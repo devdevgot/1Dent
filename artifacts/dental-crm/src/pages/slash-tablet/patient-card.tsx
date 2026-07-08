@@ -299,7 +299,7 @@ function VideoLibrary({ videos, onPlay }: { videos: TabletVideoItem[]; onPlay: (
           <CatChip key={c} active={cat === c} onClick={() => setCat(c)}>{c}</CatChip>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {list.map((v) => (
           <button
             key={v.id}
@@ -485,7 +485,7 @@ function PatientInfo({
     : null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-4 pb-24">
+    <div className="mx-auto max-w-3xl space-y-4 p-4 pb-6">
       {/* Заголовок карточки */}
       <div className="rounded-2xl border border-[#e8e3d9] bg-white p-5">
         <div className="flex items-center gap-4">

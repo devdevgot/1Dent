@@ -279,7 +279,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className={cn(
         "relative z-10 bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-xl w-full mx-4 overflow-hidden",
-        isTablet ? "max-w-md" : "max-w-sm",
+        isTablet ? "max-w-lg" : "max-w-sm",
       )}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ds-border)]">
@@ -1523,7 +1523,10 @@ export function PlanItemDetailModal({
                 />
               </div>
             ) : (
-              <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className={cn(
+                "bg-white rounded-3xl p-8 w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200",
+                isTablet ? "max-w-md" : "max-w-sm",
+              )}>
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
                   <File className="w-8 h-8 text-primary" />
                 </div>
@@ -1550,7 +1553,7 @@ export function PlanItemDetailModal({
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-150">
             <div className={cn(
               "bg-[var(--ds-surface)] w-full rounded-2xl p-5 shadow-xl border border-[var(--ds-border)] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150",
-              isTablet ? "max-w-md" : "max-w-[340px]",
+              isTablet ? "max-w-lg" : "max-w-[340px]",
             )}>
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
                 <UserRound className="w-6 h-6" />

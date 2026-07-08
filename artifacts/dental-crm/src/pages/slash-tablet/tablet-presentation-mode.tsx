@@ -152,7 +152,7 @@ export function TabletPresentationMode({
         >
           <EyeOff className="h-4 w-4" /> Вернуться врачу
         </button>
-        <div className="hidden items-center gap-2 sm:flex">
+        <div className="flex items-center gap-2">
           <StepChip icon={Activity} label="Осмотр" onClick={() => scrollTo(examineRef)} />
           <StepChip icon={ClipboardList} label="План" onClick={() => scrollTo(planRef)} />
           <StepChip icon={CreditCard} label="Стоимость" onClick={() => scrollTo(costRef)} />
@@ -160,8 +160,8 @@ export function TabletPresentationMode({
         <p className="text-xs font-medium text-[#94a3b8]">Режим для пациента</p>
       </header>
 
-      <div className="flex-1 overflow-y-auto pb-40">
-        <div className="mx-auto w-full max-w-6xl px-5 py-6">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-6xl px-5 py-6 pb-6">
 
           {/* Hero — фирменный */}
           <motion.div
@@ -268,7 +268,7 @@ export function TabletPresentationMode({
                 <h2 className="text-lg font-extrabold text-[#0f172a]">Зоны внимания</h2>
               </div>
               <p className="mb-4 text-sm text-[#64748b]">Что мы обнаружили и как это решим.</p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 {problemTeeth.map(({ fdi, cond }) => {
                   const story = CONDITION_STORY[cond];
                   const meta = CONDITION_META[cond];
@@ -434,7 +434,7 @@ export function TabletPresentationMode({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <div className="grid grid-cols-4 gap-2.5">
               <PayOption label="Полностью" sub="одним платежом" active={payment === "full"} onClick={() => setPayment("full")} />
               <PayOption label="3 месяца" sub={`${fmtTenge(Math.ceil(remainingTotal / 3 / 100) * 100)}/мес`} active={payment === "3"} onClick={() => setPayment("3")} />
               <PayOption label="6 месяцев" sub={`${fmtTenge(Math.ceil(remainingTotal / 6 / 100) * 100)}/мес`} active={payment === "6"} onClick={() => setPayment("6")} />
@@ -443,7 +443,7 @@ export function TabletPresentationMode({
           </section>
 
           {/* Почему нам доверяют — нейтрально */}
-          <section className="grid gap-3 sm:grid-cols-3">
+          <section className="grid grid-cols-3 gap-3">
             {[
               { icon: ShieldCheck, title: "Современные материалы", desc: "Работаем на проверенных материалах и оборудовании" },
               { icon: Clock, title: "Удобный график", desc: "Запись в комфортное время и напоминания в WhatsApp" },
@@ -463,8 +463,8 @@ export function TabletPresentationMode({
       </div>
 
       {/* Нижняя панель — WhatsApp */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-[#e6ebf2] bg-white/95 px-5 py-4 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md safe-area-bottom">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="shrink-0 border-t border-[#e6ebf2] bg-white/95 px-5 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur-md safe-area-bottom">
+        <div className="mx-auto flex w-full max-w-6xl flex-row items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-bold text-[#0f172a]">
               {fmtTenge(remainingTotal)}

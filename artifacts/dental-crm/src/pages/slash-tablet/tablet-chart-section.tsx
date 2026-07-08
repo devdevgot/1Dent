@@ -211,7 +211,7 @@ export function TabletChartSection({
             <p className="mb-3 text-sm font-bold text-[#0f172a]">
               Зуб {diagnosisToothFdi} — выберите диагноз
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-4 gap-2">
               {ALL_CONDITIONS.map((cond) => {
                 const meta = CONDITION_META[cond];
                 const active = (diagnosisMap.get(diagnosisToothFdi) ?? teeth[diagnosisToothFdi] ?? "healthy") === cond;
@@ -240,14 +240,14 @@ export function TabletChartSection({
         )}
       </AnimatePresence>
 
-      {/* Нижняя панель действий (как в CRM) */}
+      {/* Панель действий диагностики */}
       <AnimatePresence>
         {isDiagnosisMode && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
-            className="sticky bottom-0 -mx-1 mt-2 rounded-2xl border border-[#e8e3d9] bg-white/95 px-4 py-4 shadow-lg backdrop-blur-sm"
+            className="mt-2 rounded-2xl border border-[#e8e3d9] bg-white px-4 py-4 shadow-sm"
           >
             <div className="flex items-center justify-center gap-10">
               <ActionCircle label="Отмена" onClick={cancelDiagnosis} variant="muted">

@@ -94,7 +94,7 @@ function TabletTopBar({
     <header className="flex items-center justify-between border-b border-[#e8e3d9] bg-white px-5 py-3">
       <div className="flex items-center gap-4">
         <OneDentLogo />
-        <span className="hidden items-center gap-1.5 text-sm text-[#64748b] sm:flex">
+        <span className="flex items-center gap-1.5 text-sm text-[#64748b]">
           <LayoutGrid className="h-4 w-4" /> {cabinetName}
         </span>
       </div>
@@ -105,7 +105,7 @@ function TabletTopBar({
             style={{ backgroundColor: doctor.avatarColor }}>
             {initials(doctor.name)}
           </div>
-          <div className="hidden text-right sm:block">
+          <div className="text-right">
             <p className="text-sm font-bold leading-tight text-[#0f172a]">{doctor.name}</p>
           </div>
         </div>

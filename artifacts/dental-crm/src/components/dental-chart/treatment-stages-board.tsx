@@ -1076,7 +1076,7 @@ function StageDetailSheet({
       <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
         <DialogContent
           hideClose
-          className="flex max-h-[min(88dvh,900px)] w-[min(92vw,42rem)] max-w-2xl flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-0 shadow-xl"
+          className="flex max-h-[min(88dvh,900px)] w-[min(92vw,48rem)] max-w-3xl flex-col gap-0 overflow-hidden rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-0 shadow-xl"
         >
           <div className="flex items-center justify-between border-b border-[var(--ds-border)] px-5 py-4 shrink-0">
             <DialogTitle className="text-base font-bold text-[var(--text)] pr-4">{stage.label}</DialogTitle>
@@ -2403,7 +2403,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
               const activeItem = localItems.find((i) => i.id === activeId);
               if (!activeItem) return null;
               return (
-                <div className="w-[calc(100vw-32px)] max-w-[400px] shadow-2xl opacity-95 pointer-events-none rotate-2">
+                <div className={cn(
+                  "shadow-2xl opacity-95 pointer-events-none rotate-2",
+                  isTablet ? "w-[min(480px,42vw)]" : "w-[calc(100vw-32px)] max-w-[400px]",
+                )}>
                   <PlanItemCardOverlay item={activeItem} />
                 </div>
               );
