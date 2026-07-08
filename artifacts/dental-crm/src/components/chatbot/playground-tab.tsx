@@ -121,27 +121,27 @@ export function PlaygroundTab() {
 
   return (
     <div ref={containerRef} className="h-full flex flex-col gap-3 min-h-0">
-      <div className="flex-1 min-h-0 rounded-2xl border border-[#e8e3d9] bg-white flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] flex flex-col overflow-hidden">
         <div className="shrink-0 flex justify-end px-3 pt-2">
           <button
             type="button"
             onClick={resetPlayground}
             disabled={messages.length === 0 && !session}
-            className="flex items-center gap-1 text-xs text-[#64748b] hover:text-[#0f172a] disabled:opacity-40 transition-colors"
+            className="flex items-center gap-1 text-caption text-[var(--text-secondary)] hover:text-[var(--text)] disabled:opacity-40 transition-colors"
           >
             <RefreshCw className="h-3 w-3" />
             Сбросить
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-[#faf8f4]">
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 bg-[var(--bg)]">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center py-10">
               <div className="h-12 w-12 rounded-full bg-[#1f75fe]/10 flex items-center justify-center mb-3">
-                <Bot className="h-6 w-6 text-[#1f75fe]" />
+                <Bot className="h-6 w-6 text-[var(--ds-primary)]" />
               </div>
-              <p className="text-sm font-medium text-[#0f172a]">Playground готов</p>
-              <p className="text-xs text-[#64748b] mt-1 max-w-[220px]">
+              <p className="text-body font-medium text-[var(--text)]">Playground готов</p>
+              <p className="text-caption text-[var(--text-secondary)] mt-1 max-w-[220px]">
                 Напишите как пациент — бот ответит по вашему скрипту
               </p>
             </div>
@@ -151,14 +151,14 @@ export function PlaygroundTab() {
             <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "bot" && (
                 <div className="h-6 w-6 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 mr-2 mt-1">
-                  <Bot className="h-3.5 w-3.5 text-[#1f75fe]" />
+                  <Bot className="h-3.5 w-3.5 text-[var(--ds-primary)]" />
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
+                className={`max-w-[80%] rounded-2xl px-3 py-2 text-body whitespace-pre-wrap leading-relaxed ${
                   msg.role === "user"
                     ? "bg-[#1f75fe] text-white rounded-tr-sm"
-                    : "bg-white border border-[#e8e3d9] text-[#0f172a] rounded-tl-sm"
+                    : "bg-[var(--ds-surface)] border border-[var(--ds-border)] text-[var(--text)] rounded-tl-sm"
                 }`}
               >
                 {msg.text}
@@ -169,9 +169,9 @@ export function PlaygroundTab() {
           {(testMessage.isPending || isReceivingParts) && (
             <div className="flex justify-start">
               <div className="h-6 w-6 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 mr-2 mt-1">
-                <Bot className="h-3.5 w-3.5 text-[#1f75fe]" />
+                <Bot className="h-3.5 w-3.5 text-[var(--ds-primary)]" />
               </div>
-              <div className="bg-white border border-[#e8e3d9] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
+              <div className="bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:0ms]" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:150ms]" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:300ms]" />
@@ -181,7 +181,7 @@ export function PlaygroundTab() {
           <div ref={bottomRef} />
         </div>
 
-        <div className="shrink-0 border-t border-[#e8e3d9] bg-white px-3 py-2.5 flex gap-2">
+        <div className="shrink-0 border-t border-[var(--ds-border)] bg-[var(--ds-surface)] px-3 py-2.5 flex gap-2">
           <input
             type="text"
             placeholder="Напишите как пациент..."
@@ -194,13 +194,13 @@ export function PlaygroundTab() {
               }
             }}
             disabled={humanTakeover}
-            className="flex-1 text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+            className="flex-1 text-body border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || testMessage.isPending || isReceivingParts || humanTakeover}
-            className="flex items-center-center w-10 h-10 bg-[#1f75fe] text-white rounded-xl disabled:opacity-50 hover:bg-[#1a65e8] transition-colors shrink-0 flex items-center justify-center"
+            className="flex items-center-center w-10 h-10 bg-[#1f75fe] text-white rounded-xl disabled:opacity-50 hover:bg-[var(--primary-hover)] transition-colors shrink-0 flex items-center justify-center"
           >
             {testMessage.isPending || isReceivingParts ? (
               <Loader2 className="h-4 w-4 animate-spin" />

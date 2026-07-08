@@ -208,7 +208,7 @@ export default function WarehouseDashboard() {
             ) : recentCompleted.length === 0 ? (
               <div className="text-center py-8">
                 <Activity className="w-10 h-10 text-[var(--text-subtle)]/30 mx-auto mb-3" />
-                <p className="text-[var(--text-secondary)] text-sm font-medium">{t("warehouseDashboard.noWriteoffs")}</p>
+                <p className="text-[var(--text-secondary)] text-body font-medium">{t("warehouseDashboard.noWriteoffs")}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -226,10 +226,10 @@ export default function WarehouseDashboard() {
                     >
                       <div className="w-2 h-2 rounded-full bg-[var(--ds-primary)] mt-1.5 flex-none" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[var(--text)] truncate">{proc.name}</p>
-                        <p className="text-xs text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</p>
+                        <p className="text-body font-medium text-[var(--text)] truncate">{proc.name}</p>
+                        <p className="text-caption text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</p>
                       </div>
-                      <span className="text-xs text-[var(--text-subtle)] flex-none">{dateStr}</span>
+                      <span className="text-caption text-[var(--text-subtle)] flex-none">{dateStr}</span>
                     </motion.div>
                   );
                 })}

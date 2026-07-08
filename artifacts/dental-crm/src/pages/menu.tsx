@@ -51,7 +51,7 @@ function CategoryCard({
 }) {
   return (
     <section className="bg-[var(--ds-surface)] rounded-[20px] border border-[var(--ds-border)] px-3 pt-4 pb-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-      <h2 className="px-2 mb-1 text-[13px] font-bold uppercase tracking-[0.06em] text-[var(--text-secondary)]">
+      <h2 className="px-2 mb-1 section-label">
         {title}
       </h2>
       <div className="grid grid-cols-4">
@@ -68,7 +68,7 @@ function CategoryCard({
               className="w-14 h-14 shrink-0 object-contain drop-shadow-sm"
               draggable={false}
             />
-            <span className="w-full min-h-[26px] text-[11px] font-semibold text-[var(--text)] text-center leading-[1.2] line-clamp-2 break-words">
+            <span className="w-full min-h-[26px] text-micro font-semibold text-[var(--text)] text-center leading-[1.2] line-clamp-2 break-words">
               {item.name}
             </span>
           </Link>

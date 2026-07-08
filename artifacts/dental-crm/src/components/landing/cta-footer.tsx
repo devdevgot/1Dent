@@ -85,7 +85,7 @@ export function CtaFooter() {
                 <h3 className="font-manrope font-bold text-white text-xl mb-2 tracking-tight">
                   Оставить заявку
                 </h3>
-                <p className="font-manrope text-white/50 text-sm mb-6">
+                <p className="font-manrope text-white/50 text-body mb-6">
                   Заполните форму или сразу создайте клинику
                 </p>
 
@@ -134,7 +134,7 @@ export function CtaFooter() {
             <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />
           </Link>
 
-          <p className="font-manrope text-[var(--text-subtle)] text-sm text-center">
+          <p className="font-manrope text-[var(--text-subtle)] text-body text-center">
             © 2025 {SITE.name}. Dental CRM для стоматологий Казахстана.
           </p>
 

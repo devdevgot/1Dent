@@ -61,7 +61,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
         <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-[var(--ds-border)]">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-[var(--ds-primary)]" />
-            <span className="text-sm font-bold text-[var(--text)]">Задачи за сегодня</span>
+            <span className="text-body font-bold text-[var(--text)]">Задачи за сегодня</span>
             {todayCount > 0 && (
               <span className="dash-badge dash-badge-warning">
                 {todayCount}
@@ -69,7 +69,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
             )}
           </div>
           {allClear && (
-            <div className="flex items-center gap-1 text-xs font-semibold text-[var(--success)]">
+            <div className="flex items-center gap-1 text-caption font-semibold text-[var(--success)]">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Всё закрыто
             </div>
@@ -79,7 +79,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
         {todayCount === 0 ? (
           <div className="flex flex-col items-center justify-center py-6 gap-1.5">
             <CheckCircle2 className="w-8 h-8 text-[var(--success)] opacity-60" />
-            <p className="text-sm font-medium text-[var(--text-secondary)]">Нет задач на сегодня</p>
+            <p className="text-body font-medium text-[var(--text-secondary)]">Нет задач на сегодня</p>
           </div>
         ) : (
           <div className="divide-y divide-[var(--ds-border)]">
@@ -87,7 +87,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
               <div className="px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <AlertCircle className="w-3.5 h-3.5 text-[var(--danger)]" />
-                  <span className="text-xs font-bold text-[var(--danger)] uppercase tracking-wide">Ожидают оплату</span>
+                  <span className="text-caption font-bold text-[var(--danger)] uppercase tracking-wide">Ожидают оплату</span>
                   <span className="dash-badge dash-badge-danger ml-auto">{todayPending.length}</span>
                 </div>
                 <div className="space-y-1.5">
@@ -97,13 +97,13 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                       <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--danger-light)] border border-[var(--danger-light)]">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                          <p className="text-[10px] text-[var(--text-secondary)] truncate">
+                          <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                          <p className="text-micro text-[var(--text-secondary)] truncate">
                             {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
                           </p>
                         </div>
                         {proc.price != null && proc.price > 0 && (
-                          <span className="text-xs font-bold text-[var(--danger)] shrink-0">
+                          <span className="text-caption font-bold text-[var(--danger)] shrink-0">
                             {proc.price.toLocaleString("ru-RU")} ₸
                           </span>
                         )}
@@ -111,7 +111,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                     );
                   })}
                   {todayPending.length > 4 && (
-                    <p className="text-[11px] text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayPending.length - 4}</p>
+                    <p className="text-micro text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayPending.length - 4}</p>
                   )}
                 </div>
               </div>
@@ -121,7 +121,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
               <div className="px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <Circle className="w-3.5 h-3.5 text-[var(--warning)]" />
-                  <span className="text-xs font-bold text-[var(--warning)] uppercase tracking-wide">В работе</span>
+                  <span className="text-caption font-bold text-[var(--warning)] uppercase tracking-wide">В работе</span>
                   <span className="dash-badge dash-badge-warning ml-auto">{todayInProgress.length}</span>
                 </div>
                 <div className="space-y-1.5">
@@ -131,8 +131,8 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                       <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--warning-light)] border border-[var(--warning-light)]">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] animate-pulse shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                          <p className="text-[10px] text-[var(--text-secondary)] truncate">
+                          <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                          <p className="text-micro text-[var(--text-secondary)] truncate">
                             {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
                           </p>
                         </div>
@@ -140,7 +140,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                     );
                   })}
                   {todayInProgress.length > 4 && (
-                    <p className="text-[11px] text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayInProgress.length - 4}</p>
+                    <p className="text-micro text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayInProgress.length - 4}</p>
                   )}
                 </div>
               </div>
@@ -150,7 +150,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
               <div className="px-4 py-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <CalendarDays className="w-3.5 h-3.5 text-[var(--info)]" />
-                  <span className="text-xs font-bold text-[var(--info)] uppercase tracking-wide">Расписание на сегодня</span>
+                  <span className="text-caption font-bold text-[var(--info)] uppercase tracking-wide">Расписание на сегодня</span>
                   <span className="dash-badge dash-badge-primary ml-auto">{todayScheduled.length}</span>
                 </div>
                 <div className="space-y-1.5">
@@ -159,10 +159,10 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                     const timeStr = proc.scheduledAt ? format(parseISO(proc.scheduledAt), "HH:mm") : "—";
                     return (
                       <div key={proc.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--info-light)] border border-[var(--info-light)]">
-                        <span className="text-xs font-bold text-[var(--info)] w-10 shrink-0">{timeStr}</span>
+                        <span className="text-caption font-bold text-[var(--info)] w-10 shrink-0">{timeStr}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-[var(--text)] truncate">{proc.name}</p>
-                          <p className="text-[10px] text-[var(--text-secondary)] truncate">
+                          <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                          <p className="text-micro text-[var(--text-secondary)] truncate">
                             {patient?.name ?? "—"}{proc.doctorName ? ` · ${proc.doctorName}` : ""}
                           </p>
                         </div>
@@ -170,7 +170,7 @@ export function TasksBlock({ procedures, patients }: TasksBlockProps) {
                     );
                   })}
                   {todayScheduled.length > 5 && (
-                    <p className="text-[11px] text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayScheduled.length - 5}</p>
+                    <p className="text-micro text-[var(--text-subtle)] text-center pt-0.5">+ ещё {todayScheduled.length - 5}</p>
                   )}
                 </div>
               </div>

@@ -67,7 +67,7 @@ export function TabletConnectModal({
     >
       <div className="flex flex-col items-center font-manrope text-center">
         {cabinetName && (
-          <p className="mb-4 text-sm text-[#64748b]">{cabinetName}</p>
+          <p className="mb-4 text-body text-[var(--text-secondary)]">{cabinetName}</p>
         )}
 
         {loading && !code ? (
@@ -77,19 +77,19 @@ export function TabletConnectModal({
         ) : code ? (
           <>
             <div className="mb-2 flex items-center gap-3">
-              <span className="font-mono text-4xl font-extrabold tracking-[0.35em] text-[#0f172a]">
+              <span className="font-mono text-4xl font-extrabold tracking-[0.35em] text-[var(--text)]">
                 {code}
               </span>
               <button
                 type="button"
                 onClick={() => void copyCode()}
-                className="rounded-xl p-2 text-[#64748b] hover:bg-[#f1ede4]"
+                className="rounded-xl p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
                 aria-label="Скопировать код"
               >
                 {copied ? <Check className="h-5 w-5 text-green-600" /> : <Copy className="h-5 w-5" />}
               </button>
             </div>
-            <p className="mb-6 max-w-xs text-sm leading-relaxed text-[#64748b]">
+            <p className="mb-6 max-w-xs text-body leading-relaxed text-[var(--text-secondary)]">
               Подтвердите подключение на телефоне. Код не отображается на планшете.
             </p>
           </>
@@ -134,7 +134,7 @@ export function TabletDoctorSetup() {
   }, [toast]);
 
   return (
-    <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#faf8f4] px-6 font-manrope">
+    <div className="relative flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[var(--bg)] px-6 font-manrope">
       <div className="pointer-events-none absolute inset-0 opacity-60">
         <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#1f75fe]/8 blur-3xl" />
         <div className="absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-[#7c3aed]/8 blur-3xl" />
@@ -142,17 +142,17 @@ export function TabletDoctorSetup() {
 
       <div className="relative flex w-full max-w-lg flex-col items-center text-center">
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#1f75fe]/10">
-          <TabletSmartphone className="h-10 w-10 text-[#1f75fe]" />
+          <TabletSmartphone className="h-10 w-10 text-[var(--ds-primary)]" />
         </div>
-        <h1 className="text-2xl font-extrabold text-[#0f172a]">SlashTablet</h1>
-        <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#64748b]">
-          Откройте <strong className="text-[#0f172a]">/tablet</strong> на планшете в кабинете.
+        <h1 className="text-2xl font-extrabold text-[var(--text)]">SlashTablet</h1>
+        <p className="mt-3 max-w-sm text-body leading-relaxed text-[var(--text-secondary)]">
+          Откройте <strong className="text-[var(--text)]">/tablet</strong> на планшете в кабинете.
           На экране появится QR-код — отсканируйте его с телефона через сканер в CRM.
           При первом подключении на телефоне появится 6-значный код для ввода на планшете.
         </p>
 
-        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[#e8e3d9] bg-white p-4 text-left text-sm text-[#64748b]">
-          <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-[#1f75fe]" />
+        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4 text-left text-body text-[var(--text-secondary)]">
+          <Smartphone className="mt-0.5 h-5 w-5 shrink-0 text-[var(--ds-primary)]" />
           <p>
             В следующий раз достаточно просто отсканировать QR-код.
             Если не хотите сканировать — настройте 4-значный PIN в CRM и входите по нему на планшете.
@@ -162,16 +162,16 @@ export function TabletDoctorSetup() {
         <button
           type="button"
           onClick={() => setPinModalOpen(true)}
-          className="mt-6 flex items-center gap-2 rounded-2xl border border-[#e8e3d9] bg-white px-6 py-3 text-sm font-semibold text-[#0f172a] transition-colors hover:bg-[#faf8f4]"
+          className="mt-6 flex items-center gap-2 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-6 py-3 text-body font-semibold text-[var(--text)] transition-colors hover:bg-[var(--bg)]"
         >
-          <KeyRound className="h-4 w-4 text-[#1f75fe]" />
+          <KeyRound className="h-4 w-4 text-[var(--ds-primary)]" />
           Настроить PIN для входа без QR
         </button>
 
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="mt-4 text-sm font-semibold text-[#1f75fe] hover:underline"
+          className="mt-4 text-body font-semibold text-[var(--ds-primary)] hover:underline"
         >
           Получить код вручную (резервный способ)
         </button>

@@ -34,10 +34,10 @@ import { PageHeader } from "@/components/layout/page-header";
 
 const STATUS_COLORS: Record<ProcedureStatus, string> = {
   scheduled:       "bg-[#e0f2fe] text-[#0284c7] border-[#0284c7]/20",
-  in_progress:     "bg-[#fef3c7] text-[#d97706] border-[#d97706]/20",
-  pending_payment: "bg-[#fef3c7] text-[#d97706] border-[#d97706]/20",
-  completed:       "bg-[#f0fdf4] text-[#16a34a] border-[#16a34a]/20",
-  cancelled:       "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]",
+  in_progress:     "bg-[#fef3c7] text-[var(--warning)] border-[#d97706]/20",
+  pending_payment: "bg-[#fef3c7] text-[var(--warning)] border-[#d97706]/20",
+  completed:       "bg-[#f0fdf4] text-[var(--success)] border-[#16a34a]/20",
+  cancelled:       "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--ds-border)]",
 };
 
 const STATUS_ICONS: Record<ProcedureStatus, React.ElementType> = {
@@ -52,7 +52,7 @@ function StatusBadge({ status }: { status: ProcedureStatus }) {
   const { t } = useTranslation();
   const Icon = STATUS_ICONS[status];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${STATUS_COLORS[status]}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-caption font-semibold border ${STATUS_COLORS[status]}`}>
       <Icon className="w-3.5 h-3.5" />
       {t(`procedure.status.${status}`)}
     </span>
@@ -250,12 +250,12 @@ function NewProcedureModal({
           {/* Template picker */}
           {templates.length > 0 && (
             <div>
-              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
+              <label className="block text-body font-semibold text-[var(--text-secondary)] mb-1.5">
                 {t("procedure.fromTemplate")}
               </label>
               <div className="relative">
                 <select
-                  className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-white"
+                  className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-[var(--ds-surface)]"
                   onChange={(e) => handleTemplate(e.target.value)}
                   defaultValue=""
                 >
@@ -266,14 +266,14 @@ function NewProcedureModal({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)] pointer-events-none" />
               </div>
             </div>
           )}
 
           {/* Patient */}
           <div>
-            <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
+            <label className="block text-body font-semibold text-[var(--text-secondary)] mb-1.5">
               {t("procedure.patient")} *
             </label>
             <div className="relative">
@@ -285,27 +285,27 @@ function NewProcedureModal({
                   setSelectedFdis([]);
                   setShowToothPicker(false);
                 }}
-                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-white"
+                className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-[var(--ds-surface)]"
               >
                 <option value="">{t("procedure.selectPatient")}</option>
                 {patients.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)] pointer-events-none" />
             </div>
           </div>
 
           {/* Tooth Picker */}
           {form.patientId && (
-            <div className="border border-[#e8e3d9] rounded-xl overflow-hidden">
+            <div className="border border-[var(--ds-border)] rounded-xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowToothPicker((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-[#0f172a] hover:bg-[#faf8f4] transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 text-body font-semibold text-[var(--text)] hover:bg-[var(--bg)] transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-[#1f75fe]" />
+                  <Activity className="w-4 h-4 text-[var(--ds-primary)]" />
                   {t("procedure.toothSelection")}
                   {selectedFdis.length > 0 && (
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#1f75fe] text-white text-[10px] font-bold">
@@ -313,12 +313,12 @@ function NewProcedureModal({
                     </span>
                   )}
                 </span>
-                <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform ${showToothPicker ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-4 h-4 text-[var(--text-subtle)] transition-transform ${showToothPicker ? "rotate-180" : ""}`} />
               </button>
 
               {showToothPicker && (
-                <div className="px-4 pb-4 border-t border-[#e8e3d9] bg-[#faf8f4]">
-                  <p className="text-xs text-[#64748b] mt-3 mb-2">
+                <div className="px-4 pb-4 border-t border-[var(--ds-border)] bg-[var(--bg)]">
+                  <p className="text-caption text-[var(--text-secondary)] mt-3 mb-2">
                     {t("procedure.toothSelectionHint")}
                   </p>
 
@@ -332,14 +332,14 @@ function NewProcedureModal({
 
                   {selectedFdis.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      <label className="block text-xs font-semibold text-[#64748b]">
+                      <label className="block text-caption font-semibold text-[var(--text-secondary)]">
                         {t("procedure.manipulationType")}
                       </label>
                       <div className="relative">
                         <select
                           value={manipulation}
                           onChange={(e) => setManipulation(e.target.value as ToothCondition)}
-                          className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-8 bg-white"
+                          className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2.5 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-8 bg-[var(--ds-surface)]"
                         >
                           {MANIPULATION_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
@@ -347,20 +347,20 @@ function NewProcedureModal({
                             </option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-subtle)] pointer-events-none" />
                       </div>
 
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {selectedFdis.sort((a, b) => a - b).map((fdi) => (
                           <span
                             key={fdi}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1f75fe]/10 text-[#1f75fe] text-xs font-semibold"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1f75fe]/10 text-[var(--ds-primary)] text-caption font-semibold"
                           >
                             {t("procedure.toothFdi", { fdi })}
                             <button
                               type="button"
                               onClick={() => toggleTooth(fdi)}
-                              className="hover:text-[#dc2626] transition-colors ml-0.5"
+                              className="hover:text-[var(--danger)] transition-colors ml-0.5"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -377,28 +377,28 @@ function NewProcedureModal({
           {/* Doctor */}
           {user?.role !== "doctor" && (
             <div>
-              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
+              <label className="block text-body font-semibold text-[var(--text-secondary)] mb-1.5">
                 {t("procedure.doctor")}
               </label>
               <div className="relative">
                 <select
                   value={form.doctorId}
                   onChange={(e) => setForm({ ...form, doctorId: e.target.value })}
-                  className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-white"
+                  className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none appearance-none pr-10 bg-[var(--ds-surface)]"
                 >
                   <option value="">{t("procedure.noDoctor")}</option>
                   {doctors.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)] pointer-events-none" />
               </div>
             </div>
           )}
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
+            <label className="block text-body font-semibold text-[var(--text-secondary)] mb-1.5">
               {t("procedure.name")} *
             </label>
             <input
@@ -406,7 +406,7 @@ function NewProcedureModal({
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
+              className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
               placeholder={t("procedure.namePlaceholder")}
             />
           </div>
@@ -414,7 +414,7 @@ function NewProcedureModal({
           {/* Price & Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
+              <label className="block text-body font-semibold text-[var(--text-secondary)] mb-1.5">
                 {t("procedure.price")} (₸)
               </label>
               <input
@@ -423,33 +423,33 @@ function NewProcedureModal({
                 step="100"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
-                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
+                className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
                 placeholder="0"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
+              <label className="block text-body font-semibold text-[var(--text-secondary)] mb-1.5">
                 {t("procedure.scheduledAt")}
               </label>
               <input
                 type="datetime-local"
                 value={form.scheduledAt}
                 onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
+                className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
               />
             </div>
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-semibold text-[#64748b] mb-1.5">
+            <label className="block text-body font-semibold text-[var(--text-secondary)] mb-1.5">
               {t("procedure.notes")}
             </label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               rows={2}
-              className="w-full border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none resize-none"
+              className="w-full border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none resize-none"
               placeholder={t("procedure.notesPlaceholder")}
             />
           </div>
@@ -458,11 +458,11 @@ function NewProcedureModal({
           {inventoryItems.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-[#64748b]">{t("procedure.materials")}</label>
+                <label className="text-body font-semibold text-[var(--text-secondary)]">{t("procedure.materials")}</label>
                 <button
                   type="button"
                   onClick={addMaterial}
-                  className="flex items-center gap-1 text-xs text-[#1f75fe] font-semibold hover:underline"
+                  className="flex items-center gap-1 text-caption text-[var(--ds-primary)] font-semibold hover:underline"
                 >
                   <Plus className="w-3.5 h-3.5" /> {t("procedure.addMaterial")}
                 </button>
@@ -473,7 +473,7 @@ function NewProcedureModal({
                     <select
                       value={mat.itemId}
                       onChange={(e) => updateMaterial(idx, "itemId", e.target.value)}
-                      className="flex-1 border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none bg-white"
+                      className="flex-1 border border-[var(--ds-border)] rounded-xl px-3 py-2 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none bg-[var(--ds-surface)]"
                     >
                       {inventoryItems.map((item) => (
                         <option key={item.id} value={item.id}>{item.name}</option>
@@ -484,12 +484,12 @@ function NewProcedureModal({
                       min="1"
                       value={mat.quantity}
                       onChange={(e) => updateMaterial(idx, "quantity", Number(e.target.value))}
-                      className="w-20 border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none text-center"
+                      className="w-20 border border-[var(--ds-border)] rounded-xl px-3 py-2 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none text-center"
                     />
                     <button
                       type="button"
                       onClick={() => removeMaterial(idx)}
-                      className="p-2 text-[#dc2626] hover:bg-[#fef2f2] rounded-xl transition-colors"
+                      className="p-2 text-[var(--danger)] hover:bg-[#fef2f2] rounded-xl transition-colors"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -557,22 +557,22 @@ function ProcedureRow({
     <motion.tr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="hover:bg-[#faf8f4] transition-colors group"
+      className="hover:bg-[var(--bg)] transition-colors group"
     >
       <td className="px-4 py-3">
-        <div className="font-semibold text-sm text-[#0f172a]">{proc.name}</div>
+        <div className="font-semibold text-body text-[var(--text)]">{proc.name}</div>
         {proc.notes && (
-          <div className="text-xs text-[#64748b] truncate max-w-[180px]">{proc.notes}</div>
+          <div className="text-caption text-[var(--text-secondary)] truncate max-w-[180px]">{proc.notes}</div>
         )}
       </td>
-      <td className="px-4 py-3 text-sm text-[#64748b]">{proc.doctorName ?? "—"}</td>
+      <td className="px-4 py-3 text-body text-[var(--text-secondary)]">{proc.doctorName ?? "—"}</td>
       <td className="px-4 py-3">
         <StatusBadge status={proc.status} />
       </td>
-      <td className="px-4 py-3 text-sm font-semibold text-[#0f172a]">
+      <td className="px-4 py-3 text-body font-semibold text-[var(--text)]">
         {proc.price ? `₸ ${Number(proc.price).toLocaleString("ru-KZ")}` : "—"}
       </td>
-      <td className="px-4 py-3 text-xs text-[#64748b]">
+      <td className="px-4 py-3 text-caption text-[var(--text-secondary)]">
         {proc.scheduledAt
           ? new Date(proc.scheduledAt).toLocaleDateString("ru-RU", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
           : "—"}
@@ -582,7 +582,7 @@ function ProcedureRow({
           <div className="relative">
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="p-1.5 rounded-xl text-[#64748b] hover:bg-[#f1ede4] transition-colors opacity-0 group-hover:opacity-100"
+              className="p-1.5 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors opacity-0 group-hover:opacity-100"
             >
               <MoreVertical className="w-4 h-4" />
             </button>
@@ -592,23 +592,23 @@ function ProcedureRow({
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="absolute right-0 top-8 z-10 bg-white rounded-xl border border-[#e8e3d9] shadow-xl min-w-[160px] overflow-hidden"
+                  className="absolute right-0 top-8 z-10 bg-[var(--ds-surface)] rounded-xl border border-[var(--ds-border)] shadow-xl min-w-[160px] overflow-hidden"
                   onBlur={() => setMenuOpen(false)}
                 >
                   {canEdit && nextStatuses.map((s) => (
                     <button
                       key={s}
                       onClick={() => handleStatusClick(s)}
-                      className="w-full text-left px-4 py-2.5 text-sm text-[#0f172a] hover:bg-[#faf8f4] transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2.5 text-body text-[var(--text)] hover:bg-[var(--bg)] transition-colors flex items-center gap-2"
                     >
-                      {React.createElement(STATUS_ICONS[s], { className: "w-4 h-4 text-[#64748b]" })}
+                      {React.createElement(STATUS_ICONS[s], { className: "w-4 h-4 text-[var(--text-secondary)]" })}
                       {t(`procedure.markAs.${s}`)}
                     </button>
                   ))}
                   {canDelete && (
                     <button
                       onClick={() => { setMenuOpen(false); setShowDeleteConfirm(true); }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-[#dc2626] hover:bg-[#fef2f2] transition-colors flex items-center gap-2"
+                      className="w-full text-left px-4 py-2.5 text-body text-[var(--danger)] hover:bg-[#fef2f2] transition-colors flex items-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
                       {t("common.delete")}
@@ -632,19 +632,19 @@ function ProcedureRow({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full max-w-sm"
+          className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-xl w-full max-w-sm"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-6 border-b border-[#e8e3d9]">
-            <h2 className="text-lg font-bold text-[#0f172a]">
+          <div className="p-6 border-b border-[var(--ds-border)]">
+            <h2 className="text-lg font-bold text-[var(--text)]">
               {t(`procedure.markAs.${selectedStatus}`)}
             </h2>
-            <p className="text-sm text-[#64748b] mt-1">{proc.name}</p>
+            <p className="text-body text-[var(--text-secondary)] mt-1">{proc.name}</p>
           </div>
 
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-[#64748b] mb-2">
+              <label className="block text-body font-semibold text-[var(--text-secondary)] mb-2">
                 {t("procedure.comments")}
               </label>
               <textarea
@@ -652,7 +652,7 @@ function ProcedureRow({
                 onChange={(e) => setModalNotes(e.target.value)}
                 rows={3}
                 placeholder={t("procedure.commentsPlaceholder")}
-                className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none resize-none"
+                className="w-full border border-[var(--ds-border)] rounded-xl px-3 py-2 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none resize-none"
               />
             </div>
 
@@ -660,7 +660,7 @@ function ProcedureRow({
               <button
                 type="button"
                 onClick={() => setStatusModalOpen(false)}
-                className="flex-1 py-2.5 border border-[#e8e3d9] rounded-xl text-sm font-semibold text-[#64748b] hover:bg-[#f1ede4] transition-colors"
+                className="flex-1 py-2.5 border border-[var(--ds-border)] rounded-xl text-body font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors"
               >
                 {t("common.cancel")}
               </button>
@@ -668,7 +668,7 @@ function ProcedureRow({
                 type="button"
                 onClick={handleStatusSubmit}
                 disabled={statusMutation.isPending}
-                className="flex-1 py-2.5 bg-[#1f75fe] text-white rounded-full text-sm font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                className="flex-1 py-2.5 bg-[#1f75fe] text-white rounded-full text-body font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
               >
                 {statusMutation.isPending ? t("common.saving") : t("common.save")}
               </button>
@@ -721,7 +721,7 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
         <div className="flex justify-end">
           <button
             onClick={handleShowNew}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#1f75fe] text-white text-sm font-semibold rounded-full hover:bg-[#1a65e8] hover:scale-105 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#1f75fe] text-white text-body font-semibold rounded-full hover:bg-[var(--primary-hover)] hover:scale-105 transition-all"
           >
             <Plus className="w-4 h-4" />
             {t("procedure.new")}
@@ -735,10 +735,10 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all ${
+            className={`px-4 py-2 rounded-full text-body font-semibold border transition-all ${
               filterStatus === s
                 ? "bg-[#1f75fe] text-white border-[#1f75fe] shadow-md"
-                : "bg-white text-[#64748b] border-[#e8e3d9] hover:border-[#1f75fe]/30 hover:bg-[#faf8f4]"
+                : "bg-[var(--ds-surface)] text-[var(--text-secondary)] border-[var(--ds-border)] hover:border-[#1f75fe]/30 hover:bg-[var(--bg)]"
             }`}
           >
             {s === "all" ? t("procedure.statusAll") : t(`procedure.status.${s}`)}
@@ -751,36 +751,36 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subtle)]" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("procedure.searchPlaceholder")}
-          className="w-full bg-white border border-[#e8e3d9] rounded-xl pl-10 pr-4 py-3 text-sm text-[#0f172a] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
+          className="w-full bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl pl-10 pr-4 py-3 text-body text-[var(--text)] focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 outline-none"
         />
         {search && (
-          <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0f172a]">
+          <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-subtle)] hover:text-[var(--text)]">
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
+      <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center">
             <div className="inline-block w-8 h-8 border-4 border-[#1f75fe]/20 border-t-[#1f75fe] rounded-full animate-spin" />
-            <p className="text-[#64748b] mt-3 text-sm">{t("common.loading")}</p>
+            <p className="text-[var(--text-secondary)] mt-3 text-sm">{t("common.loading")}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-16 text-center">
-            <ClipboardList className="w-12 h-12 text-[#94a3b8]/30 mx-auto mb-3" />
-            <h3 className="font-bold text-lg text-[#0f172a]">{t("procedure.emptyTitle")}</h3>
-            <p className="text-[#64748b] text-sm mt-1">{t("procedure.emptyDesc")}</p>
+            <ClipboardList className="w-12 h-12 text-[var(--text-subtle)]/30 mx-auto mb-3" />
+            <h3 className="font-bold text-lg text-[var(--text)]">{t("procedure.emptyTitle")}</h3>
+            <p className="text-[var(--text-secondary)] text-body mt-1">{t("procedure.emptyDesc")}</p>
             {canCreate && (
               <button
                 onClick={handleShowNew}
-                className="mt-4 px-5 py-2.5 bg-[#1f75fe] text-white font-semibold rounded-full hover:bg-[#1a65e8] hover:scale-105 transition-all text-sm"
+                className="mt-4 px-5 py-2.5 bg-[#1f75fe] text-white font-semibold rounded-full hover:bg-[var(--primary-hover)] hover:scale-105 transition-all text-sm"
               >
                 {t("procedure.new")}
               </button>
@@ -789,13 +789,13 @@ export function ProceduresContent({ onAdd }: { onAdd?: () => void } = {}) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#faf8f4] border-b border-[#e8e3d9]">
+              <thead className="bg-[var(--bg)] border-b border-[var(--ds-border)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.name")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.doctor")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.status")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.price")}</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">{t("procedure.col.scheduled")}</th>
+                  <th className="px-4 py-3 text-left text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">{t("procedure.col.name")}</th>
+                  <th className="px-4 py-3 text-left text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">{t("procedure.col.doctor")}</th>
+                  <th className="px-4 py-3 text-left text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">{t("procedure.col.status")}</th>
+                  <th className="px-4 py-3 text-left text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">{t("procedure.col.price")}</th>
+                  <th className="px-4 py-3 text-left text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">{t("procedure.col.scheduled")}</th>
                   <th className="px-4 py-3 w-12" />
                 </tr>
               </thead>

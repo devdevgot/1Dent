@@ -59,7 +59,7 @@ export default function ToothDetailPage() {
 
   if (!hasValidParams) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-[#0f172a] font-manrope bg-[#faf8f4]">
+      <div className="flex flex-col items-center justify-center h-screen text-[var(--text)] font-manrope bg-[var(--bg)]">
         <p>Invalid patient or tooth</p>
       </div>
     );
@@ -72,12 +72,12 @@ export default function ToothDetailPage() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#faf8f4] font-manrope">
+    <div className="h-full flex flex-col bg-[var(--bg)] font-manrope">
       {/* Header with back button */}
-      <div className="shrink-0 border-b border-[#e8e3d9] bg-white shadow-sm px-4 py-3">
+      <div className="shrink-0 border-b border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-sm px-4 py-3">
         <button
           onClick={handleClose}
-          className="flex items-center gap-2 text-sm font-medium text-[#0f172a] hover:text-[#1f75fe] hover:bg-[#f1ede4] rounded-xl px-2 py-1.5 -ml-2 transition-colors"
+          className="flex items-center gap-2 text-body font-medium text-[var(--text)] hover:text-[var(--ds-primary)] hover:bg-[var(--surface-2)] rounded-xl px-2 py-1.5 -ml-2 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Назад к пациентам
@@ -89,11 +89,11 @@ export default function ToothDetailPage() {
         {isLoading ? (
           <ToothDetailContentSkeleton />
         ) : isError || !patient ? (
-          <div className="flex flex-col items-center justify-center h-full text-[#dc2626] text-sm gap-2">
+          <div className="flex flex-col items-center justify-center h-full text-[var(--danger)] text-body gap-2">
             <p>{t("kanban.loadError")}</p>
             <button
               onClick={handleClose}
-              className="text-[#1f75fe] hover:underline text-sm"
+              className="text-[var(--ds-primary)] hover:underline text-sm"
             >
               Назад к пациентам
             </button>

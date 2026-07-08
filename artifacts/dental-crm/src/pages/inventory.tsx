@@ -39,12 +39,12 @@ const CATEGORY_KEYS = [
 
 const CATEGORY_COLORS: Record<string, string> = {
   materials:   "bg-[#e0f2fe] text-[#0284c7]",
-  instruments: "bg-[#f0fdf4] text-[#16a34a]",
-  medications: "bg-[#f0fdf4] text-[#16a34a]",
-  consumables: "bg-[#fef3c7] text-[#d97706]",
-  prosthetics: "bg-[#fef2f2] text-[#dc2626]",
+  instruments: "bg-[#f0fdf4] text-[var(--success)]",
+  medications: "bg-[#f0fdf4] text-[var(--success)]",
+  consumables: "bg-[#fef3c7] text-[var(--warning)]",
+  prosthetics: "bg-[#fef2f2] text-[var(--danger)]",
   implants:    "bg-[#e0f2fe] text-[#0284c7]",
-  other:       "bg-[#f1ede4] text-[#64748b]",
+  other:       "bg-[var(--surface-2)] text-[var(--text-secondary)]",
 };
 
 interface CreateForm {
@@ -66,7 +66,7 @@ function StockEditor({
       <input
         type="number" min={0} step={0.1} value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="w-20 text-sm px-2 py-1 rounded-xl border border-[#e8e3d9] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
+        className="w-20 text-body px-2 py-1 rounded-xl border border-[var(--ds-border)] focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 focus:border-[#1f75fe]"
         autoFocus
       />
       <button
@@ -75,11 +75,11 @@ function StockEditor({
           if (value.trim() === "" || !Number.isFinite(parsed) || parsed < 0) return;
           onSave(parsed);
         }}
-        className="p-1 text-[#1f75fe] hover:text-[#1a65e8]"
+        className="p-1 text-[var(--ds-primary)] hover:text-[#1a65e8]"
       >
         <Check className="w-3.5 h-3.5" />
       </button>
-      <button onClick={onCancel} className="p-1 text-[#64748b] hover:text-[#0f172a]">
+      <button onClick={onCancel} className="p-1 text-[var(--text-secondary)] hover:text-[var(--text)]">
         <X className="w-3.5 h-3.5" />
       </button>
     </div>
@@ -88,15 +88,15 @@ function StockEditor({
 
 /* ─── Access Level Badge ─── */
 const ACCESS_CONFIG: Record<InventoryAccessLevel, { label: string; icon: React.ElementType; color: string }> = {
-  full_access: { label: "Полный доступ", icon: ShieldCheck, color: "bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]" },
+  full_access: { label: "Полный доступ", icon: ShieldCheck, color: "bg-[#f0fdf4] text-[var(--success)] border-[#bbf7d0]" },
   read_only:   { label: "Только чтение", icon: Eye,         color: "bg-[#e0f2fe] text-[#0284c7] border-[#bae6fd]"       },
-  denied:      { label: "Нет доступа",   icon: ShieldX,     color: "bg-[#fef2f2] text-[#dc2626] border-[#fecaca]"          },
+  denied:      { label: "Нет доступа",   icon: ShieldX,     color: "bg-[#fef2f2] text-[var(--danger)] border-[#fecaca]"          },
 };
 
 function AccessBadge({ level }: { level: InventoryAccessLevel }) {
   const cfg = ACCESS_CONFIG[level];
   return (
-    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border", cfg.color)}>
+    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-semibold border", cfg.color)}>
       <cfg.icon className="w-3 h-3" />
       {cfg.label}
     </span>
@@ -115,26 +115,26 @@ function OwnerAccessManager() {
   const ACCESS_LEVELS: InventoryAccessLevel[] = ["full_access", "read_only", "denied"];
 
   return (
-    <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
-      <div className="px-5 py-4 border-b border-[#e8e3d9] flex items-center gap-2">
-        <Shield className="w-4 h-4 text-[#1f75fe]" />
-        <h2 className="text-sm font-bold text-[#0f172a]">Управление доступом к складу</h2>
-        <span className="ml-auto text-xs text-[#94a3b8]">Только вы видите этот раздел</span>
+    <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
+      <div className="px-5 py-4 border-b border-[var(--ds-border)] flex items-center gap-2">
+        <Shield className="w-4 h-4 text-[var(--ds-primary)]" />
+        <h2 className="text-body font-bold text-[var(--text)]">Управление доступом к складу</h2>
+        <span className="ml-auto text-caption text-[var(--text-subtle)]">Только вы видите этот раздел</span>
       </div>
       <div className="divide-y divide-[#e8e3d9]">
         {users.map((u) => {
           const current = getAccess(u.id, u.role);
           const cfg = ACCESS_CONFIG[current];
           return (
-            <div key={u.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-[#faf8f4] transition-colors">
+            <div key={u.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-[var(--bg)] transition-colors">
               {/* Avatar */}
-              <div className="w-8 h-8 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 text-xs font-bold text-[#1f75fe]">
+              <div className="w-8 h-8 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 text-caption font-bold text-[var(--ds-primary)]">
                 {u.name[0]?.toUpperCase()}
               </div>
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#0f172a] truncate">{u.name}</p>
-                <p className="text-xs text-[#94a3b8]">{u.role === "admin" ? "Администратор" : "Врач"}</p>
+                <p className="text-body font-medium text-[var(--text)] truncate">{u.name}</p>
+                <p className="text-caption text-[var(--text-subtle)]">{u.role === "admin" ? "Администратор" : "Врач"}</p>
               </div>
               {/* Dropdown select */}
               <div className="relative shrink-0">
@@ -142,10 +142,10 @@ function OwnerAccessManager() {
                   value={current}
                   onChange={(e) => setUserAccess(u.id, e.target.value as InventoryAccessLevel)}
                   className={cn(
-                    "appearance-none pl-2.5 pr-7 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors",
-                    current === "full_access" && "bg-[#f0fdf4] border-[#bbf7d0] text-[#16a34a]",
+                    "appearance-none pl-2.5 pr-7 py-1.5 rounded-xl border text-caption font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors",
+                    current === "full_access" && "bg-[#f0fdf4] border-[#bbf7d0] text-[var(--success)]",
                     current === "read_only"   && "bg-[#e0f2fe] border-[#bae6fd] text-[#0284c7]",
-                    current === "denied"      && "bg-[#fef2f2] border-[#fecaca] text-[#dc2626]",
+                    current === "denied"      && "bg-[#fef2f2] border-[#fecaca] text-[var(--danger)]",
                   )}
                 >
                   {ACCESS_LEVELS.map((level) => (
@@ -154,9 +154,9 @@ function OwnerAccessManager() {
                 </select>
                 <cfg.icon className={cn(
                   "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3",
-                  current === "full_access" && "text-[#16a34a]",
+                  current === "full_access" && "text-[var(--success)]",
                   current === "read_only"   && "text-[#0284c7]",
-                  current === "denied"      && "text-[#dc2626]",
+                  current === "denied"      && "text-[var(--danger)]",
                 )} />
               </div>
             </div>
@@ -240,10 +240,10 @@ export default function InventoryPage() {
       <PageShell>
         <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
         <div className="w-16 h-16 rounded-full bg-[#fef2f2] flex items-center justify-center mb-4">
-          <ShieldX className="w-8 h-8 text-[#dc2626]" />
+          <ShieldX className="w-8 h-8 text-[var(--danger)]" />
         </div>
-        <h2 className="text-xl font-bold text-[#0f172a] mb-2">Нет доступа</h2>
-        <p className="text-sm text-[#64748b] max-w-xs">
+        <h2 className="text-xl font-bold text-[var(--text)] mb-2">Нет доступа</h2>
+        <p className="text-body text-[var(--text-secondary)] max-w-xs">
           Владелец клиники закрыл вам доступ к складу. Обратитесь к нему для получения прав.
         </p>
         </div>
@@ -264,7 +264,7 @@ export default function InventoryPage() {
         onBack={() => window.history.back()}
         right={
           canWrite ? (
-            <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[#1a65e8] hover:scale-105 font-semibold">
+            <Button onClick={() => setShowCreate((v) => !v)} size="sm" className="gap-1.5 shrink-0 rounded-full bg-[#1f75fe] hover:bg-[var(--primary-hover)] hover:scale-105 font-semibold">
               <Plus className="w-4 h-4" />
               {t("inventory.add")}
             </Button>
@@ -284,18 +284,18 @@ export default function InventoryPage() {
       {/* Low stock alert */}
       {lowStock.length > 0 && (
         <div className="bg-[#fef2f2] border border-[#fecaca] rounded-xl p-3 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-[#dc2626] shrink-0" />
+          <AlertTriangle className="w-5 h-5 text-[var(--danger)] shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-[#dc2626]">{t("inventory.lowStockTitle")}</p>
-            <p className="text-xs text-[#dc2626]/80">{lowStock.map((i) => i.name).join(", ")}</p>
+            <p className="text-body font-semibold text-[var(--danger)]">{t("inventory.lowStockTitle")}</p>
+            <p className="text-caption text-[var(--danger)]/80">{lowStock.map((i) => i.name).join(", ")}</p>
           </div>
         </div>
       )}
 
       {/* Create form */}
       {showCreate && canWrite && (
-        <form onSubmit={handleCreate} className="bg-white rounded-2xl border border-[#e8e3d9] p-4 space-y-3 shadow-md">
-          <p className="font-semibold text-sm mb-1">{t("inventory.newItem")}</p>
+        <form onSubmit={handleCreate} className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 space-y-3 shadow-md">
+          <p className="font-semibold text-body mb-1">{t("inventory.newItem")}</p>
           <Input
             placeholder={t("inventory.name")}
             value={form.name}
@@ -339,8 +339,8 @@ export default function InventoryPage() {
         <button
           onClick={() => setFilterCategory("all")}
           className={cn(
-            "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors",
-            filterCategory === "all" ? "bg-[#1f75fe] text-white" : "bg-[#f1ede4] text-[#64748b] hover:bg-[#e8e3d9]",
+            "px-3 py-1.5 rounded-full text-caption font-medium whitespace-nowrap shrink-0 transition-colors",
+            filterCategory === "all" ? "bg-[#1f75fe] text-white" : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[#e8e3d9]",
           )}
         >
           {t("inventory.allFilter", { count: items.length })}
@@ -353,8 +353,8 @@ export default function InventoryPage() {
               key={cat}
               onClick={() => setFilterCategory(cat)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 transition-colors",
-                filterCategory === cat ? "bg-[#1f75fe] text-white" : "bg-[#f1ede4] text-[#64748b] hover:bg-[#e8e3d9]",
+                "px-3 py-1.5 rounded-full text-caption font-medium whitespace-nowrap shrink-0 transition-colors",
+                filterCategory === cat ? "bg-[#1f75fe] text-white" : "bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[#e8e3d9]",
               )}
             >
               {t(`category.${cat}`)} ({count})
@@ -375,7 +375,7 @@ export default function InventoryPage() {
       {isLoading ? (
         <InventoryListSkeleton />
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#94a3b8]">
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-[var(--text-subtle)]">
           <Package className="w-10 h-10 opacity-30" />
           <p className="text-sm">
             {items.length === 0 ? t("inventory.emptyFirst") : t("inventory.emptySearch")}
@@ -389,23 +389,23 @@ export default function InventoryPage() {
               <div
                 key={item.id}
                 className={cn(
-                  "bg-white rounded-2xl border p-3.5 flex items-center gap-3 shadow-md hover:shadow-lg transition-shadow",
-                  isLow ? "border-[#fecaca]" : "border-[#e8e3d9]",
+                  "bg-[var(--ds-surface)] rounded-2xl border p-3.5 flex items-center gap-3 shadow-md hover:shadow-lg transition-shadow",
+                  isLow ? "border-[#fecaca]" : "border-[var(--ds-border)]",
                 )}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-sm text-[#0f172a] truncate">{item.name}</p>
+                    <p className="font-medium text-body text-[var(--text)] truncate">{item.name}</p>
                     <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", CATEGORY_COLORS[item.category])}>
                       {t(`category.${item.category}`)}
                     </span>
                     {isLow && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#fef2f2] text-[#dc2626] font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#fef2f2] text-[var(--danger)] font-medium">
                         {t("inventory.low")}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-[#64748b] mt-0.5">
+                  <p className="text-caption text-[var(--text-secondary)] mt-0.5">
                     {item.unitPrice > 0 && `${item.unitPrice.toLocaleString()} / ${item.unit}`}
                     {item.minQuantity > 0 && ` · ${t("inventory.min", { qty: item.minQuantity, unit: item.unit })}`}
                   </p>
@@ -422,9 +422,9 @@ export default function InventoryPage() {
                     <button
                       onClick={() => canWrite && setEditingStockId(item.id)}
                       className={cn(
-                        "text-sm font-bold px-2.5 py-1 rounded-xl transition-colors",
-                        isLow ? "text-[#dc2626] bg-[#fef2f2]" : "text-[#0f172a] bg-[#f1ede4]",
-                        canWrite && "hover:bg-[#1f75fe]/10 hover:text-[#1f75fe] cursor-pointer",
+                        "text-body font-bold px-2.5 py-1 rounded-xl transition-colors",
+                        isLow ? "text-[var(--danger)] bg-[#fef2f2]" : "text-[var(--text)] bg-[var(--surface-2)]",
+                        canWrite && "hover:bg-[#1f75fe]/10 hover:text-[var(--ds-primary)] cursor-pointer",
                         !canWrite && "cursor-default",
                       )}
                     >
@@ -436,7 +436,7 @@ export default function InventoryPage() {
                 {canDelete && (
                   <button
                     onClick={() => setConfirmDeleteId(item.id)}
-                    className="p-1.5 text-[#94a3b8] hover:text-[#dc2626] transition-colors shrink-0"
+                    className="p-1.5 text-[var(--text-subtle)] hover:text-[var(--danger)] transition-colors shrink-0"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -450,7 +450,7 @@ export default function InventoryPage() {
       {/* Owner-only: access management */}
       {isOwner && (
         <div className="mt-6 space-y-3">
-          <div className="flex items-center gap-2 text-xs text-[#94a3b8] font-medium uppercase tracking-wide">
+          <div className="flex items-center gap-2 text-caption text-[var(--text-subtle)] font-medium uppercase tracking-wide">
             <Users className="w-3.5 h-3.5" />
             Права доступа к складу
           </div>

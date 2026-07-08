@@ -213,14 +213,14 @@ export default function DoctorDashboard() {
 
       <div className="dash-top-strip">
         <div className="mx-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text)]">
+          <div className="flex items-center gap-1.5 text-body font-semibold text-[var(--text)]">
             <CalendarDays className="w-4 h-4 text-[var(--ds-primary)]" />
             <span className="capitalize">{dateRangeLabel}</span>
           </div>
           <button
             type="button"
             onClick={() => { setPendingPreset(filterPreset); setShowCustom(false); setFilterOpen(true); }}
-            className="dash-btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+            className="dash-btn-ghost text-caption py-1.5 px-3 flex items-center gap-1.5"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--text-subtle)]" />
             {filterLabel}
@@ -235,20 +235,20 @@ export default function DoctorDashboard() {
           <div className="flex items-start justify-between mb-1">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">
+                <p className="section-label">
                   {t("payroll.mySalary", "Моя зарплата")}
                   {mySalary?.period && (
-                    <span className="ml-1.5 font-normal normal-case text-[#94a3b8]">
+                    <span className="ml-1.5 font-normal normal-case text-[var(--text-subtle)]">
                       {t("employees.since", "за")} {new Date(mySalary.period.year, mySalary.period.month - 1).toLocaleDateString("ru", { month: "long", year: "numeric" })}
                     </span>
                   )}
                 </p>
                 {mySalary && (
                   <span className={cn(
-                    "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
-                    mySalary.status === "paid"     ? "bg-[#f0fdf4] text-[#16a34a]" :
+                    "text-micro font-bold px-2 py-0.5 rounded-full shrink-0",
+                    mySalary.status === "paid"     ? "bg-[#f0fdf4] text-[var(--success)]" :
                     mySalary.status === "approved" ? "bg-[#e0f2fe] text-[#0284c7]" :
-                                                     "bg-[#fef3c7] text-[#d97706]",
+                                                     "bg-[#fef3c7] text-[var(--warning)]",
                   )}>
                     {mySalary.status === "paid"     ? t("payroll.statusPaid", "Выплачено") :
                      mySalary.status === "approved" ? t("payroll.statusApproved", "Утверждено") :
@@ -258,15 +258,15 @@ export default function DoctorDashboard() {
               </div>
 
               {isLoading ? (
-                <div className="h-9 w-40 bg-[#f1ede4] rounded-xl animate-pulse" />
+                <div className="h-9 w-40 bg-[var(--surface-2)] rounded-xl animate-pulse" />
               ) : !mySalary ? (
-                <p className="text-sm text-[#94a3b8] italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
+                <p className="text-caption text-[var(--text-subtle)] italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
               ) : (
                 <>
-                  <p className="text-3xl font-bold text-[#0f172a] tracking-tight leading-none">
+                  <p className="text-page-title font-bold text-[var(--text)] tracking-tight leading-none">
                     {fmtRevenue(mySalary.calculatedSalary)}
                   </p>
-                  <p className="text-[11px] text-[#94a3b8] mt-1">
+                  <p className="text-micro text-[var(--text-subtle)] mt-1">
                     {mySalary.salaryType === "fixed" && `${t("payroll.fixed", "Оклад")}: ${fmtRevenue(mySalary.fixedAmount)}`}
                     {mySalary.salaryType === "commission" && `${mySalary.commissionPercent}% ${t("payroll.ofRevenue", "от выручки")}`}
                     {mySalary.salaryType === "fixed_plus_commission" && `${fmtRevenue(mySalary.fixedAmount)} + ${mySalary.commissionPercent}%`}
@@ -276,30 +276,30 @@ export default function DoctorDashboard() {
             </div>
             <button
               onClick={() => navigate("/payroll/my")}
-              className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full mt-1 bg-[#1f75fe]/10 text-[#1f75fe] hover:bg-[#1f75fe]/15 transition-colors"
+              className="shrink-0 text-caption font-semibold px-3 py-1.5 rounded-full mt-1 bg-[var(--ds-primary)]/10 text-[var(--ds-primary)] hover:bg-[var(--ds-primary)]/15 transition-colors"
             >
               {t("payroll.history", "История")}
             </button>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-[#e8e3d9] my-3" />
+          <div className="border-t border-[var(--ds-border)] my-3" />
 
           {/* SECONDARY: Revenue + analytics link */}
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-0.5">
+              <p className="text-micro font-semibold text-[var(--text-subtle)] uppercase tracking-wide mb-0.5">
                 {t("dashboard.myRevenue", "Выручка")}
               </p>
               {isLoading ? (
-                <div className="h-5 w-24 bg-[#f1ede4] rounded animate-pulse" />
+                <div className="h-5 w-24 bg-[var(--surface-2)] rounded animate-pulse" />
               ) : (
-                <p className="text-base font-semibold text-[#0f172a]">{fmtRevenue(displayedRevenue)}</p>
+                <p className="text-base font-semibold text-[var(--text)]">{fmtRevenue(displayedRevenue)}</p>
               )}
             </div>
             <button
               onClick={() => navigate("/doctor-analytics")}
-              className="flex items-center gap-0.5 text-xs font-semibold text-[#1f75fe] hover:text-[#1a65e8] transition-colors"
+              className="flex items-center gap-0.5 text-caption font-semibold text-[var(--ds-primary)] hover:text-[#1a65e8] transition-colors"
             >
               {t("dashboard.details", "Подробнее")} <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -312,14 +312,14 @@ export default function DoctorDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#1f75fe]/10">
-              <Calendar className="w-4 h-4 text-[#1f75fe]" />
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center bg-[var(--ds-primary)]/10">
+              <Calendar className="w-4 h-4 text-[var(--ds-primary)]" />
             </div>
-            <span className="text-sm font-bold text-[#0f172a]">Предстоящие записи</span>
+            <span className="text-body font-bold text-[var(--text)]">Предстоящие записи</span>
           </div>
           <button
             onClick={() => navigate(`/schedule/${activeDayKey}`)}
-            className="flex items-center gap-0.5 text-xs font-semibold text-[#1f75fe] hover:text-[#1a65e8] transition-colors"
+            className="flex items-center gap-0.5 text-caption font-semibold text-[var(--ds-primary)] hover:text-[#1a65e8] transition-colors"
           >
             Все <ChevronRight className="w-3.5 h-3.5" />
           </button>
@@ -337,18 +337,18 @@ export default function DoctorDashboard() {
                 onClick={() => setSelectedDayKey(dateKey)}
                 className={cn(
                   "flex-1 flex flex-col items-center py-2 rounded-2xl transition-all",
-                  isActive ? "text-white shadow-sm bg-[#1f75fe]" : "bg-[#f1ede4] text-[#64748b]",
+                  isActive ? "text-white shadow-sm bg-[var(--ds-primary)]" : "bg-[var(--surface-2)] text-[var(--text-secondary)]",
                 )}
               >
-                <span className="text-[10px] font-semibold uppercase tracking-wide leading-none">
+                <span className="text-micro font-semibold uppercase tracking-wide leading-none">
                   {isToday ? "Сегодня" : DOW_SHORT[d.getDay()]}
                 </span>
-                <span className="text-xl font-bold leading-tight">{d.getDate()}</span>
-                <span className="text-[10px] leading-none opacity-75">{MONTHS_RU[d.getMonth()]}</span>
+                <span className="text-stat font-bold leading-tight">{d.getDate()}</span>
+                <span className="text-micro leading-none opacity-75">{MONTHS_RU[d.getMonth()]}</span>
                 {scheduleByDay.find(([k]) => k === dateKey)?.[1].length ? (
                   <span className={cn(
-                    "mt-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full",
-                    isActive ? "bg-white/30 text-white" : "bg-[#1f75fe]/10 text-[#1f75fe]",
+                    "mt-1 text-micro font-semibold px-1.5 py-0.5 rounded-full",
+                    isActive ? "bg-[var(--ds-surface)]/30 text-white" : "bg-[var(--ds-primary)]/10 text-[var(--ds-primary)]",
                   )}>
                     {scheduleByDay.find(([k]) => k === dateKey)![1].length} зап.
                   </span>
@@ -372,11 +372,11 @@ export default function DoctorDashboard() {
               {proceduresLoading ? (
                 <>
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-14 rounded-2xl bg-[#f1ede4] animate-pulse" />
+                    <div key={i} className="h-14 rounded-2xl bg-[var(--surface-2)] animate-pulse" />
                   ))}
                 </>
               ) : activeDayProcs.length === 0 ? (
-                <p className="py-4 text-center text-sm text-[#94a3b8]">Нет записей на этот день</p>
+                <p className="py-4 text-center text-caption text-[var(--text-subtle)]">Нет записей на этот день</p>
               ) : (
                 activeDayProcs.map((proc, i) => {
                   const time = proc.scheduledAt
@@ -397,11 +397,11 @@ export default function DoctorDashboard() {
                         <Clock className="w-3.5 h-3.5 text-[#0284c7]" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-[#0f172a] truncate">{proc.name}</p>
-                        {time && <p className="text-[10px] font-medium mt-0.5 text-[#0284c7]">{time}</p>}
+                        <p className="text-caption font-semibold text-[var(--text)] truncate">{proc.name}</p>
+                        {time && <p className="text-micro font-medium mt-0.5 text-[#0284c7]">{time}</p>}
                       </div>
                       <span
-                        className="text-[10px] font-semibold px-2 py-1 rounded-xl shrink-0 bg-[#0284c7]/10 text-[#0284c7]"
+                        className="text-micro font-semibold px-2 py-1 rounded-xl shrink-0 bg-[#0284c7]/10 text-[#0284c7]"
                       >
                         {time}
                       </span>
@@ -416,7 +416,7 @@ export default function DoctorDashboard() {
 
       {/* ─── Quick Actions ─── */}
       <div className="mx-4 mt-4 dash-card dash-card-padded-sm">
-        <p className="dash-section-label mb-3">
+        <p className="section-label mb-3">
           {t("dashboard.quickActions")}
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -437,7 +437,7 @@ export default function DoctorDashboard() {
               >
                 <item.icon className="w-4 h-4" />
               </div>
-              <span className="text-xs font-semibold text-[var(--text)]">{item.label}</span>
+              <span className="text-caption font-semibold text-[var(--text)]">{item.label}</span>
             </button>
           ))}
         </div>
@@ -456,10 +456,10 @@ export default function DoctorDashboard() {
                 transition={{ duration: 0.18 }}
               >
                 <div className="flex items-center justify-between px-5 pt-4 pb-2">
-                  <h2 className="text-base font-bold text-[#0f172a]">Фильтр по дате</h2>
+                  <h2 className="text-base font-bold text-[var(--text)]">Фильтр по дате</h2>
                   <button
                     onClick={() => setFilterOpen(false)}
-                    className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b] hover:text-[#0f172a] transition-colors"
+                    className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -488,13 +488,13 @@ export default function DoctorDashboard() {
                       setFilterOpen(false);
                       setShowCustom(false);
                     }}
-                    className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-[#1f75fe] hover:bg-[#1a65e8] transition-colors"
+                    className="w-full py-3.5 rounded-full text-body font-semibold text-white bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)] transition-colors"
                   >
                     Применить
                   </button>
                   <button
                     onClick={() => { setFilterOpen(false); setShowCustom(false); }}
-                    className="w-full py-3.5 rounded-full text-sm font-semibold text-[#64748b] bg-[#f1ede4] hover:bg-[#e8e3d9] transition-colors"
+                    className="w-full py-3.5 rounded-full text-body font-semibold text-[var(--text-secondary)] bg-[var(--surface-2)] hover:bg-[#e8e3d9] transition-colors"
                   >
                     Отмена
                   </button>
@@ -512,30 +512,30 @@ export default function DoctorDashboard() {
                 <div className="flex items-center gap-3 pt-4 pb-2">
                   <button
                     onClick={() => setShowCustom(false)}
-                    className="w-8 h-8 rounded-full bg-[#f1ede4] flex items-center justify-center text-[#64748b] hover:text-[#0f172a] transition-colors"
+                    className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <h2 className="text-base font-bold text-[#0f172a]">Выбрать период</h2>
+                  <h2 className="text-base font-bold text-[var(--text)]">Выбрать период</h2>
                 </div>
 
                 <div className="mt-4 space-y-4">
                   <div>
-                    <label className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">С</label>
+                    <label className="section-label">С</label>
                     <input
                       type="date"
                       value={customFrom}
                       onChange={e => setCustomFrom(e.target.value)}
-                      className="mt-1.5 w-full bg-white border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
+                      className="mt-1.5 w-full bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">По</label>
+                    <label className="section-label">По</label>
                     <input
                       type="date"
                       value={customTo}
                       onChange={e => setCustomTo(e.target.value)}
-                      className="mt-1.5 w-full bg-white border border-[#e8e3d9] rounded-xl px-4 py-3 text-sm font-medium text-[#0f172a] focus:outline-none focus:border-[#1f75fe] focus:ring-2 focus:ring-[#1f75fe]/20 transition-colors"
+                      className="mt-1.5 w-full bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl px-4 py-3 text-body font-medium text-[var(--text)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 transition-colors"
                     />
                   </div>
                 </div>
@@ -547,13 +547,13 @@ export default function DoctorDashboard() {
                       setFilterOpen(false);
                       setShowCustom(false);
                     }}
-                    className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-[#1f75fe] hover:bg-[#1a65e8] transition-colors"
+                    className="w-full py-3.5 rounded-full text-body font-semibold text-white bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)] transition-colors"
                   >
                     Применить
                   </button>
                   <button
                     onClick={() => setShowCustom(false)}
-                    className="w-full py-3.5 rounded-full text-sm font-semibold text-[#64748b] bg-[#f1ede4] hover:bg-[#e8e3d9] transition-colors"
+                    className="w-full py-3.5 rounded-full text-body font-semibold text-[var(--text-secondary)] bg-[var(--surface-2)] hover:bg-[#e8e3d9] transition-colors"
                   >
                     Назад
                   </button>

@@ -264,14 +264,14 @@ function SortablePlanItem({
             {idx + 1}
           </span>
           <div className="flex-1 min-w-0">
-            <span className="text-xs font-medium text-[var(--text)] leading-tight block">{item.title}</span>
+            <span className="text-caption font-medium text-[var(--text)] leading-tight block">{item.title}</span>
             {isFirst && (
               <p className="text-[9px] font-semibold text-primary mt-0.5 uppercase tracking-wide">
                 Приоритет №1
               </p>
             )}
           </div>
-          <span className="text-xs font-semibold text-[var(--text-secondary)] shrink-0 whitespace-nowrap mt-0.5">
+          <span className="text-caption font-semibold text-[var(--text-secondary)] shrink-0 whitespace-nowrap mt-0.5">
             {item.price.toLocaleString("ru")} ₸
           </span>
           <div
@@ -287,7 +287,7 @@ function SortablePlanItem({
           <div className="px-2.5 pb-2.5 pt-0 pl-9">
             <Button
               size="sm"
-              className={`w-full h-8 text-xs gap-1.5 ${
+              className={`w-full h-8 text-caption gap-1.5 ${
                 isExtraction ? "bg-red-500 hover:bg-red-600 text-white border-0" : ""
               }`}
               variant="default"
@@ -477,7 +477,7 @@ function ToothActionModal({
             <div className="flex items-center justify-between px-4 py-3 border-b border-amber-200 bg-amber-50/80">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-amber-600" />
-                <h3 className="font-bold text-sm text-amber-900">Лечение уже идёт</h3>
+                <h3 className="font-bold text-body text-amber-900">Лечение уже идёт</h3>
               </div>
               <button onClick={onClose} className="text-[var(--text-secondary)] hover:text-[var(--text)]">
                 <X className="w-4 h-4" />
@@ -486,10 +486,10 @@ function ToothActionModal({
 
             <div className="px-5 py-5 space-y-4">
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3">
-                <p className="text-sm font-semibold text-amber-900 mb-1">
+                <p className="text-body font-semibold text-amber-900 mb-1">
                   Сначала завершите текущее лечение
                 </p>
-                <p className="text-xs text-amber-800 leading-relaxed">
+                <p className="text-caption text-amber-800 leading-relaxed">
                   Сейчас выполняется процедура на зубе {blockingTreatment.toothFdi}. Другой зуб нельзя начать лечить, пока это лечение не завершено.
                 </p>
               </div>
@@ -498,7 +498,7 @@ function ToothActionModal({
                 <p className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-0.5">
                   Текущая услуга
                 </p>
-                <p className="text-xs font-medium text-[var(--text)] leading-snug">
+                <p className="text-caption font-medium text-[var(--text)] leading-snug">
                   {blockingTreatment.description}
                 </p>
               </div>
@@ -524,7 +524,7 @@ function ToothActionModal({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
                 </span>
-                <h3 className="font-bold text-sm text-green-800">Зуб {fdi} — Лечение</h3>
+                <h3 className="font-bold text-body text-green-800">Зуб {fdi} — Лечение</h3>
               </div>
               <button onClick={handleAbort} className="text-[var(--text-secondary)] hover:text-[var(--text)]">
                 <X className="w-4 h-4" />
@@ -537,7 +537,7 @@ function ToothActionModal({
               {inProgressLabel && (
                 <div className="w-full rounded-xl bg-[var(--bg)] border border-[var(--ds-border)]/40 px-3 py-2.5 text-center">
                   <p className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-0.5">Услуга</p>
-                  <p className="text-xs font-medium text-[var(--text)] leading-snug">{inProgressLabel}</p>
+                  <p className="text-caption font-medium text-[var(--text)] leading-snug">{inProgressLabel}</p>
                 </div>
               )}
 
@@ -630,7 +630,7 @@ function ToothActionModal({
               </div>
             ) : (
               <div className="p-4 space-y-2">
-                <p className="text-xs text-[var(--text-secondary)] italic text-center pb-1">Нет позиций в плане лечения</p>
+                <p className="text-caption text-[var(--text-secondary)] italic text-center pb-1">Нет позиций в плане лечения</p>
                 <Button
                   className="w-full justify-start gap-2"
                   variant="outline"
@@ -705,7 +705,7 @@ function TreatmentTaskItem({
       <div className="flex items-center gap-2 min-w-0">
         <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-[var(--text)]">
+          <p className="text-caption font-semibold text-[var(--text)]">
             {t("tooth.title", { fdi: task.toothFdi })}
           </p>
           <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${typeColor}`}>
@@ -717,7 +717,7 @@ function TreatmentTaskItem({
         <Button
           size="sm"
           variant="outline"
-          className="text-xs h-7 shrink-0"
+          className="text-caption h-7 shrink-0"
           disabled={completeMutation.isPending}
           onClick={() =>
             completeMutation.mutate({
@@ -812,7 +812,7 @@ function DiagnosisSummaryModal({
       }
     >
       {nonHealthy.length === 0 ? (
-        <p className="text-sm text-[var(--text-secondary)] italic text-center py-4">
+        <p className="text-body text-[var(--text-secondary)] italic text-center py-4">
           Все зубы здоровы
         </p>
       ) : (
@@ -821,13 +821,13 @@ function DiagnosisSummaryModal({
           return (
             <div key={e.fdi} className="flex items-center justify-between gap-2 py-1.5 border-b border-[var(--ds-border)]/20 last:border-0">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--text)]">
+                <p className="text-body font-medium text-[var(--text)]">
                   {t("tooth.title", { fdi: e.fdi })} — {label}
                 </p>
-                <p className="text-xs text-[var(--text-secondary)]">{e.mkb10}</p>
+                <p className="text-caption text-[var(--text-secondary)]">{e.mkb10}</p>
               </div>
               {e.price > 0 && (
-                <span className="text-sm font-semibold text-[var(--text)] shrink-0">
+                <span className="text-body font-semibold text-[var(--text)] shrink-0">
                   {e.price.toLocaleString("ru-RU")} ₸
                 </span>
               )}
@@ -837,7 +837,7 @@ function DiagnosisSummaryModal({
       )}
       {total > 0 && (
         <div className="px-3 py-3 -mx-1 bg-primary/5 border border-[var(--ds-border)]/40 rounded-xl flex items-center justify-between">
-          <span className="text-sm font-semibold text-[var(--text-secondary)]">Итого:</span>
+          <span className="text-body font-semibold text-[var(--text-secondary)]">Итого:</span>
           <span className="text-lg font-bold text-primary">{total.toLocaleString("ru-RU")} ₸</span>
         </div>
       )}
@@ -1809,7 +1809,7 @@ export function PatientDetailPanel() {
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSelectedToothFdi(null); }}
-              className={`py-3 px-1 mr-6 text-sm font-medium border-b-2 transition-colors ${
+              className={`py-3 px-1 mr-6 text-body font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? "border-primary text-primary"
                   : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text)]"
@@ -1832,14 +1832,14 @@ export function PatientDetailPanel() {
                   {/* Header */}
                   <div>
                     <h3 className="text-xl font-bold text-[var(--text)]">{patient.name}</h3>
-                    <p className="text-xs text-[var(--text-subtle)] mt-0.5">
+                    <p className="text-caption text-[var(--text-subtle)] mt-0.5">
                       Зарегистрирован: {new Date(patient.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "long", year: "numeric" })}
                     </p>
                   </div>
 
                   {/* Contact info */}
                   <div className="bg-[var(--bg)] rounded-2xl p-4 space-y-3">
-                    <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Контакты</p>
+                    <p className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Контакты</p>
                     <a
                       href={`tel:${patient.phone}`}
                       className="flex items-center gap-3 group"
@@ -1847,7 +1847,7 @@ export function PatientDetailPanel() {
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Phone className="w-4 h-4 text-primary" />
                       </div>
-                      <span className="font-mono text-sm font-semibold text-[var(--text)] group-hover:text-primary transition-colors">
+                      <span className="font-mono text-body font-semibold text-[var(--text)] group-hover:text-primary transition-colors">
                         {patient.phone}
                       </span>
                     </a>
@@ -1857,10 +1857,10 @@ export function PatientDetailPanel() {
                           <User className="w-4 h-4 text-[var(--text-subtle)]" />
                         </div>
                         <div>
-                          <p className="text-sm text-[var(--text)]">
+                          <p className="text-body text-[var(--text)]">
                             {calculateAge(patient.dateOfBirth)} лет · {formatDateOfBirth(patient.dateOfBirth)}
                             {patient.gender && (
-                              <span className="ml-1 text-xs text-[var(--text-secondary)]">
+                              <span className="ml-1 text-caption text-[var(--text-secondary)]">
                                 ({patient.gender === "male" ? "муж." : patient.gender === "female" ? "жен." : "другой"})
                               </span>
                             )}
@@ -1873,7 +1873,7 @@ export function PatientDetailPanel() {
                         <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center">
                           <User className="w-4 h-4 text-[var(--text-subtle)]" />
                         </div>
-                        <span className="text-sm text-[var(--text)]">
+                        <span className="text-body text-[var(--text)]">
                           {patient.gender === "male" ? "Мужской" : patient.gender === "female" ? "Женский" : "Другой"}
                         </span>
                       </div>
@@ -1884,8 +1884,8 @@ export function PatientDetailPanel() {
                           <IdCard className="w-4 h-4 text-[var(--text-subtle)]" />
                         </div>
                         <div>
-                          <p className="text-xs text-[var(--text-secondary)]">ИИН</p>
-                          <p className="text-sm font-mono text-[var(--text)]">{maskIIN(patient.iin)}</p>
+                          <p className="text-caption text-[var(--text-secondary)]">ИИН</p>
+                          <p className="text-body font-mono text-[var(--text)]">{maskIIN(patient.iin)}</p>
                         </div>
                       </div>
                     )}
@@ -1894,8 +1894,8 @@ export function PatientDetailPanel() {
                         <Calendar className="w-4 h-4 text-[var(--text-subtle)]" />
                       </div>
                       <div>
-                        <p className="text-xs text-[var(--text-secondary)]">Источник</p>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sourceColor}`}>
+                        <p className="text-caption text-[var(--text-secondary)]">Источник</p>
+                        <span className={`text-caption font-medium px-2 py-0.5 rounded-full ${sourceColor}`}>
                           {sourceLabel}
                         </span>
                       </div>
@@ -1904,15 +1904,15 @@ export function PatientDetailPanel() {
 
                   {/* Doctor */}
                   <div className="bg-[var(--bg)] rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3">Лечащий врач</p>
+                    <p className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3">Лечащий врач</p>
                     {doctorUser ? (
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-body font-bold shrink-0">
                           {doctorUser.name[0]?.toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[var(--text)]">{doctorUser.name}</p>
-                          <p className="text-xs text-[var(--text-subtle)]">{doctorUser.email}</p>
+                          <p className="text-body font-semibold text-[var(--text)]">{doctorUser.name}</p>
+                          <p className="text-caption text-[var(--text-subtle)]">{doctorUser.email}</p>
                         </div>
                       </div>
                     ) : (
@@ -1920,18 +1920,18 @@ export function PatientDetailPanel() {
                         <div className="w-9 h-9 rounded-full bg-[var(--surface-2)] flex items-center justify-center">
                           <Stethoscope className="w-4 h-4 text-[var(--text-subtle)]" />
                         </div>
-                        <p className="text-sm text-[var(--text-subtle)] italic">Врач не назначен</p>
+                        <p className="text-body text-[var(--text-subtle)] italic">Врач не назначен</p>
                       </div>
                     )}
                   </div>
 
                   {/* WhatsApp broadcast history */}
-                  <div className="bg-[#faf8f4] rounded-2xl p-4 space-y-3">
-                    <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide flex items-center gap-1.5">
+                  <div className="bg-[var(--bg)] rounded-2xl p-4 space-y-3">
+                    <p className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide flex items-center gap-1.5">
                       <Megaphone className="h-3.5 w-3.5" />
                       Рассылки WhatsApp
                     </p>
-                    <Suspense fallback={<div className="text-xs text-[#94a3b8] py-2">Загрузка…</div>}>
+                    <Suspense fallback={<div className="text-caption text-[var(--text-subtle)] py-2">Загрузка…</div>}>
                       <PatientBroadcastHistory patientId={patient.id} />
                     </Suspense>
                   </div>
@@ -1939,11 +1939,11 @@ export function PatientDetailPanel() {
                   {/* Status */}
                   {canChangeStatus && (
                     <div className="bg-[var(--bg)] rounded-2xl p-4">
-                      <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3">Статус лечения</p>
+                      <p className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-3">Статус лечения</p>
                       <div className="relative">
                         <button
                           onClick={() => setIsStatusOpen(!isStatusOpen)}
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 border border-[var(--ds-border)] rounded-xl text-sm font-medium hover:bg-[var(--ds-surface)] transition-colors bg-[var(--ds-surface)]"
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 border border-[var(--ds-border)] rounded-xl text-body font-medium hover:bg-[var(--ds-surface)] transition-colors bg-[var(--ds-surface)]"
                         >
                           <span>{currentColumn?.label ?? patient.status}</span>
                           <ChevronDown className={`w-4 h-4 transition-transform ${isStatusOpen ? "rotate-180" : ""}`} />
@@ -1955,7 +1955,7 @@ export function PatientDetailPanel() {
                                 key={col.id}
                                 onClick={() => handleStatusChange(col.id)}
                                 disabled={statusMutation.isPending}
-                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[var(--bg)] transition-colors ${patient.status === col.id ? "font-semibold text-primary bg-primary/5" : ""}`}
+                                className={`w-full text-left px-4 py-2.5 text-body hover:bg-[var(--bg)] transition-colors ${patient.status === col.id ? "font-semibold text-primary bg-primary/5" : ""}`}
                               >
                                 {col.label}
                               </button>
@@ -1969,8 +1969,8 @@ export function PatientDetailPanel() {
                   {/* Notes */}
                   {patient.notes && (
                     <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
-                      <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Примечания</p>
-                      <p className="text-sm text-amber-900 leading-relaxed">{patient.notes}</p>
+                      <p className="text-caption font-semibold text-amber-700 uppercase tracking-wide mb-2">Примечания</p>
+                      <p className="text-body text-amber-900 leading-relaxed">{patient.notes}</p>
                     </div>
                   )}
 
@@ -1981,7 +1981,7 @@ export function PatientDetailPanel() {
                         onClick={() => setFinancialCollapsed((v) => !v)}
                         className="w-full flex items-center justify-between group"
                       >
-                        <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+                        <span className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
                           Финансы
                         </span>
                         <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-secondary)] transition-transform duration-150 ${financialCollapsed ? "" : "rotate-180"}`} />
@@ -1994,25 +1994,25 @@ export function PatientDetailPanel() {
                               <p className="text-xl font-bold text-primary">
                                 {financials.paid.toLocaleString("ru-RU")} ₸
                               </p>
-                              <p className="text-xs text-[var(--text-secondary)] mt-0.5">Оплачено</p>
+                              <p className="text-caption text-[var(--text-secondary)] mt-0.5">Оплачено</p>
                             </div>
                             <div className="bg-[var(--bg)] rounded-2xl p-3.5 text-center">
                               <p className="text-xl font-bold text-[var(--text)]">
                                 {patientProcedures.length}
                               </p>
-                              <p className="text-xs text-[var(--text-secondary)] mt-0.5">Процедур</p>
+                              <p className="text-caption text-[var(--text-secondary)] mt-0.5">Процедур</p>
                             </div>
                           </div>
 
                           {Object.keys(financials.methodCounts).length > 0 && (
                             <div className="bg-[var(--bg)] rounded-2xl p-4 space-y-2">
-                              <p className="text-xs font-semibold text-[var(--text-secondary)] mb-1">Способы оплаты</p>
+                              <p className="text-caption font-semibold text-[var(--text-secondary)] mb-1">Способы оплаты</p>
                               {Object.entries(financials.methodCounts).map(([method, data]) => (
                                 <div key={method} className="flex items-center justify-between text-sm">
                                   <div className="flex items-center gap-2">
                                     <CreditCard className="w-3.5 h-3.5 text-[var(--text-subtle)]" />
                                     <span className="text-[var(--text-secondary)]">{PAYMENT_LABELS[method] ?? method}</span>
-                                    <span className="text-xs text-[var(--text-subtle)]">×{data.count}</span>
+                                    <span className="text-caption text-[var(--text-subtle)]">×{data.count}</span>
                                   </div>
                                   <span className="font-semibold text-[var(--text)]">
                                     {data.sum.toLocaleString("ru-RU")} ₸
@@ -2033,7 +2033,7 @@ export function PatientDetailPanel() {
                         onClick={() => setProceduresCollapsed((v) => !v)}
                         className="w-full flex items-center justify-between group"
                       >
-                        <span className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
+                        <span className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
                           История процедур ({patientProcedures.length})
                         </span>
                         <ChevronDown className={`w-3.5 h-3.5 text-[var(--text-secondary)] transition-transform duration-150 ${proceduresCollapsed ? "" : "rotate-180"}`} />
@@ -2050,14 +2050,14 @@ export function PatientDetailPanel() {
                                 : "—";
                               const payLabel = PAYMENT_LABELS[(proc as any).paymentMethod ?? ""] ?? "—";
                               return (
-                                <div key={proc.id} className="bg-white rounded-2xl border border-[var(--ds-border)] p-3 space-y-1.5">
+                                <div key={proc.id} className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-3 space-y-1.5">
                                   <div className="flex items-start justify-between gap-2">
-                                    <p className="text-sm font-medium text-[var(--text)] flex-1 leading-tight">{proc.name}</p>
+                                    <p className="text-body font-medium text-[var(--text)] flex-1 leading-tight">{proc.name}</p>
                                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${STATUS_COLORS[proc.status ?? "scheduled"]}`}>
                                       {STATUS_LABELS[proc.status ?? "scheduled"]}
                                     </span>
                                   </div>
-                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[var(--text-secondary)]">
+                                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-caption text-[var(--text-secondary)]">
                                     {proc.scheduledAt && (
                                       <span>{new Date(proc.scheduledAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}</span>
                                     )}
@@ -2136,7 +2136,7 @@ export function PatientDetailPanel() {
                     {!isAdmin && (isDiagnosisMode || (chartReady && !hasDiagnosis)) && (
                       <div className="space-y-3">
                         <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                          <p className="text-xs text-amber-800 font-medium">
+                          <p className="text-caption text-amber-800 font-medium">
                             {t("patient.diagnosisMode")}
                           </p>
                         </div>
@@ -2155,7 +2155,7 @@ export function PatientDetailPanel() {
                                 <Mic className="w-4.5 h-4.5" />
                               </div>
                               <div>
-                                <h4 className="text-xs font-semibold text-[var(--text)]">Черновик голосовой диагностики</h4>
+                                <h4 className="text-caption font-semibold text-[var(--text)]">Черновик голосовой диагностики</h4>
                                 <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
                                   Найден сохраненный черновик от {voiceDraftTime ? new Date(voiceDraftTime).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}.
                                 </p>
@@ -2190,7 +2190,7 @@ export function PatientDetailPanel() {
 
                         {diagnosisToothFdi !== null && (
                           <div className="bg-[var(--bg)] rounded-xl p-3 border border-[var(--ds-border)]/30 space-y-3">
-                            <p className="text-xs font-semibold text-[var(--text-secondary)]">
+                            <p className="text-caption font-semibold text-[var(--text-secondary)]">
                               {t("tooth.title", { fdi: diagnosisToothFdi })} — {t("tooth.conditionLabel")}
                             </p>
                             {/* ── 2-level picker: conditions → services ── */}
@@ -2213,7 +2213,7 @@ export function PatientDetailPanel() {
                                           setPickerCategory(autoCategory);
                                           setPickerSearch("");
                                         }}
-                                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-caption transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                                           isSelected
                                             ? "border-primary bg-primary/10 ring-1 ring-primary/30"
                                             : "border-[var(--ds-border)] hover:border-primary/40 hover:bg-[var(--bg)]"
@@ -2235,7 +2235,7 @@ export function PatientDetailPanel() {
                               <div ref={servicePickerRef} className="space-y-1.5">
                                 <button
                                   onClick={() => { setPickerCategory(null); setPickerSearch(""); }}
-                                  className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
+                                  className="flex items-center gap-1.5 text-caption text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
                                 >
                                   <ArrowLeft className="w-3.5 h-3.5" />
                                   <span>Назад к диагнозу</span>
@@ -2273,7 +2273,7 @@ export function PatientDetailPanel() {
                                     value={pickerSearch}
                                     onChange={(e) => setPickerSearch(e.target.value)}
                                     placeholder="Поиск услуги..."
-                                    className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-[var(--ds-border)] bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-[var(--text-subtle)]/60"
+                                    className="w-full pl-7 pr-7 py-1.5 text-caption rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-[var(--text-subtle)]/60"
                                   />
                                   {pickerSearch && (
                                     <button
@@ -2289,9 +2289,9 @@ export function PatientDetailPanel() {
                                     <Loader2 className="w-4 h-4 animate-spin text-[var(--text-secondary)]" />
                                   </div>
                                 ) : pickerTemplates.length === 0 ? (
-                                  <p className="text-xs text-[var(--text-secondary)] text-center py-4">Нет услуг в этой категории</p>
+                                  <p className="text-caption text-[var(--text-secondary)] text-center py-4">Нет услуг в этой категории</p>
                                 ) : filteredPickerTemplates.length === 0 ? (
-                                  <p className="text-xs text-[var(--text-secondary)] text-center py-4">
+                                  <p className="text-caption text-[var(--text-secondary)] text-center py-4">
                                     Ничего не найдено по «{pickerSearch}»
                                   </p>
                                 ) : (
@@ -2311,7 +2311,7 @@ export function PatientDetailPanel() {
                                           }
                                           setDiagnosisServicesMap(next);
                                         }}
-                                        className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg border text-left text-xs transition-all ${
+                                        className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg border text-left text-caption transition-all ${
                                           isChecked
                                             ? "border-primary bg-primary/8 ring-1 ring-primary/30"
                                             : "border-[var(--ds-border)] hover:border-primary/40 hover:bg-[var(--bg)]"
@@ -2339,12 +2339,12 @@ export function PatientDetailPanel() {
                               </div>
                             )}
                             <div>
-                              <label className="text-xs font-medium text-[var(--text-secondary)] block mb-1">
+                              <label className="text-caption font-medium text-[var(--text-secondary)] block mb-1">
                                 {t("tooth.notesLabel")}
                               </label>
                               <textarea
                                 rows={2}
-                                className="w-full text-xs rounded-lg border border-[var(--ds-border)] bg-white px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                className="w-full text-caption rounded-lg border border-[var(--ds-border)] bg-[var(--ds-surface)] px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
                                 placeholder={t("tooth.notesPlaceholder")}
                                 value={diagnosisNotesMap.get(diagnosisToothFdi) ?? teethMap.get(diagnosisToothFdi)?.notes ?? ""}
                                 onChange={(e) => {
@@ -2359,8 +2359,8 @@ export function PatientDetailPanel() {
 
                         {diagnosisServicesMap.size > 0 && diagnosisTotalCost > 0 && (
                           <div className="bg-primary/8 border border-primary/20 rounded-xl px-3 py-2.5 flex items-center justify-between">
-                            <span className="text-xs font-medium text-primary">Предварительная стоимость:</span>
-                            <span className="text-sm font-bold text-primary">
+                            <span className="text-caption font-medium text-primary">Предварительная стоимость:</span>
+                            <span className="text-body font-bold text-primary">
                               {diagnosisTotalCost.toLocaleString("ru-RU")} ₸
                             </span>
                           </div>
@@ -2402,7 +2402,7 @@ export function PatientDetailPanel() {
                                 <Mic className="w-4.5 h-4.5" />
                               </div>
                               <div>
-                                <h4 className="text-xs font-semibold text-[var(--text)]">Черновик голосовой диагностики</h4>
+                                <h4 className="text-caption font-semibold text-[var(--text)]">Черновик голосовой диагностики</h4>
                                 <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
                                   Найден сохраненный черновик от {voiceDraftTime ? new Date(voiceDraftTime).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}.
                                 </p>
@@ -2511,7 +2511,7 @@ export function PatientDetailPanel() {
                     </div>
                     <div>
                       <p className="font-semibold text-[var(--text)]">Зубная карта не заполнена</p>
-                      <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs">
+                      <p className="text-caption text-[var(--text-secondary)] mt-1 max-w-xs">
                         Сначала проведите осмотр зубов пациента на вкладке «Зубная карта»
                       </p>
                     </div>
@@ -2534,9 +2534,9 @@ export function PatientDetailPanel() {
                   return (
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                       <div className="px-6 py-5 space-y-3">
-                        <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Активный план</p>
+                        <p className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Активный план</p>
                         {activePlan ? (
-                          <button onClick={() => setPlanDetailId(activePlan.id)} className="w-full text-left bg-white border border-[var(--ds-border)] rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                          <button onClick={() => setPlanDetailId(activePlan.id)} className="w-full text-left bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                             <div className="h-1 bg-primary" />
                             <div className="px-4 py-4">
                               {/* Header */}
@@ -2600,13 +2600,13 @@ export function PatientDetailPanel() {
                               <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
-                              <p className="text-xs text-amber-600 mt-0.5">Для создания плана {allPlans.length + 1} проведите повторный осмотр</p>
-                              <button onClick={() => { setPlanDetailId(null); setTreatmentStep(1); }} className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
+                              <p className="text-body font-semibold text-amber-800">Нужна повторная диагностика</p>
+                              <p className="text-caption text-amber-600 mt-0.5">Для создания плана {allPlans.length + 1} проведите повторный осмотр</p>
+                              <button onClick={() => { setPlanDetailId(null); setTreatmentStep(1); }} className="mt-2 text-caption font-semibold text-amber-700 underline underline-offset-2">Перейти к зубной карте →</button>
                             </div>
                           </div>
                         ) : (
-                          <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-[var(--ds-border)] text-sm font-medium text-[var(--text-subtle)] hover:bg-[var(--bg)] transition-colors"
+                          <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-dashed border-[var(--ds-border)] text-body font-medium text-[var(--text-subtle)] hover:bg-[var(--bg)] transition-colors"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })}
                             disabled={createPlanMutation.isPending}
                           >
@@ -2615,7 +2615,7 @@ export function PatientDetailPanel() {
                           </button>
                         )}
                         {activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
-                          <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[var(--ds-border)] text-sm font-medium text-[var(--text-subtle)] hover:bg-[var(--bg)] transition-colors mt-2"
+                          <button className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[var(--ds-border)] text-body font-medium text-[var(--text-subtle)] hover:bg-[var(--bg)] transition-colors mt-2"
                             onClick={() => createPlanMutation.mutate({ id: selectedPatientId, data: {} })} disabled={createPlanMutation.isPending}
                           >
                             {createPlanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -2635,7 +2635,7 @@ export function PatientDetailPanel() {
                   if (!detailPlan) {
                     return (
                       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-                        <p className="text-sm text-[var(--text-secondary)]">План не найден или ещё загружается</p>
+                        <p className="text-body text-[var(--text-secondary)]">План не найден или ещё загружается</p>
                         <Button variant="outline" size="sm" onClick={() => setPlanDetailId(null)}>
                           К списку планов
                         </Button>
@@ -2659,7 +2659,7 @@ export function PatientDetailPanel() {
                       <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="px-4 py-4 space-y-3">
                           {/* Financial summary card */}
-                          <div className="bg-white border border-[var(--ds-border)] rounded-2xl shadow-sm overflow-hidden">
+                          <div className="bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-2xl shadow-sm overflow-hidden">
                             <div className="h-0.5 bg-primary" />
                             <div className="px-4 py-4">
                               {/* Ring chart + totals */}
@@ -2720,7 +2720,7 @@ export function PatientDetailPanel() {
                           {!isActive && (
                             <div className="space-y-2">
                               {nc.length === 0 ? (
-                                <p className="text-sm text-[var(--text-subtle)] text-center py-6">Нет позиций</p>
+                                <p className="text-body text-[var(--text-subtle)] text-center py-6">Нет позиций</p>
                               ) : (
                                 nc.map((item) => (
                                   <div
@@ -2728,7 +2728,7 @@ export function PatientDetailPanel() {
                                     className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border shadow-sm ${
                                       item.status === "completed"
                                         ? "bg-emerald-50/60 border-emerald-100"
-                                        : "bg-white border-[var(--ds-border)]"
+                                        : "bg-[var(--ds-surface)] border-[var(--ds-border)]"
                                     }`}
                                   >
                                     {item.status === "completed"
@@ -2849,7 +2849,7 @@ export function PatientDetailPanel() {
                             href={bundleUrl ?? `/p/bundle/${bundleToken}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs px-2.5 py-1.5 bg-[var(--surface-2)] text-[var(--text)] rounded-lg font-medium hover:bg-[var(--ds-border)] transition-colors"
+                            className="text-caption px-2.5 py-1.5 bg-[var(--surface-2)] text-[var(--text)] rounded-lg font-medium hover:bg-[var(--ds-border)] transition-colors"
                           >
                             ↗ В новой вкладке
                           </a>

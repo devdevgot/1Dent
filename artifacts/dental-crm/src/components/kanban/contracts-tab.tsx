@@ -334,7 +334,7 @@ export function ContractsTab({ patientId, bundle }: ContractsTabProps) {
                     className={cn(
                       "w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-[14px] font-semibold transition-all",
                       selectedTemplateId
-                        ? "bg-[#25D366] hover:bg-[#22c55e] active:bg-[#16a34a] text-white shadow-md shadow-[#25D366]/25"
+                        ? "bg-[#25D366] hover:bg-[#22c55e] active:bg-[var(--success)] text-white shadow-md shadow-[#25D366]/25"
                         : "bg-[var(--surface-2)] text-[var(--text-subtle)] cursor-not-allowed",
                     )}
                   >

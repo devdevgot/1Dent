@@ -265,10 +265,10 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
       >
         {isOutbound ? <BubbleTailOut /> : <BubbleTailIn alert={isAlert} />}
         {isOutbound && message.senderId === null && (
-          <div className="text-[10px] opacity-60 mb-0.5 font-medium">🤖 Бот</div>
+          <div className="text-micro opacity-60 mb-0.5 font-medium">🤖 Бот</div>
         )}
         {isAlert && !isOutbound && (
-          <div className="flex items-center gap-1 text-[#dc2626] mb-1 text-xs font-semibold">
+          <div className="flex items-center gap-1 text-[var(--danger)] mb-1 text-caption font-semibold">
             <AlertTriangle className="w-3 h-3 shrink-0" />
             <span>{t("chat.redAlert")}</span>
           </div>
@@ -283,7 +283,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
             return (
               <div className="space-y-1">
                 {attachment?.caption && (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{attachment.caption}</p>
+                  <p className="text-body leading-relaxed whitespace-pre-wrap break-words">{attachment.caption}</p>
                 )}
                 <a href={mediaUrl} target="_blank" rel="noreferrer" className="block">
                   {isImageUrl(message.content) ? (
@@ -296,7 +296,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
                   ) : (
                     <div className="flex items-center gap-2 py-1">
                       <Paperclip className="w-4 h-4 shrink-0 opacity-70" />
-                      <span className="text-sm underline break-all">{fileLabel}</span>
+                      <span className="text-body underline break-all">{fileLabel}</span>
                     </div>
                   )}
                 </a>
@@ -304,12 +304,12 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
             );
           })()
         ) : (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>{message.content}</p>
+          <p className="text-body leading-relaxed whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>{message.content}</p>
         )}
         <div
           className={cn(
-            "flex items-center justify-end gap-0.5 mt-0.5 text-[10px] select-none",
-            isOutbound ? "opacity-70 text-white/80" : "text-[#94a3b8]",
+            "flex items-center justify-end gap-0.5 mt-0.5 text-micro select-none",
+            isOutbound ? "opacity-70 text-white/80" : "text-[var(--text-subtle)]",
           )}
         >
           <span>{formatTime(message.createdAt)}</span>
@@ -327,10 +327,10 @@ function SessionEventBubble({ kind, ts, name }: { kind: "session_start" | "sessi
     <div className="flex justify-center my-2 px-4">
       <div
         className={cn(
-          "inline-flex items-center gap-1.5 text-[11px] font-medium px-3 py-1 rounded-full shadow-sm",
+          "inline-flex items-center gap-1.5 text-micro font-medium px-3 py-1 rounded-full shadow-sm",
           isStart
-            ? "bg-[#f0fdf4] text-[#16a34a] border border-[#16a34a]/20"
-            : "bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20",
+            ? "bg-[#f0fdf4] text-[var(--success)] border border-[#16a34a]/20"
+            : "bg-[#fef2f2] text-[var(--danger)] border border-[#dc2626]/20",
         )}
       >
         {isStart ? (
@@ -526,7 +526,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           <span className="flex items-center gap-1.5 shrink-0">
             <WhatsAppIcon size={15} />
             {hasRedAlert && (
-              <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
+              <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-caption bg-[#fef2f2] text-[var(--danger)] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
                 <AlertTriangle className="w-3 h-3" />
                 {t("chat.redAlert")}
               </Badge>
@@ -546,13 +546,13 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         {isError && (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#fef2f2] border border-[#dc2626]/20 flex items-center justify-center">
-              <AlertTriangle className="w-7 h-7 text-[#dc2626]" />
+              <AlertTriangle className="w-7 h-7 text-[var(--danger)]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#0f172a]">
+              <p className="text-body font-semibold text-[var(--text)]">
                 {t("chat.loadError", { defaultValue: "Не удалось загрузить переписку" })}
               </p>
-              <p className="text-xs text-[#94a3b8] mt-0.5">
+              <p className="text-caption text-[var(--text-subtle)] mt-0.5">
                 {t("chat.loadErrorHint", { defaultValue: "Проверьте подключение и попробуйте снова" })}
               </p>
             </div>
@@ -562,13 +562,13 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         {!isLoading && !isError && messages.length === 0 && sessionHistory.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md border border-[#e8e3d9] bg-[#1f75fe]/10"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md border border-[var(--ds-border)] bg-[var(--ds-primary)]/10"
             >
               <WhatsAppIcon size={34} color={BRAND} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#0f172a]">{t("chat.noMessages")}</p>
-              <p className="text-xs text-[#94a3b8] mt-0.5">{t("chat.startConversation")}</p>
+              <p className="text-body font-semibold text-[var(--text)]">{t("chat.noMessages")}</p>
+              <p className="text-caption text-[var(--text-subtle)] mt-0.5">{t("chat.startConversation")}</p>
             </div>
           </div>
         )}
@@ -576,7 +576,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         {!isLoading && !isError && grouped.map((group) => (
           <div key={group.date}>
             <div className="flex justify-center my-3 px-4">
-              <span className="text-[11px] font-medium bg-white text-[#64748b] border border-[#e8e3d9] px-3 py-1 rounded-full shadow-sm">
+              <span className="text-micro font-medium bg-[var(--ds-surface)] text-[var(--text-secondary)] border border-[var(--ds-border)] px-3 py-1 rounded-full shadow-sm">
                 {group.date}
               </span>
             </div>
@@ -606,15 +606,15 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
       </div>
 
       {/* ── Input area ── */}
-      <div className="flex flex-col gap-0 border-t border-[#e8e3d9] shrink-0 bg-[#faf8f4] font-manrope">
+      <div className="flex flex-col gap-0 border-t border-[var(--ds-border)] shrink-0 bg-[var(--bg)] font-manrope">
         <div className="flex items-end gap-2 px-3 py-2.5">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingFile}
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-[#64748b] hover:bg-[#f1ede4] active:scale-95 transition-all disabled:opacity-40"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] active:scale-95 transition-all disabled:opacity-40"
           >
             {uploadingFile ? (
-              <Loader2 className="w-5 h-5 animate-spin text-[#1f75fe]" />
+              <Loader2 className="w-5 h-5 animate-spin text-[var(--ds-primary)]" />
             ) : (
               <Paperclip className="w-5 h-5" />
             )}
@@ -628,7 +628,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           />
 
           {/* Message textarea */}
-          <div className="flex-1 bg-white rounded-xl px-3.5 py-2 shadow-sm border border-[#e8e3d9] flex items-end min-h-[44px] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20">
+          <div className="flex-1 bg-[var(--ds-surface)] rounded-xl px-3.5 py-2 shadow-sm border border-[var(--ds-border)] flex items-end min-h-[44px] focus-within:border-[var(--ds-primary)] focus-within:ring-2 focus-within:ring-[var(--ds-primary)]/20">
             <textarea
               ref={textareaRef}
               value={text}
@@ -636,7 +636,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
               onKeyDown={handleKeyDown}
               placeholder={t("chat.messagePlaceholder")}
               rows={1}
-              className="w-full resize-none outline-none bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] leading-relaxed"
+              className="w-full resize-none outline-none bg-transparent text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] leading-relaxed"
               style={{ maxHeight: 120, minHeight: 24 }}
             />
           </div>
@@ -645,7 +645,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
           <button
             onClick={handleSend}
             disabled={!text.trim() || sendMutation.isPending}
-            className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 shadow-md bg-[#1f75fe] hover:bg-[#1a65e8]"
+            className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 shadow-md bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)]"
           >
             <Send className="w-4 h-4 text-white" />
           </button>
@@ -787,7 +787,7 @@ export default function ChatPage() {
                 type="button"
                 onClick={handleOpenChangeModal}
                 title="Изменить WhatsApp"
-                className="flex items-center gap-1 text-xs text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors px-2 py-1 rounded-xl hover:bg-[var(--surface-2)]"
+                className="flex items-center gap-1 text-caption text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors px-2 py-1 rounded-xl hover:bg-[var(--surface-2)]"
               >
                 <Pencil className="w-3 h-3" />
                 <span>Изменить</span>
@@ -798,7 +798,7 @@ export default function ChatPage() {
             <>
               {!waStatusLoading && !waConnected && !isOwner && (
                 <div className="bg-[#fef3c7] border border-[#d97706]/20 rounded-xl p-3 mb-3">
-                  <p className="text-xs text-[#d97706] leading-relaxed">
+                  <p className="text-caption text-[var(--warning)] leading-relaxed">
                     WhatsApp не подключён. Обратитесь к Владельцу клиники, чтобы он подключил WhatsApp.
                   </p>
                 </div>
@@ -806,8 +806,8 @@ export default function ChatPage() {
 
               {!waStatusLoading && waConnected && waStatus?.phone && (
                 <div className="flex items-center gap-1.5 mb-3 px-1">
-                  <div className="w-2 h-2 rounded-full bg-[#16a34a]" />
-                  <p className="text-xs text-[var(--text-secondary)] font-mono">+{waStatus.phone}</p>
+                  <div className="w-2 h-2 rounded-full bg-[var(--success)]" />
+                  <p className="text-caption text-[var(--text-secondary)] font-mono">+{waStatus.phone}</p>
                 </div>
               )}
 
@@ -817,7 +817,7 @@ export default function ChatPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t("chat.searchPlaceholder")}
-                  className="w-full pl-9 pr-4 py-2.5 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl text-sm text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 transition-all"
+                  className="w-full pl-9 pr-4 py-2.5 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20 transition-all"
                 />
               </div>
             </>
@@ -828,14 +828,14 @@ export default function ChatPage() {
           {patientsLoading && (
             <div className="p-3 space-y-2">
               {[0,1,2,3,4].map(i => (
-                <div key={i} className="h-16 bg-[#f1ede4] rounded-xl animate-pulse" />
+                <div key={i} className="h-16 bg-[var(--surface-2)] rounded-xl animate-pulse" />
               ))}
             </div>
           )}
           {!patientsLoading && filtered.length === 0 && (
             <div className="p-8 text-center">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-[#94a3b8]/40" />
-              <p className="text-sm text-[#64748b]">{t("chat.noPatients")}</p>
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-[var(--text-subtle)]/40" />
+              <p className="text-caption text-[var(--text-secondary)]">{t("chat.noPatients")}</p>
             </div>
           )}
           {!patientsLoading && filtered.map((patient) => (
@@ -864,13 +864,13 @@ export default function ChatPage() {
             style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
           >
             <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg border border-[#e8e3d9] bg-[#1f75fe]/10"
+              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg border border-[var(--ds-border)] bg-[var(--ds-primary)]/10"
             >
               <WhatsAppIcon size={44} color={BRAND} />
             </div>
             <div>
-              <p className="font-semibold text-[#0f172a] text-base">{t("chat.selectPatient")}</p>
-              <p className="text-sm text-[#94a3b8] mt-1">{t("chat.selectPatientHint")}</p>
+              <p className="font-semibold text-[var(--text)] text-base">{t("chat.selectPatient")}</p>
+              <p className="text-caption text-[var(--text-subtle)] mt-1">{t("chat.selectPatientHint")}</p>
             </div>
           </div>
         )}
@@ -911,15 +911,15 @@ function PatientListItem({
     <button
       onClick={onSelect}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b border-[#e8e3d9]",
+        "w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all border-b border-[var(--ds-border)]",
         isSelected
-          ? "bg-[#1f75fe]/10 border-l-[3px] border-l-[#1f75fe]"
-          : "hover:bg-[#faf8f4] border-l-[3px] border-l-transparent",
+          ? "bg-[var(--ds-primary)]/10 border-l-[3px] border-l-[#1f75fe]"
+          : "hover:bg-[var(--bg)] border-l-[3px] border-l-transparent",
       )}
     >
       <div className="relative shrink-0">
         <div
-          className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-sm"
+          className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-body shadow-sm"
           style={{ backgroundColor: bg, color: text }}
         >
           {initials}
@@ -934,19 +934,19 @@ function PatientListItem({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className={cn("font-semibold text-sm truncate", isSelected ? "text-[#1f75fe]" : "text-[#0f172a]")}>
+          <p className={cn("font-semibold text-body truncate", isSelected ? "text-[var(--ds-primary)]" : "text-[var(--text)]")}>
             {patient.name}
           </p>
           {isActive && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-[#1f75fe]/10 text-[#1f75fe]">
+            <span className="text-micro font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--ds-primary)]/10 text-[var(--ds-primary)]">
               активен
             </span>
           )}
         </div>
-        <p className="text-xs text-[#64748b] truncate mt-0.5">{patient.phone}</p>
+        <p className="text-caption text-[var(--text-secondary)] truncate mt-0.5">{patient.phone}</p>
       </div>
       {isSelected && (
-        <div className="w-2 h-2 rounded-full shrink-0 bg-[#1f75fe]" />
+        <div className="w-2 h-2 rounded-full shrink-0 bg-[var(--ds-primary)]" />
       )}
     </button>
   );

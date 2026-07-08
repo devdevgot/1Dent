@@ -252,7 +252,7 @@ export default function DoctorAnalyticsPage() {
         icon={<BarChart3 className="w-5 h-5" strokeWidth={1.8} />}
         badge={
           hasActiveFilters ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] rounded-full text-xs font-medium">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] rounded-full text-caption font-medium">
               <SlidersHorizontal className="w-3 h-3" />
               {t("doctorAnalytics.filterActive")}
             </div>
@@ -263,7 +263,7 @@ export default function DoctorAnalyticsPage() {
             type="button"
             onClick={() => setShowFiltersModal(true)}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 text-sm font-semibold transition-all",
+              "flex items-center gap-2 px-3 py-1.5 text-body font-semibold transition-all",
               hasActiveFilters
                 ? "rounded-full bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)] text-white shadow-md hover:scale-105"
                 : "rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
@@ -283,18 +283,18 @@ export default function DoctorAnalyticsPage() {
           <div className={`p-6 space-y-6 relative ${isFetching ? "opacity-60 pointer-events-none" : ""}`}>
             {isError && (
               <div className="bg-[var(--danger-light)] border border-[var(--danger)]/20 rounded-2xl p-4 flex items-center justify-between gap-3">
-                <p className="text-sm text-[var(--danger)]">{t("common.loadError", "Не удалось загрузить данные")}</p>
+                <p className="text-body text-[var(--danger)]">{t("common.loadError", "Не удалось загрузить данные")}</p>
                 <button
                   type="button"
                   onClick={() => refetch()}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-[var(--danger)]/20 text-[var(--danger)]"
+                  className="text-caption font-semibold px-3 py-1.5 rounded-xl bg-[var(--ds-surface)] border border-[var(--danger)]/20 text-[var(--danger)]"
                 >
                   {t("common.retry", "Повторить")}
                 </button>
               </div>
             )}
             {isFetching && !isLoading && (
-              <div className="absolute top-2 right-6 text-xs text-[var(--text-secondary)]">
+              <div className="absolute top-2 right-6 text-caption text-[var(--text-secondary)]">
                 {t("common.updating", "Обновление…")}
               </div>
             )}
@@ -307,8 +307,8 @@ export default function DoctorAnalyticsPage() {
                     <div className={`w-9 h-9 rounded-xl ${card.bg} flex items-center justify-center shadow-sm`}>
                       <Icon className="w-4.5 h-4.5 text-white" size={18} />
                     </div>
-                    <p className={`text-xl font-bold leading-none ${card.text}`}>{card.value}</p>
-                    <p className="text-xs font-medium text-[var(--text-secondary)] leading-tight">{card.label}</p>
+                    <p className={`text-stat font-bold leading-none ${card.text}`}>{card.value}</p>
+                    <p className="text-caption font-medium text-[var(--text-secondary)] leading-tight">{card.label}</p>
                   </div>
                 );
               })}
@@ -318,9 +318,9 @@ export default function DoctorAnalyticsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Revenue Trend */}
               <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
-                <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.revenueTrend")}</h3>
+                <h3 className="text-body font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.revenueTrend")}</h3>
                 {revenueByMonth.length === 0 ? (
-                  <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
+                  <div className="h-[300px] flex items-center justify-center text-caption text-[var(--text-secondary)]">
                     {t("common.noData")}
                   </div>
                 ) : (
@@ -338,9 +338,9 @@ export default function DoctorAnalyticsPage() {
 
               {/* Procedure Types Bar */}
               <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
-                <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.procedureTypes")}</h3>
+                <h3 className="text-body font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.procedureTypes")}</h3>
                 {proceduresByName.length === 0 ? (
-                  <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
+                  <div className="h-[300px] flex items-center justify-center text-caption text-[var(--text-secondary)]">
                     {t("common.noData")}
                   </div>
                 ) : (
@@ -358,9 +358,9 @@ export default function DoctorAnalyticsPage() {
 
               {/* Patient Status Pie */}
               <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
-                <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.patientStatus")}</h3>
+                <h3 className="text-body font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.patientStatus")}</h3>
                 {patientStatusData.length === 0 ? (
-                  <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
+                  <div className="h-[300px] flex items-center justify-center text-caption text-[var(--text-secondary)]">
                     {t("common.noData")}
                   </div>
                 ) : (
@@ -385,8 +385,8 @@ export default function DoctorAnalyticsPage() {
                       {patientStatusData.map((item, index) => (
                         <div key={item.name} className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <span className="text-xs text-[var(--text-secondary)] flex-1 truncate">{item.name}</span>
-                          <span className="text-xs font-semibold text-[var(--text)]">{item.value}</span>
+                          <span className="text-caption text-[var(--text-secondary)] flex-1 truncate">{item.name}</span>
+                          <span className="text-caption font-semibold text-[var(--text)]">{item.value}</span>
                         </div>
                       ))}
                     </div>
@@ -396,9 +396,9 @@ export default function DoctorAnalyticsPage() {
 
               {/* Procedures by Status Bar */}
               <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-6 shadow-md">
-                <h3 className="text-sm font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.proceduresByStatus")}</h3>
+                <h3 className="text-body font-semibold text-[var(--text)] mb-4">{t("doctorAnalytics.proceduresByStatus")}</h3>
                 {procedureStatusChartData.length === 0 ? (
-                  <div className="h-[300px] flex items-center justify-center text-sm text-[var(--text-secondary)]">
+                  <div className="h-[300px] flex items-center justify-center text-caption text-[var(--text-secondary)]">
                     {t("common.noData")}
                   </div>
                 ) : (
@@ -432,13 +432,13 @@ export default function DoctorAnalyticsPage() {
           <div className="space-y-6 py-4">
             {/* Period Section */}
             <div>
-              <h3 className="text-sm font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.period")}</h3>
+              <h3 className="text-body font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.period")}</h3>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {PRESETS.map(({ key, label }) => (
                   <button
                     key={key}
                     onClick={() => setPreset(key)}
-                    className={`px-3 py-2 text-xs rounded-xl font-medium transition-all ${
+                    className={`px-3 py-2 text-caption rounded-xl font-medium transition-all ${
                       preset === key
                         ? "bg-[var(--primary-light)] text-[var(--ds-primary)] font-semibold"
                         : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
@@ -453,10 +453,10 @@ export default function DoctorAnalyticsPage() {
             {/* Custom Date Range */}
             {preset === "custom" && (
               <div>
-                <h3 className="text-sm font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.customPeriod")}</h3>
+                <h3 className="text-body font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.customPeriod")}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)] mb-1.5 block">
+                    <label className="text-caption font-medium text-[var(--text-secondary)] mb-1.5 block">
                       {t("doctorAnalytics.from")}
                     </label>
                     <input
@@ -464,11 +464,11 @@ export default function DoctorAnalyticsPage() {
                       value={customFrom}
                       max={customTo || undefined}
                       onChange={(e) => setCustomFrom(e.target.value)}
-                      className="w-full text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
+                      className="w-full text-body border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-[var(--text-secondary)] mb-1.5 block">
+                    <label className="text-caption font-medium text-[var(--text-secondary)] mb-1.5 block">
                       {t("doctorAnalytics.to")}
                     </label>
                     <input
@@ -476,7 +476,7 @@ export default function DoctorAnalyticsPage() {
                       value={customTo}
                       min={customFrom || undefined}
                       onChange={(e) => setCustomTo(e.target.value)}
-                      className="w-full text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
+                      className="w-full text-body border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
                     />
                   </div>
                 </div>
@@ -485,11 +485,11 @@ export default function DoctorAnalyticsPage() {
 
             {/* Procedure Type */}
             <div>
-              <h3 className="text-sm font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.procedureType")}</h3>
+              <h3 className="text-body font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.procedureType")}</h3>
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowTypeDropdown((v) => !v)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl hover:border-[var(--ds-primary)]/40 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 text-body bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl hover:border-[var(--ds-primary)]/40 transition-colors"
                 >
                   <span className={selectedType ? "text-[var(--text)] font-medium" : "text-[var(--text-secondary)]"}>
                     {selectedTypeName}
@@ -500,18 +500,18 @@ export default function DoctorAnalyticsPage() {
                   <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg z-20 py-1 max-h-48 overflow-y-auto">
                     <button
                       onClick={() => { setSelectedType(""); setShowTypeDropdown(false); }}
-                      className={`w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] transition-colors ${!selectedType ? "font-semibold text-[var(--ds-primary)] bg-[var(--primary-light)]" : "text-[var(--text-secondary)]"}`}
+                      className={`w-full px-3 py-2 text-body text-left hover:bg-[var(--surface-2)] transition-colors ${!selectedType ? "font-semibold text-[var(--ds-primary)] bg-[var(--primary-light)]" : "text-[var(--text-secondary)]"}`}
                     >
                       {t("doctorAnalytics.allTypes")}
                     </button>
                     {knownProcedureNames.length === 0 && (
-                      <p className="px-3 py-2 text-sm text-[var(--text-secondary)] italic text-center">{t("common.noData")}</p>
+                      <p className="px-3 py-2 text-caption text-[var(--text-secondary)] italic text-center">{t("common.noData")}</p>
                     )}
                     {knownProcedureNames.map((name) => (
                       <button
                         key={name}
                         onClick={() => { setSelectedType(name); setShowTypeDropdown(false); }}
-                        className={`w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] transition-colors ${selectedType === name ? "font-semibold text-[var(--ds-primary)] bg-[var(--primary-light)]" : "text-[var(--text)]"}`}
+                        className={`w-full px-3 py-2 text-body text-left hover:bg-[var(--surface-2)] transition-colors ${selectedType === name ? "font-semibold text-[var(--ds-primary)] bg-[var(--primary-light)]" : "text-[var(--text)]"}`}
                       >
                         {name}
                       </button>
@@ -523,34 +523,34 @@ export default function DoctorAnalyticsPage() {
 
             {/* Min Revenue */}
             <div>
-              <h3 className="text-sm font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.minRevenue")}</h3>
+              <h3 className="text-body font-semibold text-[var(--text)] mb-3">{t("doctorAnalytics.minRevenue")}</h3>
               <input
                 type="number"
                 min={0}
                 value={minRevenueInput}
                 onChange={(e) => setMinRevenueInput(e.target.value)}
                 placeholder="Мин. выручка (₸)"
-                className="w-full text-sm border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
+                className="w-full text-body border border-[var(--ds-border)] rounded-xl px-3 py-2 bg-[var(--ds-surface)] text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] transition-colors"
               />
             </div>
 
             {/* Filter Summary */}
             {hasActiveFilters && (
               <div className="border-t border-[var(--ds-border)] pt-4">
-                <p className="text-xs text-[var(--text-secondary)] mb-2">{t("doctorAnalytics.filteredResults")}</p>
+                <p className="text-caption text-[var(--text-secondary)] mb-2">{t("doctorAnalytics.filteredResults")}</p>
                 <div className="flex flex-wrap gap-2">
                   {preset !== "all" && (
-                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-xs rounded-full font-medium">
+                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-caption rounded-full font-medium">
                       {PRESETS.find((p) => p.key === preset)?.label}
                     </div>
                   )}
                   {selectedType && (
-                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-xs rounded-full font-medium">
+                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-caption rounded-full font-medium">
                       {selectedType}
                     </div>
                   )}
                   {Number(minRevenueInput) > 0 && (
-                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-xs rounded-full font-medium">
+                    <div className="px-2.5 py-1 bg-[var(--primary-light)] text-[var(--ds-primary)] text-caption rounded-full font-medium">
                       ≥ ₸{Number(minRevenueInput).toLocaleString()}
                     </div>
                   )}
@@ -564,7 +564,7 @@ export default function DoctorAnalyticsPage() {
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm text-[var(--danger)] border border-[var(--danger)]/20 rounded-xl hover:bg-[var(--danger-light)] transition-colors font-medium"
+                className="flex items-center gap-1.5 px-4 py-2 text-body text-[var(--danger)] border border-[var(--danger)]/20 rounded-xl hover:bg-[var(--danger-light)] transition-colors font-medium"
               >
                 <X className="w-4 h-4" />
                 {t("doctorAnalytics.resetFilters")}
@@ -572,7 +572,7 @@ export default function DoctorAnalyticsPage() {
             )}
             <button
               onClick={() => setShowFiltersModal(false)}
-              className="flex items-center gap-1.5 px-6 py-2 text-sm bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)] text-white rounded-full hover:scale-105 transition-all font-semibold shadow-md"
+              className="flex items-center gap-1.5 px-6 py-2 text-body bg-[var(--ds-primary)] hover:bg-[var(--primary-hover)] text-white rounded-full hover:scale-105 transition-all font-semibold shadow-md"
             >
               {t("common.close")}
             </button>

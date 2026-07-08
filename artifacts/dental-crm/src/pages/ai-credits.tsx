@@ -64,7 +64,7 @@ export default function AiCreditsPage() {
       />
 
       <div className="px-4 pt-4 space-y-4 max-w-2xl mx-auto">
-        <p className="text-xs text-[var(--text-subtle)] -mt-2">{t("aiCredits.subtitle")}</p>
+        <p className="text-caption text-[var(--text-subtle)] -mt-2">{t("aiCredits.subtitle")}</p>
         {isLoading && (
           <SkeletonCard className="p-5 space-y-4">
             <div className="flex items-start justify-between gap-3">
@@ -80,15 +80,15 @@ export default function AiCreditsPage() {
         )}
 
         {isError && (
-          <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-2xl p-4 text-sm text-[var(--danger)] space-y-2">
+          <div className="bg-[var(--danger-light)] border border-[var(--danger-light)] rounded-2xl p-4 text-body text-[var(--danger)] space-y-2">
             <p>{t("aiCredits.loadError")}</p>
             {errorMessage && (
-              <p className="text-xs text-[var(--danger)]/80 break-words">{errorMessage}</p>
+              <p className="text-caption text-[var(--danger)]/80 break-words">{errorMessage}</p>
             )}
             <button
               type="button"
               onClick={() => void refetch()}
-              className="text-xs font-semibold text-[var(--danger)] underline"
+              className="text-caption font-semibold text-[var(--danger)] underline"
             >
               {t("aiCredits.refresh")}
             </button>
@@ -96,7 +96,7 @@ export default function AiCreditsPage() {
         )}
 
         {!isLoading && !isError && !summary && (
-          <div className="bg-[var(--warning-light)] border border-[var(--warning-light)] rounded-2xl p-4 text-sm text-[var(--warning)]">
+          <div className="bg-[var(--warning-light)] border border-[var(--warning-light)] rounded-2xl p-4 text-body text-[var(--warning)]">
             {t("aiCredits.emptyState")}
           </div>
         )}
@@ -106,11 +106,11 @@ export default function AiCreditsPage() {
             <AlertTriangle className="w-5 h-5 text-[var(--danger)] shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[var(--danger)] text-sm">{t("aiCredits.exhaustedTitle")}</p>
-              <p className="text-xs text-[var(--danger)] mt-1 leading-relaxed">{t("aiCredits.exhaustedDesc")}</p>
+              <p className="text-caption text-[var(--danger)] mt-1 leading-relaxed">{t("aiCredits.exhaustedDesc")}</p>
               {isOwner && (
                 <Link
                   href="/pricing"
-                  className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-[var(--danger)] underline"
+                  className="inline-flex items-center gap-1.5 mt-3 text-caption font-semibold text-[var(--danger)] underline"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
                   {t("aiCredits.buyMore")}
@@ -125,13 +125,13 @@ export default function AiCreditsPage() {
             <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)]">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div>
-                  <p className="text-xs font-medium text-[var(--text-subtle)] uppercase tracking-wider">
+                  <p className="text-caption font-medium text-[var(--text-subtle)] uppercase tracking-wider">
                     {t("aiCredits.available")}
                   </p>
                   <p className="text-3xl font-bold text-[var(--ds-primary)] mt-1">
                     {formatNumber(summary.remaining)}
                   </p>
-                  <p className="text-xs text-[var(--text-subtle)] mt-1">
+                  <p className="text-caption text-[var(--text-subtle)] mt-1">
                     {t("aiCredits.ofTotal", { total: formatNumber(summary.totalAvailable) })}
                   </p>
                 </div>
@@ -140,7 +140,7 @@ export default function AiCreditsPage() {
                 </div>
               </div>
 
-              <div className="mb-2 flex items-center justify-between text-xs text-[var(--text-secondary)]">
+              <div className="mb-2 flex items-center justify-between text-caption text-[var(--text-secondary)]">
                 <span>{t("aiCredits.usedThisMonth", { month: summary.monthLabel })}</span>
                 <span className="font-semibold">{formatNumber(summary.usedThisMonth)}</span>
               </div>
@@ -184,7 +184,7 @@ export default function AiCreditsPage() {
         <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--ds-border)] flex items-center gap-2">
             <History className="w-4 h-4 text-[var(--text-subtle)]" />
-            <h2 className="text-sm font-semibold text-[var(--text)]">{t("aiCredits.historyTitle")}</h2>
+            <h2 className="text-body font-semibold text-[var(--text)]">{t("aiCredits.historyTitle")}</h2>
           </div>
 
           {usageLoading && (
@@ -192,13 +192,13 @@ export default function AiCreditsPage() {
           )}
 
           {usageError && (
-            <div className="p-6 text-sm text-[var(--danger)] text-center">{t("aiCredits.historyError")}</div>
+            <div className="p-6 text-body text-[var(--danger)] text-center">{t("aiCredits.historyError")}</div>
           )}
 
           {!usageLoading && !usageError && usage.length === 0 && (
             <div className="p-8 text-center">
               <Sparkles className="w-8 h-8 text-[var(--ds-border)] mx-auto mb-2" />
-              <p className="text-sm text-[var(--text-subtle)]">{t("aiCredits.noUsage")}</p>
+              <p className="text-body text-[var(--text-subtle)]">{t("aiCredits.noUsage")}</p>
             </div>
           )}
 
@@ -207,12 +207,12 @@ export default function AiCreditsPage() {
               {usage.map((row) => (
                 <div key={row.id} className="px-4 py-3 flex items-start gap-3 hover:bg-[var(--bg)] transition-colors">
                   <div className="w-8 h-8 rounded-xl bg-[var(--primary-light)] flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-[var(--ds-primary)]">-{row.credits}</span>
+                    <span className="text-caption font-bold text-[var(--ds-primary)]">-{row.credits}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--text)] truncate">{row.featureLabel}</p>
+                    <p className="text-body font-medium text-[var(--text)] truncate">{row.featureLabel}</p>
                     {row.description && row.description !== row.featureLabel && (
-                      <p className="text-xs text-[var(--text-subtle)] truncate mt-0.5">{row.description}</p>
+                      <p className="text-caption text-[var(--text-subtle)] truncate mt-0.5">{row.description}</p>
                     )}
                     <p className="text-[11px] text-[var(--text-subtle)] mt-1">
                       {formatDateTime(row.createdAt)}
@@ -228,7 +228,7 @@ export default function AiCreditsPage() {
         {isOwner && (
           <Link
             href="/pricing"
-            className="flex items-center justify-center gap-2 w-full py-3.5 bg-[var(--ds-primary)] text-white rounded-full text-sm font-semibold shadow-md hover:bg-[var(--primary-hover)] hover:scale-105 transition-all"
+            className="flex items-center justify-center gap-2 w-full py-3.5 bg-[var(--ds-primary)] text-white rounded-full text-body font-semibold shadow-md hover:bg-[var(--primary-hover)] hover:scale-105 transition-all"
           >
             <CreditCard className="w-4 h-4" />
             {t("aiCredits.upgradePlan")}

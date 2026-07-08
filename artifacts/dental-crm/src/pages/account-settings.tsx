@@ -156,21 +156,21 @@ export default function AccountSettings() {
   const profileItems = [
     {
       icon: User,
-      iconClass: "bg-[#1f75fe] text-white",
+      iconClass: "bg-[var(--ds-primary)] text-white",
       label: t("settingsPage.name"),
       value: user?.name,
       href: "/account/edit-profile",
     },
     {
       icon: Mail,
-      iconClass: "bg-[#16a34a] text-white",
+      iconClass: "bg-[var(--success)] text-white",
       label: t("settingsPage.email"),
       value: user?.email,
       href: "/account/change-email",
     },
     {
       icon: Lock,
-      iconClass: "bg-[#64748b] text-white",
+      iconClass: "bg-[var(--text-secondary)] text-white",
       label: t("settingsPage.password"),
       value: "••••••••",
       href: "/account/change-password",
@@ -194,16 +194,16 @@ export default function AccountSettings() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1f75fe]/25 rounded-full"
+                  className="relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]/25 rounded-full"
                 >
-                  <div className="w-[64px] h-[64px] rounded-full overflow-hidden bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] font-bold text-[22px] ring-2 ring-[#1f75fe]/10 transition-transform active:scale-95 duration-150">
+                  <div className="w-[64px] h-[64px] rounded-full overflow-hidden bg-[var(--ds-primary)]/10 flex items-center justify-center text-[var(--ds-primary)] font-bold text-[22px] ring-2 ring-[var(--ds-primary)]/10 transition-transform active:scale-95 duration-150">
                     {photoUrl ? (
                       <img key={photoVersion} src={photoUrl} alt="avatar" className="w-full h-full object-cover" />
                     ) : (
                       initials
                     )}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-[#1f75fe] flex items-center justify-center shadow-sm border-2 border-white">
+                  <div className="absolute -bottom-0.5 -right-0.5 w-[22px] h-[22px] rounded-full bg-[var(--ds-primary)] flex items-center justify-center shadow-sm border-2 border-white">
                     <Camera className="w-3 h-3 text-white" />
                   </div>
                 </button>
@@ -215,14 +215,14 @@ export default function AccountSettings() {
                   onChange={handlePhotoSelect}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-[16px] text-[var(--text)] leading-tight truncate">
+                  <p className="font-bold text-section-title text-[var(--text)] leading-tight truncate">
                     {user?.name}
                   </p>
-                  <p className="text-[13px] text-[var(--text-secondary)] truncate mt-0.5">
+                  <p className="text-caption text-[var(--text-secondary)] truncate mt-0.5">
                     {user?.email}
                   </p>
                   {user?.role && (
-                    <span className="inline-block mt-1.5 text-[10px] font-bold text-[#1f75fe] uppercase tracking-wider bg-[#1f75fe]/10 px-2 py-0.5 rounded-full">
+                    <span className="inline-block mt-1.5 text-micro font-bold text-[var(--ds-primary)] uppercase tracking-wider bg-[var(--ds-primary)]/10 px-2 py-0.5 rounded-full">
                       {t(`role.${user.role}`)}
                     </span>
                   )}
@@ -291,17 +291,17 @@ export default function AccountSettings() {
                       </div>
                       <div className="text-right">
                         {r.approvedAmount && (
-                          <p className="text-body font-bold text-[#16a34a]">
+                          <p className="text-body font-bold text-[var(--success)]">
                             ₸{Number(r.approvedAmount).toLocaleString("ru-KZ")}
                           </p>
                         )}
                         {r.status === "approved" || r.status === "paid" ? (
-                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[var(--success)] bg-[#f0fdf4] px-2 py-0.5 rounded-full">
                             <CheckCircle className="w-3 h-3" />
                             {r.status === "paid" ? t("payroll.paid") : t("payroll.approved")}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[#d97706] bg-[#fef3c7] px-2 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-micro font-semibold text-[var(--warning)] bg-[#fef3c7] px-2 py-0.5 rounded-full">
                             <Clock className="w-3 h-3" />
                             {t("payroll.pending")}
                           </span>
@@ -333,7 +333,7 @@ export default function AccountSettings() {
                       className={cn(
                         "min-w-[2.5rem] text-center text-caption font-semibold px-2 py-1 rounded-md transition-all",
                         currentLang === lang
-                          ? "bg-white text-[#1f75fe] shadow-sm"
+                          ? "bg-[var(--ds-surface)] text-[var(--ds-primary)] shadow-sm"
                           : "text-[var(--text-secondary)] hover:text-[var(--text)]",
                       )}
                     >
@@ -354,7 +354,7 @@ export default function AccountSettings() {
               {user?.role === "owner" && (
                 <IosGroupRow onClick={() => setLocation("/logs")}>
                   <div className="flex items-center gap-3 min-w-0">
-                    <SettingsRowIcon icon={ScrollText} className="bg-[#64748b] text-white" />
+                    <SettingsRowIcon icon={ScrollText} className="bg-[var(--text-secondary)] text-white" />
                     <span className="text-body">{t("nav.logs")}</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
@@ -380,7 +380,7 @@ export default function AccountSettings() {
               onClick={() => logoutMutation.mutate()}
               className={cn("justify-center", logoutMutation.isPending && "opacity-60 pointer-events-none")}
             >
-              <span className="flex items-center gap-2 text-body font-semibold text-[#dc2626]">
+              <span className="flex items-center gap-2 text-body font-semibold text-[var(--danger)]">
                 <LogOut className="w-[18px] h-[18px] shrink-0" />
                 {logoutMutation.isPending ? t("account.signingOut") : t("account.signOut")}
               </span>

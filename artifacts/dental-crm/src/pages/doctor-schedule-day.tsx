@@ -29,9 +29,9 @@ const STATUS_COLORS: Record<ProcedureStatus, {
   bar: string; bg: string; text: string; badge: string; icon: string;
 }> = {
   scheduled:   { bar: "bg-[#0284c7]", bg: "bg-[#e0f2fe]", text: "text-[#0284c7]", badge: "bg-[#e0f2fe] text-[#0284c7] border-[#bae6fd]", icon: "text-[#0284c7]" },
-  in_progress: { bar: "bg-[#d97706]", bg: "bg-[#fef3c7]", text: "text-[#d97706]", badge: "bg-[#fef3c7] text-[#d97706] border-[#fde68a]", icon: "text-[#d97706]" },
-  completed:   { bar: "bg-[#16a34a]", bg: "bg-[#f0fdf4]", text: "text-[#16a34a]", badge: "bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]", icon: "text-[#16a34a]" },
-  cancelled:   { bar: "bg-[#94a3b8]", bg: "bg-[#f8fafc]", text: "text-[#64748b]", badge: "bg-[#f1f5f9] text-[#94a3b8] border-[#e2e8f0]", icon: "text-[#94a3b8]" },
+  in_progress: { bar: "bg-[var(--warning)]", bg: "bg-[#fef3c7]", text: "text-[var(--warning)]", badge: "bg-[#fef3c7] text-[var(--warning)] border-[#fde68a]", icon: "text-[var(--warning)]" },
+  completed:   { bar: "bg-[var(--success)]", bg: "bg-[#f0fdf4]", text: "text-[var(--success)]", badge: "bg-[#f0fdf4] text-[var(--success)] border-[#bbf7d0]", icon: "text-[var(--success)]" },
+  cancelled:   { bar: "bg-[#94a3b8]", bg: "bg-[#f8fafc]", text: "text-[var(--text-secondary)]", badge: "bg-[#f1f5f9] text-[var(--text-subtle)] border-[#e2e8f0]", icon: "text-[var(--text-subtle)]" },
 };
 
 
@@ -217,7 +217,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
           <button
             type="button"
             onClick={() => setEditingProcedure(null)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-xs font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-caption font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             Новая запись
@@ -245,7 +245,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                       {DOW_SHORT[(d.getDay())]}
                     </span>
                     <span className={`
-                      w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold transition-all
+                      w-8 h-8 flex items-center justify-center rounded-full text-body font-bold transition-all
                       ${isSel && isNow  ? "bg-[var(--ds-primary)] text-white shadow-lg"
                       : isSel           ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
                       : isNow           ? "text-[var(--ds-primary)]"
@@ -367,7 +367,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
               <div className="w-14 h-14 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center">
                 <Calendar className="w-7 h-7 text-[var(--text-subtle)]" />
               </div>
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">Нет приёмов на этот день</p>
+              <p className="text-body font-semibold text-[var(--text-secondary)]">Нет приёмов на этот день</p>
             </div>
           )}
         </div>

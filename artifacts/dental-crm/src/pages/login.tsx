@@ -84,12 +84,12 @@ export default function Login() {
   };
 
   return (
-    <div className="h-[100dvh] w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-center px-6 overflow-hidden">
+    <div className="h-[100dvh] w-full bg-[var(--bg)] font-manrope flex flex-col items-center justify-center px-6 overflow-hidden">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6"
+        className="w-full max-w-sm bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-6"
       >
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
@@ -98,12 +98,12 @@ export default function Login() {
             alt="1Dent"
             className="w-20 h-20 mb-3"
           />
-          <h1 className="text-lg font-bold text-[#0f172a]">1Dent</h1>
-          <p className="text-caption text-[#94a3b8] mt-0.5">Управление клиникой</p>
+          <h1 className="text-lg font-bold text-[var(--text)]">1Dent</h1>
+          <p className="text-caption text-[var(--text-subtle)] mt-0.5">Управление клиникой</p>
         </div>
 
         {/* Title */}
-        <h2 className="text-xl font-bold text-[#0f172a] text-center mb-5">
+        <h2 className="text-xl font-bold text-[var(--text)] text-center mb-5">
           {t("auth.welcome")}
         </h2>
 
@@ -111,8 +111,8 @@ export default function Login() {
           {/* Email field */}
           <div>
             <div className={`
-              w-full px-3.5 py-2.5 rounded-xl border bg-white transition-all
-              ${errors.email ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
+              w-full px-3.5 py-2.5 rounded-xl border bg-[var(--ds-surface)] transition-all
+              ${errors.email ? "border-[#dc2626] bg-[#fef2f2]" : "border-[var(--ds-border)] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
               <p className="section-label mb-0.5">
                 {t("auth.email")}
@@ -122,19 +122,19 @@ export default function Login() {
                 type="email"
                 placeholder="doctor@clinic.com"
                 autoComplete="email"
-                className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
+                className="w-full bg-transparent text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none"
               />
             </div>
             {errors.email && (
-              <p className="text-xs text-[#dc2626] font-medium mt-1 px-1">{errors.email.message}</p>
+              <p className="text-caption text-[var(--danger)] font-medium mt-1 px-1">{errors.email.message}</p>
             )}
           </div>
 
           {/* Password field */}
           <div>
             <div className={`
-              w-full px-3.5 py-2.5 rounded-xl border bg-white transition-all relative
-              ${errors.password ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
+              w-full px-3.5 py-2.5 rounded-xl border bg-[var(--ds-surface)] transition-all relative
+              ${errors.password ? "border-[#dc2626] bg-[#fef2f2]" : "border-[var(--ds-border)] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
             `}>
               <p className="section-label mb-0.5">
                 {t("auth.password")}
@@ -145,25 +145,25 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  className="flex-1 bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
+                  className="flex-1 bg-transparent text-body text-[var(--text)] placeholder:text-[var(--text-subtle)] outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="text-[#94a3b8] hover:text-[#64748b] transition-colors ml-2"
+                  className="text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors ml-2"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
             {errors.password && (
-              <p className="text-xs text-[#dc2626] font-medium mt-1 px-1">{errors.password.message}</p>
+              <p className="text-caption text-[var(--danger)] font-medium mt-1 px-1">{errors.password.message}</p>
             )}
           </div>
 
           {/* Forgot password */}
           <div className="text-right">
-            <Link href="/forgot-password" className="text-caption font-medium text-[#1f75fe] hover:opacity-80 transition-opacity">
+            <Link href="/forgot-password" className="text-caption font-medium text-[var(--ds-primary)] hover:opacity-80 transition-opacity">
               {t("auth.forgotPassword")}
             </Link>
           </div>
@@ -172,16 +172,16 @@ export default function Login() {
           <button
             type="submit"
             disabled={loginMutation.isPending}
-            className="w-full py-3 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-1 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
+            className="w-full py-3 rounded-full text-body font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-1 bg-[#1f75fe] hover:bg-[var(--primary-hover)] text-white"
           >
             {loginMutation.isPending ? t("auth.signingIn") : t("auth.signIn")}
           </button>
 
           {/* Register link */}
           <div className="text-center pt-1">
-            <Link href="/register" className="text-body text-[#94a3b8]">
+            <Link href="/register" className="text-body text-[var(--text-subtle)]">
               Нет аккаунта?{" "}
-              <span className="font-semibold text-[#1f75fe]">Создать</span>
+              <span className="font-semibold text-[var(--ds-primary)]">Создать</span>
             </Link>
           </div>
         </form>

@@ -43,7 +43,7 @@ export default function PayrollMyPage() {
 
       <div className="px-4 mt-4 space-y-3">
         {periodLabel && (
-          <p className="text-xs text-[var(--text-subtle)] -mt-1">{periodLabel}</p>
+          <p className="text-caption text-[var(--text-subtle)] -mt-1">{periodLabel}</p>
         )}
         {isLoading && (
           <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)] space-y-3">
@@ -56,8 +56,8 @@ export default function PayrollMyPage() {
         {!isLoading && !salary && (
           <div className="bg-[var(--ds-surface)] rounded-2xl p-8 shadow-md border border-[var(--ds-border)] text-center">
             <Wallet className="w-10 h-10 text-[var(--text-subtle)] mx-auto mb-3" />
-            <p className="text-sm text-[var(--text-secondary)]">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
-            <p className="text-xs text-[var(--text-subtle)] mt-1">{t("payroll.contactAdmin", "Обратитесь к администратору")}</p>
+            <p className="text-body text-[var(--text-secondary)]">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>
+            <p className="text-caption text-[var(--text-subtle)] mt-1">{t("payroll.contactAdmin", "Обратитесь к администратору")}</p>
           </div>
         )}
 
@@ -67,7 +67,7 @@ export default function PayrollMyPage() {
             <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)]">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-xs font-semibold text-[var(--text-subtle)] uppercase tracking-wide mb-1">
+                  <p className="text-caption font-semibold text-[var(--text-subtle)] uppercase tracking-wide mb-1">
                     {t("payroll.calculated", "Начислено")}
                   </p>
                   <p className="text-3xl font-bold text-[var(--text)] tracking-tight">
@@ -109,9 +109,9 @@ export default function PayrollMyPage() {
             <div className="bg-[var(--ds-surface)] rounded-2xl p-5 shadow-md border border-[var(--ds-border)]">
               <div className="flex items-center gap-2 mb-3">
                 <Clock className="w-4 h-4 text-[var(--text-subtle)]" />
-                <p className="text-sm font-semibold text-[var(--text)]">{t("payroll.history", "История выплат")}</p>
+                <p className="text-body font-semibold text-[var(--text)]">{t("payroll.history", "История выплат")}</p>
               </div>
-              <p className="text-xs text-[var(--text-subtle)]">{t("payroll.historyComingSoon", "История за прошлые месяцы будет доступна в следующем обновлении")}</p>
+              <p className="text-caption text-[var(--text-subtle)]">{t("payroll.historyComingSoon", "История за прошлые месяцы будет доступна в следующем обновлении")}</p>
             </div>
           </>
         )}
@@ -123,8 +123,8 @@ export default function PayrollMyPage() {
 function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-[var(--text-secondary)]">{label}</span>
-      <span className={cn("text-sm font-semibold", highlight ? "text-[var(--success)]" : "text-[var(--text)]")}>
+      <span className="text-caption text-[var(--text-secondary)]">{label}</span>
+      <span className={cn("text-body font-semibold", highlight ? "text-[var(--success)]" : "text-[var(--text)]")}>
         {value}
       </span>
     </div>

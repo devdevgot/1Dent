@@ -137,7 +137,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-[var(--ds-border)] bg-[var(--bg)] hover:bg-[var(--surface-2)] transition-colors"
                 >
                   <Building2 className="w-4 h-4 text-[var(--ds-primary)] shrink-0" />
-                  <span className="flex-1 text-left text-[13px] font-medium text-[var(--text)] truncate">
+                  <span className="flex-1 text-left text-caption font-medium text-[var(--text)] truncate">
                     {selectedBranch ? selectedBranch.name : mainClinicName}
                   </span>
                   <ChevronDown className={cn("w-4 h-4 text-[var(--text-subtle)] transition-transform", branchPickerOpen && "rotate-180")} />
@@ -150,7 +150,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       <button
                         onClick={() => handleBranchSelect(null)}
                         className={cn(
-                          "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
+                          "w-full flex items-center gap-2.5 px-3 py-2.5 text-caption transition-colors",
                           !selectedBranchId ? "bg-[var(--primary-light)] text-[var(--ds-primary)] font-semibold" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
                         )}
                       >
@@ -163,7 +163,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                           key={branch.id}
                           onClick={() => handleBranchSelect(branch.id)}
                           className={cn(
-                            "w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] transition-colors",
+                            "w-full flex items-center gap-2.5 px-3 py-2.5 text-caption transition-colors",
                             selectedBranchId === branch.id ? "bg-[var(--primary-light)] text-[var(--ds-primary)] font-semibold" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
                           )}
                         >
@@ -205,7 +205,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {isRestricted && hasBranches && (
         <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[var(--warning-light)] border-b border-[var(--ds-border)] z-10">
           <MapPin className="w-4 h-4 text-[var(--warning)] shrink-0" />
-          <p className="text-xs text-[var(--warning)] font-medium">
+          <p className="text-caption text-[var(--warning)] font-medium">
             Вы вне клиники — часть функций недоступна
           </p>
         </div>
@@ -215,7 +215,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {hasBranches && status === "denied" && (
         <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[var(--bg)] border-b border-[var(--ds-border)] z-10">
           <AlertTriangle className="w-4 h-4 text-[var(--text-subtle)] shrink-0" />
-          <p className="text-xs text-[var(--text-secondary)]">
+          <p className="text-caption text-[var(--text-secondary)]">
             Геолокация недоступна — разрешите доступ в настройках браузера
           </p>
         </div>
@@ -230,7 +230,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
             <div>
               <h2 className="text-[17px] font-semibold text-[var(--text)] mb-1">Вы вне клиники</h2>
-              <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+              <p className="text-caption text-[var(--text-secondary)] leading-relaxed">
                 Этот раздел доступен только когда вы находитесь в клинике.
                 {activeBranch && ` Ближайший филиал: ${activeBranch.name}`}
               </p>

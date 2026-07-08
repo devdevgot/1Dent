@@ -67,7 +67,7 @@ function KanbanPreview() {
   const counts = [3, 5, 4, 8];
   return (
     <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Канбан-доска</div>
+      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Канбан-доска</div>
       <div className="flex gap-2">
         {stages.map((s, i) => (
           <div key={s} className="flex-1 bg-[var(--bg)] rounded-xl p-2">
@@ -96,7 +96,7 @@ function WhatsAppPreview() {
     <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
       <div className="flex items-center gap-2 mb-3">
         <FaWhatsapp size={14} color="#22c55e" />
-        <span className="text-xs font-manrope font-bold text-[var(--text)]">WhatsApp чат</span>
+        <span className="text-caption font-manrope font-bold text-[var(--text)]">WhatsApp чат</span>
         <span className="ml-auto w-2 h-2 bg-green-400 rounded-full animate-pulse" />
       </div>
       <div className="space-y-2">
@@ -117,7 +117,7 @@ function WhatsAppPreview() {
 function FinancePreview() {
   return (
     <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Финансы июнь</div>
+      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Финансы июнь</div>
       <div className="grid grid-cols-2 gap-2 mb-3">
         {[
           { label: "Доходы", value: "4.2M ₸", color: "#d1fae5", text: "#065f46" },
@@ -157,7 +157,7 @@ function ToothPreview() {
   return (
     <div className="landing-mockup bg-[var(--ds-surface)] w-full overflow-hidden">
       <div className="px-3 pt-3 pb-1">
-        <div className="text-xs font-manrope font-bold text-[var(--text)]">FDI зубная карта</div>
+        <div className="text-caption font-manrope font-bold text-[var(--text)]">FDI зубная карта</div>
       </div>
       <div className="px-2 pb-3">
         <FdiChart teethData={DEMO_TEETH} selectedFdi={null} className="border-0 shadow-none p-2" />
@@ -169,7 +169,7 @@ function ToothPreview() {
 function ContractPreview() {
   return (
     <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Договор</div>
+      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Договор</div>
       <div className="space-y-2">
         {[
           { label: "Пациент", value: "Асель Нурова" },
@@ -199,7 +199,7 @@ function AnalyticsPreview() {
   ];
   return (
     <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-xs font-manrope font-bold text-[var(--text)] mb-3">Источники пациентов</div>
+      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Источники пациентов</div>
       <div className="space-y-2">
         {channels.map((c) => (
           <div key={c.label}>
@@ -252,7 +252,7 @@ export function Features() {
               >
                 <div className={!isEven ? "lg:col-start-2" : ""}>
                   <div
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-manrope font-medium mb-5"
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-body font-manrope font-medium mb-5"
                     style={{ backgroundColor: feature.color, color: feature.accent }}
                   >
                     <feature.icon size={14} />
