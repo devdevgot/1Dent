@@ -35,6 +35,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { ChatMessagesSkeleton } from "@/components/skeletons";
 import { toast } from "sonner";
+import { useChatNavigationStore } from "@/hooks/use-chat-navigation";
 
 const BRAND      = "#1f75fe";
 const CHAT_BG    = "#faf8f4";
@@ -659,6 +660,7 @@ export default function ChatPage() {
   const { t }                                   = useTranslation();
   const { user, clinic, setAuth }               = useAuthStore();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const consumePendingPatient = useChatNavigationStore((s) => s.consumePendingPatient);
   const [search, setSearch]                     = useState("");
   const [waStatus, setWaStatus]                 = useState<WaStatus | null>(null);
   const [waStatusLoading, setWaStatusLoading]   = useState(true);
@@ -679,6 +681,11 @@ export default function ChatPage() {
       // non-critical
     }
   }, []);
+
+  useEffect(() => {
+    const pendingPatientId = consumePendingPatient();
+    if (pendingPatientId) setSelectedPatientId(pendingPatientId);
+  }, [consumePendingPatient]);
 
   useEffect(() => {
     fetchActiveSessions();

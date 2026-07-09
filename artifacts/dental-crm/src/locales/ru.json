@@ -245,7 +245,10 @@
     "title": "Уведомления",
     "markAllRead": "Все прочитано",
     "empty": "Уведомлений нет",
-    "redAlerts": "{{count}} алерт"
+    "redAlerts": "{{count}} алерт",
+    "unreadCount": "{{count}} непрочитанных",
+    "new": "Новые",
+    "read": "Прочитанные"
   },
   "patient": {
     "statusLabel": "Статус",

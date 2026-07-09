@@ -243,7 +243,10 @@
     "title": "Хабарламалар",
     "markAllRead": "Барлығын оқылды деп белгілеу",
     "empty": "Хабарламалар жоқ",
-    "redAlerts": "{{count}} алерт"
+    "redAlerts": "{{count}} алерт",
+    "unreadCount": "{{count}} оқылмаған",
+    "new": "Жаңа",
+    "read": "Оқылған"
   },
   "patient": {
     "statusLabel": "Мәртебе",

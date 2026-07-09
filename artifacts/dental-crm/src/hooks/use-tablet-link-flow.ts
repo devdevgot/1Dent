@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useTabletPairingUiStore } from "@/hooks/use-tablet-pairing-ui";
 import {
   confirmTabletPairing,
   getPendingTabletPairing,
@@ -13,23 +14,18 @@ type LinkFlowStatus = "idle" | "processing" | "success" | "pairing_pending" | "e
 export function useTabletLinkFlow() {
   const { toast } = useToast();
   const { user } = useAuthStore();
-  const [pairingCodeOpen, setPairingCodeOpen] = useState(false);
-  const [pairingCode, setPairingCode] = useState<string | null>(null);
-  const [pairingSessionId, setPairingSessionId] = useState<string | null>(null);
-  const [cabinetName, setCabinetName] = useState<string | null>(null);
+  const pairingCodeOpen = useTabletPairingUiStore((s) => s.isOpen);
+  const pairingCode = useTabletPairingUiStore((s) => s.pairingCode);
+  const pairingSessionId = useTabletPairingUiStore((s) => s.sessionId);
+  const cabinetName = useTabletPairingUiStore((s) => s.cabinetName);
+  const openPairingModal = useTabletPairingUiStore((s) => s.open);
+  const closePairingModal = useTabletPairingUiStore((s) => s.close);
   const [resendingPairing, setResendingPairing] = useState(false);
   const [confirmingPairing, setConfirmingPairing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<LinkFlowStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const shownPendingRef = useRef<string | null>(null);
-
-  const openPairingModal = useCallback((sessionId: string, code: string, name: string | null) => {
-    setPairingSessionId(sessionId);
-    setPairingCode(code);
-    setCabinetName(name);
-    setPairingCodeOpen(true);
-  }, []);
 
   const processToken = useCallback(async (raw: string) => {
     const token = raw.includes("token=")
@@ -106,8 +102,11 @@ export function useTabletLinkFlow() {
     setResendingPairing(true);
     try {
       const result = await resendTabletPairingCode(pairingSessionId);
-      setPairingCode(result.data.pairingCode);
-      setCabinetName(result.data.cabinet.name);
+      openPairingModal(
+        pairingSessionId,
+        result.data.pairingCode,
+        result.data.cabinet.name,
+      );
       toast({
         title: "Новый код отправлен",
         description: `Код обновлён для ${result.data.cabinet.name}`,
@@ -121,17 +120,14 @@ export function useTabletLinkFlow() {
     } finally {
       setResendingPairing(false);
     }
-  }, [pairingSessionId, toast]);
+  }, [pairingSessionId, toast, openPairingModal]);
 
   const confirmPairing = useCallback(async () => {
     if (!pairingSessionId || !pairingCode) return false;
     setConfirmingPairing(true);
     try {
       await confirmTabletPairing(pairingSessionId, pairingCode);
-      setPairingCodeOpen(false);
-      setPairingCode(null);
-      setPairingSessionId(null);
-      setCabinetName(null);
+      closePairingModal();
       shownPendingRef.current = null;
       setStatus("success");
       toast({
@@ -149,14 +145,7 @@ export function useTabletLinkFlow() {
     } finally {
       setConfirmingPairing(false);
     }
-  }, [pairingSessionId, pairingCode, toast]);
-
-  const closePairingModal = useCallback(() => {
-    setPairingCodeOpen(false);
-    setPairingCode(null);
-    setPairingSessionId(null);
-    setCabinetName(null);
-  }, []);
+  }, [pairingSessionId, pairingCode, toast, closePairingModal]);
 
   useEffect(() => {
     if (user?.role !== "owner" || pairingCodeOpen) return;
