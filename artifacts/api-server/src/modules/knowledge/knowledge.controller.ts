@@ -289,9 +289,11 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
         .set({ scriptMindMap: scriptMindMap as never, updatedAt: new Date() })
         .where(eq(chatbotSettingsTable.clinicId, clinicId));
     } else {
+      const defaults = chatbotDefaultsForNewClinic();
       await db.insert(chatbotSettingsTable).values({
         id: randomUUID(),
         clinicId,
+        ...defaults,
         scriptMindMap: scriptMindMap as never,
       });
     }
