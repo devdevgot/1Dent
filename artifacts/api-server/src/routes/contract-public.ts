@@ -664,7 +664,7 @@ function buildBundlePage(opts: {
     .card-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
     .meta-chip{background:#f2f2f7;border-radius:8px;padding:5px 10px;font-size:12px;color:#3a3a3c}
     .meta-chip span{font-weight:600}
-    .contract-body{line-height:1.7;font-size:13px;color:#3a3a3c;white-space:pre-wrap;word-break:break-word}
+    .contract-body{line-height:1.7;font-size:13px;color:#3a3a3c;white-space:normal;word-break:break-word}
     ${CONTRACT_TABLE_CSS.replace(/\n/g, "")}
     .actions{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e5ea;padding:14px 16px;display:flex;gap:10px;z-index:20}
     .btn{flex:1;height:48px;border-radius:14px;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;text-decoration:none}
@@ -717,7 +717,7 @@ function buildBundlePage(opts: {
       <div class="card-meta">
         <div class="meta-chip">Пациент: <span>${escHtml(patientName)}</span></div>
       </div>
-      <div class="contract-body">${c.renderedHtml}</div>
+      <div class="contract-body"${i === 0 ? "" : ' data-lazy="1"'}>${i === 0 ? c.renderedHtml : ""}</div>
     </div>`,
       )
       .join("")}
@@ -768,6 +768,14 @@ function buildBundlePage(opts: {
     function showTab(idx){
       document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('active',i===idx)});
       document.querySelectorAll('.card').forEach(function(c,i){c.classList.toggle('active',i===idx)});
+      var panel=document.getElementById('tab-panel-'+idx);
+      if(panel){
+        var body=panel.querySelector('.contract-body');
+        if(body&&body.getAttribute('data-lazy')==='1'&&!body.getAttribute('data-loaded')&&TABS[idx]){
+          body.innerHTML=TABS[idx].html||'';
+          body.setAttribute('data-loaded','1');
+        }
+      }
       currentIdx=idx;
     }
 

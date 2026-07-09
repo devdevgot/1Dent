@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect, useDeferredValue, startTransition } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -19,6 +19,7 @@ import {
 import { useLocation } from "wouter";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { ListRowsSkeleton } from "@/components/skeletons";
 
 const PATIENT_FIELDS = [
@@ -155,40 +156,74 @@ function isSystemTemplate(t: ContractTemplate): boolean {
   return Boolean(t.isSystem ?? (t as ContractTemplate & { is_system?: boolean }).is_system);
 }
 
-function TemplatePreviewPanel({ templateId, open }: { templateId: string; open: boolean }) {
-  const { data, isLoading, isError } = usePreviewContractTemplate(open ? templateId : null);
-
-  if (!open) return null;
-  if (isLoading) {
-    return (
-      <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4] flex justify-center py-4">
-        <Loader2 className="w-4 h-4 text-[#94a3b8] animate-spin" />
-      </div>
-    );
-  }
-
-  const html = data?.data?.html;
-  if (isError || !html) {
-    return (
-      <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4]">
-        <p className="text-xs text-[#94a3b8] italic text-center py-2">Не удалось загрузить предпросмотр</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4]">
-      <p className="text-[10px] text-[#94a3b8] mb-2">Пример с тестовыми данными пациента</p>
-      <div
-        className="bg-white rounded-xl border border-[#e8e3d9] p-2.5 max-h-48 overflow-y-auto text-[11px] text-[#64748b] leading-relaxed prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </div>
-  );
+function buildPreviewSrcDoc(bodyHtml: string, title: string): string {
+  const safeTitle = title
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${safeTitle}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:12px 14px;color:#3a3a3c;font-size:13px;line-height:1.55;background:#fff}.contract-para{margin:0 0 10px;text-align:justify;word-break:break-word}.contract-clause{margin:0 0 8px;text-align:justify;word-break:break-word}.contract-center{margin:0 0 10px;text-align:center;font-weight:600;word-break:break-word}.contract-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}.contract-table th,.contract-table td{border:1px solid #d1d1d6;padding:6px 8px;vertical-align:top;word-break:break-word}.contract-table th{background:#f5f5f7;font-weight:600}</style></head><body>${bodyHtml}</body></html>`;
 }
 
-function SystemTemplatePreview({ templateId, open }: { templateId: string; open: boolean }) {
-  return <TemplatePreviewPanel templateId={templateId} open={open} />;
+function ContractPreviewModal({
+  templateId,
+  templateName,
+  open,
+  onOpenChange,
+}: {
+  templateId: string | null;
+  templateName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { data, isLoading, isError } = usePreviewContractTemplate(open ? templateId : null, {
+    query: { staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 },
+  });
+  const html = data?.data?.html ?? "";
+  const deferredHtml = useDeferredValue(html);
+  const [srcDoc, setSrcDoc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !deferredHtml) {
+      setSrcDoc(null);
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      startTransition(() => {
+        setSrcDoc(buildPreviewSrcDoc(deferredHtml, templateName));
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, deferredHtml, templateName]);
+
+  return (
+    <AppDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Предпросмотр договора"
+      description={templateName}
+      size="xl"
+      className="h-[80vh] max-h-[80vh] flex flex-col"
+      bodyClassName="!p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
+    >
+      {isLoading || (html && !srcDoc) ? (
+        <div className="flex flex-1 items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 text-[#94a3b8] animate-spin" />
+        </div>
+      ) : isError || !srcDoc ? (
+        <div className="flex flex-1 items-center justify-center py-16 text-sm text-[#94a3b8]">
+          Не удалось загрузить предпросмотр
+        </div>
+      ) : (
+        <iframe
+          srcDoc={srcDoc}
+          sandbox=""
+          className="flex-1 w-full border-0 min-h-0 bg-white"
+          title={`Предпросмотр: ${templateName}`}
+        />
+      )}
+    </AppDialog>
+  );
 }
 
 export default function ContractTemplatesPage() {
@@ -202,6 +237,11 @@ export default function ContractTemplatesPage() {
   const [dragOver, setDragOver] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const openPreview = (id: string, name: string) => {
+    setPreviewTarget({ id, name });
+  };
 
   const { data, isLoading } = useListContractTemplates();
   const uploadMutation = useUploadContractTemplate();
@@ -484,9 +524,7 @@ export default function ContractTemplatesPage() {
                               {/* Document list under Subcategory */}
                               {isSubExpanded && (
                                 <div className="pl-4 space-y-2 border-l-2 border-dashed border-[#e8e3d9] ml-1.5 py-1">
-                                  {docs.map((tmpl) => {
-                                    const isExpanded = expandedId === tmpl.id;
-                                    return (
+                                  {docs.map((tmpl) => (
                                       <div key={tmpl.id} className="bg-white rounded-xl border border-[#e8e3d9] overflow-hidden shadow-sm">
                                         <div className="p-3 flex items-center justify-between gap-4">
                                           <div className="flex items-center gap-2.5 min-w-0">
@@ -494,17 +532,15 @@ export default function ContractTemplatesPage() {
                                             <p className="text-xs font-medium text-[#0f172a] truncate">{tmpl.name}</p>
                                           </div>
                                           <button
-                                            onClick={() => setExpandedId(isExpanded ? null : tmpl.id)}
+                                            onClick={() => openPreview(tmpl.id, tmpl.name)}
                                             className="p-1.5 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#f1ede4] transition-colors shrink-0"
                                             title="Предпросмотр с тестовыми данными"
                                           >
-                                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                            <Eye className="w-3.5 h-3.5" />
                                           </button>
                                         </div>
-                                        <SystemTemplatePreview templateId={tmpl.id} open={isExpanded} />
                                       </div>
-                                    );
-                                  })}
+                                    ))}
                                 </div>
                               )}
                             </div>
@@ -591,11 +627,11 @@ export default function ContractTemplatesPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => setExpandedId(isExpanded && !isEditing ? null : tmpl.id)}
+                          onClick={() => openPreview(tmpl.id, tmpl.name)}
                           className="p-2 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#faf8f4] transition-colors"
-                          title={isExpanded && !isEditing ? "Скрыть" : "Предпросмотр с тестовыми данными"}
+                          title="Предпросмотр с тестовыми данными"
                         >
-                          {isExpanded && !isEditing ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          <Eye className="w-4 h-4" />
                         </button>
                         {canEdit && (
                           <button
@@ -611,16 +647,12 @@ export default function ContractTemplatesPage() {
                     </div>
 
                     {/* Expanded mapping view / editor */}
-                    {isExpanded && (
+                    {isExpanded && isEditing && (
                       <div className="px-4 pb-4 border-t border-[#e8e3d9] pt-2">
-                        {isEditing ? (
-                          <MappingEditor
-                            template={tmpl}
-                            onClose={() => { setEditingId(null); setExpandedId(null); }}
-                          />
-                        ) : (
-                          <TemplatePreviewPanel templateId={tmpl.id} open />
-                        )}
+                        <MappingEditor
+                          template={tmpl}
+                          onClose={() => { setEditingId(null); setExpandedId(null); }}
+                        />
                       </div>
                     )}
                   </div>
@@ -630,6 +662,13 @@ export default function ContractTemplatesPage() {
           )}
         </div>
       </div>
+
+      <ContractPreviewModal
+        templateId={previewTarget?.id ?? null}
+        templateName={previewTarget?.name ?? ""}
+        open={previewTarget !== null}
+        onOpenChange={(open) => { if (!open) setPreviewTarget(null); }}
+      />
     </PageShell>
   );
 }
