@@ -602,7 +602,6 @@ function buildBundlePage(opts: {
     contracts.map((c, i) => ({
       idx: i,
       label: c.templateName,
-      html: c.renderedHtml,
       status: c.status,
       token: c.token,
     })),
@@ -772,8 +771,18 @@ function buildBundlePage(opts: {
       if(panel){
         var body=panel.querySelector('.contract-body');
         if(body&&body.getAttribute('data-lazy')==='1'&&!body.getAttribute('data-loaded')&&TABS[idx]){
-          body.innerHTML=TABS[idx].html||'';
-          body.setAttribute('data-loaded','1');
+          body.innerHTML='<p style="color:#6e6e73;text-align:center;padding:24px 0">Загрузка…</p>';
+          fetch('/p/contract/'+TABS[idx].token+'?preview=1')
+            .then(function(r){return r.text();})
+            .then(function(html){
+              var doc=new DOMParser().parseFromString(html,'text/html');
+              var src=doc.querySelector('.contract-body');
+              body.innerHTML=src?src.innerHTML:'<p style="color:#ff3b30;text-align:center;padding:24px 0">Не удалось загрузить документ</p>';
+              body.setAttribute('data-loaded','1');
+            })
+            .catch(function(){
+              body.innerHTML='<p style="color:#ff3b30;text-align:center;padding:24px 0">Ошибка загрузки</p>';
+            });
         }
       }
       currentIdx=idx;

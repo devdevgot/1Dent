@@ -1,13 +1,13 @@
-import { useState, useRef, useMemo, useEffect, useDeferredValue, startTransition } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListContractTemplates,
-  usePreviewContractTemplate,
   useUploadContractTemplate,
   useDeleteContractTemplate,
   useUpdateTemplateMappings,
+  getBaseUrl,
   type ContractTemplate,
   type FieldMappingItem,
 } from "@workspace/api-client-react";
@@ -156,15 +156,6 @@ function isSystemTemplate(t: ContractTemplate): boolean {
   return Boolean(t.isSystem ?? (t as ContractTemplate & { is_system?: boolean }).is_system);
 }
 
-function buildPreviewSrcDoc(bodyHtml: string, title: string): string {
-  const safeTitle = title
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-  return `<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${safeTitle}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:12px 14px;color:#3a3a3c;font-size:13px;line-height:1.55;background:#fff}.contract-para{margin:0 0 10px;text-align:justify;word-break:break-word}.contract-clause{margin:0 0 8px;text-align:justify;word-break:break-word}.contract-center{margin:0 0 10px;text-align:center;font-weight:600;word-break:break-word}.contract-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}.contract-table th,.contract-table td{border:1px solid #d1d1d6;padding:6px 8px;vertical-align:top;word-break:break-word}.contract-table th{background:#f5f5f7;font-weight:600}</style></head><body>${bodyHtml}</body></html>`;
-}
-
 function ContractPreviewModal({
   templateId,
   templateName,
@@ -176,25 +167,71 @@ function ContractPreviewModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data, isLoading, isError } = usePreviewContractTemplate(open ? templateId : null, {
-    query: { staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 },
-  });
-  const html = data?.data?.html ?? "";
-  const deferredHtml = useDeferredValue(html);
-  const [srcDoc, setSrcDoc] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!open || !deferredHtml) {
-      setSrcDoc(null);
+    if (!open || !templateId) {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+      setPreviewUrl(null);
+      setErrorMessage(null);
+      setIsLoading(false);
       return;
     }
-    const frame = requestAnimationFrame(() => {
-      startTransition(() => {
-        setSrcDoc(buildPreviewSrcDoc(deferredHtml, templateName));
+
+    let cancelled = false;
+    setIsLoading(true);
+    setErrorMessage(null);
+    setPreviewUrl(null);
+
+    const base = getBaseUrl() ?? "";
+    const token = localStorage.getItem("auth_token");
+    const url = `${base}/api/contracts/templates/${templateId}/preview/html`;
+
+    fetch(url, {
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          let message = `Ошибка ${res.status}`;
+          try {
+            const data = await res.json() as { error?: string };
+            if (data.error) message = data.error;
+          } catch {
+            // HTML or empty body
+          }
+          throw new Error(message);
+        }
+        return res.text();
+      })
+      .then((html) => {
+        if (cancelled) return;
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+        const objectUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+        previewUrlRef.current = objectUrl;
+        setPreviewUrl(objectUrl);
+        setIsLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setErrorMessage(err instanceof Error ? err.message : "Не удалось загрузить предпросмотр");
+        setIsLoading(false);
       });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [open, deferredHtml, templateName]);
+
+    return () => {
+      cancelled = true;
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+    };
+  }, [open, templateId]);
 
   return (
     <AppDialog
@@ -206,17 +243,17 @@ function ContractPreviewModal({
       className="h-[80vh] max-h-[80vh] flex flex-col"
       bodyClassName="!p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
     >
-      {isLoading || (html && !srcDoc) ? (
+      {isLoading ? (
         <div className="flex flex-1 items-center justify-center py-16">
           <Loader2 className="w-6 h-6 text-[#94a3b8] animate-spin" />
         </div>
-      ) : isError || !srcDoc ? (
-        <div className="flex flex-1 items-center justify-center py-16 text-sm text-[#94a3b8]">
-          Не удалось загрузить предпросмотр
+      ) : errorMessage || !previewUrl ? (
+        <div className="flex flex-1 items-center justify-center py-16 px-6 text-sm text-[#94a3b8] text-center">
+          {errorMessage ?? "Не удалось загрузить предпросмотр"}
         </div>
       ) : (
         <iframe
-          srcDoc={srcDoc}
+          src={previewUrl}
           sandbox=""
           className="flex-1 w-full border-0 min-h-0 bg-white"
           title={`Предпросмотр: ${templateName}`}
