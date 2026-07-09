@@ -4,7 +4,6 @@ import { useEffect, useCallback, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, X } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -26,8 +25,6 @@ export function MenuServiceSheet({
   onStackBack,
   children,
 }: MenuServiceSheetProps) {
-  const isMobile = useIsMobile();
-
   const handleClose = useCallback(() => {
     onOpenChange(false);
   }, [onOpenChange]);
@@ -62,7 +59,7 @@ export function MenuServiceSheet({
       {open ? (
         <motion.div
           key="menu-service-overlay"
-          className="fixed inset-0 z-[60] flex flex-col justify-end"
+          className="fixed inset-0 z-[60] flex flex-col"
           role="dialog"
           aria-modal="true"
           aria-label={title}
@@ -80,12 +77,7 @@ export function MenuServiceSheet({
           />
 
           <motion.div
-            className={cn(
-              "relative flex w-full flex-col overflow-hidden",
-              "h-[100dvh] max-h-[100dvh]",
-              "bg-white shadow-[0_-16px_56px_rgba(15,23,42,0.16)]",
-              isMobile ? "rounded-t-[20px]" : "rounded-t-[24px]",
-            )}
+            className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-white"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -98,13 +90,7 @@ export function MenuServiceSheet({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.32, ease: EASE, delay: 0.08 }}
             >
-              {isMobile ? (
-                <div className="flex justify-center pt-2.5 pb-1" aria-hidden="true">
-                  <div className="w-10 h-1 rounded-full bg-[#d9d3c7]" />
-                </div>
-              ) : null}
-
-              <div className="flex items-center gap-2 px-4 pt-1 pb-3">
+              <div className="flex items-center gap-2 px-4 pt-3 pb-3">
                 {onStackBack ? (
                   <button
                     type="button"
