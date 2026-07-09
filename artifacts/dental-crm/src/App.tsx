@@ -16,6 +16,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
+import { clearChunkReloadFlag, reloadOnceOnChunkError } from "@/lib/chunk-reload";
 import {
   PatientsPageSkeleton,
   ToothDetailPageSkeleton,
@@ -58,7 +59,12 @@ function lazyPage(
   load: () => Promise<LazyPageModule>,
   fallback: React.ReactNode = <AppShellSkeleton />,
 ) {
-  const Component = lazy(load);
+  const loadWithChunkRecovery = () =>
+    load().catch((err) => {
+      reloadOnceOnChunkError(err);
+      return new Promise<LazyPageModule>(() => {});
+    });
+  const Component = lazy(loadWithChunkRecovery);
   return function LazyRoutePage() {
     return (
       <Suspense fallback={fallback}>
@@ -425,7 +431,11 @@ function Router() {
 }
 
 function App() {
-  useEffect(() => installGlobalErrorHandlers("dental-crm"), []);
+  useEffect(() => {
+    const cleanup = installGlobalErrorHandlers("dental-crm");
+    clearChunkReloadFlag();
+    return cleanup;
+  }, []);
 
   return (
     <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
