@@ -1,0 +1,254 @@
+import { createChatCompletion, CHAT_MODEL } from "../../lib/openrouter-client";
+import { logger } from "../../lib/logger";
+import type { ChatbotSettings } from "@workspace/db";
+import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
+import type { ChatMessage, ManagerExample } from "./ai-classifier";
+import { mergeReply, appendToReply, replyFromText } from "./ai-classifier";
+import type { ChatbotReply } from "./chatbot-reply";
+import { buildAgentOrchestratorPrompt } from "./chatbot-agent-prompt";
+import { parseChatbotAgentTurn } from "./chatbot-agent-parser";
+import { buildScriptContextForAgent, assertAllowedTransition } from "./chatbot-agent-context";
+import {
+  executeChatbotAgentTools,
+  deriveFsmStateFromAgent,
+  buildDoctorPresentationFallback,
+} from "./chatbot-tools";
+import type { ScriptMindMapData } from "./mindmap-utils";
+import { findMindMapNodeByFsmState } from "./mindmap-utils";
+import {
+  filterFactsForState,
+  type ChatbotPromptFacts,
+} from "./chatbot-prompt-builder";
+import { buildBranchListMessage } from "./clinic-knowledge";
+
+type OutboundResponse = ChatbotReply | null;
+
+export interface AgentTurnDeps {
+  clinicId: string;
+  phone: string;
+  messageText: string;
+  dryRun: boolean;
+  settings: ChatbotSettings;
+  mindMap: ScriptMindMapData;
+  clinicName: string;
+  knowledgeContext: string;
+  priceListContext: string;
+  clinicBranchNames: string[];
+  calendarConfig: ChatbotSettings["calendarConfig"];
+  recentMessages: ChatMessage[];
+  managerExamples: ManagerExample[];
+  sessionState: ChatbotState;
+  sessionData: ChatbotSessionData;
+  noteAction: (msg: string) => void;
+  buildPromptFacts: (fsmState: ChatbotState) => ChatbotPromptFacts;
+  finalizeBooking?: (params: {
+    data: ChatbotSessionData;
+    branchToSave: string;
+    promptState?: ChatbotState;
+  }) => Promise<{ data: ChatbotSessionData; response: OutboundResponse }>;
+}
+
+export interface AgentTurnOutcome {
+  state: ChatbotState;
+  data: ChatbotSessionData;
+  response: OutboundResponse;
+  humanTakeover: boolean;
+}
+
+function buildSessionSummary(data: ChatbotSessionData): string {
+  const parts: string[] = [];
+  if (data.patientName) parts.push(`Имя: ${data.patientName}`);
+  if (data.serviceType) parts.push(`Услуга: ${data.serviceType}`);
+  if (data.urgency) parts.push(`Срочность: ${data.urgency}`);
+  if (data.selectedBranch) parts.push(`Филиал: ${data.selectedBranch}`);
+  if (data.suggestedDoctorName) parts.push(`Врач: ${data.suggestedDoctorName}`);
+  if (data.preferredDatetime) parts.push(`Время: ${data.preferredDatetime}`);
+  if (data.activeMindMapNodeId) parts.push(`Узел скрипта: ${data.activeMindMapNodeId}`);
+  return parts.join(". ");
+}
+
+/** Run one script-guided agent turn (model orchestrates dialogue + tools). */
+export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTurnOutcome> {
+  const {
+    clinicId,
+    phone,
+    messageText,
+    dryRun,
+    mindMap,
+    clinicName,
+    knowledgeContext,
+    clinicBranchNames,
+    calendarConfig,
+    recentMessages,
+    noteAction,
+    buildPromptFacts,
+    finalizeBooking,
+  } = deps;
+
+  let data = { ...deps.sessionData };
+  let state = deps.sessionState;
+
+  const scriptCtx = buildScriptContextForAgent(mindMap, data.activeMindMapNodeId);
+
+  const fsmForFacts = (scriptCtx.currentFsmState as ChatbotState) ?? state;
+  const facts = buildPromptFacts(fsmForFacts);
+
+  const systemPrompt = buildAgentOrchestratorPrompt({
+    clinicName,
+    channel: dryRun ? "playground" : "whatsapp",
+    script: scriptCtx,
+    facts: filterFactsForState(facts, fsmForFacts),
+    fsmState: fsmForFacts,
+    sessionSummary: buildSessionSummary(data),
+  });
+
+  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+    { role: "system", content: systemPrompt },
+    ...recentMessages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+    { role: "user", content: messageText },
+  ];
+
+  let agentTurn = null;
+  try {
+    const completion = await createChatCompletion(
+      {
+        model: CHAT_MODEL,
+        messages,
+        response_format: { type: "json_object" },
+        temperature: 0.55,
+        max_tokens: 1024,
+      },
+      { timeoutMs: 35_000, label: "chatbotAgentTurn" },
+    );
+    const raw = completion.choices[0]?.message?.content ?? null;
+    agentTurn = parseChatbotAgentTurn(raw);
+    if (!agentTurn) {
+      logger.warn({ rawSnippet: raw?.slice(0, 300) }, "[AgentTurn] Invalid agent JSON — using fallback");
+    }
+  } catch (err) {
+    logger.error({ err }, "[AgentTurn] LLM call failed");
+  }
+
+  if (!agentTurn) {
+    const branchFallback =
+      clinicBranchNames.length > 1 && fsmForFacts === "collect_qualification"
+        ? buildBranchListMessage(clinicBranchNames)
+        : "Подскажите, чем могу помочь?";
+    return {
+      state,
+      data,
+      response: replyFromText(branchFallback),
+      humanTakeover: false,
+    };
+  }
+
+  if (agentTurn.handoff) {
+    return {
+      state: "human_takeover",
+      data,
+      response: replyFromText(
+        "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.",
+      ),
+      humanTakeover: true,
+    };
+  }
+
+  const fromNodeId = scriptCtx.currentNodeId;
+  let toNodeId = agentTurn.mindMapNodeId ?? fromNodeId;
+  const transition = assertAllowedTransition(mindMap, fromNodeId, toNodeId ?? undefined);
+  if (!transition.allowed) {
+    logger.warn({ reason: transition.reason, fromNodeId, toNodeId }, "[AgentTurn] Blocked transition");
+    toNodeId = fromNodeId;
+  }
+
+  if (toNodeId) {
+    data.activeMindMapNodeId = toNodeId;
+    const targetNode = mindMap.nodes.find((n) => n.id === toNodeId);
+    if (targetNode?.fsmState) {
+      state = targetNode.fsmState as ChatbotState;
+    }
+  }
+
+  const toolResult = await executeChatbotAgentTools(
+    data,
+    agentTurn.actions ?? [],
+    agentTurn.intent,
+    {
+      clinicId,
+      phone,
+      messageText,
+      dryRun,
+      calendarConfig,
+      knowledgeContext,
+      officialBranches: clinicBranchNames,
+      noteAction,
+    },
+  );
+
+  data = toolResult.data;
+  state = deriveFsmStateFromAgent(
+    data,
+    agentTurn.fsmHint,
+    mindMap.nodes.find((n) => n.id === toNodeId)?.fsmState,
+  );
+
+  if (toolResult.handoff) {
+    return {
+      state: "human_takeover",
+      data,
+      response: mergeReply(
+        replyFromText(agentTurn.reply),
+        "К сожалению, сейчас нет доступных врачей. Напишите «оператор», чтобы связаться с администратором.",
+      ),
+      humanTakeover: true,
+    };
+  }
+
+  if (toolResult.bookingReady && finalizeBooking && data.selectedBranch) {
+    try {
+      const finalized = await finalizeBooking({
+        data,
+        branchToSave: data.selectedBranch,
+        promptState: "confirm_appointment",
+      });
+      return {
+        state: "done",
+        data: finalized.data,
+        response: finalized.response ?? replyFromText(agentTurn.reply),
+        humanTakeover: false,
+      };
+    } catch (err) {
+      logger.error({ err }, "[AgentTurn] finalizeBooking failed");
+      noteAction("Ошибка создания записи");
+    }
+  }
+
+  let reply = replyFromText(agentTurn.reply);
+
+  if (toolResult.suggestedDoctor && !agentTurn.reply.includes(toolResult.suggestedDoctor.name)) {
+    reply = mergeReply(
+      reply,
+      buildDoctorPresentationFallback(toolResult.suggestedDoctor, data.urgency),
+    );
+  }
+
+  if (toolResult.slotsAppendix) {
+    reply = appendToReply(reply, toolResult.slotsAppendix);
+  }
+
+  if (toolResult.toolNotes.length > 0 && dryRun) {
+    noteAction(`Tools: ${toolResult.toolNotes.join("; ")}`);
+  }
+
+  if (!data.activeMindMapNodeId && state) {
+    const byFsm = findMindMapNodeByFsmState(mindMap, state);
+    if (byFsm) data.activeMindMapNodeId = byFsm.id;
+  }
+
+  return {
+    state,
+    data,
+    response: reply,
+    humanTakeover: false,
+  };
+}

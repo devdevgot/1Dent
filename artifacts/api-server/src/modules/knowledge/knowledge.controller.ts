@@ -4,11 +4,20 @@ import { randomUUID } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, OpenRouterAiFailedError } from "../../shared/errors";
-import { db, knowledgeSourcesTable, knowledgeScriptsTable, clinicsTable } from "@workspace/db";
+import {
+  db,
+  knowledgeSourcesTable,
+  knowledgeScriptsTable,
+  clinicsTable,
+  chatbotSettingsTable,
+  clinicBranchesTable,
+} from "@workspace/db";
 import { assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { scrapeUrl, extractFileText } from "./knowledge.service";
 import { generateKnowledgeScripts } from "./knowledge-generate.service";
+import { generateMindMapFromKnowledge } from "./knowledge-mindmap-generate.service";
+import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.service";
 
 const router: IRouter = Router();
 
@@ -195,12 +204,13 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
     assertOpenRouterConfigured();
     const clinicId = req.user!.clinicId;
 
-    const [clinicRow, sources] = await Promise.all([
+    const [clinicRow, sources, branchRows] = await Promise.all([
       db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
       db.select().from(knowledgeSourcesTable).where(and(
         eq(knowledgeSourcesTable.clinicId, clinicId),
         eq(knowledgeSourcesTable.status, "ready"),
       )),
+      db.select({ name: clinicBranchesTable.name }).from(clinicBranchesTable).where(eq(clinicBranchesTable.clinicId, clinicId)),
     ]);
 
     if (sources.length === 0) {
@@ -223,9 +233,15 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
       ? `ВАЖНО: Настоящее название клиники — «${realClinicName}». Используй именно это название.`
       : `ВАЖНО: В приветствиях используй плейсхолдер {{clinic_name}}.`;
 
+    const branchNames = branchRows.map((r) => r.name).filter(Boolean);
+
     let generated;
+    let mindMapResult;
     try {
-      generated = await generateKnowledgeScripts(clinicNameNote, knowledgeText);
+      [generated, mindMapResult] = await Promise.all([
+        generateKnowledgeScripts(clinicNameNote, knowledgeText),
+        generateMindMapFromKnowledge(clinicNameNote, knowledgeText, branchNames),
+      ]);
     } catch (err) {
       req.log?.error({ err, clinicId }, "[KnowledgeGenerate] generation failed");
       const message = err instanceof Error ? err.message : String(err);
@@ -259,7 +275,41 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
         },
       });
 
-    res.json({ success: true, data: { primaryScript: generated.primaryScript, repeatScript: generated.repeatScript } });
+    const scriptMindMap = mindMapResult.mindMap;
+
+    const existingSettings = await db
+      .select({ id: chatbotSettingsTable.id })
+      .from(chatbotSettingsTable)
+      .where(eq(chatbotSettingsTable.clinicId, clinicId))
+      .limit(1);
+
+    if (existingSettings.length > 0) {
+      await db
+        .update(chatbotSettingsTable)
+        .set({ scriptMindMap: scriptMindMap as never, updatedAt: new Date() })
+        .where(eq(chatbotSettingsTable.clinicId, clinicId));
+    } else {
+      await db.insert(chatbotSettingsTable).values({
+        id: randomUUID(),
+        clinicId,
+        scriptMindMap: scriptMindMap as never,
+      });
+    }
+
+    req.log?.info(
+      { clinicId, mindMapNodes: scriptMindMap.nodes.length, warnings: mindMapResult.validation.warnings },
+      "[KnowledgeGenerate] Saved scriptMindMap to chatbot_settings",
+    );
+
+    res.json({
+      success: true,
+      data: {
+        primaryScript: generated.primaryScript,
+        repeatScript: generated.repeatScript,
+        scriptMindMap,
+        mindMapValidation: mindMapResult.validation,
+      },
+    });
   } catch (err) { next(err); }
 });
 

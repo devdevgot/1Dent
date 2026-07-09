@@ -91,9 +91,15 @@ import { planLimitsService } from "../../shared/plan-limits.service";
 import { InsufficientAiCreditsError, OpenRouterAiFailedError, PlanLimitExceededError } from "../../shared/errors/index";
 import {
   renderMindMapCompactPath,
+  renderMindMapScript,
   resolveMindMapNodeIdForState,
+  getGreetingContentFromMindMap,
+  findMindMapRootId,
   type ScriptMindMapData,
 } from "./mindmap-utils";
+import { validateMindMapScript, mergeMindMapWithDefault } from "./mindmap-validator";
+import { shouldUseAgentTurn } from "./chatbot-agent.types";
+import { runChatbotAgentTurn } from "./chatbot-agent-turn";
 import {
   DEFAULT_BOOKING_MIND_MAP,
   usesBookingFlow,
@@ -109,6 +115,7 @@ import {
   isUsableClinicKnowledge,
   buildRefusalFallback,
   resolveBranchFromMessage,
+  buildBranchListMessage,
 } from "./clinic-knowledge";
 import { scheduleAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { scheduleFollowups } from "../followups/followup.queue";
@@ -630,11 +637,13 @@ function getEffectiveSettings(settings: ChatbotSettings): ChatbotSettings {
   if (!raw?.nodes?.length) {
     return { ...settings, scriptMindMap: DEFAULT_BOOKING_MIND_MAP };
   }
+  const validation = validateMindMapScript(raw);
+  const map = validation.valid ? raw : mergeMindMapWithDefault(raw);
   return {
     ...settings,
     scriptMindMap: {
-      nodes: raw.nodes,
-      edges: Array.isArray(raw.edges) ? raw.edges : [],
+      nodes: map.nodes,
+      edges: Array.isArray(map.edges) ? map.edges : [],
     },
   };
 }
@@ -1123,6 +1132,11 @@ function buildUnifiedScriptPrompt(
     task = opts.backendContext.trim();
   }
 
+  const scriptSections = [
+    renderMindMapScript(mindMap).slice(0, 4500),
+    activeNodeId ? renderMindMapCompactPath(mindMap, activeNodeId) : "",
+  ].filter(Boolean);
+
   return buildChatbotPrompt({
     fsmState,
     channel,
@@ -1138,7 +1152,7 @@ function buildUnifiedScriptPrompt(
       userText: opts?.userText,
     }),
     task,
-    mindMapCompactPath: activeNodeId ? renderMindMapCompactPath(mindMap, activeNodeId) : undefined,
+    mindMapCompactPath: scriptSections.length > 0 ? scriptSections.join("\n") : undefined,
     activeMindMapNode: activeNode
       ? { label: activeNode.label, content: activeNode.content, fsmState: activeNode.fsmState }
       : undefined,
@@ -2019,20 +2033,103 @@ export class ChatbotService {
 
     let response: OutboundResponse = null;
 
+    if (
+      shouldUseAgentTurn(promptChannel) &&
+      state !== "human_takeover" &&
+      !session.humanTakeover &&
+      state !== "collect_iin"
+    ) {
+      const mindMap = settings.scriptMindMap as ScriptMindMapData;
+      if (!data.activeMindMapNodeId) {
+        const rootId = findMindMapRootId(mindMap);
+        if (rootId) data.activeMindMapNodeId = rootId;
+      }
+
+      const agentOutcome = await runChatbotAgentTurn({
+        clinicId,
+        phone,
+        messageText,
+        dryRun,
+        settings,
+        mindMap,
+        clinicName: resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName),
+        knowledgeContext,
+        priceListContext,
+        clinicBranchNames,
+        calendarConfig,
+        recentMessages,
+        managerExamples,
+        sessionState: state,
+        sessionData: data,
+        noteAction,
+        buildPromptFacts: (fsmState) =>
+          buildPromptFacts({
+            settings,
+            clinicName,
+            doctorsWithSlots,
+            knowledgeContext,
+            priceListContext,
+            officialBranches: clinicBranchNames,
+            sessionData: data,
+            fsmState,
+            userText: messageText,
+          }),
+        finalizeBooking: async ({ data: bookingData, branchToSave, promptState }) =>
+          finalizeBookingAppointment({
+            clinicId,
+            phone,
+            data: bookingData,
+            branchToSave,
+            dryRun,
+            noteAction,
+            recentMessages,
+            messageText,
+            managerExamples,
+            up: (ps, upOpts) =>
+              buildUnifiedScriptPrompt(
+                settings,
+                doctorsWithSlots,
+                clinicName,
+                knowledgeContext,
+                priceListContext,
+                {
+                  fsmState: ps,
+                  serviceType: bookingData.serviceType,
+                  userText: upOpts?.userText ?? messageText,
+                  activeMindMapNodeId: bookingData.activeMindMapNodeId,
+                  channel: promptChannel,
+                  backendContext: upOpts?.backendContext,
+                  officialBranches: clinicBranchNames,
+                  sessionData: bookingData,
+                },
+              ),
+            promptState,
+          }),
+      });
+
+      session.state = agentOutcome.state;
+      session.data = agentOutcome.data;
+      session.humanTakeover = agentOutcome.humanTakeover;
+      if (agentOutcome.humanTakeover && !dryRun) {
+        await this.notifyHumanTakeover(clinicId, phone, agentOutcome.data.patientName, agentOutcome.data.handoffSummary);
+      }
+      return finishTurn(session, agentOutcome.response);
+    }
+
     switch (state) {
       case "greeting": {
         // Compute a script-based greeting fallback (NOT the legacy IIN-asking greetingTemplate).
         const scriptGreeting = (() => {
-          const blocks = ((settings.scriptBlocks ?? []) as ScriptBlock[]);
-          const active = blocks.length > 0 ? blocks : STANDARD_SCRIPT_BLOCKS;
-          const greet = active.find((b) => b.id === "greeting" && b.enabled);
           const resolvePlaceholders = createPromptPlaceholderResolver({
             clinicName: resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName),
             date: formatAlmatyDayMonth(new Date()),
             time: "удобное вам время",
             doctorName: "вашего врача",
           });
-          return (greet?.content ?? STANDARD_SCRIPT_BLOCKS[0]!.content)
+          const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
+          const fromMindMap = getGreetingContentFromMindMap(mindMapData);
+          const rawContent = fromMindMap ?? STANDARD_SCRIPT_BLOCKS[0]!.content;
+          return rawContent
             .split("\n")
             .filter((line) => !line.includes("• "))
             .join("\n")
@@ -2601,7 +2698,7 @@ export class ChatbotService {
 
         const branchBackendContext = (): string => {
           if (clinicBranchNames.length > 1) {
-            return `Спроси филиал одним коротким вопросом — только из списка: ${clinicBranchNames.join(", ")}. Не придумывай адреса.`;
+            return `Покажи ВСЕ филиалы нумерованным списком в одном сообщении (исключение из правила краткости). Только из списка: ${clinicBranchNames.join("; ")}. Не придумывай адреса.`;
           }
           if (clinicBranchNames.length === 1) {
             return `Единственный филиал: «${clinicBranchNames[0]}». Подтверди коротко и иди дальше.`;
