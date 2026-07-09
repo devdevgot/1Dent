@@ -666,14 +666,15 @@ export function KnowledgeAndScriptModal({
             </button>
           </div>
           <div
-            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white"
-            style={{ height: 320 }}
+            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white relative"
+            style={{ height: 480 }}
           >
             <ScriptMindMap
               key={`${open}-${liveMindMapData?.nodes?.length ?? 0}`}
               initialData={liveMindMapData}
               onSave={handleSaveMindMap}
               saveStatus={mindMapSaveStatus}
+              mode="inline"
             />
           </div>
         </div>
