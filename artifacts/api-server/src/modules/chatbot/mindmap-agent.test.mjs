@@ -43,3 +43,12 @@ test("resolveBranchIndex maps number and ordinal", () => {
   assert.equal(resolveBranchIndex("второй", branches), 1);
   assert.equal(resolveBranchIndex("ул. A", branches), null);
 });
+
+test("shouldUseAgentTurn: playground on without env flag", async () => {
+  const prev = process.env.CHATBOT_AGENT_MODE;
+  delete process.env.CHATBOT_AGENT_MODE;
+  const { shouldUseAgentTurn } = await import("./chatbot-agent.types.ts");
+  assert.equal(shouldUseAgentTurn("playground"), true);
+  assert.equal(shouldUseAgentTurn("whatsapp"), false);
+  if (prev !== undefined) process.env.CHATBOT_AGENT_MODE = prev;
+});
