@@ -57,10 +57,12 @@ export function parseChatbotAgentTurn(raw: string | null): ChatbotAgentTurn | nu
   if (!raw?.trim()) return null;
   try {
     const parsed = parseLlmJson<Record<string, unknown>>(raw);
-    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed || typeof parsed !== "object") {
+      return parseAgentReplyOnly(raw);
+    }
 
     const reply = typeof parsed["reply"] === "string" ? parsed["reply"].trim() : "";
-    if (!reply) return null;
+    if (!reply) return parseAgentReplyOnly(raw);
 
     const actionsRaw = parsed["actions"];
     const actions = Array.isArray(actionsRaw)
@@ -82,6 +84,28 @@ export function parseChatbotAgentTurn(raw: string | null): ChatbotAgentTurn | nu
     };
   } catch (err) {
     logger.warn({ err, rawSnippet: raw.slice(0, 200) }, "[AgentTurn] Failed to parse agent JSON");
-    return null;
+    return parseAgentReplyOnly(raw);
   }
+}
+
+/** Recover at least the reply field when full JSON is malformed. */
+export function parseAgentReplyOnly(raw: string | null): ChatbotAgentTurn | null {
+  if (!raw?.trim()) return null;
+
+  const parsed = parseLlmJson<Record<string, unknown>>(raw);
+  if (parsed && typeof parsed["reply"] === "string" && parsed["reply"].trim()) {
+    return { reply: parsed["reply"].trim(), actions: [] };
+  }
+
+  const match = raw.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  if (match?.[1]) {
+    try {
+      const reply = JSON.parse(`"${match[1]}"`) as string;
+      if (reply.trim()) return { reply: reply.trim(), actions: [] };
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return null;
 }

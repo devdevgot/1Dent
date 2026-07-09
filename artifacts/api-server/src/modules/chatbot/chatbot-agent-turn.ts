@@ -19,7 +19,11 @@ import {
   filterFactsForState,
   type ChatbotPromptFacts,
 } from "./chatbot-prompt-builder";
-import { buildBranchListMessage } from "./clinic-knowledge";
+import {
+  buildAgentFallbackReply,
+  inferAgentActionsForTransition,
+  resolveDeterministicNextNodeId,
+} from "./chatbot-agent-orchestrator";
 
 type OutboundResponse = ChatbotReply | null;
 
@@ -113,6 +117,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   const llmTimeoutMs = dryRun ? 20_000 : 35_000;
 
   let agentTurn = null;
+  let usedParseFallback = false;
   try {
     const completion = await createChatCompletion(
       {
@@ -127,23 +132,72 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     const raw = completion.choices[0]?.message?.content ?? null;
     agentTurn = parseChatbotAgentTurn(raw);
     if (!agentTurn) {
-      logger.warn({ rawSnippet: raw?.slice(0, 300) }, "[AgentTurn] Invalid agent JSON — using fallback");
+      logger.warn({ rawSnippet: raw?.slice(0, 300) }, "[AgentTurn] Invalid agent JSON — using node fallback");
+      usedParseFallback = true;
     }
   } catch (err) {
     logger.error({ err }, "[AgentTurn] LLM call failed");
+    usedParseFallback = true;
   }
 
+  const fromNodeId = scriptCtx.currentNodeId;
+  const fromNode = safeMindMap?.nodes.find((n) => n.id === fromNodeId);
+
+  const toNodeId = resolveDeterministicNextNodeId(
+    safeMindMap,
+    fromNodeId,
+    messageText,
+    data,
+    agentTurn?.mindMapNodeId,
+  );
+  const toNode = safeMindMap?.nodes.find((n) => n.id === toNodeId);
+
   if (!agentTurn) {
-    const branchFallback =
-      clinicBranchNames.length > 1 && fsmForFacts === "collect_qualification"
-        ? buildBranchListMessage(clinicBranchNames)
-        : "Подскажите, чем могу помочь?";
-    return {
-      state,
+    const fallbackReply = buildAgentFallbackReply({
+      scriptCtx,
+      fsmState: fsmForFacts,
+      sessionData: data,
+      clinicBranchNames,
+      knowledgeContext: deps.knowledgeContext,
+    });
+    const actions = inferAgentActionsForTransition(
+      fromNode,
+      toNode,
       data,
-      response: replyFromText(branchFallback),
-      humanTakeover: false,
-    };
+      messageText,
+      clinicBranchNames,
+      [],
+    );
+
+    if (toNodeId) data.activeMindMapNodeId = toNodeId;
+    if (toNode?.fsmState) state = toNode.fsmState as ChatbotState;
+
+    const toolResult = await executeChatbotAgentTools(data, actions, undefined, {
+      clinicId,
+      phone,
+      messageText,
+      dryRun,
+      calendarConfig,
+      knowledgeContext,
+      officialBranches: clinicBranchNames,
+      noteAction,
+    });
+
+    data = toolResult.data;
+    state = deriveFsmStateFromAgent(data, toNode?.fsmState, toNode?.fsmState);
+
+    let reply = replyFromText(fallbackReply);
+    if (toolResult.suggestedDoctor) {
+      reply = mergeReply(reply, buildDoctorPresentationFallback(toolResult.suggestedDoctor, data.urgency));
+    }
+    if (toolResult.slotsAppendix) {
+      reply = appendToReply(reply, toolResult.slotsAppendix);
+    }
+    if (dryRun) {
+      noteAction(usedParseFallback ? "Agent JSON fallback — node-aware reply" : "Agent orchestrator fallback");
+    }
+
+    return { state, data, response: reply, humanTakeover: false };
   }
 
   if (agentTurn.handoff) {
@@ -157,25 +211,37 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     };
   }
 
-  const fromNodeId = scriptCtx.currentNodeId;
-  let toNodeId = agentTurn.mindMapNodeId ?? fromNodeId;
-  const transition = assertAllowedTransition(safeMindMap, fromNodeId, toNodeId ?? undefined);
+  const fromNodeIdResolved = fromNodeId;
+  let resolvedToNodeId = toNodeId;
+  const transition = assertAllowedTransition(safeMindMap, fromNodeIdResolved, resolvedToNodeId ?? undefined);
   if (!transition.allowed) {
-    logger.warn({ reason: transition.reason, fromNodeId, toNodeId }, "[AgentTurn] Blocked transition");
-    toNodeId = fromNodeId;
+    logger.warn(
+      { reason: transition.reason, fromNodeId: fromNodeIdResolved, toNodeId: resolvedToNodeId },
+      "[AgentTurn] Blocked transition — staying on node",
+    );
+    resolvedToNodeId = fromNodeIdResolved;
   }
 
-  if (toNodeId) {
-    data.activeMindMapNodeId = toNodeId;
-    const targetNode = safeMindMap?.nodes.find((n) => n.id === toNodeId);
+  if (resolvedToNodeId) {
+    data.activeMindMapNodeId = resolvedToNodeId;
+    const targetNode = safeMindMap?.nodes.find((n) => n.id === resolvedToNodeId);
     if (targetNode?.fsmState) {
       state = targetNode.fsmState as ChatbotState;
     }
   }
 
+  const mergedActions = inferAgentActionsForTransition(
+    fromNode,
+    safeMindMap?.nodes.find((n) => n.id === resolvedToNodeId),
+    data,
+    messageText,
+    clinicBranchNames,
+    agentTurn.actions ?? [],
+  );
+
   const toolResult = await executeChatbotAgentTools(
     data,
-    agentTurn.actions ?? [],
+    mergedActions,
     agentTurn.intent,
     {
       clinicId,
@@ -193,7 +259,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   state = deriveFsmStateFromAgent(
     data,
     agentTurn.fsmHint,
-    safeMindMap?.nodes.find((n) => n.id === toNodeId)?.fsmState,
+    safeMindMap?.nodes.find((n) => n.id === resolvedToNodeId)?.fsmState,
   );
 
   if (toolResult.handoff) {
