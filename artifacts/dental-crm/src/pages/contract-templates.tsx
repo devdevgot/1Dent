@@ -412,25 +412,25 @@ export default function ContractTemplatesPage() {
                     {/* Category Header */}
                     <button
                       onClick={() => toggleCategory(category)}
-                      className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-[#faf8f4] transition-colors"
+                      className="w-full min-w-0 px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-[#faf8f4] transition-colors"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] shrink-0">
                           {isCatExpanded ? <FolderOpen className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#0f172a]">{category}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[#0f172a] truncate">{category}</p>
                           <p className="text-xs text-[#94a3b8] mt-0.5">{totalDocs} документов в пакете</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         {isCatExpanded ? <ChevronUp className="w-4 h-4 text-[#94a3b8]" /> : <ChevronDown className="w-4 h-4 text-[#94a3b8]" />}
                       </div>
                     </button>
 
                     {/* Subcategories & Files */}
                     {isCatExpanded && (
-                      <div className="border-t border-[#e8e3d9] bg-[#faf8f4]/50 px-5 py-4 space-y-4">
+                      <div className="border-t border-[#e8e3d9] bg-[#faf8f4]/50 px-5 py-4 space-y-4 min-w-0 overflow-hidden">
                         {Object.keys(subcategories).sort().map((subcategory) => {
                           const docs = subcategories[subcategory]!;
                           const subKey = `${category}:${subcategory}`;
@@ -441,10 +441,10 @@ export default function ContractTemplatesPage() {
                               {/* Subcategory Header */}
                               <button
                                 onClick={() => toggleSubcategory(subKey)}
-                                className="flex items-center gap-2 text-xs font-semibold text-[#64748b] hover:text-[#0f172a] transition-colors py-1 outline-none"
+                                className="flex items-center gap-2 min-w-0 max-w-full text-xs font-semibold text-[#64748b] hover:text-[#0f172a] transition-colors py-1 outline-none"
                               >
-                                {isSubExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                                <span>{subcategory}</span>
+                                {isSubExpanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+                                <span className="truncate">{subcategory}</span>
                                 <span className="bg-[#e8e3d9] text-[#64748b] px-1.5 py-0.2 rounded-full text-[10px]">
                                   {docs.length}
                                 </span>
@@ -452,11 +452,11 @@ export default function ContractTemplatesPage() {
 
                               {/* Document list under Subcategory */}
                               {isSubExpanded && (
-                                <div className="pl-4 space-y-2 border-l-2 border-dashed border-[#e8e3d9] ml-1.5 py-1">
+                                <div className="pl-4 space-y-2 border-l-2 border-dashed border-[#e8e3d9] ml-1.5 py-1 min-w-0">
                                   {docs.map((tmpl) => (
-                                      <div key={tmpl.id} className="bg-white rounded-xl border border-[#e8e3d9] overflow-hidden shadow-sm">
-                                        <div className="p-3 flex items-center justify-between gap-4">
-                                          <div className="flex items-center gap-2.5 min-w-0">
+                                      <div key={tmpl.id} className="bg-white rounded-xl border border-[#e8e3d9] overflow-hidden shadow-sm min-w-0">
+                                        <div className="p-3 flex items-center gap-2 min-w-0">
+                                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                             <FileText className="w-4 h-4 text-[#d97706] shrink-0" />
                                             <p className="text-xs font-medium text-[#0f172a] truncate">{tmpl.name}</p>
                                           </div>
