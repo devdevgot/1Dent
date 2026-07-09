@@ -798,7 +798,14 @@ export default function ChatbotPage() {
         }
       />
 
-      <div className={cn("flex-1 p-4 min-h-0", tab === "playground" ? "overflow-hidden flex flex-col" : "overflow-y-auto")}>
+      <div
+        className={cn(
+          "flex-1 min-h-0",
+          tab === "playground"
+            ? "overflow-hidden flex flex-col px-3 py-2 sm:px-4 sm:py-3"
+            : "overflow-y-auto p-4",
+        )}
+      >
 
         {/* Sessions tab */}
         {tab === "sessions" && (
@@ -925,7 +932,11 @@ export default function ChatbotPage() {
           </div>
         )}
 
-        {tab === "playground" && <PlaygroundTab />}
+        {tab === "playground" && (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <PlaygroundTab />
+          </div>
+        )}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
         {tab === "analytics" && <ChatbotAnalyticsTab />}
         {tab === "examples" && <ManagerExamplesTab />}
