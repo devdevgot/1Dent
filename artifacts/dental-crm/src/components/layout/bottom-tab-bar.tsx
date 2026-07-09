@@ -6,7 +6,7 @@ import {
   TabFinanceIcon,
   TabHomeIcon,
   TabInventoryIcon,
-  TabMessagesIcon,
+  TabWhatsAppIcon,
   TabMoreIcon,
   TabPatientsIcon,
   TabServicesIcon,
@@ -109,10 +109,10 @@ function buildTabs(
 
   if (role === "owner" || role === "doctor") {
     tabs.push({
-      id: "messages",
-      labelKey: "nav.messages",
+      id: "chat",
+      labelKey: "nav.chat",
       href: "/chat",
-      icon: TabMessagesIcon,
+      icon: TabWhatsAppIcon,
       geoRestricted: true,
       isActive: matchesPath(location, "/chat"),
       overlaySlug: null,

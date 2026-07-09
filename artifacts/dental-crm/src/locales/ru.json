@@ -206,7 +206,7 @@
     "deleted": "Пациент удалён"
   },
   "chat": {
-    "title": "WhatsApp Чат",
+    "title": "Чат",
     "searchPlaceholder": "Поиск пациента...",
     "noPatients": "Пациенты не найдены",
     "noMessages": "Нет сообщений. Начните переписку.",
