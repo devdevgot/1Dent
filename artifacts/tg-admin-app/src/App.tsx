@@ -22,6 +22,7 @@ import PlatformChatbotPage from "./pages/PlatformChatbotPage";
 import PlatformWhatsappPage from "./pages/PlatformWhatsappPage";
 import MorePage from "./pages/MorePage";
 import { ErrorBoundary } from "./components/error-boundary";
+import { clearChunkReloadFlag } from "./lib/chunk-reload";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -148,6 +149,10 @@ function Inner() {
 }
 
 export default function App() {
+  useEffect(() => {
+    clearChunkReloadFlag();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <HashRouter>

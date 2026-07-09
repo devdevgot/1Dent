@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
 import { MapPin } from "lucide-react";
@@ -12,9 +12,10 @@ import { isGeoRestrictedPath } from "@/lib/geo-restriction";
 import { MenuServiceSheet } from "@/components/layout/menu-service-sheet";
 import { MenuServiceContentSkeleton } from "@/components/skeletons/menu-service-content-skeleton";
 import { findCachedStaffUser } from "@workspace/api-client-react";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 
-const StaffDetailPage = lazy(() => import("@/pages/staff-detail"));
-const DoctorScheduleDayPage = lazy(() => import("@/pages/doctor-schedule-day"));
+const StaffDetailPage = lazyWithChunkRecovery(() => import("@/pages/staff-detail"));
+const DoctorScheduleDayPage = lazyWithChunkRecovery(() => import("@/pages/doctor-schedule-day"));
 
 export function MenuServiceOverlay() {
   const { t } = useTranslation();

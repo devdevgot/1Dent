@@ -1,5 +1,5 @@
 
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { queryClient, persistOptions, clearPersistedQueryCache } from "@/lib/query-persist";
@@ -16,7 +16,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
-import { clearChunkReloadFlag, reloadOnceOnChunkError } from "@/lib/chunk-reload";
+import { clearChunkReloadFlag, lazyWithChunkRecovery } from "@/lib/chunk-reload";
 import {
   PatientsPageSkeleton,
   ToothDetailPageSkeleton,
@@ -59,12 +59,7 @@ function lazyPage(
   load: () => Promise<LazyPageModule>,
   fallback: React.ReactNode = <AppShellSkeleton />,
 ) {
-  const loadWithChunkRecovery = () =>
-    load().catch((err) => {
-      reloadOnceOnChunkError(err);
-      return new Promise<LazyPageModule>(() => {});
-    });
-  const Component = lazy(loadWithChunkRecovery);
+  const Component = lazyWithChunkRecovery(load);
   return function LazyRoutePage() {
     return (
       <Suspense fallback={fallback}>
@@ -119,7 +114,7 @@ const AdminCalendarPage = lazyPage(() => import("@/pages/admin-calendar"), <Admi
 const AdminAppointmentNewPage = lazyPage(() => import("@/pages/admin-appointment-new"), <AppointmentNewPageSkeleton />);
 const AdminFinancePage = lazyPage(() => import("@/pages/admin-finance"), <AdminFinancePageSkeleton />);
 const PayrollMyPage = lazyPage(() => import("@/pages/payroll-my"), <PayrollMyPageSkeleton />);
-const PlanPaywall = lazy(() =>
+const PlanPaywall = lazyWithChunkRecovery(() =>
   import("@/components/billing/plan-paywall").then((m) => ({ default: m.PlanPaywall })),
 );
 

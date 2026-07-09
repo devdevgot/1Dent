@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { RefreshCw } from "lucide-react";
+import { isChunkLoadError } from "./lib/chunk-reload";
 
 interface Props {
   children: ReactNode;
@@ -8,6 +9,7 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  error: Error | null;
 }
 
 function reportBoundaryError(message: string, stack: string | null, componentStack: string) {
@@ -29,11 +31,11 @@ function reportBoundaryError(message: string, stack: string | null, componentSta
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
@@ -41,7 +43,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   reset = () => {
-    this.setState({ hasError: false });
+    if (this.state.error && isChunkLoadError(this.state.error)) {
+      window.location.reload();
+      return;
+    }
+    this.setState({ hasError: false, error: null });
   };
 
   render() {
