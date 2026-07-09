@@ -161,10 +161,10 @@ export function TabWhatsAppIcon(props: TabIconProps) {
   return (
     <TabIconShell {...props} highlightId="tab-whatsapp">
       {(gradId) => (
-        <>
+        <g transform="translate(12 12) scale(0.72) translate(-12 -12)">
           <path d={WA_ICON_PATH} />
           <path d={WA_ICON_PATH} fill={`url(#${gradId})`} />
-        </>
+        </g>
       )}
     </TabIconShell>
   );
