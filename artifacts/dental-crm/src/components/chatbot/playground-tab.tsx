@@ -19,6 +19,11 @@ export function PlaygroundTab() {
   const [isReceivingParts, setIsReceivingParts] = useState(false);
   const [session, setSession] = useState<PlaygroundSessionPayload | null>(null);
   const [humanTakeover, setHumanTakeover] = useState(false);
+  const [activeMindMapNode, setActiveMindMapNode] = useState<{
+    id: string;
+    label: string;
+    fsmState?: string;
+  } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cancelPartsRef = useRef<(() => void) | null>(null);
@@ -34,6 +39,7 @@ export function PlaygroundTab() {
       humanTakeover: data.humanTakeover,
     });
     setHumanTakeover(!!data.humanTakeover);
+    setActiveMindMapNode(data.mindMapNode ?? null);
     setIsReceivingParts(true);
     cancelPartsRef.current?.();
     cancelPartsRef.current = schedulePlaygroundBotParts(
@@ -106,6 +112,7 @@ export function PlaygroundTab() {
     setInput("");
     setSession(null);
     setHumanTakeover(false);
+    setActiveMindMapNode(null);
   }, []);
 
   const handleSend = () => {
@@ -140,6 +147,14 @@ export function PlaygroundTab() {
             <p className="text-xs text-[#64748b] truncate">Тест диалога как новый пациент</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {activeMindMapNode && (
+              <span
+                className="hidden md:inline text-[10px] font-medium px-2 py-1 rounded-full bg-[#e0f2fe] text-[#0284c7] max-w-[180px] truncate"
+                title={activeMindMapNode.id}
+              >
+                {activeMindMapNode.label}
+              </span>
+            )}
             {stateLabel && (
               <span className="hidden sm:inline text-[10px] font-medium px-2 py-1 rounded-full bg-[#f1ede4] text-[#64748b] max-w-[140px] truncate">
                 {stateLabel}

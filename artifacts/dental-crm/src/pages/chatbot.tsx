@@ -676,6 +676,7 @@ export default function ChatbotPage() {
   const sessions = sessionsRes?.data?.sessions ?? [];
 
   const effectiveEnabled = localSettings.enabled ?? settings?.enabled ?? true;
+  const effectiveAgentModeEnabled = localSettings.agentModeEnabled ?? settings?.agentModeEnabled ?? true;
 
   // Seed local settings from server once loaded
   useEffect(() => {
@@ -684,6 +685,7 @@ export default function ChatbotPage() {
       if (Object.keys(prev).length > 0) return prev;
       return {
         enabled: settings.enabled,
+        agentModeEnabled: settings.agentModeEnabled ?? true,
         calendarConfig: settings.calendarConfig,
         abTestEnabled: settings.abTestEnabled,
         scriptVariants: settings.scriptVariants,
@@ -693,6 +695,7 @@ export default function ChatbotPage() {
       if (Object.keys(prev).length > 0) return prev;
       return {
         enabled: settings.enabled,
+        agentModeEnabled: settings.agentModeEnabled ?? true,
         calendarConfig: settings.calendarConfig,
         abTestEnabled: settings.abTestEnabled,
         scriptVariants: settings.scriptVariants,
@@ -739,10 +742,20 @@ export default function ChatbotPage() {
     updateSettings.mutate(
       { data: { scriptMindMap: data } as ChatbotSettingsUpdate },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
           setMindMapSaveStatus("saved");
           setTimeout(() => setMindMapSaveStatus("idle"), 2000);
           refetchSettings();
+          const validation = response?.data?.mindMapValidation;
+          if (validation?.errors?.length) {
+            toast.error(`Mind map: ${validation.errors[0]}`);
+          } else if (validation?.warnings?.length) {
+            toast.warning(
+              `Mind map сохранён с ${validation.warnings.length} предупреждением(ями): ${validation.warnings.slice(0, 2).join("; ")}${validation.warnings.length > 2 ? "…" : ""}`,
+            );
+          } else {
+            toast.success("Mind map сохранён");
+          }
         },
         onError: () => setMindMapSaveStatus("idle"),
       },
@@ -906,6 +919,34 @@ export default function ChatbotPage() {
                   {autosaveStatus === "saving" ? "Сохранение…" : "Сохранено"}
                 </p>
               )}
+            </div>
+
+            {/* Agent mode (mind map as main scenario) */}
+            <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4">
+              <div className="flex items-center gap-3 justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[#0f172a]">Agent mode (mind map)</p>
+                  <p className="text-xs text-[#64748b]">
+                    AI ведёт диалог по mind map. Playground всегда; WhatsApp — при CHATBOT_AGENT_MODE=1
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setLocalSettings((p) => ({ ...p, agentModeEnabled: !effectiveAgentModeEnabled }))
+                  }
+                  className={cn(
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none",
+                    effectiveAgentModeEnabled ? "bg-[var(--success)]" : "bg-[#94a3b8]/40",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                      effectiveAgentModeEnabled ? "translate-x-6" : "translate-x-1",
+                    )}
+                  />
+                </button>
+              </div>
             </div>
 
             {/* Combined knowledge + script button */}

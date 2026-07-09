@@ -90,6 +90,7 @@ const settingsUpdateSchema = z.object({
   calendarConfig: calendarConfigSchema.optional(),
   abTestEnabled: z.boolean().optional(),
   broadcastAiEnabled: z.boolean().optional(),
+  agentModeEnabled: z.boolean().optional(),
   scriptVariants: z.array(scriptVariantSchema).optional(),
 });
 
@@ -150,9 +151,9 @@ router.put(
     if (!parsed.success) {
       return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
     }
-    const settings = await service.updateSettings(req.user!.clinicId, parsed.data).catch(next);
-    if (!settings) return;
-    res.json({ success: true, data: { settings } });
+    const result = await service.updateSettings(req.user!.clinicId, parsed.data).catch(next);
+    if (!result) return;
+    res.json({ success: true, data: result });
   },
 );
 

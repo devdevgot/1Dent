@@ -79,3 +79,51 @@ test("shouldUseAgentTurn: playground on without env flag", async () => {
   assert.equal(shouldUseAgentTurn("whatsapp"), false);
   if (prev !== undefined) process.env.CHATBOT_AGENT_MODE = prev;
 });
+
+test("shouldUseAgentTurn: respects per-clinic kill switch", async () => {
+  const { shouldUseAgentTurn } = await import("./chatbot-agent.types.ts");
+  assert.equal(shouldUseAgentTurn("playground", { agentModeEnabled: false }), false);
+  assert.equal(shouldUseAgentTurn("whatsapp", { agentModeEnabled: false }), false);
+  assert.equal(shouldUseAgentTurn("playground", { agentModeEnabled: true }), true);
+});
+
+test("shouldUseAgentTurn: whatsapp needs env flag when agent mode enabled", async () => {
+  const prev = process.env.CHATBOT_AGENT_MODE;
+  process.env.CHATBOT_AGENT_MODE = "1";
+  const { shouldUseAgentTurn } = await import("./chatbot-agent.types.ts");
+  assert.equal(shouldUseAgentTurn("whatsapp", { agentModeEnabled: true }), true);
+  if (prev !== undefined) process.env.CHATBOT_AGENT_MODE = prev;
+  else delete process.env.CHATBOT_AGENT_MODE;
+});
+
+test("validateMindMapScript: default booking map covers golden-path FSM states", () => {
+  const result = validateMindMapScript(DEFAULT_BOOKING_MIND_MAP);
+  assert.equal(result.valid, true);
+  const required = [
+    "greeting",
+    "collect_problem",
+    "collect_qualification",
+    "suggest_doctor",
+    "await_decision",
+    "collect_datetime",
+  ];
+  for (const fsm of required) {
+    assert.ok(
+      DEFAULT_BOOKING_MIND_MAP.nodes.some((n) => n.fsmState === fsm),
+      `default map should include ${fsm}`,
+    );
+  }
+});
+
+test("validateMindMapScript: warns on cyclic back-edges without failing", () => {
+  const map = {
+    ...DEFAULT_BOOKING_MIND_MAP,
+    edges: [
+      ...(DEFAULT_BOOKING_MIND_MAP.edges ?? []),
+      { id: "cycle", source: "step6-reoffer", target: "step3-decision" },
+    ],
+  };
+  const result = validateMindMapScript(map);
+  assert.equal(result.valid, true);
+  assert.ok(result.warnings.some((w) => w.includes("Cycle")));
+});

@@ -584,6 +584,9 @@ async function ensureChatbotSettingsSchema(): Promise<void> {
       await pool.query(
         `ALTER TABLE "chatbot_settings" ADD COLUMN IF NOT EXISTS "broadcast_ai_enabled" boolean DEFAULT false NOT NULL`,
       );
+      await pool.query(
+        `ALTER TABLE "chatbot_settings" ADD COLUMN IF NOT EXISTS "agent_mode_enabled" boolean DEFAULT true NOT NULL`,
+      );
     })().catch((err) => {
       chatbotSettingsSchemaReady = null;
       logger.error({ err }, "[ChatbotService] Failed to ensure chatbot_settings schema");
@@ -2062,7 +2065,7 @@ export class ChatbotService {
     let response: OutboundResponse = null;
 
     if (
-      shouldUseAgentTurn(promptChannel) &&
+      shouldUseAgentTurn(promptChannel, { agentModeEnabled: settings.agentModeEnabled }) &&
       state !== "human_takeover" &&
       !session.humanTakeover &&
       state !== "collect_iin"
@@ -4046,10 +4049,13 @@ export class ChatbotService {
       calendarConfig?: ChatbotSettings["calendarConfig"];
       abTestEnabled?: boolean;
       broadcastAiEnabled?: boolean;
+      agentModeEnabled?: boolean;
       scriptVariants?: ChatbotSettings["scriptVariants"];
     },
-  ) {
+  ): Promise<{ settings: ChatbotSettings; mindMapValidation?: ReturnType<typeof validateMindMapScript> }> {
     const settings = await getSettings(clinicId);
+    const mindMapValidation =
+      updates.scriptMindMap !== undefined ? validateMindMapScript(updates.scriptMindMap) : undefined;
     const [updated] = await db
       .update(chatbotSettingsTable)
       .set({ ...updates, updatedAt: new Date() })
@@ -4057,7 +4063,7 @@ export class ChatbotService {
       .returning();
     // Invalidate cache
     settingsCache.delete(clinicId);
-    return updated!;
+    return { settings: updated!, ...(mindMapValidation ? { mindMapValidation } : {}) };
   }
 
   // ─── Manager Examples CRUD ────────────────────────────────────────────────
