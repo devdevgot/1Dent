@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, startTransition } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -7,10 +7,10 @@ import {
   useUploadContractTemplate,
   useDeleteContractTemplate,
   useUpdateTemplateMappings,
-  getBaseUrl,
   type ContractTemplate,
   type FieldMappingItem,
 } from "@workspace/api-client-react";
+import { DocumentPreviewDialog, buildTemplatePreviewUrl } from "@/components/contracts/document-preview-dialog";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Upload, Trash2, Loader2, AlertCircle, CheckCircle2, Plus,
@@ -19,7 +19,6 @@ import {
 import { usePageBack } from "@/hooks/use-page-back";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
-import { AppDialog } from "@/components/layout/app-dialog";
 import { ListRowsSkeleton } from "@/components/skeletons";
 
 const PATIENT_FIELDS = [
@@ -156,113 +155,6 @@ function isSystemTemplate(t: ContractTemplate): boolean {
   return Boolean(t.isSystem ?? (t as ContractTemplate & { is_system?: boolean }).is_system);
 }
 
-function ContractPreviewModal({
-  templateId,
-  templateName,
-  open,
-  onOpenChange,
-}: {
-  templateId: string | null;
-  templateName: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const previewUrlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!open || !templateId) {
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
-        previewUrlRef.current = null;
-      }
-      setPreviewUrl(null);
-      setErrorMessage(null);
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-    setErrorMessage(null);
-    setPreviewUrl(null);
-
-    const base = getBaseUrl() ?? "";
-    const token = localStorage.getItem("auth_token");
-    const url = `${base}/api/contracts/templates/${templateId}/preview/html`;
-
-    fetch(url, {
-      credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          let message = `Ошибка ${res.status}`;
-          try {
-            const data = await res.json() as { error?: string };
-            if (data.error) message = data.error;
-          } catch {
-            // HTML or empty body
-          }
-          throw new Error(message);
-        }
-        return res.text();
-      })
-      .then((html) => {
-        if (cancelled) return;
-        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-        const objectUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
-        previewUrlRef.current = objectUrl;
-        setPreviewUrl(objectUrl);
-        setIsLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setErrorMessage(err instanceof Error ? err.message : "Не удалось загрузить предпросмотр");
-        setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
-        previewUrlRef.current = null;
-      }
-    };
-  }, [open, templateId]);
-
-  return (
-    <AppDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Предпросмотр договора"
-      description={templateName}
-      size="xl"
-      className="h-[80vh] max-h-[80vh] flex flex-col"
-      bodyClassName="!p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
-    >
-      {isLoading ? (
-        <div className="flex flex-1 items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 text-[#94a3b8] animate-spin" />
-        </div>
-      ) : errorMessage || !previewUrl ? (
-        <div className="flex flex-1 items-center justify-center py-16 px-6 text-sm text-[#94a3b8] text-center">
-          {errorMessage ?? "Не удалось загрузить предпросмотр"}
-        </div>
-      ) : (
-        <iframe
-          src={previewUrl}
-          sandbox=""
-          className="flex-1 w-full border-0 min-h-0 bg-white"
-          title={`Предпросмотр: ${templateName}`}
-        />
-      )}
-    </AppDialog>
-  );
-}
-
 export default function ContractTemplatesPage() {
   const { user } = useAuthStore();
   const canEdit = user?.role === "owner" || user?.role === "admin";
@@ -277,7 +169,7 @@ export default function ContractTemplatesPage() {
   const [previewTarget, setPreviewTarget] = useState<{ id: string; name: string } | null>(null);
 
   const openPreview = (id: string, name: string) => {
-    setPreviewTarget({ id, name });
+    startTransition(() => setPreviewTarget({ id, name }));
   };
 
   const { data, isLoading } = useListContractTemplates();
@@ -700,11 +592,12 @@ export default function ContractTemplatesPage() {
         </div>
       </div>
 
-      <ContractPreviewModal
-        templateId={previewTarget?.id ?? null}
-        templateName={previewTarget?.name ?? ""}
+      <DocumentPreviewDialog
         open={previewTarget !== null}
         onOpenChange={(open) => { if (!open) setPreviewTarget(null); }}
+        title="Предпросмотр договора"
+        description={previewTarget?.name ?? ""}
+        iframeSrc={previewTarget ? buildTemplatePreviewUrl(previewTarget.id) : null}
       />
     </PageShell>
   );

@@ -438,6 +438,24 @@ function buildContractPage(opts: {
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
+// GET /p/contract/:token/fragment — HTML body only (for lazy bundle tabs / CRM embed)
+router.get("/p/contract/:token/fragment", async (req: Request, res: Response, next: NextFunction) => {
+  const token = String(req.params["token"]);
+  try {
+    const result = await repo.findContractByToken(token);
+    if (!result) {
+      res.status(404).setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.send('<p style="color:#ff3b30;text-align:center;padding:24px 0">Документ не найден</p>');
+    }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "private, max-age=120");
+    return res.send(result.contract.renderedHtml ?? "");
+  } catch (err) {
+    next(err);
+    return;
+  }
+});
+
 // GET /p/contract/:token — public patient-facing contract page
 router.get("/p/contract/:token", async (req: Request, res: Response, next: NextFunction) => {
   const token = String(req.params["token"]);
@@ -580,6 +598,7 @@ function buildBundlePage(opts: {
   patientName: string;
   bundleToken: string;
   isPreview?: boolean;
+  embed?: boolean;
   contracts: Array<{
     token: string;
     templateName: string;
@@ -588,7 +607,8 @@ function buildBundlePage(opts: {
     signedAt?: Date | null;
   }>;
 }): string {
-  const { clinicName, patientName, bundleToken, isPreview, contracts } = opts;
+  const { clinicName, patientName, bundleToken, isPreview, embed, contracts } = opts;
+  const lazyAllTabs = Boolean(embed);
   const allSigned = contracts.every((c) => c.status === "signed");
   const firstSignedAt = contracts.find((c) => c.signedAt)?.signedAt;
   const signedDateStr = firstSignedAt
@@ -629,6 +649,31 @@ function buildBundlePage(opts: {
     )
     .join("");
 
+  const bundleShowTabScript = `
+    function showTab(idx){
+      document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('active',i===idx)});
+      document.querySelectorAll('.card').forEach(function(c,i){c.classList.toggle('active',i===idx)});
+      var panel=document.getElementById('tab-panel-'+idx);
+      if(panel){
+        var body=panel.querySelector('.contract-body');
+        if(body&&body.getAttribute('data-lazy')==='1'&&!body.getAttribute('data-loaded')&&TABS[idx]){
+          body.innerHTML='<p style="color:#6e6e73;text-align:center;padding:24px 0">Загрузка…</p>';
+          fetch('/p/contract/'+TABS[idx].token+'/fragment')
+            .then(function(r){return r.text();})
+            .then(function(html){
+              body.innerHTML=html||'<p style="color:#ff3b30;text-align:center;padding:24px 0">Не удалось загрузить документ</p>';
+              body.setAttribute('data-loaded','1');
+            })
+            .catch(function(){
+              body.innerHTML='<p style="color:#ff3b30;text-align:center;padding:24px 0">Ошибка загрузки</p>';
+            });
+        }
+      }
+      currentIdx=idx;
+    }`;
+
+  const bundleBootScript = lazyAllTabs ? "showTab(0);" : "";
+
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -654,7 +699,7 @@ function buildBundlePage(opts: {
     .tab-btn.active .tab-num{background:#6bcb3a;color:#fff}
     .tab-label{line-height:1}
     .tab-check{position:absolute;top:6px;right:6px;font-size:9px;color:#6bcb3a;font-weight:700}
-    .container{max-width:720px;margin:0 auto;padding:16px 14px 130px}
+    .container{max-width:720px;margin:0 auto;padding:16px 14px ${embed ? "16px" : "130px"}}
     .signed-banner{background:#d4edda;border:1px solid #c3e6cb;border-radius:14px;padding:14px 18px;text-align:center;margin-bottom:14px}
     .signed-banner h3{font-size:15px;font-weight:700;color:#155724;margin-bottom:3px}
     .signed-banner p{font-size:12px;color:#155724;opacity:.85}
@@ -716,13 +761,13 @@ function buildBundlePage(opts: {
       <div class="card-meta">
         <div class="meta-chip">Пациент: <span>${escHtml(patientName)}</span></div>
       </div>
-      <div class="contract-body"${i === 0 ? "" : ' data-lazy="1"'}>${i === 0 ? c.renderedHtml : ""}</div>
+      <div class="contract-body"${lazyAllTabs || i > 0 ? ' data-lazy="1"' : ""}>${lazyAllTabs || i > 0 ? "" : c.renderedHtml}</div>
     </div>`,
       )
       .join("")}
   </div>
 
-  ${!isPreview ? `<div class="actions">
+  ${!isPreview && !embed ? `<div class="actions">
     ${!allSigned ? `<button class="btn btn-primary" id="sign-all-btn" onclick="startSign()">
       <div class="spinner"></div>
       <span class="btn-label">✍️ Подписать все (${contracts.length})</span>
@@ -730,7 +775,7 @@ function buildBundlePage(opts: {
     <button class="btn btn-secondary" onclick="downloadCurrent()">📄 PDF</button>
   </div>` : ""}
 
-  <!-- OTP Modal -->
+  ${!embed ? `<!-- OTP Modal -->
   <div class="otp-overlay" id="otp-overlay">
     <div class="otp-box">
       <div class="otp-handle"></div>
@@ -755,7 +800,7 @@ function buildBundlePage(opts: {
         <button class="otp-resend" id="otp-resend" onclick="resendOtp()" disabled>Отправить снова</button>
       </div>
     </div>
-  </div>
+  </div>` : ""}
 
   <script>
     var BUNDLE = '${bundleToken}';
@@ -763,31 +808,8 @@ function buildBundlePage(opts: {
     var currentIdx = 0;
     var timerInterval = null;
     var secondsLeft = 300;
-
-    function showTab(idx){
-      document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('active',i===idx)});
-      document.querySelectorAll('.card').forEach(function(c,i){c.classList.toggle('active',i===idx)});
-      var panel=document.getElementById('tab-panel-'+idx);
-      if(panel){
-        var body=panel.querySelector('.contract-body');
-        if(body&&body.getAttribute('data-lazy')==='1'&&!body.getAttribute('data-loaded')&&TABS[idx]){
-          body.innerHTML='<p style="color:#6e6e73;text-align:center;padding:24px 0">Загрузка…</p>';
-          fetch('/p/contract/'+TABS[idx].token+'?preview=1')
-            .then(function(r){return r.text();})
-            .then(function(html){
-              var doc=new DOMParser().parseFromString(html,'text/html');
-              var src=doc.querySelector('.contract-body');
-              body.innerHTML=src?src.innerHTML:'<p style="color:#ff3b30;text-align:center;padding:24px 0">Не удалось загрузить документ</p>';
-              body.setAttribute('data-loaded','1');
-            })
-            .catch(function(){
-              body.innerHTML='<p style="color:#ff3b30;text-align:center;padding:24px 0">Ошибка загрузки</p>';
-            });
-        }
-      }
-      currentIdx=idx;
-    }
-
+    ${bundleShowTabScript}
+    ${embed ? bundleBootScript : `
     function startSign(){
       var btn=document.getElementById('sign-all-btn');
       btn.classList.add('loading');
@@ -900,7 +922,7 @@ function buildBundlePage(opts: {
         });
       });
       document.getElementById('otp-overlay').addEventListener('click',function(e){if(e.target===this)document.getElementById('otp-overlay').classList.remove('open');});
-    })();
+    })();`}
   </script>
 </body>
 </html>`;
@@ -918,6 +940,7 @@ router.get("/p/bundle/:bundleToken", async (req: Request, res: Response, next: N
     }
 
     const isPreview = req.query["preview"] === "1";
+    const isEmbed = req.query["embed"] === "1";
 
     if (!isPreview) {
       await repo.markBundleViewed(bundleToken).catch(() => {});
@@ -932,6 +955,7 @@ router.get("/p/bundle/:bundleToken", async (req: Request, res: Response, next: N
         patientName: first.patientName,
         bundleToken,
         isPreview,
+        embed: isEmbed,
         contracts: results.map((r) => ({
           token: r.contract.token,
           templateName: r.templateName,

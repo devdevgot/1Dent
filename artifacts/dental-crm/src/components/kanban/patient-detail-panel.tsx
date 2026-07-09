@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense, type ComponentType } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense, startTransition, type ComponentType } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -55,6 +55,7 @@ import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { getBaseUrl } from "@/lib/base-url";
 import { cn } from "@/lib/utils";
 import { AppDialog } from "@/components/layout/app-dialog";
+import { DocumentPreviewDialog } from "@/components/contracts/document-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -844,6 +845,15 @@ export function PatientDetailPanel() {
   const [bundleSent, setBundleSent] = useState(false);
   const [bundlePreviewOpen, setBundlePreviewOpen] = useState(false);
   const [bundleRequiredModalOpen, setBundleRequiredModalOpen] = useState(false);
+  const bundlePreviewSrc = useMemo(() => {
+    if (!bundleToken) return null;
+    const base = bundleUrl ?? `/p/bundle/${bundleToken}`;
+    const join = base.includes("?") ? "&" : "?";
+    return `${base}${join}preview=1&embed=1`;
+  }, [bundleToken, bundleUrl]);
+  const openBundlePreview = useCallback(() => {
+    startTransition(() => setBundlePreviewOpen(true));
+  }, []);
   const [bundlePrepareError, setBundlePrepareError] = useState<string | null>(null);
   const [bundleServiceNames, setBundleServiceNames] = useState<string[]>([]);
   const [whatsappNotConnectedOpen, setWhatsappNotConnectedOpen] = useState(false);
@@ -2836,7 +2846,7 @@ export function PatientDetailPanel() {
                             void handlePrepareBundle(selectedPatientId, names.length > 0 ? names : undefined);
                           },
                           onSend: (token) => void handleSendBundleWhatsapp(token),
-                          onOpenPreview: () => setBundlePreviewOpen(true),
+                          onOpenPreview: openBundlePreview,
                         }}
                       />
                     </Suspense>
@@ -2876,33 +2886,6 @@ export function PatientDetailPanel() {
                       </div>
                     </AppDialog>
 
-                    {bundlePreviewOpen && bundleToken && (
-                      <AppDialog
-                        open
-                        onOpenChange={setBundlePreviewOpen}
-                        title="Предпросмотр пакета договоров"
-                        description="4 документа · удаление зуба"
-                        size="xl"
-                        className="h-[85vh] max-h-[85vh] flex flex-col"
-                        bodyClassName="!p-0 flex flex-col flex-1 min-h-0 overflow-hidden"
-                      >
-                        <div className="flex justify-end px-4 py-2 border-b border-[#e8e3d9] shrink-0">
-                          <a
-                            href={bundleUrl ?? `/p/bundle/${bundleToken}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs px-2.5 py-1.5 bg-[#f1ede4] text-[#0f172a] rounded-lg font-medium hover:bg-[var(--ds-border)] transition-colors"
-                          >
-                            ↗ В новой вкладке
-                          </a>
-                        </div>
-                        <iframe
-                          src={`${bundleUrl ?? `/p/bundle/${bundleToken}`}?preview=1`}
-                          className="flex-1 w-full border-0 min-h-0"
-                          title="Пакет договоров"
-                        />
-                      </AppDialog>
-                    )}
                   </div>
                 )} {/* end treatmentStep === 3 */}
 
@@ -3000,7 +2983,7 @@ export function PatientDetailPanel() {
             {!bundlePreparing && bundleToken && !bundleSent && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setBundlePreviewOpen(true)}
+                  onClick={openBundlePreview}
                   className="flex-1 h-8 text-[12px] font-medium text-[#0f172a] border border-[#e8e3d9] rounded-lg hover:bg-[#faf8f4] transition-colors flex items-center justify-center gap-1.5"
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -3054,6 +3037,15 @@ export function PatientDetailPanel() {
           </div>
         </div>
       </AppDialog>
+
+      <DocumentPreviewDialog
+        open={bundlePreviewOpen && !!bundleToken}
+        onOpenChange={setBundlePreviewOpen}
+        title="Предпросмотр пакета договоров"
+        description="Договоры, согласия и памятки для пациента"
+        iframeSrc={bundlePreviewOpen ? bundlePreviewSrc : null}
+        externalHref={bundleToken ? (bundleUrl ?? `/p/bundle/${bundleToken}?preview=1`) : null}
+      />
     </>
   );
 }
