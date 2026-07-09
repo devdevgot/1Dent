@@ -1781,5 +1781,7 @@ export const usePreviewContractTemplate = <TError = unknown>(
     queryKey: ["contract-template-preview", id],
     queryFn: () => previewContractTemplate(id!),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     ...options?.query,
   });

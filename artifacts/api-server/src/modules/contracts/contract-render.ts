@@ -500,3 +500,20 @@ export const CONTRACT_TABLE_CSS = `
 .contract-table th { border: 1px solid #b8b8bd; padding: 8px 10px; vertical-align: top; word-break: break-word; background: #f5f5f7; font-weight: 600; text-align: left; }
 .contract-table td { border: 1px solid #d1d1d6; padding: 8px 10px; vertical-align: top; word-break: break-word; }
 `;
+
+/** Full HTML document for isolated iframe preview (avoids blocking the parent React tree). */
+export function wrapContractPreviewDocument(bodyHtml: string, title = "Предпросмотр"): string {
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 12px 14px; color: #3a3a3c; font-size: 13px; line-height: 1.55; background: #fff; }
+    ${CONTRACT_TABLE_CSS}
+  </style>
+</head>
+<body>${bodyHtml}</body>
+</html>`;
+}
