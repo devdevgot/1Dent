@@ -127,3 +127,48 @@ test("validateMindMapScript: warns on cyclic back-edges without failing", () => 
   assert.equal(result.valid, true);
   assert.ok(result.warnings.some((w) => w.includes("Cycle")));
 });
+
+test("resolveDeterministicNextNodeId: routes service branch from intro", async () => {
+  const { resolveDeterministicNextNodeId } = await import("./chatbot-agent-orchestrator.ts");
+  const next = resolveDeterministicNextNodeId(
+    DEFAULT_BOOKING_MIND_MAP,
+    "step1-intro",
+    "хочу лечение кариеса, зуб болит",
+    {},
+    null,
+  );
+  assert.equal(next, "step1-caries");
+});
+
+test("resolveDeterministicNextNodeId: decision yes goes to booking", async () => {
+  const { resolveDeterministicNextNodeId } = await import("./chatbot-agent-orchestrator.ts");
+  const next = resolveDeterministicNextNodeId(
+    DEFAULT_BOOKING_MIND_MAP,
+    "step3-decision",
+    "да, давайте запишем",
+    { suggestedDoctorId: "doc-1" },
+    null,
+  );
+  assert.equal(next, "step3-ready");
+});
+
+test("buildAgentFallbackReply: stays contextual on qualification", async () => {
+  const { buildAgentFallbackReply } = await import("./chatbot-agent-orchestrator.ts");
+  const reply = buildAgentFallbackReply({
+    scriptCtx: {
+      currentNodeId: "step2-qualification",
+      currentNodeLabel: "Квалификация",
+      currentNodeContent: "Уточни симптомы",
+      currentFsmState: "collect_qualification",
+      compactPath: "",
+      fullScript: "",
+      outgoingTransitions: "",
+    },
+    fsmState: "collect_qualification",
+    sessionData: {},
+    clinicBranchNames: [],
+    knowledgeContext: "",
+  });
+  assert.doesNotMatch(reply, /чем могу помочь/i);
+  assert.match(reply, /боль|дискомфорт/i);
+});
