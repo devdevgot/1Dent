@@ -60,8 +60,11 @@ export function isChatbotAgentMode(): boolean {
   return v === "1" || v === "true" || v === "yes";
 }
 
-/** Playground always uses agent mode; WhatsApp requires CHATBOT_AGENT_MODE=1. */
-export function shouldUseAgentTurn(channel: "playground" | "whatsapp"): boolean {
+export function shouldUseAgentTurn(
+  channel: "playground" | "whatsapp",
+  opts?: { agentModeEnabled?: boolean },
+): boolean {
+  if (opts?.agentModeEnabled === false) return false;
   if (channel === "playground") return true;
   return isChatbotAgentMode();
 }
