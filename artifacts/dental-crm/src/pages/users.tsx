@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListUsersAll,
@@ -37,9 +37,10 @@ import type { EmployeeFormData } from "./employee-dialog";
 import { cn } from "@/lib/utils";
 import { TableSkeleton } from "@/components/skeletons";
 import { StaffSectionNav } from "@/components/staff/staff-section-nav";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 
-const EmployeeDialog = lazy(() => import("./employee-dialog"));
-const InviteStaffDialog = lazy(() => import("./invite-staff-dialog"));
+const EmployeeDialog = lazyWithChunkRecovery(() => import("./employee-dialog"));
+const InviteStaffDialog = lazyWithChunkRecovery(() => import("./invite-staff-dialog"));
 
 const ROLES = ["admin", "doctor", "accountant", "warehouse", "assistant", "nurse"] as const;
 

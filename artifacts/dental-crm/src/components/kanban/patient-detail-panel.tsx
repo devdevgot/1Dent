@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense, startTransition, type ComponentType } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, Suspense, startTransition, type ComponentType } from "react";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -30,14 +30,15 @@ import {
   getListProcedureTemplatesQueryKey,
   getDentalAiAnalysisQueryKey,
 } from "@workspace/api-client-react";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 // Lazy-loaded so they don't block the first paint of the patient card
-const DentalAiAnalysisPanel = lazy(() =>
+const DentalAiAnalysisPanel = lazyWithChunkRecovery(() =>
   import("./dental-ai-analysis-panel").then((m) => ({ default: m.DentalAiAnalysisPanel })),
 );
-const ContractsTab = lazy(() =>
+const ContractsTab = lazyWithChunkRecovery(() =>
   import("./contracts-tab").then((m) => ({ default: m.ContractsTab })),
 );
-const PatientBroadcastHistory = lazy(() =>
+const PatientBroadcastHistory = lazyWithChunkRecovery(() =>
   import("./patient-broadcast-history").then((m) => ({ default: m.PatientBroadcastHistory })),
 );
 import { VoiceDiagnosisModal, type VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";

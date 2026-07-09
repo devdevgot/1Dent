@@ -1,5 +1,6 @@
-import { lazy, type ComponentType } from "react";
+import { type ComponentType } from "react";
 import { CLINICAL_STAFF_ROLES } from "@/lib/role-groups";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 import type { MenuServiceSkeletonVariant } from "@/components/skeletons/menu-service-content-skeleton";
 
 export type MenuCategory = "clinic" | "finance" | "automation" | "admin" | "warehouse";
@@ -39,7 +40,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/dashboard.png",
     roles: ["warehouse"],
     category: "warehouse",
-    component: lazy(() => import("@/pages/dashboard-warehouse")),
+    component: lazyWithChunkRecovery(() => import("@/pages/dashboard-warehouse")),
     skeletonVariant: "dashboard",
   },
   {
@@ -49,7 +50,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/inventory.png",
     roles: ["warehouse"],
     category: "warehouse",
-    component: lazy(() => import("@/pages/inventory")),
+    component: lazyWithChunkRecovery(() => import("@/pages/inventory")),
     skeletonVariant: "inventory",
   },
   {
@@ -59,7 +60,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/patients.png",
     roles: ["owner", "admin", ...CLINICAL, "accountant"],
     category: "clinic",
-    component: lazy(() => import("@/pages/patients")),
+    component: lazyWithChunkRecovery(() => import("@/pages/patients")),
     skeletonVariant: "patients",
   },
   {
@@ -69,7 +70,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/schedule.png",
     roles: CLINICAL,
     category: "clinic",
-    component: lazy(() => import("@/pages/doctor-schedule")),
+    component: lazyWithChunkRecovery(() => import("@/pages/doctor-schedule")),
     skeletonVariant: "schedule",
     supportsDate: true,
   },
@@ -80,7 +81,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/services.png",
     roles: ["owner", "admin", ...CLINICAL, "accountant"],
     category: "clinic",
-    component: lazy(() => import("@/pages/services")),
+    component: lazyWithChunkRecovery(() => import("@/pages/services")),
     skeletonVariant: "services",
   },
   {
@@ -90,7 +91,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/users.png",
     roles: ["owner", "admin"],
     category: "clinic",
-    component: lazy(() => import("@/pages/users")),
+    component: lazyWithChunkRecovery(() => import("@/pages/users")),
     skeletonVariant: "users",
     supportsDetail: true,
   },
@@ -102,7 +103,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     roles: ["owner", "admin"],
     category: "clinic",
     showInMenu: false,
-    component: lazy(() => import("@/pages/doctor-ratings")),
+    component: lazyWithChunkRecovery(() => import("@/pages/doctor-ratings")),
     skeletonVariant: "users",
     supportsDetail: true,
   },
@@ -113,7 +114,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/clinic-branches.png",
     roles: ["owner"],
     category: "clinic",
-    component: lazy(() => import("@/pages/clinic-branches")),
+    component: lazyWithChunkRecovery(() => import("@/pages/clinic-branches")),
     skeletonVariant: "form",
   },
   {
@@ -123,7 +124,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/contracts.png",
     roles: ["owner", "admin", "doctor"],
     category: "clinic",
-    component: lazy(() => import("@/pages/contract-templates")),
+    component: lazyWithChunkRecovery(() => import("@/pages/contract-templates")),
     skeletonVariant: "default",
   },
   {
@@ -133,7 +134,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/analytics.png",
     roles: ["owner"],
     category: "finance",
-    component: lazy(() => import("@/pages/analytics")),
+    component: lazyWithChunkRecovery(() => import("@/pages/analytics")),
     skeletonVariant: "analytics",
   },
   {
@@ -143,7 +144,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/analytics.png",
     roles: ["doctor"],
     category: "finance",
-    component: lazy(() => import("@/pages/doctor-analytics")),
+    component: lazyWithChunkRecovery(() => import("@/pages/doctor-analytics")),
     skeletonVariant: "analytics",
   },
   {
@@ -153,7 +154,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/financials.png",
     roles: ["owner", "accountant"],
     category: "finance",
-    component: lazy(() => import("@/pages/financials")),
+    component: lazyWithChunkRecovery(() => import("@/pages/financials")),
     skeletonVariant: "financials",
   },
   {
@@ -163,7 +164,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/pricing.png",
     roles: ["owner"],
     category: "finance",
-    component: lazy(() => import("@/pages/pricing")),
+    component: lazyWithChunkRecovery(() => import("@/pages/pricing")),
     skeletonVariant: "form",
   },
   {
@@ -173,7 +174,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/chatbot.png",
     roles: ["owner"],
     category: "automation",
-    component: lazy(() => import("@/pages/chatbot")),
+    component: lazyWithChunkRecovery(() => import("@/pages/chatbot")),
     skeletonVariant: "chatbot",
   },
   {
@@ -183,7 +184,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/channels.png",
     roles: ["owner", "admin"],
     category: "automation",
-    component: lazy(() => import("@/pages/channels")),
+    component: lazyWithChunkRecovery(() => import("@/pages/channels")),
     skeletonVariant: "default",
   },
   {
@@ -193,7 +194,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/branches.png",
     roles: ["owner"],
     category: "automation",
-    component: lazy(() => import("@/pages/branches")),
+    component: lazyWithChunkRecovery(() => import("@/pages/branches")),
     skeletonVariant: "form",
   },
   {
@@ -203,7 +204,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     img: "/icons/menu/migration.png",
     roles: ["owner"],
     category: "admin",
-    component: lazy(() => import("@/pages/migration")),
+    component: lazyWithChunkRecovery(() => import("@/pages/migration")),
     skeletonVariant: "form",
   },
 ];
