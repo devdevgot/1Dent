@@ -10,6 +10,33 @@ import {
   buildBranchListMessage,
   resolveBranchIndex,
 } from "./clinic-knowledge.ts";
+import { renderMindMapScript, renderMindMapCompactPath } from "./mindmap-utils.ts";
+
+test("renderMindMapScript survives cyclic back-edges", () => {
+  const map = {
+    ...DEFAULT_BOOKING_MIND_MAP,
+    edges: [
+      ...(DEFAULT_BOOKING_MIND_MAP.edges ?? []),
+      { id: "cycle", source: "step6-reoffer", target: "step3-decision" },
+    ],
+  };
+  const text = renderMindMapScript(map);
+  assert.ok(text.length > 100);
+  assert.match(text, /СКРИПТ ДИАЛОГА/);
+});
+
+test("renderMindMapCompactPath stops on parent cycle", () => {
+  const map = {
+    ...DEFAULT_BOOKING_MIND_MAP,
+    edges: [
+      ...(DEFAULT_BOOKING_MIND_MAP.edges ?? []),
+      { id: "cycle", source: "step6-reoffer", target: "step3-decision" },
+    ],
+  };
+  const text = renderMindMapCompactPath(map, "step6-reoffer");
+  assert.ok(text.length > 20);
+  assert.match(text, /КРАТКИЙ ПУТЬ/);
+});
 
 test("validateMindMapScript accepts default booking map", () => {
   const result = validateMindMapScript(DEFAULT_BOOKING_MIND_MAP);
