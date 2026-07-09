@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { RefreshCw } from "lucide-react";
-import { isChunkLoadError } from "./lib/chunk-reload";
+import { isChunkLoadError } from "../lib/chunk-reload";
 
 interface Props {
   children: ReactNode;
