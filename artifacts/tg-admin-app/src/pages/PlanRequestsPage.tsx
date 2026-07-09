@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface PlanRequest {
   id: string;
@@ -26,16 +27,32 @@ interface PlanRequest {
   created_at: string;
 }
 
+interface LandingLead {
+  id: string;
+  name: string;
+  phone: string;
+  clinic_name: string;
+  status: string;
+  source: string;
+  created_at: string;
+}
+
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-500/20 text-amber-400",
   approved: "bg-green-500/20 text-green-400",
   rejected: "bg-red-500/20 text-red-400",
+  new: "bg-amber-500/20 text-amber-400",
+  contacted: "bg-blue-500/20 text-blue-400",
+  converted: "bg-green-500/20 text-green-400",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Ожидает",
   approved: "Одобрена",
   rejected: "Отклонена",
+  new: "Новая",
+  contacted: "Связались",
+  converted: "Конверсия",
 };
 
 const PLAN_LABELS: Record<string, string> = {
@@ -55,14 +72,24 @@ const SUBSCRIPTION_MONTH_OPTIONS = [
   { value: 120, label: "10 лет" },
 ] as const;
 
+type Tab = "plans" | "landing";
+
 export default function PlanRequestsPage() {
   const qc = useQueryClient();
+  const [tab, setTab] = useState<Tab>("landing");
   const [approvingRequest, setApprovingRequest] = useState<PlanRequest | null>(null);
   const [months, setMonths] = useState(1);
 
   const { data, isLoading } = useQuery({
     queryKey: ["tma-plan-requests"],
     queryFn: () => api.get<{ success: boolean; data: { requests: PlanRequest[] } }>("/plan-requests"),
+    enabled: tab === "plans",
+  });
+
+  const { data: leadsData, isLoading: leadsLoading } = useQuery({
+    queryKey: ["tma-landing-leads"],
+    queryFn: () => api.get<{ success: boolean; data: { leads: LandingLead[] } }>("/landing-leads"),
+    enabled: tab === "landing",
   });
 
   const rejectMut = useMutation({
@@ -100,61 +127,133 @@ export default function PlanRequestsPage() {
     },
   });
 
+  const updateLeadMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.patch(`/landing-leads/${id}`, { status }),
+    onSuccess: () => {
+      hapticNotify("success");
+      qc.invalidateQueries({ queryKey: ["tma-landing-leads"] });
+    },
+    onError: (err: Error) => {
+      hapticNotify("error");
+      tgAlert(err.message || "Не удалось обновить статус");
+    },
+  });
+
   const requests = data?.data?.requests ?? [];
   const pending = requests.filter((r) => r.status === "pending");
   const processed = requests.filter((r) => r.status !== "pending");
 
-  if (isLoading) {
-    return (
-      <TmaPage title="Заявки на подключение" withTabBarOffset>
+  const leads = leadsData?.data?.leads ?? [];
+  const newLeads = leads.filter((l) => l.status === "new");
+  const processedLeads = leads.filter((l) => l.status !== "new");
+
+  const loading = tab === "plans" ? isLoading : leadsLoading;
+
+  return (
+    <TmaPage title="Заявки" withTabBarOffset>
+      <div className="flex gap-2 mb-4 p-1 bg-muted/40 rounded-xl">
+        {([
+          { key: "landing" as const, label: "С лендинга" },
+          { key: "plans" as const, label: "На тариф" },
+        ]).map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => { haptic("light"); setTab(t.key); }}
+            className={cn(
+              "flex-1 py-2 rounded-lg text-xs font-semibold transition-colors",
+              tab === t.key ? "bg-white text-foreground shadow-sm" : "text-muted-foreground",
+            )}
+          >
+            {t.label}
+            {t.key === "landing" && newLeads.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-white text-[9px]">
+                {newLeads.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {loading && (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-24 bg-white rounded-xl animate-pulse" />
           ))}
         </div>
-      </TmaPage>
-    );
-  }
-
-  return (
-    <TmaPage title="Заявки на подключение" withTabBarOffset>
-
-      {requests.length === 0 && (
-        <EmptyState text="Заявок пока нет" />
       )}
 
-      {pending.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Новые ({pending.length})
-          </p>
-          {pending.map((r) => (
-            <RequestCard
-              key={r.id}
-              request={r}
-              onApprove={() => {
-                haptic("medium");
-                setMonths(1);
-                setApprovingRequest(r);
-              }}
-              onReject={() => {
-                haptic("medium");
-                rejectMut.mutate(r.id);
-              }}
-            />
-          ))}
-        </div>
+      {!loading && tab === "landing" && (
+        <>
+          {leads.length === 0 && <EmptyState text="Заявок с лендинга пока нет" />}
+
+          {newLeads.length > 0 && (
+            <div className="space-y-2 mb-6">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Новые ({newLeads.length})
+              </p>
+              {newLeads.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatus={(status) => updateLeadMut.mutate({ id: lead.id, status })}
+                />
+              ))}
+            </div>
+          )}
+
+          {processedLeads.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Обработанные ({processedLeads.length})
+              </p>
+              {processedLeads.map((lead) => (
+                <LeadCard key={lead.id} lead={lead} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {processed.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Обработанные ({processed.length})
-          </p>
-          {processed.map((r) => (
-            <RequestCard key={r.id} request={r} />
-          ))}
-        </div>
+      {!loading && tab === "plans" && (
+        <>
+          {requests.length === 0 && <EmptyState text="Заявок на тариф пока нет" />}
+
+          {pending.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Новые ({pending.length})
+              </p>
+              {pending.map((r) => (
+                <RequestCard
+                  key={r.id}
+                  request={r}
+                  onApprove={() => {
+                    haptic("medium");
+                    setMonths(1);
+                    setApprovingRequest(r);
+                  }}
+                  onReject={() => {
+                    haptic("medium");
+                    rejectMut.mutate(r.id);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {processed.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Обработанные ({processed.length})
+              </p>
+              {processed.map((r) => (
+                <RequestCard key={r.id} request={r} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <Dialog
@@ -235,6 +334,62 @@ export default function PlanRequestsPage() {
         </DialogContent>
       </Dialog>
     </TmaPage>
+  );
+}
+
+function LeadCard({
+  lead,
+  onStatus,
+}: {
+  lead: LandingLead;
+  onStatus?: (status: string) => void;
+}) {
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-semibold text-foreground text-sm">{lead.name}</p>
+          <a href={`tel:${lead.phone}`} className="text-xs text-primary">{lead.phone}</a>
+        </div>
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[lead.status] ?? ""}`}>
+          {STATUS_LABELS[lead.status] ?? lead.status}
+        </span>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Клиника: <span className="text-foreground font-medium">{lead.clinic_name}</span>
+      </p>
+
+      <p className="text-[10px] text-muted-foreground">
+        {new Date(lead.created_at).toLocaleString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+      </p>
+
+      {onStatus && lead.status === "new" && (
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => onStatus("contacted")}
+            className="flex-1 py-2 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-semibold"
+          >
+            Связались
+          </button>
+          <button
+            type="button"
+            onClick={() => onStatus("converted")}
+            className="flex-1 py-2 bg-green-500/20 text-green-400 rounded-lg text-xs font-semibold"
+          >
+            Конверсия
+          </button>
+          <button
+            type="button"
+            onClick={() => onStatus("rejected")}
+            className="py-2 px-3 bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

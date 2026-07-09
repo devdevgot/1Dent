@@ -2,11 +2,17 @@ export const SITE = {
   name: "1Dent",
   landingTitle: "1Dent — CRM для стоматологий Казахстана",
   hero: {
-    headline: "Управляй клиникой.",
-    headlineAccent: "Расти быстрее.",
+    headline: "Пациенты не теряются.",
+    headlineAccent: "Клиника растёт.",
     subtitle:
-      "Все пациенты, финансы, WhatsApp и ИИ — в одной системе. Больше никаких Excel и потерянных заявок.",
+      "Канбан, WhatsApp с ИИ, финансы и FDI-карта — в одной системе для стоматологий Казахстана.",
     announcement: "WhatsApp ИИ-ассистент для клиник",
+    bullets: [
+      "Все заявки в одном WhatsApp-чате",
+      "Автозапись и напоминания 24/7",
+      "Финансы, зарплаты и аналитика",
+    ],
+    trialNote: "3 дня бесплатно",
   },
   seo: {
     description:

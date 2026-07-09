@@ -108,7 +108,7 @@ export function PricingSection() {
             Выберите план
           </h2>
           <p className="landing-lead font-manrope max-w-xl mx-auto">
-            14 дней бесплатного пробного периода. Без карты.
+            3 дня бесплатного пробного периода. Без карты.
           </p>
         </motion.div>
 

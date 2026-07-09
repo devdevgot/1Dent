@@ -372,6 +372,13 @@
       "when": 1782825000000,
       "tag": "0051_clinic_contract_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1782911400000,
+      "tag": "0052_landing_leads",
+      "breakpoints": true
     }
   ]
 }

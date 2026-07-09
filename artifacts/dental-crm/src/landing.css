@@ -342,6 +342,88 @@ html {
   background: linear-gradient(to right, transparent, var(--ds-border), transparent);
 }
 
+/* ── Scroll progress ───────────────────────────────────────────────────────── */
+.landing-scroll-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--ds-primary);
+  transition: width 0.1s ease-out;
+  z-index: 10;
+}
+
+/* ── Hero product preview ──────────────────────────────────────────────────── */
+.landing-product-frame {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.landing-product-chrome {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f8f6f1;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.landing-product-body {
+  display: flex;
+  min-height: 280px;
+}
+
+.landing-product-sidebar {
+  width: 110px;
+  flex-shrink: 0;
+  padding: 0.75rem;
+  background: #faf8f4;
+  border-right: 1px solid var(--ds-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.landing-product-main {
+  flex: 1;
+  background: white;
+}
+
+.landing-floating-card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Sticky mobile CTA ─────────────────────────────────────────────────────── */
+.landing-sticky-cta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 0.75rem 1rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  background: rgba(250, 248, 244, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--ds-border);
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
+}
+
+.landing-footer-offset {
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .landing-footer-offset {
+    padding-bottom: 3rem;
+  }
+}
+
 /* ── Reduced motion ────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   html {

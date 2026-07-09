@@ -341,6 +341,30 @@ router.patch("/plan-requests/:id", async (req: Request, res: Response, next: Nex
   } catch (err) { next(err); }
 });
 
+// ── LANDING LEADS ───────────────────────────────────────────────────────────
+router.get("/landing-leads", async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT id, name, phone, clinic_name, status, source, created_at
+      FROM landing_leads
+      ORDER BY created_at DESC
+      LIMIT 200
+    `);
+    res.json({ success: true, data: { leads: rows } });
+  } catch (err) { next(err); }
+});
+
+router.patch("/landing-leads/:id", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const status = req.body?.status;
+    if (!status || !["new", "contacted", "converted", "rejected"].includes(status)) {
+      return next(new ValidationError("Invalid status"));
+    }
+    await pool.query(`UPDATE landing_leads SET status = $1 WHERE id = $2`, [status, req.params["id"]]);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 // ── PLATFORM SETTINGS ────────────────────────────────────────────────────────
 router.get("/settings", async (_req: Request, res: Response, next: NextFunction) => {
   try {

@@ -31,6 +31,7 @@ import knowledgeRouter from "../modules/knowledge/knowledge.controller";
 import aiCreditsRouter from "../modules/ai-credits/ai-credits.controller";
 import errorEventsRouter from "../modules/error-events/error-events.controller";
 import planRequestsRouter from "../modules/plan-requests/plan-requests.controller";
+import landingLeadsRouter from "../modules/landing-leads/landing-leads.controller";
 import tabletPublicRouter from "../modules/tablet/tablet-public.controller";
 import tabletRouter from "../modules/tablet/tablet.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
@@ -54,6 +55,7 @@ router.use("/errors", errorEventsRouter);
 
 // Plan request — must be before planGate so it's accessible even without a plan
 router.use("/plan-requests", planRequestsRouter);
+router.use("/landing-leads", landingLeadsRouter);
 
 router.use(planGateMiddleware);
 router.use("/tablet/public", tabletPublicRouter);
