@@ -16,6 +16,8 @@ export const SITE = {
     owner: "Дашборд — 1Dent",
     admin: "Админ-панель — 1Dent",
     doctor: "Кабинет врача — 1Dent",
+    assistant: "Кабинет ассистента — 1Dent",
+    nurse: "Кабинет медсестры — 1Dent",
     accountant: "Бухгалтерия — 1Dent",
     warehouse: "Склад — 1Dent",
     default: "Дашборд — 1Dent",

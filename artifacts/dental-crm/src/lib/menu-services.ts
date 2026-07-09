@@ -231,3 +231,19 @@ export const HOME_SERVICE_SLUGS = [
   "chatbot",
   "contract-templates",
 ] as const;
+
+/** Returns home tile slugs allowed for the given role. */
+export function getHomeServiceSlugsForRole(role: string | undefined | null): readonly string[] {
+  if (role === "owner") return HOME_SERVICE_SLUGS;
+  if (role === "doctor") {
+    return ["patients", "schedule", "services", "contract-templates", "doctor-analytics"];
+  }
+  if (role === "assistant" || role === "nurse") {
+    return ["patients", "schedule", "services"];
+  }
+  if (!role) return [];
+  return HOME_SERVICE_SLUGS.filter((slug) => {
+    const service = MENU_SERVICES.find((s) => s.slug === slug);
+    return service?.roles.includes(role);
+  });
+}
