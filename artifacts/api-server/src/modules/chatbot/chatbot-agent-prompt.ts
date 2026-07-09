@@ -40,6 +40,13 @@ export function buildAgentOrchestratorPrompt(opts: BuildAgentPromptOpts): string
 
   const factsBlock = buildFactsBlock(opts.facts, opts.fsmState);
 
+  const scriptSection =
+    opts.channel === "playground"
+      ? [opts.script.compactPath.trim(), opts.script.outgoingTransitions.trim()]
+          .filter(Boolean)
+          .join("\n") || "(скрипт не задан — следуй этапам FSM)"
+      : opts.script.fullScript.trim() || "(скрипт не задан — следуй этапам FSM)";
+
   return [
     "=== ROLE ===",
     `Ты — AI-ассистент и дирижёр диалога стоматологической клиники «${opts.clinicName}».`,
@@ -48,7 +55,7 @@ export function buildAgentOrchestratorPrompt(opts: BuildAgentPromptOpts): string
     "Ты не врач — не ставишь диагнозы.",
     "",
     "=== SCRIPT (Mind Map — главный скрипт продаж) ===",
-    opts.script.fullScript.trim() || "(скрипт не задан — следуй этапам FSM)",
+    scriptSection,
     "",
     "=== ТЕКУЩИЙ УЗЕЛ ===",
     `id: ${opts.script.currentNodeId}`,
