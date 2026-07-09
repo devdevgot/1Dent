@@ -1931,7 +1931,7 @@ export function PatientDetailPanel() {
                       <Megaphone className="h-3.5 w-3.5" />
                       Рассылки WhatsApp
                     </p>
-                    <Suspense fallback={<div className="text-caption text-[var(--text-subtle)] py-2">Загрузка…</div>}>
+                    <Suspense fallback={<ListRowsSkeleton rows={3} avatar={false} card={false} className="py-2" />}>
                       <PatientBroadcastHistory patientId={patient.id} />
                     </Suspense>
                   </div>

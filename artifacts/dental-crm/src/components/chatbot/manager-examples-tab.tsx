@@ -5,6 +5,7 @@ import {
   useCreateManagerExample,
   useDeleteManagerExample,
 } from "@workspace/api-client-react";
+import { ListRowsSkeleton } from "@/components/skeletons";
 
 export function ManagerExamplesTab() {
   const { data, refetch, isLoading } = useListManagerExamples();
@@ -67,7 +68,7 @@ export function ManagerExamplesTab() {
       </div>
 
       {isLoading ? (
-        <p className="text-body text-[var(--text-secondary)] text-center py-6">Загрузка…</p>
+        <ListRowsSkeleton rows={4} avatar={false} card />
       ) : examples.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--ds-border)] p-8 text-center text-body text-[var(--text-secondary)]">
           <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-40" />

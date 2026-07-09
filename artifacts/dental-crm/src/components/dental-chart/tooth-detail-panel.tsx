@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Bone, ListRowsSkeleton } from "@/components/skeletons";
 import { X, Clock, Beaker, Stethoscope, Brain, RefreshCw } from "lucide-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
@@ -37,8 +38,10 @@ function ToothAiSection({ patientId, toothFdi }: { patientId: string; toothFdi: 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-4">
-        <div className="w-5 h-5 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <div className="space-y-2 py-2">
+        <Bone className="h-3 w-full rounded-full" />
+        <Bone className="h-3 w-4/5 rounded-full" />
+        <Bone className="h-3 w-3/5 rounded-full" />
       </div>
     );
   }
@@ -437,7 +440,7 @@ export function ToothDetailPanel({
             )}
 
             {treatmentsLoading ? (
-              <div className="text-caption text-[var(--text-secondary)] py-4 text-center">{t("tooth.loading")}</div>
+              <ListRowsSkeleton rows={3} avatar={false} card={false} />
             ) : treatments.length === 0 ? (
               <div className="text-caption text-[var(--text-secondary)] py-4 text-center">{t("tooth.noTreatments")}</div>
             ) : (

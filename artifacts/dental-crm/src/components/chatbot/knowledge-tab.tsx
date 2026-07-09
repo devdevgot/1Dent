@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { guessFsmStateFromLabel } from "@/lib/chatbot-fsm-states";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
+import { ListRowsSkeleton } from "@/components/skeletons";
 
 // ── Error message helper ──────────────────────────────────────────────────────
 function friendlyError(msg: string | null | undefined): string {
@@ -446,9 +447,7 @@ export function KnowledgeTab({
 
       {/* Sources list */}
       {loading ? (
-        <div className="flex justify-center py-6">
-          <Loader2 className="h-5 w-5 text-[var(--ds-primary)] animate-spin" />
-        </div>
+        <ListRowsSkeleton rows={4} avatar={false} card />
       ) : sources.length > 0 && (
         <div className="space-y-2">
           <p className="text-caption font-medium text-[var(--text-secondary)]">

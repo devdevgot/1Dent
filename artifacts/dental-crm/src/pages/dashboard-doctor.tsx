@@ -127,7 +127,7 @@ export default function DoctorDashboard() {
   const { data: analyticsData, isLoading } = useGetDoctorAnalytics({
     query: { queryKey: getGetDoctorAnalyticsQueryKey() },
   });
-  const { data: salaryData } = useGetMySalary();
+  const { data: salaryData, isLoading: salaryLoading } = useGetMySalary();
   const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
 
   const rawAnalytics = (analyticsData?.data?.analytics ?? {}) as Record<string, unknown>;
@@ -257,7 +257,7 @@ export default function DoctorDashboard() {
                 )}
               </div>
 
-              {isLoading ? (
+              {salaryLoading ? (
                 <div className="h-9 w-40 bg-[var(--surface-2)] rounded-xl animate-pulse" />
               ) : !mySalary ? (
                 <p className="text-caption text-[var(--text-subtle)] italic">{t("payroll.noSettings", "Настройки зарплаты не заданы")}</p>

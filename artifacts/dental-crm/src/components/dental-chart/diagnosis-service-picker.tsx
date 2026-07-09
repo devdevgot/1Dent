@@ -8,6 +8,7 @@ import {
 import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ListRowsSkeleton } from "@/components/skeletons";
 import {
   Search,
   CheckSquare,
@@ -229,10 +230,7 @@ export function DiagnosisServicePicker({
       {/* ── Service list ───────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-2 space-y-1">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="text-caption text-[var(--text-secondary)]">Загрузка прейскуранта...</span>
-          </div>
+          <ListRowsSkeleton rows={6} avatar={false} card={false} className="py-2" />
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
             <span className="text-2xl">🔍</span>

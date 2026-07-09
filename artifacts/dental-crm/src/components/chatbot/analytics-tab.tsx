@@ -3,6 +3,7 @@ import { BarChart3, TrendingUp, Users, CalendarCheck } from "lucide-react";
 import { useGetChatbotFunnelAnalytics } from "@workspace/api-client-react";
 import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
 import { cn } from "@/lib/utils";
+import { QACardSkeleton, ListRowsSkeleton, Bone, SkeletonCard } from "@/components/skeletons";
 
 export function ChatbotAnalyticsTab() {
   const { t } = useTranslation();
@@ -10,7 +11,19 @@ export function ChatbotAnalyticsTab() {
   const analytics = data?.data?.analytics;
 
   if (isLoading) {
-    return <div className="p-8 text-center text-body text-[var(--text-secondary)]">{t("common.loading")}</div>;
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <QACardSkeleton key={i} />
+          ))}
+        </div>
+        <SkeletonCard className="overflow-hidden">
+          <Bone className="h-4 w-48 rounded m-4 mb-3" />
+          <ListRowsSkeleton rows={5} avatar={false} card={false} />
+        </SkeletonCard>
+      </div>
+    );
   }
 
   if (!analytics) {
