@@ -1,4 +1,4 @@
-import { createChatCompletion, CHAT_MODEL } from "../../lib/openrouter-client";
+import { createChatCompletion, CHAT_MODEL, FAST_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import type { ChatbotSettings } from "@workspace/db";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
@@ -89,6 +89,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   let state = deps.sessionState;
 
   const scriptCtx = buildScriptContextForAgent(mindMap, data.activeMindMapNodeId);
+  const safeMindMap = mindMap?.nodes?.length ? mindMap : null;
 
   const fsmForFacts = (scriptCtx.currentFsmState as ChatbotState) ?? state;
   const facts = buildPromptFacts(fsmForFacts);
@@ -108,17 +109,20 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     { role: "user", content: messageText },
   ];
 
+  const llmModel = dryRun ? FAST_MODEL : CHAT_MODEL;
+  const llmTimeoutMs = dryRun ? 20_000 : 35_000;
+
   let agentTurn = null;
   try {
     const completion = await createChatCompletion(
       {
-        model: CHAT_MODEL,
+        model: llmModel,
         messages,
         response_format: { type: "json_object" },
         temperature: 0.55,
-        max_tokens: 1024,
+        max_tokens: dryRun ? 768 : 1024,
       },
-      { timeoutMs: 35_000, label: "chatbotAgentTurn" },
+      { timeoutMs: llmTimeoutMs, label: dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn" },
     );
     const raw = completion.choices[0]?.message?.content ?? null;
     agentTurn = parseChatbotAgentTurn(raw);
@@ -155,7 +159,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
 
   const fromNodeId = scriptCtx.currentNodeId;
   let toNodeId = agentTurn.mindMapNodeId ?? fromNodeId;
-  const transition = assertAllowedTransition(mindMap, fromNodeId, toNodeId ?? undefined);
+  const transition = assertAllowedTransition(safeMindMap, fromNodeId, toNodeId ?? undefined);
   if (!transition.allowed) {
     logger.warn({ reason: transition.reason, fromNodeId, toNodeId }, "[AgentTurn] Blocked transition");
     toNodeId = fromNodeId;
@@ -163,7 +167,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
 
   if (toNodeId) {
     data.activeMindMapNodeId = toNodeId;
-    const targetNode = mindMap.nodes.find((n) => n.id === toNodeId);
+    const targetNode = safeMindMap?.nodes.find((n) => n.id === toNodeId);
     if (targetNode?.fsmState) {
       state = targetNode.fsmState as ChatbotState;
     }
@@ -189,7 +193,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   state = deriveFsmStateFromAgent(
     data,
     agentTurn.fsmHint,
-    mindMap.nodes.find((n) => n.id === toNodeId)?.fsmState,
+    safeMindMap?.nodes.find((n) => n.id === toNodeId)?.fsmState,
   );
 
   if (toolResult.handoff) {
@@ -241,7 +245,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   }
 
   if (!data.activeMindMapNodeId && state) {
-    const byFsm = findMindMapNodeByFsmState(mindMap, state);
+    const byFsm = findMindMapNodeByFsmState(safeMindMap, state);
     if (byFsm) data.activeMindMapNodeId = byFsm.id;
   }
 

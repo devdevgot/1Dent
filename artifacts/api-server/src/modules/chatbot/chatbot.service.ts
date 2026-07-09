@@ -57,6 +57,7 @@ import {
 } from "./chatbot-ab-funnel";
 import {
   formatSlotAlternatives,
+  getClinicDoctorsLightweight,
   getClinicDoctorsWithSlots,
   getDoctorAvailableSlots,
   validateAppointmentSlot,
@@ -1634,6 +1635,30 @@ function formatSimulateMessageResult(
   };
 }
 
+const PLAYGROUND_TURN_TIMEOUT_MS = 28_000;
+
+function buildPlaygroundFallbackResult(
+  opts: {
+    session?: PlaygroundSessionInput;
+    userMessage: string;
+    reason?: string;
+  },
+): SimulateMessageResult {
+  const state = opts.session?.state ?? "greeting";
+  const reply =
+    "Извините, ответ занял слишком много времени. Попробуйте короче сообщение или повторите через несколько секунд.";
+  return {
+    reply,
+    parts: [reply],
+    pausesMs: [0],
+    fsmState: state,
+    humanTakeover: false,
+    sessionData: opts.session?.data ?? {},
+    mindMapNode: null,
+    simulatedActions: opts.reason ? [opts.reason] : [],
+  };
+}
+
 export class ChatbotService {
   async processMessage(
     clinicId: string,
@@ -1772,11 +1797,14 @@ export class ChatbotService {
     let clinicName: string | undefined;
     let clinicBranchNames: string[] = [];
     try {
+      const doctorsPromise = dryRun
+        ? getClinicDoctorsLightweight(clinicId).catch(() => [] as DoctorWithSlots[])
+        : getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(() => [] as DoctorWithSlots[]);
       [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName, clinicBranchNames] = await Promise.all([
         getManagerExamples(clinicId),
         loadKnowledgeContext(clinicId, messageText),
         loadPriceListContext(clinicId),
-        getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(() => [] as DoctorWithSlots[]),
+        doctorsPromise,
         db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []).then((rows) => rows[0]?.name),
         loadClinicBranchNames(clinicId),
       ]);
@@ -3716,14 +3744,44 @@ export class ChatbotService {
       }
 
       const settings = getEffectiveSettings(await getSettings(clinicId));
-      const turn = await this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
-        dryRun: true,
-        sessionInput: opts?.session,
-        historyInput: opts?.history,
-        scenario: opts?.scenario,
-        initGreeting: opts?.initGreeting,
-      });
+      type PlaygroundRaceResult = { timedOut: true } | { timedOut: false; turn: TurnResult | null };
+      let raceResult: PlaygroundRaceResult;
+      try {
+        raceResult = await Promise.race([
+          this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
+            dryRun: true,
+            sessionInput: opts?.session,
+            historyInput: opts?.history,
+            scenario: opts?.scenario,
+            initGreeting: opts?.initGreeting,
+          }).then((turn) => ({ timedOut: false as const, turn })),
+          new Promise<PlaygroundRaceResult>((resolve) => {
+            setTimeout(() => resolve({ timedOut: true }), PLAYGROUND_TURN_TIMEOUT_MS);
+          }),
+        ]);
+      } catch (turnErr) {
+        const turnMsg = turnErr instanceof Error ? turnErr.message : String(turnErr);
+        if (turnMsg.includes("OpenRouterTimeout") || turnMsg.includes("PLAYGROUND_TIMEOUT")) {
+          logger.warn({ clinicId, turnMsg }, "[ChatbotService] Playground turn timed out");
+          return buildPlaygroundFallbackResult({
+            session: opts?.session,
+            userMessage,
+            reason: "timeout",
+          });
+        }
+        throw turnErr;
+      }
 
+      if (raceResult.timedOut) {
+        logger.warn({ clinicId }, "[ChatbotService] Playground turn exceeded time budget");
+        return buildPlaygroundFallbackResult({
+          session: opts?.session,
+          userMessage,
+          reason: "timeout",
+        });
+      }
+
+      const turn = raceResult.turn;
       if (!turn) {
         return {
           reply: "Чат-бот отключён или недоступен.",
@@ -3753,13 +3811,18 @@ export class ChatbotService {
       if (
         errMsg.includes("OpenRouter") ||
         errMsg.includes("openrouter") ||
+        errMsg.includes("OpenRouterTimeout") ||
         errMsg.includes("429") ||
         errMsg.includes("402")
       ) {
         throw new OpenRouterAiFailedError();
       }
       logger.error({ err, clinicId }, "[ChatbotService] simulateMessage failed");
-      throw err;
+      return buildPlaygroundFallbackResult({
+        session: opts?.session,
+        userMessage,
+        reason: "error",
+      });
     }
   }
 
