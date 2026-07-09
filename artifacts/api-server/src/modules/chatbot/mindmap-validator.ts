@@ -86,6 +86,42 @@ function normalizeMindMapInput(raw: unknown): ScriptMindMapData | null {
   return { nodes, edges };
 }
 
+/** Detect cycles in mind map edges (back-edges in conversation scripts). */
+export function detectMindMapCycles(map: ScriptMindMapData): string[] {
+  const ch: Record<string, string[]> = {};
+  for (const node of map.nodes) ch[node.id] = [];
+  for (const edge of map.edges ?? []) {
+    if (!ch[edge.source]) ch[edge.source] = [];
+    ch[edge.source].push(edge.target);
+  }
+
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const cycles: string[] = [];
+
+  function dfs(id: string, path: string[]): void {
+    if (visiting.has(id)) {
+      const start = path.indexOf(id);
+      const loop = start >= 0 ? [...path.slice(start), id] : [...path, id];
+      cycles.push(loop.join(" → "));
+      return;
+    }
+    if (visited.has(id)) return;
+    visiting.add(id);
+    for (const childId of ch[id] ?? []) {
+      dfs(childId, [...path, id]);
+    }
+    visiting.delete(id);
+    visited.add(id);
+  }
+
+  for (const node of map.nodes) {
+    if (!visited.has(node.id)) dfs(node.id, []);
+  }
+
+  return cycles;
+}
+
 /** Validate mind map structure for runtime + agent mode. */
 export function validateMindMapScript(raw: unknown): MindMapValidationResult {
   const map = normalizeMindMapInput(raw);
@@ -110,6 +146,10 @@ export function validateMindMapScript(raw: unknown): MindMapValidationResult {
   for (const edge of map.edges ?? []) {
     if (!ids.has(edge.source)) errors.push(`Edge ${edge.id} references missing source ${edge.source}`);
     if (!ids.has(edge.target)) errors.push(`Edge ${edge.id} references missing target ${edge.target}`);
+  }
+
+  for (const cycle of detectMindMapCycles(map)) {
+    warnings.push(`Cycle in graph: ${cycle}`);
   }
 
   const hasRoot =

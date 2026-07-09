@@ -50,10 +50,16 @@ const H_GAP = 40;
 /** Vertical gap between parent and child row. */
 const V_GAP = 56;
 
-function subtreeW(id: string, ch: Record<string, string[]>): number {
+function subtreeW(id: string, ch: Record<string, string[]>, stack = new Set<string>()): number {
+  if (stack.has(id)) return NODE_W;
   const kids = ch[id] ?? [];
   if (!kids.length) return NODE_W;
-  return kids.reduce((s, k) => s + subtreeW(k, ch), 0) + (kids.length - 1) * H_GAP;
+  stack.add(id);
+  try {
+    return kids.reduce((s, k) => s + subtreeW(k, ch, stack), 0) + (kids.length - 1) * H_GAP;
+  } finally {
+    stack.delete(id);
+  }
 }
 
 function placeNode(
@@ -62,21 +68,32 @@ function placeNode(
   leftX: number,
   ch: Record<string, string[]>,
   pos: Record<string, { x: number; y: number }>,
+  stack = new Set<string>(),
 ) {
-  const kids = ch[id] ?? [];
   const y = depth * (NODE_H + V_GAP);
+  if (stack.has(id)) {
+    pos[id] = pos[id] ?? { x: leftX, y };
+    return;
+  }
+
+  const kids = ch[id] ?? [];
   if (!kids.length) {
     pos[id] = { x: leftX, y };
     return;
   }
 
-  const rowWidth = subtreeW(id, ch);
-  pos[id] = { x: leftX + Math.max(0, (rowWidth - NODE_W) / 2), y };
+  stack.add(id);
+  try {
+    const rowWidth = subtreeW(id, ch);
+    pos[id] = { x: leftX + Math.max(0, (rowWidth - NODE_W) / 2), y };
 
-  let curX = leftX;
-  for (const childId of kids) {
-    placeNode(childId, depth + 1, curX, ch, pos);
-    curX += subtreeW(childId, ch) + H_GAP;
+    let curX = leftX;
+    for (const childId of kids) {
+      placeNode(childId, depth + 1, curX, ch, pos, stack);
+      curX += subtreeW(childId, ch) + H_GAP;
+    }
+  } finally {
+    stack.delete(id);
   }
 }
 
