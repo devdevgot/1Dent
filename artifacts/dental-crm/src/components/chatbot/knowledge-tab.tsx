@@ -614,19 +614,21 @@ export function KnowledgeAndScriptModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4] font-manrope">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#f1f5f9] font-manrope">
       {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e8e3d9] shadow-sm">
-        <BookOpen className="h-4 w-4 text-[#1f75fe] shrink-0" />
+      <div className="shrink-0 flex items-center gap-4 px-5 py-4 bg-white border-b border-[#e8e3d9] shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1f75fe] to-[#60a5fa] text-white shadow-sm shrink-0">
+          <BookOpen className="h-5 w-5" />
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#0f172a]">База знаний и скрипт</p>
-          <p className="text-xs text-[#64748b] leading-tight">Обучение чат-бота и сценарий разговора</p>
+          <p className="text-base font-semibold text-[#0f172a]">База знаний и скрипт</p>
+          <p className="text-xs text-[#64748b] leading-tight mt-0.5">Обучение чат-бота и визуальный сценарий разговора</p>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
+          className="p-2 rounded-xl hover:bg-[#f1f5f9] transition-colors shrink-0"
         >
-          <X className="h-4 w-4 text-[#64748b]" />
+          <X className="h-5 w-5 text-[#64748b]" />
         </button>
       </div>
 
@@ -645,29 +647,31 @@ export function KnowledgeAndScriptModal({
 
         {/* Mind map inline section */}
         <div className="px-4 py-4 pb-8 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4 text-[#1f75fe] shrink-0" />
-              <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f75fe] to-[#60a5fa] text-white shadow-sm shrink-0">
+                <GitBranch className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
-                <p className="text-xs text-[#64748b] mt-0.5">
+                <p className="text-xs text-[#64748b] mt-0.5 truncate">
                   {liveMindMapData?.nodes?.length
-                    ? "Нажмите на узел для редактирования"
+                    ? "Цветные карточки по этапам · нажмите узел для редактирования"
                     : "Сгенерируйте скрипты выше — они появятся здесь"}
                 </p>
               </div>
             </div>
             <button
               onClick={() => setMapExpanded(true)}
-              className="flex items-center gap-1.5 text-xs text-[#64748b] hover:text-[#0f172a] px-2.5 py-1.5 rounded-lg border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#64748b] hover:text-[#0f172a] px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#f8fafc] shadow-sm transition-colors shrink-0"
             >
               <Maximize2 className="h-3.5 w-3.5" />
               На весь экран
             </button>
           </div>
           <div
-            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white relative"
-            style={{ height: 480 }}
+            className="rounded-2xl border border-[#e2e8f0] overflow-hidden bg-[#f8fafc] relative shadow-[0_12px_40px_rgba(15,23,42,0.06)]"
+            style={{ height: 520 }}
           >
             <ScriptMindMap
               key={`${open}-${liveMindMapData?.nodes?.length ?? 0}`}

@@ -26,6 +26,7 @@ import {
   Minimize2,
   RefreshCw,
   Save,
+  Sparkles,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ import {
   LAYOUT_V_GAP,
   resolveMainPathIds,
 } from "./mindmap-layout";
+import { getFsmTone } from "./mindmap-theme";
 import { MindMapNodePanel } from "./mindmap-node-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -48,6 +50,8 @@ export interface ScriptMindMapNodeData extends Record<string, unknown> {
   content: string;
   isRoot?: boolean;
   fsmState?: string;
+  isMainPath?: boolean;
+  mainPathStep?: number;
 }
 
 export interface ScriptMindMapData {
@@ -64,10 +68,11 @@ export interface ScriptMindMapData {
 
 export type ScriptMindMapMode = "inline" | "fullscreen";
 
-// ─── Custom node (compact card — edit in side panel) ──────────────────────────
+// ─── Custom node — polished step card ─────────────────────────────────────────
 
-function MindMapNodeComponent({ id, data, selected }: NodeProps) {
+function MindMapNodeComponent({ data, selected }: NodeProps) {
   const d = data as ScriptMindMapNodeData;
+  const tone = getFsmTone(d.fsmState);
   const fsmLabel = d.fsmState
     ? CHATBOT_FSM_STATES.find((s) => s.value === d.fsmState)?.label ?? d.fsmState
     : null;
@@ -75,45 +80,89 @@ function MindMapNodeComponent({ id, data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "w-[300px] min-h-[96px] rounded-xl border-2 bg-white shadow-sm transition-all select-none cursor-pointer",
+        "group relative w-[280px] min-h-[108px] rounded-2xl border bg-white/95 backdrop-blur-sm transition-all duration-200 select-none cursor-pointer overflow-hidden",
         d.isRoot
-          ? "border-[#1f75fe] bg-[#1f75fe]/5"
+          ? "shadow-[0_8px_30px_rgba(31,117,254,0.18)]"
           : selected
-            ? "border-[#1f75fe] shadow-md ring-2 ring-[#1f75fe]/20"
-            : "border-[#e8e3d9] hover:border-[#93c5fd] hover:shadow-md",
+            ? "shadow-[0_12px_40px_rgba(15,23,42,0.12)] scale-[1.02]"
+            : "shadow-[0_4px_20px_rgba(15,23,42,0.06)] hover:shadow-[0_10px_32px_rgba(15,23,42,0.10)] hover:-translate-y-0.5",
       )}
+      style={{
+        borderColor: selected ? tone.accent : d.isRoot ? tone.accent : tone.border,
+        boxShadow: selected ? `0 0 0 3px ${tone.accent}22` : undefined,
+      }}
     >
+      <div
+        className="absolute inset-y-0 left-0 w-1.5 rounded-l-2xl"
+        style={{ backgroundColor: d.isRoot ? "#1f75fe" : tone.accent }}
+      />
+
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-2.5 !h-2.5 !bg-[#1f75fe] !border-2 !border-white"
+        className="!w-3 !h-3 !border-2 !border-white !shadow-sm"
+        style={{ backgroundColor: tone.accent }}
       />
 
-      <div className="p-3.5">
-        <p
-          className={cn(
-            "text-sm font-semibold leading-snug line-clamp-2",
-            d.isRoot ? "text-[#1f75fe]" : "text-[#0f172a]",
+      <div className="pl-4 pr-3.5 py-3.5">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {d.isRoot ? (
+              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#1f75fe] text-white shadow-sm">
+                <Sparkles className="h-3.5 w-3.5" />
+              </span>
+            ) : d.isMainPath && d.mainPathStep != null && d.mainPathStep > 0 ? (
+              <span
+                className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-lg px-1.5 text-[11px] font-bold text-white shadow-sm"
+                style={{ backgroundColor: tone.accent }}
+              >
+                {d.mainPathStep}
+              </span>
+            ) : (
+              <span
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold"
+                style={{ backgroundColor: tone.badge, color: tone.badgeText }}
+              >
+                •
+              </span>
+            )}
+            <p
+              className={cn(
+                "text-[13px] font-semibold leading-snug line-clamp-2",
+                d.isRoot ? "text-[#1f75fe]" : "text-[#0f172a]",
+              )}
+            >
+              {d.label || <span className="font-normal italic text-[#94a3b8]">Без названия</span>}
+            </p>
+          </div>
+          {d.isMainPath && !d.isRoot && (
+            <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-[#1f75fe]/80 bg-[#1f75fe]/8 px-1.5 py-0.5 rounded-md">
+              путь
+            </span>
           )}
-        >
-          {d.label || <span className="font-normal italic text-[#64748b]">Без названия</span>}
-        </p>
+        </div>
+
         {fsmLabel && (
-          <span className="inline-block mt-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">
+          <span
+            className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: tone.badge, color: tone.badgeText }}
+          >
             {fsmLabel}
           </span>
         )}
+
         {d.content ? (
-          <p className="text-sm text-[#64748b] mt-2 leading-relaxed line-clamp-2">{d.content}</p>
+          <p className="text-[12px] text-[#64748b] mt-2 leading-relaxed line-clamp-2">{d.content}</p>
         ) : (
-          <p className="text-xs text-[#94a3b8] mt-2 italic">Нажмите для редактирования</p>
+          <p className="text-[11px] text-[#94a3b8] mt-2 italic">Нажмите, чтобы настроить шаг</p>
         )}
       </div>
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-2.5 !h-2.5 !bg-[#1f75fe] !border-2 !border-white"
+        className="!w-3 !h-3 !border-2 !border-white !shadow-sm"
+        style={{ backgroundColor: tone.accent }}
       />
     </div>
   );
@@ -198,16 +247,31 @@ const DEFAULT_EDGES: ScriptMindMapData["edges"] = [
 
 const EDGE_STYLE = {
   type: "smoothstep" as const,
-  style: { stroke: "#93c5fd", strokeWidth: 2 },
-  markerEnd: { type: MarkerType.ArrowClosed, color: "#93c5fd" },
-  labelStyle: { fontSize: 11, fill: "#475569", fontWeight: 500 },
-  labelBgStyle: { fill: "#ffffff", fillOpacity: 0.95 },
-  labelBgPadding: [5, 4] as [number, number],
-  labelBgBorderRadius: 6,
+  style: { stroke: "#cbd5e1", strokeWidth: 1.75 },
+  markerEnd: { type: MarkerType.ArrowClosed, color: "#cbd5e1", width: 18, height: 18 },
+  labelStyle: { fontSize: 11, fill: "#475569", fontWeight: 600 },
+  labelBgStyle: { fill: "#ffffff", fillOpacity: 0.98 },
+  labelBgPadding: [6, 5] as [number, number],
+  labelBgBorderRadius: 8,
 };
 
-function makeFlowEdge(e: ScriptMindMapData["edges"][number]): Edge {
-  return { ...e, ...EDGE_STYLE, ...(e.label ? { label: e.label } : {}) };
+const MAIN_PATH_EDGE_STYLE = {
+  type: "smoothstep" as const,
+  style: { stroke: "#1f75fe", strokeWidth: 2.5 },
+  markerEnd: { type: MarkerType.ArrowClosed, color: "#1f75fe", width: 20, height: 20 },
+  labelStyle: { fontSize: 11, fill: "#1d4ed8", fontWeight: 600 },
+  labelBgStyle: { fill: "#eff6ff", fillOpacity: 0.98 },
+  labelBgPadding: [6, 5] as [number, number],
+  labelBgBorderRadius: 8,
+};
+
+function makeFlowEdge(
+  e: ScriptMindMapData["edges"][number],
+  mainPathIds: string[],
+): Edge {
+  const onMainPath = mainPathIds.includes(e.source) && mainPathIds.includes(e.target);
+  const base = onMainPath ? MAIN_PATH_EDGE_STYLE : EDGE_STYLE;
+  return { ...e, ...base, ...(e.label ? { label: e.label } : {}) };
 }
 
 function makeFlowNode(n: ScriptMindMapData["nodes"][number]): Node {
@@ -215,12 +279,21 @@ function makeFlowNode(n: ScriptMindMapData["nodes"][number]): Node {
     id: n.id,
     type: "mindmap",
     position: n.position ?? { x: 0, y: 0 },
-    data: { label: n.label, content: n.content, isRoot: n.isRoot, fsmState: n.fsmState },
+    data: {
+      label: n.label,
+      content: n.content,
+      isRoot: n.isRoot,
+      fsmState: n.fsmState,
+    },
   };
 }
 
 function toFlowGraph(raw: ScriptMindMapData, forceLayout: boolean): { nodes: Node[]; edges: Edge[] } {
-  const edges = raw.edges.map(makeFlowEdge);
+  const mainPathIds = resolveMainPathIds(
+    raw.nodes.map((n) => ({ id: n.id, isRoot: n.isRoot, fsmState: n.fsmState })),
+    raw.edges.map((e) => ({ source: e.source, target: e.target })),
+  );
+  const edges = raw.edges.map((e) => makeFlowEdge(e, mainPathIds));
   let flowNodes = raw.nodes.map(makeFlowNode);
   const useSaved = !forceLayout && hasSavedMindMapPositions(raw.nodes);
   if (!useSaved) {
@@ -283,10 +356,42 @@ export function ScriptMindMap({
     [allNodes, allEdges],
   );
 
+  const styledAllEdges = useMemo(
+    () =>
+      allEdges.map((e) =>
+        makeFlowEdge(
+          {
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            label: typeof e.label === "string" ? e.label : undefined,
+          },
+          mainPathIds,
+        ),
+      ),
+    [allEdges, mainPathIds],
+  );
+
+  const enrichedNodes = useMemo(
+    () =>
+      allNodes.map((n) => {
+        const pathIndex = mainPathIds.indexOf(n.id);
+        return {
+          ...n,
+          data: {
+            ...(n.data as ScriptMindMapNodeData),
+            isMainPath: pathIndex >= 0,
+            mainPathStep: pathIndex >= 0 ? pathIndex : undefined,
+          },
+        };
+      }),
+    [allNodes, mainPathIds],
+  );
+
   const { nodes: displayNodes, edges: displayEdges } = useMemo(() => {
-    if (showAllBranches) return { nodes: allNodes, edges: allEdges };
-    return filterFocusGraph(allNodes, allEdges, mainPathIds, branchHiddenIds);
-  }, [showAllBranches, allNodes, allEdges, mainPathIds, branchHiddenIds]);
+    if (showAllBranches) return { nodes: enrichedNodes, edges: styledAllEdges };
+    return filterFocusGraph(enrichedNodes, styledAllEdges, mainPathIds, branchHiddenIds);
+  }, [showAllBranches, enrichedNodes, styledAllEdges, mainPathIds, branchHiddenIds]);
 
   const branchCount = branchHiddenIds.size;
 
@@ -347,13 +452,13 @@ export function ScriptMindMap({
       const id = genId();
       const newNode = makeFlowNode({ id, label: "Новый шаг", content: "" });
       setAllEdges((prev) => {
-        const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentId, target: id });
+        const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentId, target: id }, mainPathIds);
         setAllNodes((pn) => [...pn, placeChildNode(parentId, newNode, pn, prev)]);
         return [...prev, newEdge];
       });
       setSelectedId(id);
     },
-    [setAllNodes, setAllEdges, markDirty, placeChildNode],
+    [setAllNodes, setAllEdges, markDirty, placeChildNode, mainPathIds],
   );
 
   const fork = useCallback(
@@ -367,7 +472,7 @@ export function ScriptMindMap({
           setAllNodes((pn) => [...pn, { ...newNode, position: { x: pn.length * (LAYOUT_NODE_W + 32), y: 0 } }]);
           return prev;
         }
-        const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentEdge.source, target: id });
+        const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentEdge.source, target: id }, mainPathIds);
         setAllNodes((pn) => {
           const sibling = pn.find((n) => n.id === siblingId);
           const placed = sibling
@@ -379,7 +484,7 @@ export function ScriptMindMap({
       });
       setSelectedId(id);
     },
-    [setAllNodes, setAllEdges, markDirty, placeChildNode],
+    [setAllNodes, setAllEdges, markDirty, placeChildNode, mainPathIds],
   );
 
   const remove = useCallback(
@@ -467,7 +572,7 @@ export function ScriptMindMap({
   }, []);
 
   return (
-    <div className="relative flex h-full w-full min-h-0">
+    <div className="relative flex h-full w-full min-h-0 bg-[#f8fafc]">
       <div className="flex-1 min-w-0">
         <ReactFlow
           nodes={displayNodes.map((n) => ({ ...n, selected: n.id === selectedId }))}
@@ -478,34 +583,55 @@ export function ScriptMindMap({
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           onInit={(inst) => { flowRef.current = inst; fitCanvas(); }}
-          minZoom={0.5}
-          maxZoom={1.5}
+          minZoom={0.35}
+          maxZoom={1.6}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={EDGE_STYLE}
+          className="mindmap-flow"
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e8e3d9" />
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={22}
+            size={1.2}
+            color="#cbd5e1"
+            className="!bg-[radial-gradient(ellipse_at_top,#f8fbff_0%,#f1f5f9_45%,#eef2f7_100%)]"
+          />
           <Controls
             showInteractive={false}
-            className="!shadow-sm !border !border-[#e8e3d9] !rounded-xl !overflow-hidden"
+            className="!shadow-[0_8px_24px_rgba(15,23,42,0.08)] !border !border-white/80 !rounded-2xl !overflow-hidden !bg-white/90 !backdrop-blur-md"
           />
           {mode === "fullscreen" && (
             <MiniMap
-              className="!rounded-xl !border !border-[#e8e3d9] !shadow-sm"
-              nodeColor={(n) => ((n.data as ScriptMindMapNodeData).isRoot ? "#1f75fe" : "#cbd5e1")}
-              maskColor="rgb(250 248 244 / 0.75)"
+              className="!rounded-2xl !border !border-white/80 !shadow-[0_8px_24px_rgba(15,23,42,0.08)] !bg-white/90 !backdrop-blur-md"
+              nodeColor={(n) => {
+                const d = n.data as ScriptMindMapNodeData;
+                if (d.isRoot) return "#1f75fe";
+                return getFsmTone(d.fsmState).accent;
+              }}
+              maskColor="rgb(248 250 252 / 0.82)"
+              pannable
+              zoomable
             />
           )}
+          <Panel position="top-left" className="m-3">
+            <div className="rounded-2xl border border-white/80 bg-white/90 backdrop-blur-md shadow-[0_8px_24px_rgba(15,23,42,0.08)] px-3.5 py-2.5">
+              <p className="text-[11px] font-semibold text-[#0f172a]">Сценарий записи</p>
+              <p className="text-[10px] text-[#64748b] mt-0.5">
+                {showAllBranches ? "Все ветки" : "Главный путь"} · {displayNodes.length} узлов
+              </p>
+            </div>
+          </Panel>
           <Panel position="top-right" className="m-3 flex flex-col items-end gap-2">
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-white/80 bg-white/90 backdrop-blur-md shadow-[0_8px_24px_rgba(15,23,42,0.08)] p-2">
               {branchCount > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowAllBranches((v) => !v)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm transition-colors",
+                    "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
                     showAllBranches
-                      ? "bg-white border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4]"
-                      : "bg-[#1f75fe]/10 border-[#1f75fe]/30 text-[#1f75fe]",
+                      ? "bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9]"
+                      : "bg-[#1f75fe] text-white shadow-sm hover:bg-[#1a65e8]",
                   )}
                 >
                   {showAllBranches ? (
@@ -524,7 +650,7 @@ export function ScriptMindMap({
               <button
                 type="button"
                 onClick={relayoutAll}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4] shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#f8fafc] text-[#64748b] hover:bg-[#f1f5f9] transition-colors"
                 title="Перестроить расположение узлов"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -535,10 +661,10 @@ export function ScriptMindMap({
                 onClick={handleSave}
                 disabled={saveStatus === "saving"}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all",
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
                   saveStatus === "saved"
-                    ? "bg-emerald-500 text-white"
-                    : "bg-[#1f75fe] text-white hover:bg-[#1a6ae8]",
+                    ? "bg-emerald-500 text-white shadow-sm"
+                    : "bg-[#1f75fe] text-white shadow-sm hover:bg-[#1a65e8]",
                   saveStatus === "saving" && "opacity-70 cursor-not-allowed",
                 )}
               >
@@ -549,20 +675,20 @@ export function ScriptMindMap({
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                {saveStatus === "saving" ? "…" : saveStatus === "saved" ? "OK" : "Сохранить"}
+                {saveStatus === "saving" ? "…" : saveStatus === "saved" ? "Сохранено" : "Сохранить"}
               </button>
             </div>
             {!showAllBranches && branchCount > 0 && (
-              <p className="text-[10px] text-[#64748b] bg-white/90 px-2 py-1 rounded-md border border-[#e8e3d9] shadow-sm max-w-[220px] text-right">
+              <p className="text-[10px] text-[#64748b] bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/80 shadow-sm max-w-[240px] text-right">
                 Скрыто {branchCount} веток услуг · «Все ветки» для полной карты
               </p>
             )}
           </Panel>
           {mode === "inline" && (
-            <Panel position="bottom-left" className="m-2">
-              <div className="flex items-center gap-1.5 text-[10px] text-[#64748b] bg-white/95 px-2 py-1 rounded-lg border border-[#e8e3d9]">
-                <LayoutGrid className="h-3 w-3" />
-                Нажмите узел для редактирования
+            <Panel position="bottom-left" className="m-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-[#64748b] bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-white/80 shadow-sm">
+                <LayoutGrid className="h-3 w-3 text-[#1f75fe]" />
+                Клик по узлу — редактирование справа
               </div>
             </Panel>
           )}
@@ -572,10 +698,10 @@ export function ScriptMindMap({
       {selectedNode && selectedData && (
         <div
           className={cn(
-            "shrink-0 border-l border-[#e8e3d9] bg-white z-10",
+            "shrink-0 border-l border-[#e8e3d9] bg-white z-10 shadow-[-8px_0_32px_rgba(15,23,42,0.06)]",
             mode === "inline"
-              ? "absolute inset-y-0 right-0 w-[min(100%,320px)] shadow-xl"
-              : "relative w-[min(100%,360px)]",
+              ? "absolute inset-y-0 right-0 w-[min(100%,340px)]"
+              : "relative w-[min(100%,380px)]",
           )}
         >
           <MindMapNodePanel
@@ -613,21 +739,23 @@ export function ScriptMindMapModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4] font-manrope">
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 bg-white border-b border-[#e8e3d9] shadow-sm">
-        <GitBranch className="h-4 w-4 text-[#1f75fe] shrink-0" />
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#f1f5f9] font-manrope">
+      <div className="shrink-0 flex items-center gap-4 px-5 py-4 bg-white border-b border-[#e8e3d9] shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1f75fe] to-[#60a5fa] text-white shadow-sm shrink-0">
+          <GitBranch className="h-5 w-5" />
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
-          <p className="text-xs text-[#64748b] leading-tight">
-            Главный путь по центру · услуги в grid · клик по узлу — редактирование справа
+          <p className="text-base font-semibold text-[#0f172a]">Скрипт диалога</p>
+          <p className="text-xs text-[#64748b] leading-tight mt-0.5">
+            Главный путь подсвечен синим · цвет узла = этап FSM · клик — редактирование
           </p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
+          className="p-2 rounded-xl hover:bg-[#f1f5f9] transition-colors shrink-0"
         >
-          <X className="h-4 w-4 text-[#64748b]" />
+          <X className="h-5 w-5 text-[#64748b]" />
         </button>
       </div>
       <div className="flex-1 min-h-0">

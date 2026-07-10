@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 
-export const LAYOUT_NODE_W = 300;
+export const LAYOUT_NODE_W = 280;
 export const LAYOUT_NODE_H = 120;
 export const LAYOUT_H_GAP = 32;
 export const LAYOUT_V_GAP = 80;
