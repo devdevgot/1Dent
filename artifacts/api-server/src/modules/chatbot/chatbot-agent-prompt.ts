@@ -14,19 +14,12 @@ export interface BuildAgentPromptOpts {
 }
 
 const AGENT_JSON_SCHEMA = `{
-  "reply": "первое сообщение пациенту (ответ/инфо)",
-  "replyParts": ["второе сообщение — следующий шаг воронки", "третье при необходимости"],
-  "mindMapNodeId": "id узла из «Доступные переходы» или текущий",
-  "fsmHint": "greeting|collect_problem|collect_qualification|suggest_doctor|await_decision|collect_datetime|done|human_takeover",
-  "intent": {
-    "serviceType": "therapy|hygiene|surgery|orthopedics|orthodontics|consultation|unknown",
-    "urgency": "urgent|soon|planned",
-    "selectedBranch": "точный филиал из FACTS или null",
-    "patientName": "имя или null",
-    "preferredDatetime": "ISO или null",
-    "problemDescription": "кратко или null"
-  },
-  "actions": [{ "type": "suggest_doctor" }],
+  "reply": "короткий ответ пациенту",
+  "replyParts": ["второе сообщение если нужно"],
+  "mindMapNodeId": "id из «Доступные переходы»",
+  "fsmHint": "collect_qualification",
+  "intent": { "serviceType": "hygiene", "urgency": "planned", "selectedBranch": null },
+  "actions": [],
   "handoff": false
 }`;
 
@@ -92,7 +85,8 @@ export function buildAgentOrchestratorPrompt(opts: BuildAgentPromptOpts): string
     "9. Сервер проверяет переходы — не перескакивай этапы.",
     "",
     "=== OUTPUT ===",
-    "Верни ТОЛЬКО валидный JSON без markdown:",
+    "Верни ТОЛЬКО валидный JSON (без markdown, без комментариев). replyParts — массив строк или [].",
+    "Если не уверен в поле — ставь null или []. Обязательно заполни reply.",
     AGENT_JSON_SCHEMA,
   ]
     .filter(Boolean)
