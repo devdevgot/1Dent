@@ -1,174 +1,165 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, MessageSquare, Send, Bell } from "lucide-react";
-import { fadeUp, staggerParentVariants, EASE } from "@/lib/landing-animations";
+import { Bot, MessageSquare, Send, Bell, Sparkles } from "lucide-react";
+import { fadeUp, EASE } from "@/lib/landing-animations";
 import { SITE } from "@/config/site";
 
-function ChatBubble({ text, from, delay }: { text: string; from: "user" | "ai"; delay: number }) {
+const CONVERSATION = [
+  { role: "user" as const, text: "Здравствуйте! Хочу записаться к ортодонту" },
+  { role: "bot" as const, text: "Добрый день! Помогу с записью. К какому врачу предпочитаете?" },
+  { role: "user" as const, text: "К доктору Сейткали" },
+  { role: "bot" as const, text: "Ближайшее время: завтра 10:00 или послезавтра 14:30. Что удобнее?" },
+  { role: "user" as const, text: "Завтра в 10:00" },
+  { role: "bot" as const, text: "Записал! Завтра в 10:00. Накануне придёт напоминание в WhatsApp." },
+];
+
+const QUICK_REPLIES = ["Записаться", "Цены", "Адрес клиники"];
+
+const aiFeatures = [
+  { icon: MessageSquare, title: "ИИ-чатбот", desc: "Отвечает в WhatsApp 24/7, записывает на приём." },
+  { icon: Send, title: "Автоответы", desc: "Перехватывает диалог, если администратор занят." },
+  { icon: Bell, title: "Умные рассылки", desc: "Напоминания и возврат пациентов автоматически." },
+];
+
+function BotBubble({ text, delay = 0 }: { text: string; delay?: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
-      transition={{ delay, duration: 0.4, ease: EASE }}
-      style={{ willChange: "transform, opacity" }}
-      className={`flex ${from === "ai" ? "justify-end" : "justify-start"}`}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.35, ease: EASE }}
+      className="flex justify-start"
     >
-      <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm font-manrope ${
-        from === "ai"
-          ? "bg-[var(--ds-primary)] text-white rounded-br-sm"
-          : "bg-white/10 text-white/80 rounded-bl-sm border border-white/10"
-      }`}>
+      <div className="h-6 w-6 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 mr-2 mt-0.5">
+        <Bot className="h-3.5 w-3.5 text-[#1f75fe]" />
+      </div>
+      <div className="max-w-[82%] rounded-2xl rounded-tl-sm px-3 py-2 text-sm font-manrope bg-white border border-[#e8e3d9] text-[#0f172a] leading-relaxed">
         {text}
       </div>
     </motion.div>
   );
 }
 
-const aiFeaturesData = [
-  {
-    icon: MessageSquare,
-    title: "ИИ-чатбот",
-    desc: "Отвечает пациентам в WhatsApp автоматически 24/7. Записывает, консультирует, отвечает на вопросы.",
-  },
-  {
-    icon: Send,
-    title: "Автоответы",
-    desc: "Не успели ответить — ИИ перехватит и не потеряет пациента. Каждый диалог под контролем.",
-  },
-  {
-    icon: Bell,
-    title: "Умные рассылки",
-    desc: "Напоминания о записи, возврат пациентов после лечения, профилактика — всё автоматически.",
-  },
-];
-
-const featureItemVariants = {
-  hidden: { opacity: 0, x: -18 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.5, ease: EASE },
-  },
-};
-
-const statsVariants = {
-  hidden: { opacity: 0, y: 14 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: EASE },
-  },
-};
+function UserBubble({ text, delay = 0 }: { text: string; delay?: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.35, ease: EASE }}
+      className="flex justify-end"
+    >
+      <div className="max-w-[82%] rounded-2xl rounded-tr-sm px-3 py-2 text-sm font-manrope bg-[#1f75fe] text-white leading-relaxed">
+        {text}
+      </div>
+    </motion.div>
+  );
+}
 
 export function AiSection() {
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (visibleCount >= CONVERSATION.length) return;
+    const t = setTimeout(() => setVisibleCount((c) => c + 1), visibleCount === 0 ? 400 : 700);
+    return () => clearTimeout(t);
+  }, [visibleCount]);
+
   return (
-    <section className="bg-[var(--dark-bg)] landing-section-sm px-6 overflow-hidden relative">
-      <div className="absolute inset-0 pointer-events-none landing-dark-grid" />
-      <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full filter blur-[120px] opacity-100 pointer-events-none landing-dark-glow-blue" />
-      <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full filter blur-[100px] opacity-100 pointer-events-none landing-dark-glow-purple" />
-
-      <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <motion.div {...fadeUp(0)}>
-              <div className="landing-badge landing-badge-dark font-manrope mb-8">
-                <Sparkles size={14} className="text-[var(--accent-blue-light)]" />
-                <span>Powered by DeepSeek V3</span>
-              </div>
-              <h2 className="landing-h2 font-manrope text-white leading-[0.95] mb-6">
-                Искусственный
-                <br />
-                <span className="landing-gradient-text-dark">интеллект</span>
-                <br />
-                внутри.
-              </h2>
-              <p className="font-manrope text-[var(--dark-secondary)] text-lg leading-relaxed mb-10">
-                {SITE.name} работает на ИИ. Чатбот отвечает пациентам, система напоминает, аналитика советует — пока вы занимаетесь лечением.
-              </p>
-            </motion.div>
-
-            <motion.div
-              variants={staggerParentVariants(0.12)}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-30px" }}
-              className="space-y-5"
-            >
-              {aiFeaturesData.map((f, i) => (
-                <motion.div
-                  key={i}
-                  variants={featureItemVariants}
-                  style={{ willChange: "transform, opacity" }}
-                  className="flex gap-4 items-start group"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-[var(--ds-primary)]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--ds-primary)]/30 transition-colors">
-                    <f.icon size={18} className="text-[var(--accent-blue-light)]" />
+    <section className="bg-[#faf8f4] landing-section-sm px-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <motion.div {...fadeUp(0)}>
+            <div className="landing-badge landing-badge-primary font-manrope mb-5">
+              <Sparkles size={14} />
+              <span>ИИ-ассистент</span>
+            </div>
+            <h2 className="landing-h2 font-manrope text-[#0f172a] mb-4">
+              Чатбот, который ведёт пациента до записи
+            </h2>
+            <p className="landing-lead font-manrope mb-8">
+              {SITE.name} отвечает пациентам в WhatsApp, пока вы занимаетесь лечением.
+            </p>
+            <div className="space-y-4">
+              {aiFeatures.map((f) => (
+                <div key={f.title} className="flex gap-3 items-start">
+                  <div className="w-9 h-9 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                    <f.icon size={16} className="text-[#1f75fe]" />
                   </div>
                   <div>
-                    <div className="font-manrope font-bold text-white text-base mb-1">{f.title}</div>
-                    <div className="font-manrope text-white/50 text-sm leading-relaxed">{f.desc}</div>
+                    <p className="font-manrope font-semibold text-[#0f172a] text-sm">{f.title}</p>
+                    <p className="font-manrope text-[#64748b] text-sm">{f.desc}</p>
                   </div>
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
 
-          <motion.div {...fadeUp(0.08, 20)}>
-            <div className="landing-card-dark p-6">
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[var(--dark-border)]">
-                <div className="w-10 h-10 rounded-full bg-[var(--ds-primary)] flex items-center justify-center">
-                  <Sparkles size={18} className="text-white" />
+          <motion.div {...fadeUp(0.08)}>
+            <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-[var(--shadow-md)] overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e8e3d9] bg-white">
+                <div className="w-8 h-8 rounded-full bg-[#1f75fe] flex items-center justify-center">
+                  <Bot size={16} className="text-white" />
                 </div>
                 <div>
-                  <div className="font-manrope font-bold text-white text-sm">{SITE.name} ИИ-Ассистент</div>
-                  <div className="font-manrope text-white/50 text-xs flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
-                    Онлайн 24/7
-                  </div>
+                  <p className="text-sm font-semibold font-manrope text-[#0f172a]">{SITE.name} ИИ</p>
+                  <p className="text-[11px] text-green-600 font-manrope flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Онлайн
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <ChatBubble from="user" text="Здравствуйте! Хочу записаться к ортодонту" delay={0.1} />
-                <ChatBubble from="ai" text="Добрый день! Конечно, помогу с записью. К какому врачу предпочитаете?" delay={0.2} />
-                <ChatBubble from="user" text="К доктору Сейткали, если можно" delay={0.3} />
-                <ChatBubble from="ai" text="Отлично! Ближайшее свободное время у доктора Сейткали: завтра в 10:00 или послезавтра в 14:30. Какое время удобнее?" delay={0.4} />
-                <ChatBubble from="user" text="Завтра в 10:00" delay={0.5} />
-                <ChatBubble from="ai" text="Записал! Завтра в 10:00. Накануне вечером придёт напоминание в WhatsApp." delay={0.6} />
+              <div className="px-3 py-4 space-y-3 bg-[#faf8f4] min-h-[280px] max-h-[320px] overflow-y-auto">
+                {CONVERSATION.slice(0, visibleCount).map((msg, i) =>
+                  msg.role === "user" ? (
+                    <UserBubble key={i} text={msg.text} delay={i * 0.05} />
+                  ) : (
+                    <BotBubble key={i} text={msg.text} delay={i * 0.05} />
+                  ),
+                )}
+                {visibleCount < CONVERSATION.length && (
+                  <div className="flex justify-start">
+                    <div className="h-6 w-6 rounded-full bg-[#1f75fe]/10 flex items-center justify-center shrink-0 mr-2">
+                      <Bot className="h-3.5 w-3.5 text-[#1f75fe]" />
+                    </div>
+                    <div className="bg-white border border-[#e8e3d9] rounded-2xl rounded-tl-sm px-4 py-3 flex gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:150ms]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#94a3b8]/50 animate-bounce [animation-delay:300ms]" />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="mt-6 flex gap-2 bg-white/5 rounded-2xl p-3 border border-[var(--dark-border)]">
+              <div className="px-3 py-2 border-t border-[#e8e3d9] flex gap-1.5 flex-wrap bg-white">
+                {QUICK_REPLIES.map((q) => (
+                  <span key={q} className="text-[11px] font-manrope px-2.5 py-1 rounded-full border border-[#e8e3d9] text-[#64748b] bg-[#faf8f4]">
+                    {q}
+                  </span>
+                ))}
+              </div>
+
+              <div className="px-3 py-2.5 border-t border-[#e8e3d9] bg-white flex gap-2">
                 <input
                   readOnly
-                  placeholder="Напишите сообщение..."
+                  placeholder="Напишите как пациент..."
                   aria-label="Сообщение"
-                  className="flex-1 bg-transparent font-manrope text-white/40 text-sm outline-none placeholder:text-white/30"
+                  className="flex-1 text-sm border border-[#e8e3d9] rounded-xl px-3 py-2 bg-white font-manrope text-[#94a3b8]"
                 />
-                <button type="button" aria-label="Отправить" className="w-8 h-8 rounded-xl bg-[var(--ds-primary)] flex items-center justify-center hover:bg-[#1a65e8] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
-                  <Send size={14} className="text-white" />
+                <button type="button" aria-label="Отправить" className="w-9 h-9 bg-[#1f75fe] text-white rounded-xl flex items-center justify-center shrink-0">
+                  <Send size={14} />
                 </button>
               </div>
             </div>
 
-            <motion.div
-              variants={staggerParentVariants(0.1)}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-30px" }}
-              className="grid grid-cols-3 gap-4 mt-4"
-            >
+            <div className="grid grid-cols-3 gap-3 mt-4">
               {[{ value: "24/7", label: "Работает" }, { value: "< 2с", label: "Ответ" }, { value: "Авто", label: "Запись" }].map((s) => (
-                <motion.div
-                  key={s.label}
-                  variants={statsVariants}
-                  style={{ willChange: "transform, opacity" }}
-                  className="landing-card-dark p-4 text-center"
-                >
-                  <div className="font-manrope font-bold text-white text-xl">{s.value}</div>
-                  <div className="font-manrope text-white/40 text-xs mt-1">{s.label}</div>
-                </motion.div>
+                <div key={s.label} className="landing-card p-3 text-center">
+                  <p className="font-manrope font-bold text-[#0f172a] text-lg">{s.value}</p>
+                  <p className="font-manrope text-[#94a3b8] text-xs">{s.label}</p>
+                </div>
               ))}
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       </div>

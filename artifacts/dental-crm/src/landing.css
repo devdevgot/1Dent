@@ -342,6 +342,41 @@ html {
   background: linear-gradient(to right, transparent, var(--ds-border), transparent);
 }
 
+/* ── Page preview mockups (real CRM screens) ───────────────────────────────── */
+.landing-page-preview {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.landing-page-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.5rem 0.75rem;
+  background: #f8f6f1;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.landing-page-preview-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d4cfc6;
+}
+
+.landing-page-preview-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  margin-left: 6px;
+}
+
+.landing-page-preview-body {
+  overflow: hidden;
+}
+
 /* ── Scroll progress ───────────────────────────────────────────────────────── */
 .landing-scroll-progress {
   position: absolute;
