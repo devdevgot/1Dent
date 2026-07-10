@@ -325,12 +325,16 @@ export async function rankDoctorCandidates(
 
   let scoring = opts.scoring;
   if (!scoring) {
-    const [settings] = await db
-      .select({ scoringConfig: chatbotSettingsTable.scoringConfig })
-      .from(chatbotSettingsTable)
-      .where(eq(chatbotSettingsTable.clinicId, clinicId))
-      .limit(1);
-    scoring = settings?.scoringConfig ?? {};
+    try {
+      const [settings] = await db
+        .select({ scoringConfig: chatbotSettingsTable.scoringConfig })
+        .from(chatbotSettingsTable)
+        .where(eq(chatbotSettingsTable.clinicId, clinicId))
+        .limit(1);
+      scoring = settings?.scoringConfig ?? {};
+    } catch {
+      scoring = {};
+    }
   }
   const scoringOpts = { ...opts, scoring };
 

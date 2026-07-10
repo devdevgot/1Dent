@@ -104,6 +104,32 @@ function matchOfficialBranch(text: string, officialBranches: string[]): string |
   return null;
 }
 
+/** Resolve a branch from the official list using number, ordinal, or name match. */
+export function resolveOfficialBranchFromMessage(
+  messageText: string,
+  officialBranches: string[],
+): string | null {
+  const trimmed = messageText.trim();
+  if (!trimmed || officialBranches.length === 0) return null;
+
+  const branchIndex = resolveBranchIndex(trimmed, officialBranches);
+  if (branchIndex !== null && officialBranches[branchIndex]) {
+    return officialBranches[branchIndex]!;
+  }
+
+  return matchOfficialBranch(trimmed, officialBranches);
+}
+
+/** Whether the patient message picks a branch (already saved or in this turn's text). */
+export function branchChoiceResolved(
+  messageText: string,
+  selectedBranch: string | undefined,
+  officialBranches: string[],
+): boolean {
+  if (selectedBranch) return true;
+  return resolveOfficialBranchFromMessage(messageText, officialBranches) !== null;
+}
+
 /** Resolve branch only from clinic materials, or free-text when materials are absent. */
 export async function resolveBranchFromMessage(
   messageText: string,
@@ -115,12 +141,7 @@ export async function resolveBranchFromMessage(
   if (!trimmed) return null;
 
   const official = options?.officialBranches ?? [];
-  const branchIndex = resolveBranchIndex(trimmed, official);
-  if (branchIndex !== null && official[branchIndex]) {
-    return official[branchIndex]!;
-  }
-
-  const fromOfficial = matchOfficialBranch(trimmed, official);
+  const fromOfficial = resolveOfficialBranchFromMessage(trimmed, official);
   if (fromOfficial) return fromOfficial;
 
   if (official.length > 0 || isUsableClinicKnowledge(knowledgeContext)) {

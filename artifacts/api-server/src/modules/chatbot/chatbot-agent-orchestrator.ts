@@ -4,8 +4,9 @@ import type { AgentScriptContext } from "./chatbot-agent-context.ts";
 import {
   buildBranchPromptFallback,
   buildSymptomsPromptFallback,
+  branchChoiceResolved,
   hasClinicKnowledge,
-  resolveBranchIndex,
+  resolveOfficialBranchFromMessage,
 } from "./clinic-knowledge.ts";
 import {
   buildDecisionFallback,
@@ -28,6 +29,7 @@ export function resolveDeterministicNextNodeId(
   messageText: string,
   sessionData: ChatbotSessionData,
   llmSuggestedId?: string | null,
+  officialBranches: string[] = [],
 ): string {
   if (!mindMap?.nodes?.length) return fromNodeId;
 
@@ -73,7 +75,7 @@ export function resolveDeterministicNextNodeId(
 
   if (
     (fromNode.fsmState === "collect_qualification" || fromNode.id === "step2-branch") &&
-    sessionData.selectedBranch
+    branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches)
   ) {
     const nextId = resolveMindMapNodeIdForState(mindMap, "suggest_doctor", {
       activeNodeId: fromNodeId,
@@ -89,8 +91,13 @@ export function resolveDeterministicNextNodeId(
     if (nextId && nextId !== fromNodeId) return nextId;
   }
 
-  if (outgoing.length === 1 && trimmed.length >= 2) {
-    return outgoing[0]!.target.id;
+  if (outgoing.length === 1) {
+    const branchStepAdvance =
+      fromNode.id === "step2-branch" &&
+      branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches);
+    if (trimmed.length >= 2 || branchStepAdvance) {
+      return outgoing[0]!.target.id;
+    }
   }
 
   if (llmSuggestedId && llmSuggestedId !== fromNodeId && isDirectTransition(mindMap, fromNodeId, llmSuggestedId)) {
@@ -195,9 +202,12 @@ export function inferAgentActionsForTransition(
     !sessionData.selectedBranch &&
     officialBranches.length > 0
   ) {
-    const idx = resolveBranchIndex(messageText, officialBranches);
-    if (idx !== null && !has("set_branch")) {
-      actions.push({ type: "set_branch", branch: officialBranches[idx] });
+    const matchedBranch = resolveOfficialBranchFromMessage(messageText, officialBranches);
+    if (matchedBranch && !has("set_branch")) {
+      actions.push({ type: "set_branch", branch: matchedBranch });
+      if (!sessionData.suggestedDoctorId && !has("suggest_doctor")) {
+        actions.push({ type: "suggest_doctor" });
+      }
     }
   }
 
