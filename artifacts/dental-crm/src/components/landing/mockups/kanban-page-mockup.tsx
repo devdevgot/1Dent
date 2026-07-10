@@ -1,7 +1,8 @@
 import type { Patient } from "@workspace/api-client-react";
-import { PatientCardView } from "@/components/kanban/patient-card";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
+import { cn } from "@/lib/utils";
 import { PagePreviewFrame } from "./page-preview-frame";
+import { LandingKanbanCard } from "./landing-kanban-card";
 
 const MOCK_PATIENTS: Patient[] = [
   {
@@ -38,31 +39,52 @@ const MOCK_PATIENTS: Patient[] = [
 
 const VISIBLE_COLUMNS = KANBAN_COLUMNS.slice(0, 3);
 
+function ColumnHeader({ label, headerColor }: { label: string; headerColor: string }) {
+  return (
+    <div className={cn("text-[9px] font-semibold px-2 py-1 rounded-lg truncate", headerColor)}>
+      {label}
+    </div>
+  );
+}
+
 export function KanbanPageMockup() {
   return (
     <PagePreviewFrame title="Пациенты — Канбан">
-      <div className="landing-mockup-scroll p-3 bg-[#faf8f4] min-h-[200px]">
-        <div className="flex gap-2 w-max sm:w-full min-w-full">
+      <div className="p-3 bg-[#faf8f4] min-h-[200px]">
+        {/* Mobile: vertical list — readable on narrow screens */}
+        <div className="space-y-2.5 sm:hidden">
           {VISIBLE_COLUMNS.map((col) => {
             const patient = MOCK_PATIENTS.find((p) => p.status === col.id);
             if (!patient) return null;
 
             return (
-              <div key={col.id} className="w-[132px] sm:flex-1 sm:min-w-0 sm:w-auto shrink-0 sm:shrink">
-                <div className={`text-[9px] font-semibold px-2 py-1 rounded-lg mb-2 truncate ${col.headerColor}`}>
-                  {col.label}
+              <div key={col.id}>
+                <ColumnHeader label={col.label} headerColor={col.headerColor} />
+                <div className="mt-1.5">
+                  <LandingKanbanCard patient={patient} />
                 </div>
-                <PatientCardView
-                  patient={patient}
-                  progress={
-                    patient.status === "initial_consultation"
-                      ? { paid: 120000, debt: 80000, pending: 50000, paidCount: 2, debtCount: 1, pendingCount: 1 }
-                      : undefined
-                  }
-                />
               </div>
             );
           })}
+        </div>
+
+        {/* Tablet+: horizontal board */}
+        <div className="hidden sm:block landing-mockup-scroll">
+          <div className="flex gap-2 w-full min-w-0">
+            {VISIBLE_COLUMNS.map((col) => {
+              const patient = MOCK_PATIENTS.find((p) => p.status === col.id);
+              if (!patient) return null;
+
+              return (
+                <div key={col.id} className="flex-1 min-w-0">
+                  <ColumnHeader label={col.label} headerColor={col.headerColor} />
+                  <div className="mt-1.5">
+                    <LandingKanbanCard patient={patient} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </PagePreviewFrame>
