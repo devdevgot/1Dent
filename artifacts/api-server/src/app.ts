@@ -10,6 +10,7 @@ import contractPublicRouter from "./routes/contract-public";
 import webhooksRouter from "./routes/webhooks";
 import tmaRouter from "./modules/tma/tma.controller";
 import { logger } from "./lib/logger";
+import { canonicalHostMiddleware } from "./middlewares/canonical-host.middleware";
 import { dbReadyMiddleware } from "./middlewares/db-ready.middleware";
 import { errorHandler } from "./middlewares/error.middleware";
 import { resolveCrmDistDir, resolveTmaDistDir, isStaticAssetPath, setSpaStaticCacheHeaders } from "./shared/static-dirs";
@@ -50,6 +51,7 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use(cookieParser());
+app.use(canonicalHostMiddleware);
 
 // Block API traffic until Postgres migrations finish (healthcheck stays available).
 app.use(dbReadyMiddleware);

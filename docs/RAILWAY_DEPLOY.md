@@ -97,6 +97,50 @@ bash scripts/railway-deploy.sh
 
 После деплоя: `https://www.1dent.kz/api/healthz` должен отвечать `200`.
 
+## Редирект `1dent.kz` → `www.1dent.kz`
+
+Канонический домен — **`www.1dent.kz`** (`FRONTEND_URL`, `PUBLIC_URL`, `WEBHOOK_BASE_URL`).
+
+Сервер отдаёт **301** с apex-домена на `www`, если запрос дошёл до Railway (middleware `canonical-host` в API).
+
+### Текущее состояние DNS (ps.kz)
+
+| Запись | Сейчас | Нужно |
+|---|---|---|
+| `www` | CNAME → `*.up.railway.app` | без изменений |
+| `@` (apex) | A → старый IP (`162.220.232.251`) | перенаправить на Railway **или** URL-forward на `https://www.1dent.kz` |
+
+Пока apex не указывает на Railway, редирект из приложения **не сработает** — трафик не доходит до сервиса.
+
+### Вариант A (рекомендуется): apex на Railway + редирект в приложении
+
+1. Railway → сервис **1dent** → **Settings** → **Networking** → **+ Custom Domain** → `1dent.kz`
+2. Скопировать **CNAME** и **TXT** (`_railway-verify`) из Railway
+3. В ps.kz:
+   - удалить A-запись `@` → `162.220.232.251`
+   - добавить CNAME `@` → значение из Railway (если ps.kz поддерживает CNAME на apex; иначе см. вариант B)
+   - добавить TXT `_railway-verify` → значение из Railway
+4. Дождаться зелёной галочки в Railway (верификация + SSL)
+5. Задеплоить код с middleware (ветка `master` после merge PR)
+6. Проверка: `curl -I https://1dent.kz/` → `301` и `Location: https://www.1dent.kz/`
+
+Через CLI (нужен валидный project token `RAILWAY_TOKEN`):
+
+```bash
+export RAILWAY_TOKEN="<project-token>"
+railway domain 1dent.kz --service 1dent
+```
+
+### Вариант B: URL-forward на ps.kz (без apex в Railway)
+
+Если регистратор **не** поддерживает CNAME на `@`:
+
+1. ps.kz → DNS / перенаправление домена
+2. **301 permanent forward**: `https://1dent.kz` → `https://www.1dent.kz`
+3. Сохранить путь и query string, если есть такая опция
+
+Это работает сразу, без второго custom domain в Railway (экономит лимит доменов на Hobby).
+
 ## Переменные окружения на Railway
 
 ### Project token (для CLI / Cloud Agent)
