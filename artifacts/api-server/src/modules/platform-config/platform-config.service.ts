@@ -3,6 +3,7 @@ import { db, platformSettingsTable, chatbotSettingsTable, clinicsTable } from "@
 import {
   DEFAULT_CHATBOT_DEFAULTS,
   DEFAULT_CHATBOT_PROMPT_COMPOSER,
+  resolveOpusMetaPrompt,
   getDefaultPlatformPlans,
   buildDefaultContractTemplatesConfig,
   type PlatformChatbotDefaults,
@@ -106,10 +107,10 @@ export class PlatformConfigService {
   }
 
   async getChatbotPromptComposerConfig(): Promise<PlatformChatbotPromptComposerConfig> {
-    chatbotPromptComposerCache = await readSetting(
-      KEYS.chatbotPromptComposer,
-      DEFAULT_CHATBOT_PROMPT_COMPOSER,
-    );
+    const stored = await readSetting(KEYS.chatbotPromptComposer, DEFAULT_CHATBOT_PROMPT_COMPOSER);
+    chatbotPromptComposerCache = {
+      opusMetaPrompt: resolveOpusMetaPrompt(stored.opusMetaPrompt),
+    };
     return chatbotPromptComposerCache;
   }
 
