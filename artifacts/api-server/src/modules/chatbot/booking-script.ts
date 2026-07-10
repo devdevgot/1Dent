@@ -228,6 +228,13 @@ export function isReadyToBook(text: string): boolean {
   return READY_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+/** Short affirmative («да», «ок») — patient agrees to doctor/branch/booking step. */
+export function isShortYes(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  if (/^(да|д|ага|угу|ок|ok|yes|иә|👍|✅)$/i.test(lower)) return true;
+  return /^да[,.!?\s]/i.test(lower);
+}
+
 export function isHesitating(text: string): boolean {
   const lower = text.toLowerCase().trim();
   return HESITATE_KEYWORDS.some((kw) => lower.includes(kw));

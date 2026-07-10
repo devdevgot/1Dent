@@ -258,7 +258,7 @@ test("resolveOfficialBranchFromMessage: maps digit to branch", async () => {
   assert.equal(resolveOfficialBranchFromMessage("2", ["ул. A", "ул. B"]), "ул. B");
 });
 
-test("buildAgentOrchestratorPrompt: playground uses full script like WhatsApp", async () => {
+test("buildAgentOrchestratorPrompt: playground uses compact script not full mind map dump", async () => {
   const { buildAgentOrchestratorPrompt } = await import("./chatbot-agent-prompt.ts");
   const prompt = buildAgentOrchestratorPrompt({
     clinicName: "Test Clinic",
@@ -268,14 +268,15 @@ test("buildAgentOrchestratorPrompt: playground uses full script like WhatsApp", 
       currentNodeLabel: "Intro",
       currentNodeContent: "Приветствие",
       currentFsmState: "greeting",
-      compactPath: "COMPACT ONLY",
-      fullScript: "FULL SCRIPT BODY",
+      compactPath: "COMPACT PATH BODY",
+      fullScript: "FULL SCRIPT BODY SHOULD NOT APPEAR",
       outgoingTransitions: "transitions",
     },
     facts: { clinicName: "Test Clinic", nowContext: "now" },
     fsmState: "greeting",
   });
-  assert.match(prompt, /FULL SCRIPT BODY/);
+  assert.match(prompt, /COMPACT PATH BODY/);
+  assert.doesNotMatch(prompt, /FULL SCRIPT BODY SHOULD NOT APPEAR/);
   assert.doesNotMatch(prompt, /Тестовый режим \(playground\)/);
   assert.match(prompt, /ИДЕНТИЧНО реальному WhatsApp/i);
 });

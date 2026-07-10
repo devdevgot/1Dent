@@ -26,18 +26,11 @@ export function wantsAlternativeDoctor(text: string): boolean {
 }
 
 export function buildDoctorPresentationFallback(candidate: DoctorCandidate, urgency?: string): string {
-  const reasons =
-    candidate.reasons.length > 0 ? candidate.reasons.join(", ") : "лучший рейтинг среди доступных врачей";
-  const urgencyNote =
-    urgency === "urgent" ? "\n🚨 Ситуация срочная — подобрали врача с ближайшим окном." : "";
-  const specialtyLine = candidate.specialty ? `\nСпециализация: ${candidate.specialty}.` : "";
-  const ratingLine = candidate.rankPercent >= 55 ? `\n⭐ Рейтинг: ${candidate.rankPercent}/100.` : "";
-
-  return (
-    `Рекомендую врача *${candidate.name}*.${specialtyLine}${ratingLine}\n` +
-    `Почему: ${reasons}.${urgencyNote}\n\n` +
-    `Подходит? (Да / «другой врач» / Нет)`
-  );
+  const reason = candidate.reasons[0] ?? "свободные окна";
+  const rating =
+    candidate.rankPercent >= 55 ? `, рейтинг ${candidate.rankPercent}/100` : "";
+  const urgent = urgency === "urgent" ? " Ближайшее окно." : "";
+  return `Рекомендую *${candidate.name}* (${reason}${rating}).${urgent} Подходит? (Да / другой врач / Нет)`;
 }
 
 export function buildScoringOptionsFromSession(

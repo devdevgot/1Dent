@@ -17,6 +17,7 @@ import {
   isHesitating,
   isReadyToBook,
   isRefusing,
+  isShortYes,
 } from "./booking-script.ts";
 import {
   getMindMapOutgoingEdges,
@@ -234,6 +235,29 @@ export function inferAgentActionsForTransition(
 
   if (toNode?.fsmState === "suggest_doctor" && !sessionData.suggestedDoctorId && !has("suggest_doctor")) {
     actions.push({ type: "suggest_doctor" });
+  }
+
+  const patientConfirmed =
+    isShortYes(messageText) || isReadyToBook(messageText) || branchChoiceResolved(messageText, sessionData.selectedBranch, officialBranches);
+
+  if (
+    sessionData.selectedBranch &&
+    !sessionData.suggestedDoctorId &&
+    !has("suggest_doctor") &&
+    patientConfirmed
+  ) {
+    actions.push({ type: "suggest_doctor" });
+  }
+
+  if (
+    sessionData.suggestedDoctorId &&
+    patientConfirmed &&
+    (fromNode?.fsmState === "suggest_doctor" ||
+      fromNode?.fsmState === "await_decision" ||
+      toNode?.fsmState === "collect_datetime") &&
+    !has("show_slots")
+  ) {
+    actions.push({ type: "show_slots" });
   }
 
   if (
