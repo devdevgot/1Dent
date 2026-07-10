@@ -57,16 +57,9 @@ export const CHATBOT_AGENT_ACTION_TYPES: ChatbotAgentActionType[] = [
   "handoff_operator",
 ];
 
-export function isChatbotAgentMode(): boolean {
-  const v = process.env["CHATBOT_AGENT_MODE"]?.trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-}
-
 export function shouldUseAgentTurn(
-  channel: "playground" | "whatsapp",
-  opts?: { agentModeEnabled?: boolean },
+  _channel: "playground" | "whatsapp",
+  _opts?: { agentModeEnabled?: boolean },
 ): boolean {
-  if (opts?.agentModeEnabled === false) return false;
-  if (channel === "playground") return true;
-  return isChatbotAgentMode();
+  return true;
 }

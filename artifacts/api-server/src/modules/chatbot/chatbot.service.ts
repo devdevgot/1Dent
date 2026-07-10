@@ -2081,7 +2081,7 @@ export class ChatbotService {
     let response: OutboundResponse = null;
 
     if (
-      shouldUseAgentTurn(promptChannel, { agentModeEnabled: settings.agentModeEnabled }) &&
+      shouldUseAgentTurn(promptChannel) &&
       state !== "human_takeover" &&
       !session.humanTakeover &&
       state !== "collect_iin"

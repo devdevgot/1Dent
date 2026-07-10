@@ -16,8 +16,6 @@ import {
   FlaskConical,
   BookOpen,
   Sparkles,
-  BarChart3,
-  Users,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -39,9 +37,6 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Switch } from "@/components/ui/switch";
 import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
 import { PlaygroundTab } from "@/components/chatbot/playground-tab";
-import { ChatbotCalendarAbSettings } from "@/components/chatbot/calendar-ab-settings";
-import { ChatbotAnalyticsTab } from "@/components/chatbot/analytics-tab";
-import { ManagerExamplesTab } from "@/components/chatbot/manager-examples-tab";
 import type { ScriptMindMapData, MindMapSaveMeta } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -657,7 +652,7 @@ export default function ChatbotPage() {
   const goBack = usePageBack();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
-  const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast" | "analytics" | "examples">("sessions");
+  const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast">("sessions");
   const [combinedOpen, setCombinedOpen] = useState(false);
   const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
@@ -676,7 +671,6 @@ export default function ChatbotPage() {
   const sessions = sessionsRes?.data?.sessions ?? [];
 
   const effectiveEnabled = localSettings.enabled ?? settings?.enabled ?? true;
-  const effectiveAgentModeEnabled = localSettings.agentModeEnabled ?? settings?.agentModeEnabled ?? true;
 
   // Seed local settings from server once loaded
   useEffect(() => {
@@ -685,20 +679,12 @@ export default function ChatbotPage() {
       if (Object.keys(prev).length > 0) return prev;
       return {
         enabled: settings.enabled,
-        agentModeEnabled: settings.agentModeEnabled ?? true,
-        calendarConfig: settings.calendarConfig,
-        abTestEnabled: settings.abTestEnabled,
-        scriptVariants: settings.scriptVariants,
       };
     });
     setSavedSettings((prev) => {
       if (Object.keys(prev).length > 0) return prev;
       return {
         enabled: settings.enabled,
-        agentModeEnabled: settings.agentModeEnabled ?? true,
-        calendarConfig: settings.calendarConfig,
-        abTestEnabled: settings.abTestEnabled,
-        scriptVariants: settings.scriptVariants,
       };
     });
   }, [settings]);
@@ -712,13 +698,6 @@ export default function ChatbotPage() {
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
       const toSave = { ...localSettings };
-      if (toSave.calendarConfig) {
-        toSave.calendarConfig = {
-          ...(settings?.calendarConfig ?? {}),
-          ...(savedSettings.calendarConfig ?? {}),
-          ...toSave.calendarConfig,
-        };
-      }
       setAutosaveStatus("saving");
       updateSettings.mutate(
         { data: toSave },
@@ -789,8 +768,6 @@ export default function ChatbotPage() {
               { key: "settings", label: t("chatbot.tab.settings"), icon: Settings },
               { key: "playground", label: "Playground", icon: FlaskConical },
               { key: "ai-broadcast", label: "ИИ Рассылка", icon: Megaphone },
-              { key: "analytics", label: "Аналитика", icon: BarChart3 },
-              { key: "examples", label: "Примеры", icon: Users },
             ] as const).map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -918,34 +895,6 @@ export default function ChatbotPage() {
               )}
             </div>
 
-            {/* Agent mode (mind map as main scenario) */}
-            <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4">
-              <div className="flex items-center gap-3 justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-[#0f172a]">Agent mode (mind map)</p>
-                  <p className="text-xs text-[#64748b]">
-                    AI ведёт диалог по mind map. Playground всегда; WhatsApp — при CHATBOT_AGENT_MODE=1
-                  </p>
-                </div>
-                <button
-                  onClick={() =>
-                    setLocalSettings((p) => ({ ...p, agentModeEnabled: !effectiveAgentModeEnabled }))
-                  }
-                  className={cn(
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none",
-                    effectiveAgentModeEnabled ? "bg-[var(--success)]" : "bg-[#94a3b8]/40",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
-                      effectiveAgentModeEnabled ? "translate-x-6" : "translate-x-1",
-                    )}
-                  />
-                </button>
-              </div>
-            </div>
-
             {/* Combined knowledge + script button */}
             <button
               onClick={() => setCombinedOpen(true)}
@@ -961,12 +910,6 @@ export default function ChatbotPage() {
               <ChevronRight className="h-4 w-4 text-[#64748b] shrink-0" />
             </button>
 
-            <ChatbotCalendarAbSettings
-              localSettings={localSettings}
-              serverCalendarConfig={settings?.calendarConfig}
-              onChange={(patch) => setLocalSettings((p) => ({ ...p, ...patch }))}
-            />
-
           </div>
         )}
 
@@ -976,8 +919,6 @@ export default function ChatbotPage() {
           </div>
         )}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
-        {tab === "analytics" && <ChatbotAnalyticsTab />}
-        {tab === "examples" && <ManagerExamplesTab />}
       </div>
 
       {/* Combined knowledge + script modal */}

@@ -73,26 +73,15 @@ test("resolveBranchIndex maps number and ordinal", () => {
   assert.equal(resolveBranchIndex("ул. A", branches), null);
 });
 
-test("shouldUseAgentTurn: playground on without env flag", async () => {
+test("shouldUseAgentTurn: always enabled for playground and whatsapp", async () => {
   const prev = process.env.CHATBOT_AGENT_MODE;
   delete process.env.CHATBOT_AGENT_MODE;
   const { shouldUseAgentTurn } = await import("./chatbot-agent.types.ts");
   assert.equal(shouldUseAgentTurn("playground"), true);
-  assert.equal(shouldUseAgentTurn("whatsapp"), false);
-  if (prev !== undefined) process.env.CHATBOT_AGENT_MODE = prev;
-});
-
-test("shouldUseAgentTurn: respects per-clinic kill switch", async () => {
-  const { shouldUseAgentTurn } = await import("./chatbot-agent.types.ts");
-  assert.equal(shouldUseAgentTurn("playground", { agentModeEnabled: false }), false);
-  assert.equal(shouldUseAgentTurn("whatsapp", { agentModeEnabled: false }), false);
-  assert.equal(shouldUseAgentTurn("playground", { agentModeEnabled: true }), true);
-});
-
-test("shouldUseAgentTurn: whatsapp needs env flag when agent mode enabled", async () => {
-  const prev = process.env.CHATBOT_AGENT_MODE;
+  assert.equal(shouldUseAgentTurn("whatsapp"), true);
+  assert.equal(shouldUseAgentTurn("playground", { agentModeEnabled: false }), true);
+  assert.equal(shouldUseAgentTurn("whatsapp", { agentModeEnabled: false }), true);
   process.env.CHATBOT_AGENT_MODE = "1";
-  const { shouldUseAgentTurn } = await import("./chatbot-agent.types.ts");
   assert.equal(shouldUseAgentTurn("whatsapp", { agentModeEnabled: true }), true);
   if (prev !== undefined) process.env.CHATBOT_AGENT_MODE = prev;
   else delete process.env.CHATBOT_AGENT_MODE;
