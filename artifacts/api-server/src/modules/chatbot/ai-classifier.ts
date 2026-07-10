@@ -293,7 +293,7 @@ export async function generateChatbotResponse(
     }
 
     if (content.trim()) {
-      return splitTextToReply(content.trim());
+      return splitTextToReply(content.trim(), 3);
     }
 
     logger.warn(
