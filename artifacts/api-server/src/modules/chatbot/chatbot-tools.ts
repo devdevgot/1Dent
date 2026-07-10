@@ -5,11 +5,20 @@ import { extractDatetimeFromText, extractBranchFromText } from "./ai-classifier"
 import {
   formatSlotAlternatives,
   getDoctorAvailableSlots,
+  validateAppointmentSlot,
+  type SlotValidationResult,
 } from "./calendar-slots";
-import { formatAlmatyIso, formatAlmatySlotCompact, tryParseAppointmentDatetimeLocal } from "./almaty-time";
+import {
+  formatAlmatyDateTimeLong,
+  formatAlmatyIso,
+  formatAlmatySlotCompact,
+  tryParseAppointmentDatetimeLocal,
+} from "./almaty-time";
 import { resolveBranchFromMessage } from "./clinic-knowledge";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 import type { ClinicCalendarConfig } from "@workspace/db";
+
+export { inferKnowledgeAgentActions } from "./chatbot-agent-action-inference";
 
 export interface AgentToolContext {
   clinicId: string;
@@ -45,6 +54,63 @@ function mergeIntent(data: ChatbotSessionData, intent?: ChatbotAgentIntent): Cha
       : intent.problemDescription.slice(0, 400);
   }
   return next;
+}
+
+function buildSlotValidationFeedback(validation: SlotValidationResult, datetime: Date): string {
+  const formatted = formatAlmatyDateTimeLong(datetime);
+  if (validation.ok) {
+    return `✅ ${formatted} — свободно. Подтверждаем запись? (Да / другое время)`;
+  }
+
+  const alt = validation.nearestSlots?.length
+    ? `\n\nБлижайшие слоты:\n${formatSlotAlternatives(validation.nearestSlots, formatAlmatySlotCompact)}`
+    : "";
+
+  switch (validation.reason) {
+    case "occupied":
+      return `На ${formatted} уже занято.${alt}\n\nВыберите другое время.`;
+    case "day_full":
+      return `На этот день полная запись.${alt}\n\nПредложите другой день.`;
+    case "outside_hours":
+    case "past":
+      return `Время ${formatted} недоступно.${alt}\n\nУкажите другое время в рабочие часы.`;
+    default:
+      return `Время ${formatted} недоступно.${alt}`;
+  }
+}
+
+async function validateParsedDatetime(
+  sessionData: ChatbotSessionData,
+  ctx: AgentToolContext,
+): Promise<{ data: ChatbotSessionData; feedback: string; slotOk: boolean }> {
+  if (!sessionData.preferredDatetime || !sessionData.suggestedDoctorId) {
+    return { data: sessionData, feedback: "", slotOk: true };
+  }
+
+  const datetime = new Date(sessionData.preferredDatetime);
+  if (Number.isNaN(datetime.getTime())) {
+    const cleared = { ...sessionData, preferredDatetime: undefined };
+    return { data: cleared, feedback: "Не удалось распознать дату и время. Укажите, пожалуйста, ещё раз.", slotOk: false };
+  }
+
+  const validation = await validateAppointmentSlot(
+    ctx.clinicId,
+    sessionData.suggestedDoctorId,
+    datetime,
+    ctx.calendarConfig ?? undefined,
+    sessionData.existingProcedureId,
+  );
+
+  const feedback = buildSlotValidationFeedback(validation, datetime);
+  if (!validation.ok) {
+    return {
+      data: { ...sessionData, preferredDatetime: undefined },
+      feedback,
+      slotOk: false,
+    };
+  }
+
+  return { data: sessionData, feedback, slotOk: true };
 }
 
 /** Execute agent-declared tools (validated server-side). */
@@ -133,12 +199,21 @@ export async function executeChatbotAgentTools(
         if (localDate) {
           sessionData.preferredDatetime = formatAlmatyIso(localDate);
           toolNotes.push(`Время: ${sessionData.preferredDatetime}`);
-          break;
+        } else {
+          const extracted = await extractDatetimeFromText(text);
+          if (extracted) {
+            sessionData.preferredDatetime = formatAlmatyIso(extracted);
+            toolNotes.push(`Время: ${sessionData.preferredDatetime}`);
+          }
         }
-        const extracted = await extractDatetimeFromText(text);
-        if (extracted) {
-          sessionData.preferredDatetime = formatAlmatyIso(extracted);
-          toolNotes.push(`Время: ${sessionData.preferredDatetime}`);
+
+        if (sessionData.preferredDatetime && sessionData.suggestedDoctorId) {
+          const validated = await validateParsedDatetime(sessionData, ctx);
+          sessionData = validated.data;
+          if (validated.feedback) {
+            slotsAppendix = validated.feedback;
+            toolNotes.push(validated.slotOk ? "Слот свободен" : "Слот недоступен");
+          }
         }
         break;
       }

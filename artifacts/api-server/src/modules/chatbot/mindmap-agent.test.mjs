@@ -396,3 +396,40 @@ test("buildAgentFallbackReply: stays contextual on qualification", async () => {
   assert.doesNotMatch(reply, /чем могу помочь/i);
   assert.match(reply, /боль|дискомфорт/i);
 });
+
+test("inferKnowledgeAgentActions: datetime message adds parse_datetime when doctor selected", async () => {
+  const { inferKnowledgeAgentActions } = await import("./chatbot-agent-action-inference.ts");
+  const data = {
+    suggestedDoctorId: "doc-1",
+    suggestedDoctorName: "Dr. Smith",
+    selectedBranch: "ул. A",
+  };
+  const actions = inferKnowledgeAgentActions(data, "Завтра в 14:00?", ["ул. A"], []);
+  assert.ok(actions.some((a) => a.type === "parse_datetime"));
+  const withExisting = inferKnowledgeAgentActions(data, "Завтра в 14:00?", ["ул. A"], [
+    { type: "parse_datetime", datetimeText: "Завтра в 14:00?" },
+  ]);
+  assert.equal(withExisting.filter((a) => a.type === "parse_datetime").length, 1);
+});
+
+test("inferKnowledgeAgentActions: short yes with datetime triggers book_appointment", async () => {
+  const { inferKnowledgeAgentActions } = await import("./chatbot-agent-action-inference.ts");
+  const data = {
+    suggestedDoctorId: "doc-1",
+    suggestedDoctorName: "Dr. Smith",
+    selectedBranch: "ул. A",
+    preferredDatetime: "2026-07-11T14:00:00+05:00",
+  };
+  const actions = inferKnowledgeAgentActions(data, "да", ["ул. A"], []);
+  assert.ok(actions.some((a) => a.type === "book_appointment"));
+});
+
+test("isWaitFillerText: detects async wait phrases", async () => {
+  const { isWaitFillerText } = await import("./chatbot-reply-format.ts");
+  assert.equal(isWaitFillerText("Минутку... ✨"), true);
+  assert.equal(
+    isWaitFillerText("Хорошо, сейчас проверю, свободно ли это время у доктора."),
+    true,
+  );
+  assert.equal(isWaitFillerText("Завтра в 14:00 свободно?"), false);
+});

@@ -13,6 +13,8 @@ import {
   deriveFsmStateFromAgent,
   buildDoctorPresentationFallback,
 } from "./chatbot-tools";
+import { inferKnowledgeAgentActions } from "./chatbot-agent-action-inference";
+import { stripWaitFillerParts } from "./chatbot-reply-format";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 
 type OutboundResponse = ChatbotReply | null;
@@ -35,6 +37,8 @@ function finalizeAgentReply(
   }
 
   if (toolResult.slotsAppendix) {
+    const parts = stripWaitFillerParts(reply.parts);
+    reply = parts.length > 0 ? { ...reply, parts } : replyFromText("");
     reply = appendToReply(reply, toolResult.slotsAppendix);
   }
 
@@ -175,7 +179,13 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       "[AgentTurn] Structured JSON unavailable — using plain-text fallback",
     );
 
-    const toolResult = await executeChatbotAgentTools(data, [], undefined, {
+    const fallbackActions = inferKnowledgeAgentActions(
+      data,
+      messageText,
+      clinicBranchNames,
+      [],
+    );
+    const toolResult = await executeChatbotAgentTools(data, fallbackActions, undefined, {
       clinicId,
       phone,
       messageText,
@@ -234,9 +244,15 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     };
   }
 
+  const inferredActions = inferKnowledgeAgentActions(
+    data,
+    messageText,
+    clinicBranchNames,
+    agentTurn.actions ?? [],
+  );
   const toolResult = await executeChatbotAgentTools(
     data,
-    agentTurn.actions ?? [],
+    inferredActions,
     agentTurn.intent,
     {
       clinicId,
