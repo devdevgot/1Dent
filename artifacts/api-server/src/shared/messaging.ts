@@ -124,6 +124,21 @@ export async function sendTypingToPatient(
   }
 }
 
+const TYPING_KEEPALIVE_MS = 12_000;
+
+/** Refresh Green API typing while async work runs (LLM, slot checks). Returns stop handle. */
+export function startTypingKeepalive(clinicId: string, phone: string): () => void {
+  const tick = () => {
+    sendTypingToPatient(clinicId, phone, true).catch(() => {});
+  };
+  tick();
+  const timer = setInterval(tick, TYPING_KEEPALIVE_MS);
+  return () => {
+    clearInterval(timer);
+    sendTypingToPatient(clinicId, phone, false).catch(() => {});
+  };
+}
+
 export function isWhatsAppEnabled(): boolean {
   return META_ENABLED;
 }

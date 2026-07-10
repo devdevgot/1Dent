@@ -27,6 +27,8 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const FIRST_MULTI_BUBBLE_TYPING_MS = 400;
+
 /** Deliver reply as sequential WhatsApp bubbles with typing indicator and human-like pauses. */
 export async function deliverChatbotReply(
   clinicId: string,
@@ -40,14 +42,14 @@ export async function deliverChatbotReply(
   try {
     for (let i = 0; i < normalized.parts.length; i++) {
       const part = normalized.parts[i]!;
-      const pause = normalized.pausesMs?.[i] ?? (i === 0 ? 0 : estimateTypingPause(normalized.parts[i - 1]!));
-
-      if (pause > 0) {
-        await sendTypingToPatient(clinicId, phone, true).catch(() => {});
-        await sleep(pause);
-      } else if (i === 0) {
-        await sendTypingToPatient(clinicId, phone, true).catch(() => {});
+      let pause =
+        normalized.pausesMs?.[i] ?? (i === 0 ? 0 : estimateTypingPause(normalized.parts[i - 1]!));
+      if (i === 0 && normalized.parts.length > 1 && pause < FIRST_MULTI_BUBBLE_TYPING_MS) {
+        pause = FIRST_MULTI_BUBBLE_TYPING_MS;
       }
+
+      await sendTypingToPatient(clinicId, phone, true).catch(() => {});
+      if (pause > 0) await sleep(pause);
 
       await opts?.onPartDelivered?.(part).catch((err) =>
         logger.warn({ err }, "[ChatbotReply] onPartDelivered failed"),

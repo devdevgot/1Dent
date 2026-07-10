@@ -29,7 +29,7 @@ import { withSessionLock } from "../../shared/session-lock";
 import { parseReviewScoreFromText, savePatientReview } from "../../shared/patient-reviews";
 import { isRedAlert } from "../../shared/whatsapp";
 import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.service";
-import { sendTypingToPatient } from "../../shared/messaging";
+import { sendToPatient, sendTypingToPatient, startTypingKeepalive } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { logger } from "../../lib/logger";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
@@ -1742,10 +1742,10 @@ export class ChatbotService {
     options?: ProcessMessageOptions,
   ): Promise<string | null> {
     return withSessionLock(clinicId, phone, async () => {
+      const stopTyping = startTypingKeepalive(clinicId, phone);
       try {
         const turn = await this.safeExecuteTurn(clinicId, phone, text, { ...options, dryRun: false });
         if (!turn?.outbound) {
-          sendTypingToPatient(clinicId, phone, false).catch(() => {});
           return null;
         }
         await saveSession(turn.session);
@@ -1755,11 +1755,12 @@ export class ChatbotService {
         return joinChatbotReply(turn.outbound);
       } catch (err) {
         logger.error({ err, clinicId, phone }, "[ChatbotService] processMessage failed — patient safe fallback");
-        sendTypingToPatient(clinicId, phone, false).catch(() => {});
         await sendOutboundReply(clinicId, phone, PATIENT_SAFE_FALLBACK_TEXT).catch((sendErr) =>
           logger.error({ err: sendErr, clinicId, phone }, "[ChatbotService] failed to send patient safe fallback"),
         );
         return PATIENT_SAFE_FALLBACK_TEXT;
+      } finally {
+        stopTyping();
       }
     });
   }
@@ -2155,10 +2156,6 @@ export class ChatbotService {
       }
       const doneReply = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
       return finishTurn(session, doneReply);
-    }
-
-    if (!dryRun) {
-      sendTypingToPatient(clinicId, phone, true).catch(() => {});
     }
 
     const recentMessages =
