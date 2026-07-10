@@ -11,6 +11,7 @@ import { OwnerProfitSheet } from "@/components/dashboard/owner-profit-sheet";
 import type { FilterPreset } from "@/components/dashboard/owner-dashboard-shared";
 import { SITE } from "@/config/site";
 import "@/styles/dashboard.css";
+import { FormSkeleton } from "@/components/skeletons";
 import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 
 const OnboardingWizard = lazyWithChunkRecovery(() =>
@@ -119,7 +120,15 @@ export default function OwnerDashboard() {
       )}
 
       {onboardingOpen && (
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4">
+              <div className="bg-[var(--ds-surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl">
+                <FormSkeleton fields={5} />
+              </div>
+            </div>
+          }
+        >
           <OnboardingWizard
             open={onboardingOpen}
             onClose={() => {

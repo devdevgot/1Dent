@@ -1094,3 +1094,63 @@ export function AuthShellSkeleton() {
     </div>
   );
 }
+
+/* ══════════════ Account & pricing pages ══════════════ */
+
+export function AccountSettingsPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-[var(--bg)] font-manrope pb-8">
+      <RootTabHeaderSkeleton />
+      <div className="pt-2 px-4 space-y-5">
+        <SkeletonCard className="px-4 py-4">
+          <div className="flex items-center gap-3.5">
+            <Bone className="w-16 h-16 rounded-full shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Bone className="h-5 w-36 rounded" />
+              <Bone className="h-3 w-48 rounded" />
+              <Bone className="h-5 w-20 rounded-full" />
+            </div>
+          </div>
+        </SkeletonCard>
+        <Bone className="h-3 w-24 rounded mx-2" />
+        <SkeletonCard>
+          <ListRowsSkeleton rows={3} avatar card={false} />
+        </SkeletonCard>
+        <Bone className="h-3 w-28 rounded mx-2" />
+        <SkeletonCard>
+          <ListRowsSkeleton rows={4} avatar card={false} />
+        </SkeletonCard>
+      </div>
+    </div>
+  );
+}
+
+export function AccountFormPageSkeleton({ fields = 2 }: { fields?: number }) {
+  return (
+    <div className="min-h-screen bg-[var(--bg)] font-manrope pb-8">
+      <PageHeaderSkeleton back />
+      <div className="px-4 pt-4">
+        <SkeletonCard className="p-4">
+          <FormSkeleton fields={fields} />
+        </SkeletonCard>
+      </div>
+    </div>
+  );
+}
+
+export function PricingPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-[var(--bg)] font-manrope pb-8">
+      <PageHeaderSkeleton />
+      <div className="px-4 pt-4 space-y-4">
+        <Bone className="h-20 w-full rounded-2xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonCard key={i} className="p-5 h-64" />
+          ))}
+        </div>
+        <SkeletonCard className="p-4 h-48" />
+      </div>
+    </div>
+  );
+}

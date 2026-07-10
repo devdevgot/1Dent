@@ -8,6 +8,7 @@ import { PeriodPills } from "@/components/layout/period-pills";
 import { RevenueEmptyState } from "@/components/dashboard/revenue-empty-state";
 import { fetchBranchScopedJson } from "@/lib/branch-scoped-fetch";
 import { cn } from "@/lib/utils";
+import { Bone } from "@/components/skeletons";
 import {
   ChannelIcon,
   DonutChart,
@@ -308,7 +309,7 @@ export function OwnerProfitSheet({
             <div className="pt-4 pb-2 flex justify-center">
               {revenueCardLoading ? (
                 <div className="w-[260px] h-[260px] flex items-center justify-center">
-                  <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                  <Bone className="w-[220px] h-[220px] rounded-full" />
                 </div>
               ) : hasNoRevenueInPeriod ? (
                 <RevenueEmptyState />

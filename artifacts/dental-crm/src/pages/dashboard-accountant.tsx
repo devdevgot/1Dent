@@ -78,7 +78,7 @@ export default function AccountantDashboard() {
     query: { queryKey: getGetOwnerAnalyticsQueryKey() },
   });
   const { data: proceduresData, isLoading: proceduresLoading } = useListProcedures();
-  const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords();
+  const { data: payrollData, isLoading: payrollLoading, refetch: refetchPayroll } = useGetPayrollRecords();
   const { data: summaryData } = useGetFinancialSummary({
     dateFrom: todayStr,
     dateTo: todayStr,
@@ -224,10 +224,20 @@ export default function AccountantDashboard() {
           </div>
 
           <div className="dash-stat-value text-3xl mb-3">
-            ₸ {fotTotal.toLocaleString("ru-KZ")}
+            {payrollLoading ? (
+              <span className="dash-skeleton inline-block h-9 w-40 rounded" />
+            ) : (
+              <>₸ {fotTotal.toLocaleString("ru-KZ")}</>
+            )}
           </div>
 
-          {approvedThisMonth.length > 0 ? (
+          {payrollLoading ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="dash-skeleton h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : approvedThisMonth.length > 0 ? (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-[#16a34a] flex items-center gap-1">
                 <CheckCircle className="w-3.5 h-3.5" />
