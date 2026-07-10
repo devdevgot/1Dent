@@ -1068,7 +1068,7 @@ function buildPromptFacts(args: {
         ? { name: data.suggestedDoctorName, rankPercent: data.doctorRankPercent }
         : undefined,
     alternativeDoctor: altCandidate
-      ? { name: altCandidate.name, rankPercent: altCandidate.finalScore ?? altCandidate.score }
+      ? { name: altCandidate.name, rankPercent: altCandidate.score }
       : undefined,
     slots:
       SLOT_STATES.includes(args.fsmState) && doc
