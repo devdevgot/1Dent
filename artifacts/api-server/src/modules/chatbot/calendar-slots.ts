@@ -210,6 +210,21 @@ export async function getDoctorAvailableSlots(
   });
 }
 
+export async function getClinicDoctorsLightweight(clinicId: string): Promise<DoctorWithSlots[]> {
+  const doctors = await db
+    .select({ id: usersTable.id, name: usersTable.name, specialty: usersTable.specialty })
+    .from(usersTable)
+    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)))
+    .limit(8);
+
+  return doctors.map((doc) => ({
+    id: doc.id,
+    name: doc.name,
+    specialty: doc.specialty ?? null,
+    slots: [] as Date[],
+  }));
+}
+
 export async function getClinicDoctorsWithSlots(
   clinicId: string,
   calendarConfig?: ClinicCalendarConfig | null,

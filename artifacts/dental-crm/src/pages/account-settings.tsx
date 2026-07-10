@@ -30,6 +30,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { ListRowsSkeleton } from "@/components/skeletons";
 import PhotoCropModal from "@/components/account/photo-crop-modal";
 import { PageShell } from "@/components/layout/page-shell";
 import { RootTabHeader } from "@/components/layout/root-tab-header";
@@ -79,7 +80,7 @@ export default function AccountSettings() {
     return () => i18n.off("languageChanged", handleLanguageChanged);
   }, []);
 
-  const { data: myPayrollData } = useGetMyPayrollRecords();
+  const { data: myPayrollData, isLoading: payrollLoading } = useGetMyPayrollRecords();
   const myRecords: PayrollRecord[] = myPayrollData?.data?.records ?? [];
 
   const [photoVersion, setPhotoVersion] = useState(0);
@@ -270,7 +271,9 @@ export default function AccountSettings() {
                   <p className="text-xs text-[#64748b]">{t("payroll.mySalaryDesc")}</p>
                 </div>
               </div>
-              {myRecords.length === 0 ? (
+              {payrollLoading ? (
+                <ListRowsSkeleton rows={3} avatar={false} card={false} className="px-2" />
+              ) : myRecords.length === 0 ? (
                 <div className="px-4 py-6 text-center text-xs text-[#64748b]">
                   {t("payroll.noMySalary")}
                 </div>

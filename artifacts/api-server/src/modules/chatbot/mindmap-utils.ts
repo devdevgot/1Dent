@@ -207,6 +207,45 @@ export function resolveActiveMindMapNode(
   return findMindMapNodeByFsmState(mindMap, state);
 }
 
+/** Outgoing edges from a node — for agent transition menu. */
+export function getMindMapOutgoingEdges(
+  mindMap: ScriptMindMapData | null | undefined,
+  nodeId: string,
+): Array<{ edge: ScriptMindMapEdge; target: ScriptMindMapNode }> {
+  if (!mindMap?.nodes?.length) return [];
+  const nodeById = new Map(mindMap.nodes.map((n) => [n.id, n]));
+  return mindMapEdges(mindMap)
+    .filter((e) => e.source === nodeId)
+    .map((edge) => {
+      const target = nodeById.get(edge.target);
+      return target ? { edge, target } : null;
+    })
+    .filter((x): x is { edge: ScriptMindMapEdge; target: ScriptMindMapNode } => x != null);
+}
+
+/** Find root node id. */
+export function findMindMapRootId(mindMap: ScriptMindMapData | null | undefined): string | undefined {
+  if (!mindMap?.nodes?.length) return undefined;
+  const explicit = mindMap.nodes.find((n) => n.isRoot || n.id === "booking-root");
+  if (explicit) return explicit.id;
+  const edges = mindMapEdges(mindMap);
+  const hasParent = new Set(edges.map((e) => e.target));
+  const roots = mindMap.nodes.filter((n) => !hasParent.has(n.id));
+  return roots[0]?.id;
+}
+
+/** Greeting text from mind map root / intro node. */
+export function getGreetingContentFromMindMap(
+  mindMap: ScriptMindMapData | null | undefined,
+): string | null {
+  if (!mindMap?.nodes?.length) return null;
+  const intro =
+    mindMap.nodes.find((n) => n.id === "step1-intro") ??
+    mindMap.nodes.find((n) => n.fsmState === "greeting" && n.id !== "booking-root") ??
+    mindMap.nodes.find((n) => n.isRoot || n.id === "booking-root");
+  return intro?.content?.trim() || null;
+}
+
 /** Render mind map as prompt text (includes edge labels and fsmState). */
 export function renderMindMapScript(
   mindMap: ScriptMindMapData | null | undefined,
@@ -227,23 +266,29 @@ export function renderMindMapScript(
   const roots = nodes.filter((n) => !hasParent.has(n.id));
   if (roots.length === 0) return "";
 
-  function renderNode(id: string, depth: number): string {
+  function renderNode(id: string, depth: number, visiting = new Set<string>()): string {
+    if (visiting.has(id)) return "";
     const node = nodeById.get(id);
     if (!node) return "";
-    const indent = "  ".repeat(depth);
-    const bullet = depth === 0 ? "▶" : "–";
-    let out = `${indent}${bullet} ${node.label}`;
-    if (node.fsmState) out += ` [этап: ${node.fsmState}]`;
-    if (node.content?.trim()) out += `\n${indent}  ${node.content.trim()}`;
-    out += "\n";
+    visiting.add(id);
+    try {
+      const indent = "  ".repeat(depth);
+      const bullet = depth === 0 ? "▶" : "–";
+      let out = `${indent}${bullet} ${node.label}`;
+      if (node.fsmState) out += ` [этап: ${node.fsmState}]`;
+      if (node.content?.trim()) out += `\n${indent}  ${node.content.trim()}`;
+      out += "\n";
 
-    for (const child of childrenMap[id] ?? []) {
-      if (child.label?.trim()) {
-        out += `${indent}  ↳ если «${child.label.trim()}»:\n`;
+      for (const child of childrenMap[id] ?? []) {
+        if (child.label?.trim()) {
+          out += `${indent}  ↳ если «${child.label.trim()}»:\n`;
+        }
+        out += renderNode(child.targetId, depth + (child.label?.trim() ? 2 : 1), visiting);
       }
-      out += renderNode(child.targetId, depth + (child.label?.trim() ? 2 : 1));
+      return out;
+    } finally {
+      visiting.delete(id);
     }
-    return out;
   }
 
   let text =
@@ -269,8 +314,11 @@ export function renderMindMapCompactPath(
   }
 
   const pathIds: string[] = [];
+  const visited = new Set<string>();
   let currentId: string | undefined = activeNodeId;
   while (currentId && nodeById.has(currentId)) {
+    if (visited.has(currentId)) break;
+    visited.add(currentId);
     pathIds.unshift(currentId);
     currentId = parentByChild.get(currentId)?.parentId;
   }

@@ -51,6 +51,9 @@ import {
   ClinicBranchesPageSkeleton,
   AppShellSkeleton,
   AuthShellSkeleton,
+  AccountSettingsPageSkeleton,
+  AccountFormPageSkeleton,
+  PricingPageSkeleton,
 } from "@/components/skeletons";
 
 type LazyPageModule = { default: React.ComponentType<any> };
@@ -94,17 +97,17 @@ const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffDet
 const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"), <DoctorAnalyticsPageSkeleton />);
 const DoctorSchedulePage = lazyPage(() => import("@/pages/doctor-schedule"), <DoctorSchedulePageSkeleton />);
 const DoctorScheduleDayPage = lazyPage(() => import("@/pages/doctor-schedule-day"), <DoctorScheduleDayPageSkeleton />);
-const AccountSettingsPage = lazyPage(() => import("@/pages/account-settings"));
-const AccountEditProfilePage = lazyPage(() => import("@/pages/account-edit-profile"));
-const AccountChangeEmailPage = lazyPage(() => import("@/pages/account-change-email"));
-const AccountChangePasswordPage = lazyPage(() => import("@/pages/account-change-password"));
+const AccountSettingsPage = lazyPage(() => import("@/pages/account-settings"), <AccountSettingsPageSkeleton />);
+const AccountEditProfilePage = lazyPage(() => import("@/pages/account-edit-profile"), <AccountFormPageSkeleton fields={1} />);
+const AccountChangeEmailPage = lazyPage(() => import("@/pages/account-change-email"), <AccountFormPageSkeleton fields={2} />);
+const AccountChangePasswordPage = lazyPage(() => import("@/pages/account-change-password"), <AccountFormPageSkeleton fields={3} />);
 const MenuPage = lazyPage(() => import("@/pages/menu"), <MenuPageSkeleton />);
 const MigrationPage = lazyPage(() => import("@/pages/migration"), <MigrationPageSkeleton />);
 const ChannelsPage = lazyPage(() => import("@/pages/channels"), <ChannelsPageSkeleton />);
 const ContractTemplatesPage = lazyPage(() => import("@/pages/contract-templates"), <ContractTemplatesPageSkeleton />);
 const BranchesPage = lazyPage(() => import("@/pages/branches"), <BranchesPageSkeleton />);
 const ClinicBranchesPage = lazyPage(() => import("@/pages/clinic-branches"), <ClinicBranchesPageSkeleton />);
-const PricingPage = lazyPage(() => import("@/pages/pricing"));
+const PricingPage = lazyPage(() => import("@/pages/pricing"), <PricingPageSkeleton />);
 const AiCreditsPage = lazyPage(() => import("@/pages/ai-credits"), <AiCreditsPageSkeleton />);
 const LandingPage = lazyPage(() => import("@/pages/landing"));
 const SlashTabletPage = lazyPage(() => import("@/pages/slash-tablet"));

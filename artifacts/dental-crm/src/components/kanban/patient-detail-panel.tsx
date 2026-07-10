@@ -1945,7 +1945,7 @@ export function PatientDetailPanel() {
                       <Megaphone className="h-3.5 w-3.5" />
                       Рассылки WhatsApp
                     </p>
-                    <Suspense fallback={<div className="text-xs text-[#94a3b8] py-2">Загрузка…</div>}>
+                    <Suspense fallback={<ListRowsSkeleton rows={3} avatar={false} card={false} className="py-2" />}>
                       <PatientBroadcastHistory patientId={patient.id} />
                     </Suspense>
                   </div>

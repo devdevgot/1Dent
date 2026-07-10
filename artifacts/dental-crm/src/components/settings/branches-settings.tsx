@@ -1163,10 +1163,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {journalLoading ? (
-              <div className="flex items-center justify-center py-16 gap-2 text-[#64748b]">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Загрузка…</span>
-              </div>
+              <ListRowsSkeleton rows={6} avatar={false} card={false} className="p-4" />
             ) : journalFiltered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <div className="w-14 h-14 rounded-2xl bg-[#f1ede4]/60 flex items-center justify-center">

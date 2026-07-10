@@ -57,6 +57,7 @@ import {
 } from "./chatbot-ab-funnel";
 import {
   formatSlotAlternatives,
+  getClinicDoctorsLightweight,
   getClinicDoctorsWithSlots,
   getDoctorAvailableSlots,
   validateAppointmentSlot,
@@ -91,9 +92,15 @@ import { planLimitsService } from "../../shared/plan-limits.service";
 import { InsufficientAiCreditsError, OpenRouterAiFailedError, PlanLimitExceededError } from "../../shared/errors/index";
 import {
   renderMindMapCompactPath,
+  renderMindMapScript,
   resolveMindMapNodeIdForState,
+  getGreetingContentFromMindMap,
+  findMindMapRootId,
   type ScriptMindMapData,
 } from "./mindmap-utils";
+import { validateMindMapScript, mergeMindMapWithDefault } from "./mindmap-validator";
+import { shouldUseAgentTurn } from "./chatbot-agent.types";
+import { runChatbotAgentTurn } from "./chatbot-agent-turn";
 import {
   DEFAULT_BOOKING_MIND_MAP,
   usesBookingFlow,
@@ -109,6 +116,7 @@ import {
   isUsableClinicKnowledge,
   buildRefusalFallback,
   resolveBranchFromMessage,
+  buildBranchListMessage,
 } from "./clinic-knowledge";
 import { scheduleAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { scheduleFollowups } from "../followups/followup.queue";
@@ -576,6 +584,9 @@ async function ensureChatbotSettingsSchema(): Promise<void> {
       await pool.query(
         `ALTER TABLE "chatbot_settings" ADD COLUMN IF NOT EXISTS "broadcast_ai_enabled" boolean DEFAULT false NOT NULL`,
       );
+      await pool.query(
+        `ALTER TABLE "chatbot_settings" ADD COLUMN IF NOT EXISTS "agent_mode_enabled" boolean DEFAULT true NOT NULL`,
+      );
     })().catch((err) => {
       chatbotSettingsSchemaReady = null;
       logger.error({ err }, "[ChatbotService] Failed to ensure chatbot_settings schema");
@@ -630,11 +641,13 @@ function getEffectiveSettings(settings: ChatbotSettings): ChatbotSettings {
   if (!raw?.nodes?.length) {
     return { ...settings, scriptMindMap: DEFAULT_BOOKING_MIND_MAP };
   }
+  const validation = validateMindMapScript(raw);
+  const map = validation.valid ? raw : mergeMindMapWithDefault(raw);
   return {
     ...settings,
     scriptMindMap: {
-      nodes: raw.nodes,
-      edges: Array.isArray(raw.edges) ? raw.edges : [],
+      nodes: map.nodes,
+      edges: Array.isArray(map.edges) ? map.edges : [],
     },
   };
 }
@@ -1123,6 +1136,11 @@ function buildUnifiedScriptPrompt(
     task = opts.backendContext.trim();
   }
 
+  const scriptSections = [
+    renderMindMapScript(mindMap).slice(0, 4500),
+    activeNodeId ? renderMindMapCompactPath(mindMap, activeNodeId) : "",
+  ].filter(Boolean);
+
   return buildChatbotPrompt({
     fsmState,
     channel,
@@ -1138,7 +1156,7 @@ function buildUnifiedScriptPrompt(
       userText: opts?.userText,
     }),
     task,
-    mindMapCompactPath: activeNodeId ? renderMindMapCompactPath(mindMap, activeNodeId) : undefined,
+    mindMapCompactPath: scriptSections.length > 0 ? scriptSections.join("\n") : undefined,
     activeMindMapNode: activeNode
       ? { label: activeNode.label, content: activeNode.content, fsmState: activeNode.fsmState }
       : undefined,
@@ -1620,6 +1638,30 @@ function formatSimulateMessageResult(
   };
 }
 
+const PLAYGROUND_TURN_TIMEOUT_MS = 28_000;
+
+function buildPlaygroundFallbackResult(
+  opts: {
+    session?: PlaygroundSessionInput;
+    userMessage: string;
+    reason?: string;
+  },
+): SimulateMessageResult {
+  const state = opts.session?.state ?? "greeting";
+  const reply =
+    "Извините, ответ занял слишком много времени. Попробуйте короче сообщение или повторите через несколько секунд.";
+  return {
+    reply,
+    parts: [reply],
+    pausesMs: [0],
+    fsmState: state,
+    humanTakeover: false,
+    sessionData: opts.session?.data ?? {},
+    mindMapNode: null,
+    simulatedActions: opts.reason ? [opts.reason] : [],
+  };
+}
+
 export class ChatbotService {
   async processMessage(
     clinicId: string,
@@ -1758,11 +1800,14 @@ export class ChatbotService {
     let clinicName: string | undefined;
     let clinicBranchNames: string[] = [];
     try {
+      const doctorsPromise = dryRun
+        ? getClinicDoctorsLightweight(clinicId).catch(() => [] as DoctorWithSlots[])
+        : getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(() => [] as DoctorWithSlots[]);
       [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName, clinicBranchNames] = await Promise.all([
         getManagerExamples(clinicId),
         loadKnowledgeContext(clinicId, messageText),
         loadPriceListContext(clinicId),
-        getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(() => [] as DoctorWithSlots[]),
+        doctorsPromise,
         db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []).then((rows) => rows[0]?.name),
         loadClinicBranchNames(clinicId),
       ]);
@@ -2019,20 +2064,103 @@ export class ChatbotService {
 
     let response: OutboundResponse = null;
 
+    if (
+      shouldUseAgentTurn(promptChannel, { agentModeEnabled: settings.agentModeEnabled }) &&
+      state !== "human_takeover" &&
+      !session.humanTakeover &&
+      state !== "collect_iin"
+    ) {
+      const mindMap = settings.scriptMindMap as ScriptMindMapData;
+      if (!data.activeMindMapNodeId) {
+        const rootId = findMindMapRootId(mindMap);
+        if (rootId) data.activeMindMapNodeId = rootId;
+      }
+
+      const agentOutcome = await runChatbotAgentTurn({
+        clinicId,
+        phone,
+        messageText,
+        dryRun,
+        settings,
+        mindMap,
+        clinicName: resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName),
+        knowledgeContext,
+        priceListContext,
+        clinicBranchNames,
+        calendarConfig,
+        recentMessages,
+        managerExamples,
+        sessionState: state,
+        sessionData: data,
+        noteAction,
+        buildPromptFacts: (fsmState) =>
+          buildPromptFacts({
+            settings,
+            clinicName,
+            doctorsWithSlots,
+            knowledgeContext,
+            priceListContext,
+            officialBranches: clinicBranchNames,
+            sessionData: data,
+            fsmState,
+            userText: messageText,
+          }),
+        finalizeBooking: async ({ data: bookingData, branchToSave, promptState }) =>
+          finalizeBookingAppointment({
+            clinicId,
+            phone,
+            data: bookingData,
+            branchToSave,
+            dryRun,
+            noteAction,
+            recentMessages,
+            messageText,
+            managerExamples,
+            up: (ps, upOpts) =>
+              buildUnifiedScriptPrompt(
+                settings,
+                doctorsWithSlots,
+                clinicName,
+                knowledgeContext,
+                priceListContext,
+                {
+                  fsmState: ps,
+                  serviceType: bookingData.serviceType,
+                  userText: upOpts?.userText ?? messageText,
+                  activeMindMapNodeId: bookingData.activeMindMapNodeId,
+                  channel: promptChannel,
+                  backendContext: upOpts?.backendContext,
+                  officialBranches: clinicBranchNames,
+                  sessionData: bookingData,
+                },
+              ),
+            promptState,
+          }),
+      });
+
+      session.state = agentOutcome.state;
+      session.data = agentOutcome.data;
+      session.humanTakeover = agentOutcome.humanTakeover;
+      if (agentOutcome.humanTakeover && !dryRun) {
+        await this.notifyHumanTakeover(clinicId, phone, agentOutcome.data.patientName, agentOutcome.data.handoffSummary);
+      }
+      return finishTurn(session, agentOutcome.response);
+    }
+
     switch (state) {
       case "greeting": {
         // Compute a script-based greeting fallback (NOT the legacy IIN-asking greetingTemplate).
         const scriptGreeting = (() => {
-          const blocks = ((settings.scriptBlocks ?? []) as ScriptBlock[]);
-          const active = blocks.length > 0 ? blocks : STANDARD_SCRIPT_BLOCKS;
-          const greet = active.find((b) => b.id === "greeting" && b.enabled);
           const resolvePlaceholders = createPromptPlaceholderResolver({
             clinicName: resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName),
             date: formatAlmatyDayMonth(new Date()),
             time: "удобное вам время",
             doctorName: "вашего врача",
           });
-          return (greet?.content ?? STANDARD_SCRIPT_BLOCKS[0]!.content)
+          const mindMapData = settings.scriptMindMap as ScriptMindMapData | undefined;
+          const fromMindMap = getGreetingContentFromMindMap(mindMapData);
+          const rawContent = fromMindMap ?? STANDARD_SCRIPT_BLOCKS[0]!.content;
+          return rawContent
             .split("\n")
             .filter((line) => !line.includes("• "))
             .join("\n")
@@ -2601,7 +2729,7 @@ export class ChatbotService {
 
         const branchBackendContext = (): string => {
           if (clinicBranchNames.length > 1) {
-            return `Спроси филиал одним коротким вопросом — только из списка: ${clinicBranchNames.join(", ")}. Не придумывай адреса.`;
+            return `Покажи ВСЕ филиалы нумерованным списком в одном сообщении (исключение из правила краткости). Только из списка: ${clinicBranchNames.join("; ")}. Не придумывай адреса.`;
           }
           if (clinicBranchNames.length === 1) {
             return `Единственный филиал: «${clinicBranchNames[0]}». Подтверди коротко и иди дальше.`;
@@ -3619,14 +3747,44 @@ export class ChatbotService {
       }
 
       const settings = getEffectiveSettings(await getSettings(clinicId));
-      const turn = await this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
-        dryRun: true,
-        sessionInput: opts?.session,
-        historyInput: opts?.history,
-        scenario: opts?.scenario,
-        initGreeting: opts?.initGreeting,
-      });
+      type PlaygroundRaceResult = { timedOut: true } | { timedOut: false; turn: TurnResult | null };
+      let raceResult: PlaygroundRaceResult;
+      try {
+        raceResult = await Promise.race([
+          this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
+            dryRun: true,
+            sessionInput: opts?.session,
+            historyInput: opts?.history,
+            scenario: opts?.scenario,
+            initGreeting: opts?.initGreeting,
+          }).then((turn) => ({ timedOut: false as const, turn })),
+          new Promise<PlaygroundRaceResult>((resolve) => {
+            setTimeout(() => resolve({ timedOut: true }), PLAYGROUND_TURN_TIMEOUT_MS);
+          }),
+        ]);
+      } catch (turnErr) {
+        const turnMsg = turnErr instanceof Error ? turnErr.message : String(turnErr);
+        if (turnMsg.includes("OpenRouterTimeout") || turnMsg.includes("PLAYGROUND_TIMEOUT")) {
+          logger.warn({ clinicId, turnMsg }, "[ChatbotService] Playground turn timed out");
+          return buildPlaygroundFallbackResult({
+            session: opts?.session,
+            userMessage,
+            reason: "timeout",
+          });
+        }
+        throw turnErr;
+      }
 
+      if (raceResult.timedOut) {
+        logger.warn({ clinicId }, "[ChatbotService] Playground turn exceeded time budget");
+        return buildPlaygroundFallbackResult({
+          session: opts?.session,
+          userMessage,
+          reason: "timeout",
+        });
+      }
+
+      const turn = raceResult.turn;
       if (!turn) {
         return {
           reply: "Чат-бот отключён или недоступен.",
@@ -3656,13 +3814,18 @@ export class ChatbotService {
       if (
         errMsg.includes("OpenRouter") ||
         errMsg.includes("openrouter") ||
+        errMsg.includes("OpenRouterTimeout") ||
         errMsg.includes("429") ||
         errMsg.includes("402")
       ) {
         throw new OpenRouterAiFailedError();
       }
       logger.error({ err, clinicId }, "[ChatbotService] simulateMessage failed");
-      throw err;
+      return buildPlaygroundFallbackResult({
+        session: opts?.session,
+        userMessage,
+        reason: "error",
+      });
     }
   }
 
@@ -3886,10 +4049,13 @@ export class ChatbotService {
       calendarConfig?: ChatbotSettings["calendarConfig"];
       abTestEnabled?: boolean;
       broadcastAiEnabled?: boolean;
+      agentModeEnabled?: boolean;
       scriptVariants?: ChatbotSettings["scriptVariants"];
     },
-  ) {
+  ): Promise<{ settings: ChatbotSettings; mindMapValidation?: ReturnType<typeof validateMindMapScript> }> {
     const settings = await getSettings(clinicId);
+    const mindMapValidation =
+      updates.scriptMindMap !== undefined ? validateMindMapScript(updates.scriptMindMap) : undefined;
     const [updated] = await db
       .update(chatbotSettingsTable)
       .set({ ...updates, updatedAt: new Date() })
@@ -3897,7 +4063,7 @@ export class ChatbotService {
       .returning();
     // Invalidate cache
     settingsCache.delete(clinicId);
-    return updated!;
+    return { settings: updated!, ...(mindMapValidation ? { mindMapValidation } : {}) };
   }
 
   // ─── Manager Examples CRUD ────────────────────────────────────────────────
