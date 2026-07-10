@@ -2,16 +2,21 @@ import { useMemo } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { ChevronRight } from "lucide-react";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useGetMySalary } from "@workspace/api-client-react";
 import {
   fmtRevenue,
-  getPresetRange,
   LIST_PERIOD_PRESETS,
   type FilterPreset,
 } from "@/components/dashboard/owner-dashboard-shared";
+import {
+  formatSalaryPeriodLabel,
+  getSalaryDateRange,
+  payrollMyUrl,
+  salarySummaryHint,
+  toSalaryDateParams,
+} from "@/lib/payroll-period";
 
 const SALARY_ICON = "/icons/menu/financials.png";
 
@@ -36,24 +41,22 @@ export function MySalaryCard({ listPreset, onListPresetChange }: MySalaryCardPro
   const [, navigate] = useLocation();
   const { user } = useAuthStore();
 
-  const dateRange = useMemo(() => {
-    const range = getPresetRange(listPreset);
-    const to = new Date(range.to);
-    to.setHours(23, 59, 59, 999);
-    return { from: range.from, to };
-  }, [listPreset]);
-
-  const dateFromStr = format(dateRange.from, "yyyy-MM-dd");
-  const dateToStr = format(dateRange.to, "yyyy-MM-dd");
+  const dateRange = useMemo(() => getSalaryDateRange(listPreset), [listPreset]);
+  const dateParams = useMemo(() => toSalaryDateParams(listPreset), [listPreset]);
+  const periodLabel = formatSalaryPeriodLabel(dateRange.from, dateRange.to);
 
   const { data, isLoading } = useGetMySalary(
-    { dateFrom: dateFromStr, dateTo: dateToStr },
+    dateParams,
     { query: { staleTime: 30_000 } },
   );
 
   const salary = data?.data;
   const displayName = salary?.userName?.trim() || user?.name?.trim() || t("payroll.mySalary", "Моя зарплата");
-  const subtitle = salary ? salaryTypeLabel(salary.salaryType, t) : t("payroll.noSettings", "Настройки не заданы");
+  const subtitle = salary
+    ? salarySummaryHint(salary, t) || salaryTypeLabel(salary.salaryType, t)
+    : t("payroll.noSettings", "Настройки не заданы");
+
+  const openDetails = () => navigate(payrollMyUrl(listPreset));
 
   return (
     <div className="mx-4 mt-4 bg-white rounded-3xl border border-[#e8e3d9] shadow-sm overflow-hidden">
@@ -61,6 +64,9 @@ export function MySalaryCard({ listPreset, onListPresetChange }: MySalaryCardPro
         <h2 className="text-[22px] font-bold text-[#0f172a] tracking-tight">
           {t("payroll.mySalary", "Моя зарплата")}
         </h2>
+        <p className="text-xs text-[#94a3b8] mt-1">
+          {t("payroll.cardHint", "Предварительный расчёт за выбранный период")}
+        </p>
         <div
           className="flex gap-2 mt-3 overflow-x-auto pb-0.5"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -86,7 +92,7 @@ export function MySalaryCard({ listPreset, onListPresetChange }: MySalaryCardPro
       <div className="divide-y divide-[#f1ede4]">
         <button
           type="button"
-          onClick={() => navigate("/payroll/my")}
+          onClick={openDetails}
           className="flex items-center gap-3.5 w-full px-5 py-3.5 text-left hover:bg-[#faf8f4] active:bg-[#f1ede4] transition-colors"
         >
           <div
@@ -104,6 +110,7 @@ export function MySalaryCard({ listPreset, onListPresetChange }: MySalaryCardPro
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm text-[#0f172a] truncate">{displayName}</p>
             <p className="text-xs text-[#64748b] mt-0.5 truncate">{subtitle}</p>
+            <p className="text-[11px] text-[#94a3b8] mt-0.5 truncate">{periodLabel}</p>
           </div>
           <div className="shrink-0 text-right">
             {isLoading ? (
@@ -122,7 +129,7 @@ export function MySalaryCard({ listPreset, onListPresetChange }: MySalaryCardPro
 
       <button
         type="button"
-        onClick={() => navigate("/payroll/my")}
+        onClick={openDetails}
         className="mx-4 my-4 w-[calc(100%-2rem)] py-3.5 rounded-2xl bg-[#f1ede4] hover:bg-[#e8e3d9] text-[#0f172a] text-sm font-semibold transition-colors flex items-center justify-center gap-1"
       >
         {t("payroll.details", "Подробнее")}
