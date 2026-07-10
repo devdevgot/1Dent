@@ -3,6 +3,12 @@ import { db, knowledgeSourcesTable } from "@workspace/db";
 import { openrouter, FAST_MODEL, withTimeout } from "../../lib/openrouter-client";
 import { ObjectStorageService } from "../../lib/objectStorage";
 import { invalidateKnowledgeCache } from "./knowledge-cache";
+import { invalidateComposedPromptCache } from "../chatbot/chatbot-prompt-composer";
+
+function invalidateClinicKnowledgeCaches(clinicId: string): void {
+  invalidateKnowledgeCache(clinicId);
+  invalidateComposedPromptCache(clinicId);
+}
 
 const storage = new ObjectStorageService();
 
@@ -324,7 +330,7 @@ export async function scrapeUrl(id: string, url: string, clinicId?: string): Pro
         .update(knowledgeSourcesTable)
         .set({ extractedText: text, status: "ready" })
         .where(eq(knowledgeSourcesTable.id, id));
-      if (clinicId) invalidateKnowledgeCache(clinicId);
+      if (clinicId) invalidateClinicKnowledgeCaches(clinicId);
       return;
     }
 
@@ -388,7 +394,7 @@ export async function scrapeUrl(id: string, url: string, clinicId?: string): Pro
       .update(knowledgeSourcesTable)
       .set({ extractedText, status: "ready", errorMessage: null })
       .where(eq(knowledgeSourcesTable.id, id));
-    if (clinicId) invalidateKnowledgeCache(clinicId);
+    if (clinicId) invalidateClinicKnowledgeCaches(clinicId);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await db
@@ -411,7 +417,7 @@ export async function extractFileText(
 
     if (IMAGE_MIME_TYPES.has(mimeType) || mimeType.startsWith("image/")) {
       await extractImageText(id, buffer, mimeType, name ?? objectPath);
-      if (clinicId) invalidateKnowledgeCache(clinicId);
+      if (clinicId) invalidateClinicKnowledgeCaches(clinicId);
       return;
     }
 
@@ -438,7 +444,7 @@ export async function extractFileText(
       .update(knowledgeSourcesTable)
       .set({ extractedText: text, status: "ready", errorMessage: null })
       .where(eq(knowledgeSourcesTable.id, id));
-    if (clinicId) invalidateKnowledgeCache(clinicId);
+    if (clinicId) invalidateClinicKnowledgeCaches(clinicId);
   } catch (err) {
     await db
       .update(knowledgeSourcesTable)
@@ -480,7 +486,7 @@ export function processKnowledgeSource(
       .update(knowledgeSourcesTable)
       .set({ status: "ready", errorMessage: null })
       .where(eq(knowledgeSourcesTable.id, source.id))
-      .then(() => invalidateKnowledgeCache(source.clinicId));
+      .then(() => invalidateClinicKnowledgeCaches(source.clinicId));
   }
 }
 

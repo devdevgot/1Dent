@@ -9,15 +9,13 @@ import {
   knowledgeSourcesTable,
   knowledgeScriptsTable,
   clinicsTable,
-  chatbotSettingsTable,
   clinicBranchesTable,
 } from "@workspace/db";
 import { assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { scrapeUrl, extractFileText } from "./knowledge.service";
 import { generateKnowledgeScripts } from "./knowledge-generate.service";
-import { generateMindMapFromKnowledge } from "./knowledge-mindmap-generate.service";
-import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.service";
+import { invalidateComposedPromptCache } from "../chatbot/chatbot-prompt-composer";
 
 const router: IRouter = Router();
 
@@ -236,12 +234,8 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
     const branchNames = branchRows.map((r) => r.name).filter(Boolean);
 
     let generated;
-    let mindMapResult;
     try {
-      [generated, mindMapResult] = await Promise.all([
-        generateKnowledgeScripts(clinicNameNote, knowledgeText),
-        generateMindMapFromKnowledge(clinicNameNote, knowledgeText, branchNames),
-      ]);
+      generated = await generateKnowledgeScripts(clinicNameNote, knowledgeText);
     } catch (err) {
       req.log?.error({ err, clinicId }, "[KnowledgeGenerate] generation failed");
       const message = err instanceof Error ? err.message : String(err);
@@ -275,41 +269,13 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
         },
       });
 
-    const scriptMindMap = mindMapResult.mindMap;
-
-    const existingSettings = await db
-      .select({ id: chatbotSettingsTable.id })
-      .from(chatbotSettingsTable)
-      .where(eq(chatbotSettingsTable.clinicId, clinicId))
-      .limit(1);
-
-    if (existingSettings.length > 0) {
-      await db
-        .update(chatbotSettingsTable)
-        .set({ scriptMindMap: scriptMindMap as never, updatedAt: new Date() })
-        .where(eq(chatbotSettingsTable.clinicId, clinicId));
-    } else {
-      const defaults = chatbotDefaultsForNewClinic();
-      await db.insert(chatbotSettingsTable).values({
-        id: randomUUID(),
-        clinicId,
-        ...defaults,
-        scriptMindMap: scriptMindMap as never,
-      });
-    }
-
-    req.log?.info(
-      { clinicId, mindMapNodes: scriptMindMap.nodes.length, warnings: mindMapResult.validation.warnings },
-      "[KnowledgeGenerate] Saved scriptMindMap to chatbot_settings",
-    );
+    invalidateComposedPromptCache(clinicId);
 
     res.json({
       success: true,
       data: {
         primaryScript: generated.primaryScript,
         repeatScript: generated.repeatScript,
-        scriptMindMap,
-        mindMapValidation: mindMapResult.validation,
       },
     });
   } catch (err) { next(err); }

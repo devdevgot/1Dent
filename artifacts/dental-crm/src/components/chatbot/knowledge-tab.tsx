@@ -2,12 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
   AlertCircle, Clock, X, Upload, AlignLeft, ChevronDown, ChevronUp,
-  BookOpen, GitBranch, Maximize2, RefreshCw,
+  BookOpen, RefreshCw,
 } from "lucide-react";
-import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData, type MindMapSaveMeta } from "./script-mindmap";
 import { AppDialog } from "@/components/layout/app-dialog";
-import { cn } from "@/lib/utils";
-import { guessFsmStateFromLabel } from "@/lib/chatbot-fsm-states";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
 import { getApiErrorMessage } from "@/lib/api-error-message";
@@ -59,70 +56,8 @@ interface KnowledgeSource {
   createdAt: string;
 }
 
-interface ScriptNode {
-  id: string;
-  label: string;
-  detail?: string;
-  children?: ScriptNode[];
-}
-
-interface GeneratedScript {
-  title: string;
-  nodes: ScriptNode[];
-}
-
-// ── Convert AI-generated scripts to ScriptMindMapData ─────────────────────────
-function convertGeneratedScriptsToMindMap(
-  primaryScript?: GeneratedScript,
-  repeatScript?: GeneratedScript,
-): ScriptMindMapData {
-  const nodes: ScriptMindMapData["nodes"] = [];
-  const edges: ScriptMindMapData["edges"] = [];
-
-  nodes.push({ id: "root", label: "Скрипты продаж", content: "", isRoot: true });
-
-  function flattenTree(node: ScriptNode, parentId: string, prefix: string) {
-    const id = `${prefix}_${node.id}`;
-    nodes.push({
-      id,
-      label: node.label,
-      content: node.detail ?? "",
-      fsmState: guessFsmStateFromLabel(node.label),
-    });
-    edges.push({
-      id: `e_${parentId}_${id}`,
-      source: parentId,
-      target: id,
-      label: node.label,
-    });
-    for (const child of node.children ?? []) {
-      flattenTree(child, id, prefix);
-    }
-  }
-
-  if (primaryScript) {
-    nodes.push({ id: "p_root", label: primaryScript.title, content: "" });
-    edges.push({ id: "e_root_p_root", source: "root", target: "p_root" });
-    for (const n of primaryScript.nodes) flattenTree(n, "p_root", "p");
-  }
-
-  if (repeatScript) {
-    nodes.push({ id: "r_root", label: repeatScript.title, content: "" });
-    edges.push({ id: "e_root_r_root", source: "root", target: "r_root" });
-    for (const n of repeatScript.nodes) flattenTree(n, "r_root", "r");
-  }
-
-  return { nodes, edges };
-}
-
 // ── Main KnowledgeTab component ───────────────────────────────────────────────
-export function KnowledgeTab({
-  onScriptsGenerated,
-  hasExistingMindMap = false,
-}: {
-  onScriptsGenerated?: (data: ScriptMindMapData) => void;
-  hasExistingMindMap?: boolean;
-}) {
+export function KnowledgeTab() {
   const { toast } = useToast();
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
   const [loading, setLoading] = useState(true);
@@ -261,12 +196,6 @@ export function KnowledgeTab({
   };
 
   const handleGenerate = async () => {
-    if (hasExistingMindMap) {
-      const ok = window.confirm(
-        "Текущий майнд-мэп скрипта будет заменён новой генерацией. Продолжить?",
-      );
-      if (!ok) return;
-    }
     setGenerating(true);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 130_000);
@@ -285,32 +214,15 @@ export function KnowledgeTab({
         throw new Error(getApiErrorMessage({ data: body }, "Ошибка сервера"));
       }
       const json = await res.json();
-      const { primaryScript, repeatScript, scriptMindMap, mindMapValidation } = json.data as {
-        primaryScript: GeneratedScript;
-        repeatScript: GeneratedScript;
-        scriptMindMap?: ScriptMindMapData;
-        mindMapValidation?: { warnings?: string[] };
-      };
-
-      if (scriptMindMap?.nodes?.length) {
-        onScriptsGenerated?.(scriptMindMap);
-        const warnCount = mindMapValidation?.warnings?.length ?? 0;
-        toast({
-          title: "Скрипт сохранён",
-          description:
-            warnCount > 0
-              ? `Mind map (${scriptMindMap.nodes.length} узлов) сохранён в настройки чатбота. ${warnCount} предупреждений валидации.`
-              : `Mind map (${scriptMindMap.nodes.length} узлов) автоматически сохранён как главный скрипт.`,
-        });
-      } else {
-        const mindMapData = convertGeneratedScriptsToMindMap(primaryScript, repeatScript);
-        onScriptsGenerated?.(mindMapData);
-        toast({ title: "Скрипты готовы!", description: "ИИ сгенерировал скрипты — смотрите в майнд-мэпе ниже" });
-      }
+      toast({
+        title: "Промпт обновлён",
+        description: "Claude Opus пересобрал system prompt чатбота из базы знаний.",
+      });
+      void json;
     } catch (err) {
       const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
       toast({
-        title: "Не удалось сгенерировать скрипты",
+        title: "Не удалось обновить промпт",
         description: isAbort
           ? "Генерация заняла слишком много времени. Попробуйте ещё раз."
           : err instanceof Error ? err.message : "Попробуйте ещё раз.",
@@ -334,7 +246,7 @@ export function KnowledgeTab({
       <div>
         <p className="text-sm font-semibold text-[#0f172a]">База знаний</p>
         <p className="text-xs text-[#64748b] mt-0.5">
-          Добавьте ссылки и файлы — ИИ обучится на них и сгенерирует скрипты в майнд-мэпе
+          Добавьте ссылки и файлы — Claude Opus составит единый промпт, Gemini ведёт диалог
         </p>
       </div>
 
@@ -558,71 +470,45 @@ export function KnowledgeTab({
         )}
       >
         {generating
-          ? <><Loader2 className="h-4 w-4 animate-spin" /> Генерация скриптов…</>
-          : <><Sparkles className="h-4 w-4" /> Сгенерировать скрипты продаж</>
+          ? <><Loader2 className="h-4 w-4 animate-spin" /> Составление промпта…</>
+          : <><Sparkles className="h-4 w-4" /> Обновить промпт чатбота</>
         }
       </button>
 
       {readySources.length === 0 && sources.length > 0 && pendingSources.length > 0 && (
         <p className="text-xs text-center text-[#64748b]">
-          Дождитесь обработки источников, затем нажмите «Сгенерировать»
+          Дождитесь обработки источников, затем нажмите «Обновить промпт»
         </p>
       )}
       {sources.length === 0 && (
         <p className="text-xs text-center text-[#64748b]">
-          Добавьте хотя бы один источник, чтобы ИИ мог создать скрипты
+          Добавьте хотя бы один источник — чатбот будет отвечать по вашим материалам
         </p>
       )}
     </div>
   );
 }
 
-// ── Combined knowledge + script modal ─────────────────────────────────────────
-interface KnowledgeAndScriptModalProps {
+// ── Knowledge modal (fullscreen) ──────────────────────────────────────────────
+interface KnowledgeModalProps {
   open: boolean;
   onClose: () => void;
-  initialMindMapData?: ScriptMindMapData | null;
-  onSaveMindMap: (data: ScriptMindMapData, meta?: MindMapSaveMeta) => void;
-  mindMapSaveStatus?: "idle" | "saving" | "saved";
 }
 
-export function KnowledgeAndScriptModal({
-  open,
-  onClose,
-  initialMindMapData,
-  onSaveMindMap,
-  mindMapSaveStatus,
-}: KnowledgeAndScriptModalProps) {
-  const [mapExpanded, setMapExpanded] = useState(false);
-  const [liveMindMapData, setLiveMindMapData] = useState<ScriptMindMapData | null | undefined>(initialMindMapData);
-
-  // Sync if parent data changes (e.g. on first load)
-  useEffect(() => {
-    setLiveMindMapData(initialMindMapData);
-  }, [initialMindMapData]);
-
-  const handleScriptsGenerated = useCallback((data: ScriptMindMapData) => {
-    setLiveMindMapData(data);
-    onSaveMindMap(data);
-  }, [onSaveMindMap]);
-
-  const handleSaveMindMap = useCallback((data: ScriptMindMapData, meta?: MindMapSaveMeta) => {
-    setLiveMindMapData(data);
-    onSaveMindMap(data, meta);
-  }, [onSaveMindMap]);
-
+export function KnowledgeModal({ open, onClose }: KnowledgeModalProps) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#f1f5f9] font-manrope">
-      {/* Header */}
       <div className="shrink-0 flex items-center gap-4 px-5 py-4 bg-white border-b border-[#e8e3d9] shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1f75fe] to-[#60a5fa] text-white shadow-sm shrink-0">
           <BookOpen className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-semibold text-[#0f172a]">База знаний и скрипт</p>
-          <p className="text-xs text-[#64748b] leading-tight mt-0.5">Обучение чат-бота и визуальный сценарий разговора</p>
+          <p className="text-base font-semibold text-[#0f172a]">База знаний</p>
+          <p className="text-xs text-[#64748b] leading-tight mt-0.5">
+            Материалы клиники → Claude Opus составляет промпт → Gemini ведёт диалог
+          </p>
         </div>
         <button
           onClick={onClose}
@@ -631,67 +517,12 @@ export function KnowledgeAndScriptModal({
           <X className="h-5 w-5 text-[#64748b]" />
         </button>
       </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Knowledge base */}
-        <div className="px-4 py-5">
-          <KnowledgeTab
-            onScriptsGenerated={handleScriptsGenerated}
-            hasExistingMindMap={(liveMindMapData?.nodes?.length ?? 0) > 0}
-          />
-        </div>
-
-        {/* Divider */}
-        <div className="h-px bg-[var(--ds-border)] mx-4" />
-
-        {/* Mind map inline section */}
-        <div className="px-4 py-4 pb-8 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f75fe] to-[#60a5fa] text-white shadow-sm shrink-0">
-                <GitBranch className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
-                <p className="text-xs text-[#64748b] mt-0.5 truncate">
-                  {liveMindMapData?.nodes?.length
-                    ? "Основной сценарий сверху вниз · «Все ветки» для деталей"
-                    : "Сгенерируйте скрипты выше — они появятся здесь"}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setMapExpanded(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-[#64748b] hover:text-[#0f172a] px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#f8fafc] shadow-sm transition-colors shrink-0"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              На весь экран
-            </button>
-          </div>
-          <div
-            className="rounded-2xl overflow-hidden bg-[#f6f8fb] relative"
-            style={{ height: 520 }}
-          >
-            <ScriptMindMap
-              key={`${open}-${liveMindMapData?.nodes?.length ?? 0}`}
-              initialData={liveMindMapData}
-              onSave={handleSaveMindMap}
-              saveStatus={mindMapSaveStatus}
-              mode="inline"
-            />
-          </div>
-        </div>
+      <div className="flex-1 overflow-y-auto px-4 py-5">
+        <KnowledgeTab />
       </div>
-
-      {/* Fullscreen overlay for mind map */}
-      <ScriptMindMapModal
-        open={mapExpanded}
-        onClose={() => setMapExpanded(false)}
-        initialData={liveMindMapData}
-        onSave={handleSaveMindMap}
-        saveStatus={mindMapSaveStatus}
-      />
     </div>
   );
 }
+
+/** @deprecated Use KnowledgeModal */
+export const KnowledgeAndScriptModal = KnowledgeModal;

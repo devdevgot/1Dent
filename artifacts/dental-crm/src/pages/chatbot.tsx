@@ -35,9 +35,8 @@ import {
 import type { ChatbotSettingsUpdate, DentalBroadcastRun, GetChatbotSettings200 } from "@workspace/api-client-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Switch } from "@/components/ui/switch";
-import { KnowledgeAndScriptModal } from "@/components/chatbot/knowledge-tab";
+import { KnowledgeModal } from "@/components/chatbot/knowledge-tab";
 import { PlaygroundTab } from "@/components/chatbot/playground-tab";
-import type { ScriptMindMapData, MindMapSaveMeta } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
@@ -654,7 +653,6 @@ export default function ChatbotPage() {
   const lang = i18n.language || "ru";
   const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast">("sessions");
   const [combinedOpen, setCombinedOpen] = useState(false);
-  const [mindMapSaveStatus, setMindMapSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [confirmResetPhone, setConfirmResetPhone] = useState<string | null>(null);
   const [localSettings, setLocalSettings] = useState<ChatbotSettingsUpdate>({});
   const [savedSettings, setSavedSettings] = useState<ChatbotSettingsUpdate>({});
@@ -715,28 +713,6 @@ export default function ChatbotPage() {
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSettings]);
-
-  const handleSaveMindMap = useCallback((data: ScriptMindMapData, meta?: MindMapSaveMeta) => {
-    const isAuto = meta?.source === "auto";
-    setMindMapSaveStatus("saving");
-    updateSettings.mutate(
-      { data: { scriptMindMap: data } as ChatbotSettingsUpdate },
-      {
-        onSuccess: (response) => {
-          setMindMapSaveStatus("saved");
-          setTimeout(() => setMindMapSaveStatus("idle"), 2000);
-          refetchSettings();
-          const validation = response?.data?.mindMapValidation;
-          if (validation?.errors?.length) {
-            toast.error(`Mind map: ${validation.errors[0]}`);
-          } else if (!isAuto) {
-            toast.success("Mind map сохранён");
-          }
-        },
-        onError: () => setMindMapSaveStatus("idle"),
-      },
-    );
-  }, [updateSettings, refetchSettings]);
 
   const handleDeleteSession = (phone: string) => {
     deleteSession.mutate({ phone }, { onSuccess: () => refetchSessions() });
@@ -902,9 +878,9 @@ export default function ChatbotPage() {
             >
               <BookOpen className="h-4 w-4 text-[#1f75fe] shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#0f172a]">База знаний и скрипт</p>
+                <p className="text-sm font-medium text-[#0f172a]">База знаний</p>
                 <p className="text-xs text-[#64748b] mt-0.5 truncate">
-                  Ссылки, файлы и визуальный сценарий разговора
+                  Ссылки, файлы и тексты — ИИ составляет промпт чатбота из всех материалов
                 </p>
               </div>
               <ChevronRight className="h-4 w-4 text-[#64748b] shrink-0" />
@@ -922,13 +898,7 @@ export default function ChatbotPage() {
       </div>
 
       {/* Combined knowledge + script modal */}
-      <KnowledgeAndScriptModal
-        open={combinedOpen}
-        onClose={() => { setCombinedOpen(false); setMindMapSaveStatus("idle"); }}
-        initialMindMapData={settings?.scriptMindMap}
-        onSaveMindMap={handleSaveMindMap}
-        mindMapSaveStatus={mindMapSaveStatus}
-      />
+      <KnowledgeModal open={combinedOpen} onClose={() => setCombinedOpen(false)} />
 
       <ConfirmDeleteDialog
         open={!!confirmResetPhone}

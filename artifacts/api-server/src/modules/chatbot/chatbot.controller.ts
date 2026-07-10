@@ -30,22 +30,6 @@ const scriptBlockSchema = z.object({
   order: z.number().int(),
 });
 
-const mindMapNodeSchema = z.object({
-  id: z.string(),
-  label: z.string().max(200),
-  content: z.string().max(2000),
-  isRoot: z.boolean().optional(),
-  fsmState: z.string().max(50).optional(),
-  position: z.object({ x: z.number(), y: z.number() }).optional(),
-});
-
-const mindMapEdgeSchema = z.object({
-  id: z.string(),
-  source: z.string(),
-  target: z.string(),
-  label: z.string().max(200).optional(),
-});
-
 const dayScheduleSchema = z.object({
   day: z.number().int().min(0).max(6),
   enabled: z.boolean(),
@@ -67,10 +51,6 @@ const scriptVariantSchema = z.object({
   name: z.string().max(100),
   weight: z.number().int().min(0).max(100),
   scriptBlocks: z.array(scriptBlockSchema).optional(),
-  scriptMindMap: z.object({
-    nodes: z.array(mindMapNodeSchema),
-    edges: z.array(mindMapEdgeSchema),
-  }).optional(),
   stepInstructions: stepInstructionsSchema.optional(),
   greetingTemplate: z.string().max(500).optional(),
 });
@@ -83,10 +63,6 @@ const settingsUpdateSchema = z.object({
   followup168hTemplate: z.string().min(1).max(500).optional(),
   stepInstructions: stepInstructionsSchema.optional(),
   scriptBlocks: z.array(scriptBlockSchema).optional(),
-  scriptMindMap: z.object({
-    nodes: z.array(mindMapNodeSchema),
-    edges: z.array(mindMapEdgeSchema),
-  }).optional(),
   calendarConfig: calendarConfigSchema.optional(),
   abTestEnabled: z.boolean().optional(),
   broadcastAiEnabled: z.boolean().optional(),
@@ -139,7 +115,8 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     const settings = await service.getSettings(req.user!.clinicId).catch(next);
     if (!settings) return;
-    res.json({ success: true, data: { settings } });
+    const { scriptMindMap: _omit, ...publicSettings } = settings as Record<string, unknown>;
+    res.json({ success: true, data: { settings: publicSettings } });
   },
 );
 
@@ -153,7 +130,8 @@ router.put(
     }
     const result = await service.updateSettings(req.user!.clinicId, parsed.data).catch(next);
     if (!result) return;
-    res.json({ success: true, data: result });
+    const { scriptMindMap: _omit, ...publicSettings } = result.settings as Record<string, unknown>;
+    res.json({ success: true, data: { settings: publicSettings } });
   },
 );
 
