@@ -117,6 +117,7 @@ import {
   buildRefusalFallback,
   resolveBranchFromMessage,
   buildBranchListMessage,
+  isBranchListInquiry,
 } from "./clinic-knowledge";
 import { scheduleAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { scheduleFollowups } from "../followups/followup.queue";
@@ -2740,6 +2741,7 @@ export class ChatbotService {
         };
 
         const tryProceedWithoutBranch = (): boolean => {
+          if (isBranchListInquiry(messageText)) return false;
           if (clinicBranchNames.length === 1) {
             data.selectedBranch = clinicBranchNames[0];
             return true;
@@ -2752,6 +2754,26 @@ export class ChatbotService {
           }
           return false;
         };
+
+        if (inBranchPhase && isBranchListInquiry(messageText) && clinicBranchNames.length > 1) {
+          data.qualificationPhase = "branch";
+          data.activeMindMapNodeId =
+            resolveMindMapNodeIdForState(mindMapData, "collect_qualification", {
+              activeNodeId: data.activeMindMapNodeId,
+            }) ?? data.activeMindMapNodeId;
+          const aiBranch = await generateChatbotResponse(
+            up("collect_qualification", {
+              backendContext: branchBackendContext(),
+            }),
+            recentMessages,
+            messageText,
+            managerExamples,
+          );
+          response = mergeReply(aiBranch, buildBranchListMessage(clinicBranchNames));
+          session.state = "collect_qualification";
+          session.data = data;
+          break;
+        }
 
         if (phase === "symptoms" && !symptomsAnswered(data, messageText)) {
           data.qualificationAsked = true;

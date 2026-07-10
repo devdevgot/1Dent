@@ -24,6 +24,11 @@ import {
   inferAgentActionsForTransition,
   resolveDeterministicNextNodeId,
 } from "./chatbot-agent-orchestrator";
+import {
+  branchChoiceResolved,
+  isBranchSelectionNode,
+  resolveBranchStepClarificationReply,
+} from "./clinic-knowledge.ts";
 
 type OutboundResponse = ChatbotReply | null;
 
@@ -69,6 +74,45 @@ function buildSessionSummary(data: ChatbotSessionData): string {
   if (data.preferredDatetime) parts.push(`Время: ${data.preferredDatetime}`);
   if (data.activeMindMapNodeId) parts.push(`Узел скрипта: ${data.activeMindMapNodeId}`);
   return parts.join(". ");
+}
+
+function applyBranchStepReplyOverride(opts: {
+  fromNodeId: string;
+  fromNodeFsmState?: string;
+  toNodeId: string;
+  messageText: string;
+  sessionData: ChatbotSessionData;
+  clinicBranchNames: string[];
+  knowledgeContext: string;
+  reply: ChatbotReply;
+}): ChatbotReply {
+  if (!isBranchSelectionNode(opts.fromNodeId, opts.fromNodeFsmState)) return opts.reply;
+  if (opts.toNodeId !== opts.fromNodeId) return opts.reply;
+  if (branchChoiceResolved(opts.messageText, opts.sessionData.selectedBranch, opts.clinicBranchNames)) {
+    return opts.reply;
+  }
+
+  const clarification = resolveBranchStepClarificationReply({
+    messageText: opts.messageText,
+    selectedBranch: opts.sessionData.selectedBranch,
+    clinicBranchNames: opts.clinicBranchNames,
+    knowledgeContext: opts.knowledgeContext,
+  });
+  return replyFromText(clarification);
+}
+
+function syncQualificationPhase(
+  data: ChatbotSessionData,
+  fromNodeId?: string,
+  toNodeId?: string,
+): ChatbotSessionData {
+  if (fromNodeId === "step2-branch" || toNodeId === "step2-branch") {
+    return { ...data, qualificationPhase: "branch" };
+  }
+  if (fromNodeId === "step2-qualification" || toNodeId === "step2-qualification") {
+    return { ...data, qualificationPhase: "symptoms" };
+  }
+  return data;
 }
 
 /** Run one script-guided agent turn (model orchestrates dialogue + tools). */
@@ -160,6 +204,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       sessionData: data,
       clinicBranchNames,
       knowledgeContext: deps.knowledgeContext,
+      messageText,
     });
     const actions = inferAgentActionsForTransition(
       fromNode,
@@ -172,6 +217,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
 
     if (toNodeId) data.activeMindMapNodeId = toNodeId;
     if (toNode?.fsmState) state = toNode.fsmState as ChatbotState;
+    data = syncQualificationPhase(data, fromNodeId, toNodeId);
 
     const toolResult = await executeChatbotAgentTools(data, actions, undefined, {
       clinicId,
@@ -194,6 +240,16 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     if (toolResult.slotsAppendix) {
       reply = appendToReply(reply, toolResult.slotsAppendix);
     }
+    reply = applyBranchStepReplyOverride({
+      fromNodeId,
+      fromNodeFsmState: fromNode?.fsmState,
+      toNodeId,
+      messageText,
+      sessionData: data,
+      clinicBranchNames,
+      knowledgeContext: deps.knowledgeContext,
+      reply,
+    });
     if (dryRun) {
       noteAction(usedParseFallback ? "Agent JSON fallback — node-aware reply" : "Agent orchestrator fallback");
     }
@@ -230,6 +286,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       state = targetNode.fsmState as ChatbotState;
     }
   }
+  data = syncQualificationPhase(data, fromNodeIdResolved, resolvedToNodeId);
 
   const mergedActions = inferAgentActionsForTransition(
     fromNode,
@@ -306,6 +363,17 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   if (toolResult.slotsAppendix) {
     reply = appendToReply(reply, toolResult.slotsAppendix);
   }
+
+  reply = applyBranchStepReplyOverride({
+    fromNodeId: fromNodeIdResolved,
+    fromNodeFsmState: fromNode?.fsmState,
+    toNodeId: resolvedToNodeId ?? fromNodeIdResolved,
+    messageText,
+    sessionData: data,
+    clinicBranchNames,
+    knowledgeContext: deps.knowledgeContext,
+    reply,
+  });
 
   if (toolResult.toolNotes.length > 0 && dryRun) {
     noteAction(`Tools: ${toolResult.toolNotes.join("; ")}`);

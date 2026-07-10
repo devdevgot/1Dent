@@ -6,6 +6,9 @@ import {
   buildSymptomsPromptFallback,
   branchChoiceResolved,
   hasClinicKnowledge,
+  isBranchListInquiry,
+  isBranchSelectionNode,
+  resolveBranchStepClarificationReply,
   resolveOfficialBranchFromMessage,
 } from "./clinic-knowledge.ts";
 import {
@@ -38,6 +41,12 @@ export function resolveDeterministicNextNodeId(
 
   const outgoing = getMindMapOutgoingEdges(mindMap, fromNodeId);
   const trimmed = messageText.trim();
+
+  if (isBranchSelectionNode(fromNode.id, fromNode.fsmState)) {
+    if (!branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches)) {
+      return fromNodeId;
+    }
+  }
 
   if (fromNode.fsmState === "await_decision" && outgoing.length >= 2) {
     if (isRefusing(trimmed)) {
@@ -91,16 +100,23 @@ export function resolveDeterministicNextNodeId(
     if (nextId && nextId !== fromNodeId) return nextId;
   }
 
+  if (isBranchSelectionNode(fromNode.id, fromNode.fsmState) && outgoing.length === 1) {
+    return outgoing[0]!.target.id;
+  }
+
   if (outgoing.length === 1) {
-    const branchStepAdvance =
-      fromNode.id === "step2-branch" &&
-      branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches);
-    if (trimmed.length >= 2 || branchStepAdvance) {
+    if (trimmed.length >= 2) {
       return outgoing[0]!.target.id;
     }
   }
 
   if (llmSuggestedId && llmSuggestedId !== fromNodeId && isDirectTransition(mindMap, fromNodeId, llmSuggestedId)) {
+    if (
+      isBranchSelectionNode(fromNode.id, fromNode.fsmState) &&
+      !branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches)
+    ) {
+      return fromNodeId;
+    }
     return llmSuggestedId;
   }
 
@@ -125,9 +141,22 @@ export function buildAgentFallbackReply(opts: {
   sessionData: ChatbotSessionData;
   clinicBranchNames: string[];
   knowledgeContext: string;
+  messageText?: string;
 }): string {
-  const { scriptCtx, fsmState, sessionData, clinicBranchNames, knowledgeContext } = opts;
+  const { scriptCtx, fsmState, sessionData, clinicBranchNames, knowledgeContext, messageText } = opts;
   const hasKnowledge = hasClinicKnowledge(knowledgeContext);
+
+  if (
+    isBranchSelectionNode(scriptCtx.currentNodeId, scriptCtx.currentFsmState) ||
+    (messageText && isBranchListInquiry(messageText))
+  ) {
+    return resolveBranchStepClarificationReply({
+      messageText: messageText ?? "",
+      selectedBranch: sessionData.selectedBranch,
+      clinicBranchNames,
+      knowledgeContext,
+    });
+  }
 
   switch (fsmState) {
     case "greeting":
@@ -137,6 +166,9 @@ export function buildAgentFallbackReply(opts: {
       }
       return "Здравствуйте! Чем могу помочь — лечение, чистка, консультация или другая услуга?";
     case "collect_qualification":
+      if (scriptCtx.currentNodeId === "step2-qualification") {
+        return buildSymptomsPromptFallback();
+      }
       if (!sessionData.selectedBranch && clinicBranchNames.length > 1) {
         return buildBranchPromptFallback(hasKnowledge, clinicBranchNames);
       }

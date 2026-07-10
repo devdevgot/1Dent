@@ -9,6 +9,7 @@ import { DEFAULT_BOOKING_MIND_MAP } from "./booking-script.ts";
 import {
   buildBranchListMessage,
   resolveBranchIndex,
+  isBranchListInquiry,
 } from "./clinic-knowledge.ts";
 import { renderMindMapScript, renderMindMapCompactPath } from "./mindmap-utils.ts";
 
@@ -164,6 +165,57 @@ test("resolveDeterministicNextNodeId: branch number advances to doctor step", as
     branches,
   );
   assert.equal(next, "step2-doctor");
+});
+
+test("resolveDeterministicNextNodeId: branch list inquiry stays on branch step", async () => {
+  const { resolveDeterministicNextNodeId } = await import("./chatbot-agent-orchestrator.ts");
+  const branches = ["ул. A 1", "ул. B 2"];
+  const next = resolveDeterministicNextNodeId(
+    DEFAULT_BOOKING_MIND_MAP,
+    "step2-branch",
+    "какие есть филиалы?",
+    {},
+    "step2-qualification",
+    branches,
+  );
+  assert.equal(next, "step2-branch");
+});
+
+test("isBranchListInquiry detects branch list questions", () => {
+  assert.equal(isBranchListInquiry("какие есть филиалы?"), true);
+  assert.equal(isBranchListInquiry("2"), false);
+});
+
+test("buildAgentFallbackReply: branch step returns branch list not symptoms", async () => {
+  const { buildAgentFallbackReply } = await import("./chatbot-agent-orchestrator.ts");
+  const reply = buildAgentFallbackReply({
+    scriptCtx: {
+      currentNodeId: "step2-branch",
+      currentNodeLabel: "Выбор филиала",
+      currentNodeContent: "Предложи выбрать филиал",
+      currentFsmState: "collect_qualification",
+      compactPath: "",
+      fullScript: "",
+      outgoingTransitions: "",
+    },
+    fsmState: "collect_qualification",
+    sessionData: {},
+    clinicBranchNames: ["ул. A 1", "ул. B 2"],
+    knowledgeContext: "",
+    messageText: "какие есть филиалы?",
+  });
+  assert.match(reply, /филиал/i);
+  assert.doesNotMatch(reply, /боль|дискомфорт/i);
+});
+
+test("assertAllowedTransition: blocks branch to symptoms regression", async () => {
+  const { assertAllowedTransition } = await import("./chatbot-agent-context.ts");
+  const result = assertAllowedTransition(
+    DEFAULT_BOOKING_MIND_MAP,
+    "step2-branch",
+    "step2-qualification",
+  );
+  assert.equal(result.allowed, false);
 });
 
 test("inferAgentActionsForTransition: branch pick triggers doctor suggestion", async () => {
