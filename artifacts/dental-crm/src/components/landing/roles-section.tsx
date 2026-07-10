@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Crown, Settings, Stethoscope, Calculator, Package, ShieldCheck } from "lucide-react";
+import { Crown, Settings, Stethoscope, ShieldCheck } from "lucide-react";
 import { fadeUp, staggerParentVariants, staggerChildVariants } from "@/lib/landing-animations";
 
 const roles = [
@@ -43,29 +43,6 @@ const roles = [
     ],
     antiTheft: true,
   },
-  {
-    icon: Calculator,
-    title: "Бухгалтер",
-    color: "#fce7f3",
-    accent: "#db2777",
-    perms: [
-      "Финансовые отчёты",
-      "Выгрузка данных",
-      "Зарплаты сотрудников",
-      "Только чтение",
-    ],
-  },
-  {
-    icon: Package,
-    title: "Склад",
-    color: "#e0f2fe",
-    accent: "#0284c7",
-    perms: [
-      "Управление запасами",
-      "Учёт расходников",
-      "Уведомления о нехватке",
-    ],
-  },
 ];
 
 export function RolesSection() {
@@ -87,7 +64,7 @@ export function RolesSection() {
           className="text-center landing-lead font-manrope max-w-2xl mx-auto mb-16"
           style={{ willChange: "transform, opacity" }}
         >
-          5 ролей с разными правами доступа. Ни один сотрудник не видит лишнего — данные клиники под защитой.
+          3 роли с разными правами доступа. Ни один сотрудник не видит лишнего — данные клиники под защитой.
         </motion.p>
 
         <motion.div
@@ -95,7 +72,7 @@ export function RolesSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-30px" }}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
           {roles.map((role, i) => (
             <motion.div
