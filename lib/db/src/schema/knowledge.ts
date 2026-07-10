@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
 
 export interface ScriptNode {
@@ -37,6 +37,9 @@ export const knowledgeScriptsTable = pgTable("knowledge_scripts", {
   primaryScript: jsonb("primary_script").$type<GeneratedScript>(),
   repeatScript: jsonb("repeat_script").$type<GeneratedScript>(),
   generatedAt: timestamp("generated_at", { withTimezone: true }).defaultNow().notNull(),
+  composedPrompt: text("composed_prompt"),
+  composedPromptRefined: boolean("composed_prompt_refined").notNull().default(false),
+  composedPromptAt: timestamp("composed_prompt_at", { withTimezone: true }),
 });
 
 export type KnowledgeSource = typeof knowledgeSourcesTable.$inferSelect;

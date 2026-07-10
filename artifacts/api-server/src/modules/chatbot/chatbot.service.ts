@@ -1828,12 +1828,8 @@ export class ChatbotService {
       saveChatbotMessage(clinicId, phone, "inbound", messageText).catch(() => {});
     }
 
-    if (!settings.enabled) {
-      const earlyPatient = !dryRun
-        ? await findPatientByPhoneNormalized(clinicId, phone)
-        : scenarioCtx?.patient
-          ? { status: scenarioCtx.patient.status }
-          : undefined;
+    if (!settings.enabled && !dryRun) {
+      const earlyPatient = await findPatientByPhoneNormalized(clinicId, phone);
       const allowAutoresponder =
         earlyPatient?.status === "repeat_sale" || session.state === "collect_review";
       if (!allowAutoresponder) return null;

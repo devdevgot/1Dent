@@ -66,11 +66,18 @@ export function KnowledgeTab() {
   const [addingUrl, setAddingUrl] = useState(false);
   const [composing, setComposing] = useState(false);
   const [refining, setRefining] = useState(false);
-  const [promptStatus, setPromptStatus] = useState<{ exists: boolean; refined: boolean; length: number }>({
+  const [promptStatus, setPromptStatus] = useState<{
+    exists: boolean;
+    refined: boolean;
+    length: number;
+    prompt: string | null;
+  }>({
     exists: false,
     refined: false,
     length: 0,
+    prompt: null,
   });
+  const [promptExpanded, setPromptExpanded] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [fileModalOpen, setFileModalOpen] = useState(false);
   const [textModalOpen, setTextModalOpen] = useState(false);
@@ -85,10 +92,16 @@ export function KnowledgeTab() {
   const loadPromptStatus = useCallback(async () => {
     try {
       const res = await apiFetch("/api/knowledge/prompt-status");
-      setPromptStatus((res.data as { exists: boolean; refined: boolean; length: number }) ?? {
+      setPromptStatus((res.data as {
+        exists: boolean;
+        refined: boolean;
+        length: number;
+        prompt: string | null;
+      }) ?? {
         exists: false,
         refined: false,
         length: 0,
+        prompt: null,
       });
     } catch {
       // silent
@@ -216,6 +229,22 @@ export function KnowledgeTab() {
     }
   };
 
+  const applyPromptResponse = (data: {
+    prompt?: string;
+    promptLength?: number;
+    refined?: boolean;
+  }) => {
+    const prompt = data.prompt ?? null;
+    const length = data.promptLength ?? prompt?.length ?? 0;
+    setPromptStatus({
+      exists: Boolean(prompt),
+      refined: data.refined ?? false,
+      length,
+      prompt,
+    });
+    if (prompt) setPromptExpanded(true);
+  };
+
   const postPromptAction = async (
     path: "/api/knowledge/compose-prompt" | "/api/knowledge/refine-prompt",
     timeoutMs: number,
@@ -236,7 +265,9 @@ export function KnowledgeTab() {
         const body = await res.json().catch(() => ({}));
         throw new Error(getApiErrorMessage({ data: body }, "Ошибка сервера"));
       }
-      return await res.json();
+      const json = await res.json();
+      applyPromptResponse(json.data ?? {});
+      return json;
     } finally {
       clearTimeout(timer);
     }
@@ -246,7 +277,6 @@ export function KnowledgeTab() {
     setComposing(true);
     try {
       await postPromptAction("/api/knowledge/compose-prompt", 100_000);
-      await loadPromptStatus();
       toast({
         title: "Промпт создан",
         description: "Claude Opus 4.8 собрал базовый system prompt. При желании нажмите «Доработать».",
@@ -269,7 +299,6 @@ export function KnowledgeTab() {
     setRefining(true);
     try {
       await postPromptAction("/api/knowledge/refine-prompt", 70_000);
-      await loadPromptStatus();
       toast({
         title: "Промпт доработан",
         description: "Claude Sonnet 5 улучшил структуру и ясность промпта.",
@@ -556,6 +585,35 @@ export function KnowledgeTab() {
           </p>
         )}
       </div>
+
+      {promptStatus.prompt && (
+        <div className="rounded-xl border border-[#e8e3d9] bg-white overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setPromptExpanded((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 border-b border-[#e8e3d9] bg-[#faf8f4] text-left"
+          >
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-[#1f75fe]" />
+              <span className="text-sm font-semibold text-[#0f172a]">Промпт чатбота</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[#64748b]">
+                {promptStatus.refined ? "Opus + Sonnet" : "Черновик Opus"}
+              </span>
+              {promptExpanded
+                ? <ChevronUp className="h-4 w-4 text-[#64748b]" />
+                : <ChevronDown className="h-4 w-4 text-[#64748b]" />
+              }
+            </div>
+          </button>
+          {promptExpanded && (
+            <pre className="p-4 text-xs text-[#334155] whitespace-pre-wrap font-mono leading-relaxed max-h-[min(50vh,480px)] overflow-y-auto bg-white">
+              {promptStatus.prompt}
+            </pre>
+          )}
+        </div>
+      )}
 
       {readySources.length === 0 && sources.length > 0 && pendingSources.length > 0 && (
         <p className="text-xs text-center text-[#64748b]">
