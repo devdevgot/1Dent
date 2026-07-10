@@ -10,6 +10,7 @@ import {
   buildBranchListMessage,
   resolveBranchIndex,
   isBranchListInquiry,
+  isPatientInquiry,
 } from "./clinic-knowledge.ts";
 import { renderMindMapScript, renderMindMapCompactPath } from "./mindmap-utils.ts";
 
@@ -184,6 +185,24 @@ test("resolveDeterministicNextNodeId: branch list inquiry stays on branch step",
 test("isBranchListInquiry detects branch list questions", () => {
   assert.equal(isBranchListInquiry("какие есть филиалы?"), true);
   assert.equal(isBranchListInquiry("2"), false);
+});
+
+test("isPatientInquiry detects general off-script questions", () => {
+  assert.equal(isPatientInquiry("сколько стоит чистка?"), true);
+  assert.equal(isPatientInquiry("да, записывайте"), false);
+});
+
+test("resolveDeterministicNextNodeId: price inquiry stays on current node", async () => {
+  const { resolveDeterministicNextNodeId } = await import("./chatbot-agent-orchestrator.ts");
+  const next = resolveDeterministicNextNodeId(
+    DEFAULT_BOOKING_MIND_MAP,
+    "step2-branch",
+    "сколько стоит лечение?",
+    {},
+    "step2-doctor",
+    ["ул. A 1", "ул. B 2"],
+  );
+  assert.equal(next, "step2-branch");
 });
 
 test("buildAgentFallbackReply: branch step returns branch list not symptoms", async () => {

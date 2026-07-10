@@ -8,6 +8,7 @@ import {
   hasClinicKnowledge,
   isBranchListInquiry,
   isBranchSelectionNode,
+  isPatientInquiry,
   resolveBranchStepClarificationReply,
   resolveOfficialBranchFromMessage,
 } from "./clinic-knowledge.ts";
@@ -46,6 +47,14 @@ export function resolveDeterministicNextNodeId(
     if (!branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches)) {
       return fromNodeId;
     }
+  }
+
+  if (
+    isPatientInquiry(trimmed) &&
+    fromNode.fsmState !== "await_decision" &&
+    !branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches)
+  ) {
+    return fromNodeId;
   }
 
   if (fromNode.fsmState === "await_decision" && outgoing.length >= 2) {
@@ -105,12 +114,18 @@ export function resolveDeterministicNextNodeId(
   }
 
   if (outgoing.length === 1) {
+    if (isPatientInquiry(trimmed)) {
+      return fromNodeId;
+    }
     if (trimmed.length >= 2) {
       return outgoing[0]!.target.id;
     }
   }
 
   if (llmSuggestedId && llmSuggestedId !== fromNodeId && isDirectTransition(mindMap, fromNodeId, llmSuggestedId)) {
+    if (isPatientInquiry(trimmed) && !branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches)) {
+      return fromNodeId;
+    }
     if (
       isBranchSelectionNode(fromNode.id, fromNode.fsmState) &&
       !branchChoiceResolved(trimmed, sessionData.selectedBranch, officialBranches)

@@ -99,6 +99,25 @@ export function isBranchListInquiry(text: string): boolean {
   );
 }
 
+const PRICE_INQUIRY_RE =
+  /\b(цен|стоим|сколько\s+стоит|прайс|price|cost|теңge|баға|қымбат)\b/i;
+
+/** Patient asks a question instead of advancing the booking step. */
+export function isPatientInquiry(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (isBranchListInquiry(t)) return true;
+  if (PRICE_INQUIRY_RE.test(t)) return true;
+  if (/\?\s*$/.test(t)) return true;
+  return /^(какие|сколько|где|когда|почему|зачем|можно\s+ли|расскаж|объясн|что\s+такое|как\s+(долго|работает|находится|записаться))/i.test(
+    t,
+  );
+}
+
+export function isPriceInquiry(text: string): boolean {
+  return PRICE_INQUIRY_RE.test(text.trim());
+}
+
 /** Mind-map / FSM node where the patient must pick a branch before advancing. */
 export function isBranchSelectionNode(nodeId: string, fsmState?: string): boolean {
   return nodeId === "step2-branch" || fsmState === "collect_branch";
