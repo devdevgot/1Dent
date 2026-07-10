@@ -5,12 +5,16 @@ import {
   usersTable,
   notificationsTable,
   doctorCapacityTable,
+  chatbotSettingsTable,
 } from "@workspace/db";
 import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL, ne } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
 import { findNearestSlotMinutes } from "../chatbot/calendar-slots";
 import { getDoctorNpsMap } from "../../shared/patient-reviews";
 import type { ScoringConfig } from "@workspace/db";
+import { compareDoctorCandidates, specialtyMatchesService } from "./doctor-ranking";
+
+export { compareDoctorCandidates } from "./doctor-ranking";
 
 export interface DoctorAnalyticsFilters {
   dateFrom?: Date;
@@ -162,6 +166,8 @@ export type AdvancedScoringOptions = {
   returningPatientDoctorId?: string;
   /** Skip random exploration noise — for Playground / reproducible ranking */
   deterministic?: boolean;
+  /** Optional clinic scoring weights for rankPercent */
+  scoring?: ScoringConfig;
 };
 
 export interface DoctorCandidate {
@@ -268,24 +274,6 @@ export function computeAdvancedScore(
   return Math.max(0, finalScore);
 }
 
-const SERVICE_SPECIALTY_HINTS: Record<string, string[]> = {
-  therapy: ["therapist", "general", "терапевт", "терапия", "дантист", "dentist"],
-  hygiene: ["hygienist", "therapist", "гигиен", "терапевт"],
-  surgery: ["surgeon", "хирург", "surgery"],
-  orthopedics: ["orthoped", "ортопед", "prosth"],
-  orthodontics: ["orthodont", "ортодонт", "braces", "брекет"],
-  implantation: ["implant", "implantolog", "хирург", "surgeon"],
-  consultation: ["therapist", "general", "терапевт"],
-};
-
-function specialtyMatchesService(serviceType: string | undefined, specialty: string | null): boolean {
-  if (!serviceType || !specialty) return false;
-  const hints = SERVICE_SPECIALTY_HINTS[serviceType];
-  if (!hints) return false;
-  const lower = specialty.toLowerCase();
-  return hints.some((h) => lower.includes(h));
-}
-
 function buildDoctorPickReasons(
   kpi: RawDoctorKpi,
   allKpis: RawDoctorKpi[],
@@ -295,7 +283,12 @@ function buildDoctorPickReasons(
 ): string[] {
   const reasons: string[] = [];
   if (opts.returningPatientDoctorId === kpi.doctorId) {
-    reasons.push("ваш постоянный врач");
+    reasons.unshift("ваш постоянный врач");
+  }
+  if (rankPercent >= 75) {
+    reasons.unshift("высокий рейтинг");
+  } else if (rankPercent >= 55 && !reasons.includes("высокий рейтинг")) {
+    reasons.unshift("стабильно высокие показатели");
   }
   if (opts.urgency === "urgent") {
     if (kpi.nearestSlotMinutes !== null && kpi.nearestSlotMinutes <= 120) {
@@ -304,11 +297,6 @@ function buildDoctorPickReasons(
     if (kpi.slotsUsedToday < kpi.maxSlotsPerDay) {
       reasons.push("есть окно сегодня");
     }
-  }
-  if (rankPercent >= 75) {
-    reasons.push("высокий рейтинг");
-  } else if (rankPercent >= 55) {
-    reasons.push("стабильно высокие показатели");
   }
   if (specialtyMatchesService(opts.serviceType, specialty)) {
     reasons.push("специализация под ваш запрос");
@@ -335,6 +323,21 @@ export async function rankDoctorCandidates(
   const limit = options?.limit ?? 3;
   const excludeIds = new Set(options?.excludeIds ?? []);
 
+  let scoring = opts.scoring;
+  if (!scoring) {
+    try {
+      const [settings] = await db
+        .select({ scoringConfig: chatbotSettingsTable.scoringConfig })
+        .from(chatbotSettingsTable)
+        .where(eq(chatbotSettingsTable.clinicId, clinicId))
+        .limit(1);
+      scoring = settings?.scoringConfig ?? {};
+    } catch {
+      scoring = {};
+    }
+  }
+  const scoringOpts = { ...opts, scoring };
+
   const repo = new AnalyticsRepository();
   const kpis = await repo.getDoctorKpisRaw(clinicId);
   if (kpis.length === 0) return [];
@@ -345,28 +348,12 @@ export async function rankDoctorCandidates(
     .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")));
   const specialtyMap = new Map(doctors.map((d) => [d.id, d.specialty ?? null]));
 
-  let pool = kpis.filter((k) => !excludeIds.has(k.doctorId));
-
-  if (opts.urgency === "urgent") {
-    pool = [...pool]
-      .filter((k) => k.slotsUsedToday < k.maxSlotsPerDay)
-      .sort((a, b) => {
-        const aMin = a.nearestSlotMinutes ?? 9999;
-        const bMin = b.nearestSlotMinutes ?? 9999;
-        if (aMin !== bMin) return aMin - bMin;
-        return a.slotsUsedToday / a.maxSlotsPerDay - b.slotsUsedToday / b.maxSlotsPerDay;
-      });
-    if (pool.length === 0) {
-      pool = [...kpis.filter((k) => !excludeIds.has(k.doctorId))].sort(
-        (a, b) => a.slotsUsedToday - b.slotsUsedToday,
-      );
-    }
-  }
+  const pool = kpis.filter((k) => !excludeIds.has(k.doctorId));
 
   const scored = pool.map((kpi) => {
     const specialty = specialtyMap.get(kpi.doctorId) ?? null;
-    const finalScore = computeAdvancedScore(kpi, kpis, opts);
-    const rankPercent = computeDoctorScore(kpi, kpis);
+    const rankPercent = computeDoctorScore(kpi, kpis, scoringOpts.scoring);
+    const finalScore = computeAdvancedScore(kpi, kpis, scoringOpts);
     return {
       id: kpi.doctorId,
       name: kpi.doctorName,
@@ -375,11 +362,11 @@ export async function rankDoctorCandidates(
       rankPercent,
       hasCapacity: kpi.slotsUsedToday < kpi.maxSlotsPerDay,
       nearestSlotMinutes: kpi.nearestSlotMinutes,
-      reasons: buildDoctorPickReasons(kpi, kpis, opts, rankPercent, specialty),
+      reasons: buildDoctorPickReasons(kpi, kpis, scoringOpts, rankPercent, specialty),
     };
   });
 
-  scored.sort((a, b) => b.finalScore - a.finalScore);
+  scored.sort((a, b) => compareDoctorCandidates(a, b, scoringOpts));
 
   const withCapacity = scored.filter((s) => s.hasCapacity);
   const ranked = (withCapacity.length > 0 ? withCapacity : scored).slice(0, limit);

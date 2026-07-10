@@ -152,6 +152,41 @@ test("resolveDeterministicNextNodeId: decision yes goes to booking", async () =>
   assert.equal(next, "step3-ready");
 });
 
+test("resolveDeterministicNextNodeId: branch number advances to doctor step", async () => {
+  const { resolveDeterministicNextNodeId } = await import("./chatbot-agent-orchestrator.ts");
+  const branches = ["ул. A 1", "ул. B 2"];
+  const next = resolveDeterministicNextNodeId(
+    DEFAULT_BOOKING_MIND_MAP,
+    "step2-branch",
+    "2",
+    {},
+    null,
+    branches,
+  );
+  assert.equal(next, "step2-doctor");
+});
+
+test("inferAgentActionsForTransition: branch pick triggers doctor suggestion", async () => {
+  const { inferAgentActionsForTransition } = await import("./chatbot-agent-orchestrator.ts");
+  const fromNode = DEFAULT_BOOKING_MIND_MAP.nodes.find((n) => n.id === "step2-branch");
+  const toNode = DEFAULT_BOOKING_MIND_MAP.nodes.find((n) => n.id === "step2-doctor");
+  const actions = inferAgentActionsForTransition(
+    fromNode,
+    toNode,
+    {},
+    "1",
+    ["ул. A 1", "ул. B 2"],
+    [],
+  );
+  assert.ok(actions.some((a) => a.type === "set_branch"));
+  assert.ok(actions.some((a) => a.type === "suggest_doctor"));
+});
+
+test("resolveOfficialBranchFromMessage: maps digit to branch", async () => {
+  const { resolveOfficialBranchFromMessage } = await import("./clinic-knowledge.ts");
+  assert.equal(resolveOfficialBranchFromMessage("2", ["ул. A", "ул. B"]), "ул. B");
+});
+
 test("buildAgentFallbackReply: stays contextual on qualification", async () => {
   const { buildAgentFallbackReply } = await import("./chatbot-agent-orchestrator.ts");
   const reply = buildAgentFallbackReply({

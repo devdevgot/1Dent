@@ -149,6 +149,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     messageText,
     data,
     agentTurn?.mindMapNodeId,
+    clinicBranchNames,
   );
   const toNode = safeMindMap?.nodes.find((n) => n.id === toNodeId);
 
