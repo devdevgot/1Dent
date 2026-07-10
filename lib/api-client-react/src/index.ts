@@ -849,13 +849,17 @@ export const useUpdateUserStatus = <TError = unknown>(options?: {
 export interface MySalaryData {
   salaryType: SalaryType;
   fixedAmount: number;
+  effectiveFixedAmount?: number;
   commissionPercent: number;
   revenueThisMonth: number;
+  revenueScope?: "personal" | "clinic";
   workHours: number;
   calculatedSalary: number;
   approvedAmount: number | null;
   status: PayrollStatus;
   period: { year: number; month: number };
+  dateFrom?: string;
+  dateTo?: string;
   userName?: string | null;
 }
 

@@ -462,13 +462,17 @@ export class PayrollRepository {
     return {
       salaryType,
       fixedAmount,
+      effectiveFixedAmount: effectiveFixed,
       commissionPercent,
       revenueThisMonth: revenue,
+      revenueScope: isDoctor ? ("personal" as const) : ("clinic" as const),
       workHours,
       calculatedSalary,
       approvedAmount,
       status,
       period: { year, month },
+      dateFrom: dateFrom.toISOString().slice(0, 10),
+      dateTo: dateTo.toISOString().slice(0, 10),
       userName: user?.name ?? null,
     };
   }
