@@ -670,7 +670,7 @@ export function KnowledgeAndScriptModal({
             </button>
           </div>
           <div
-            className="rounded-2xl border border-[#e2e8f0] overflow-hidden bg-[#f8fafc] relative shadow-[0_12px_40px_rgba(15,23,42,0.06)]"
+            className="rounded-2xl overflow-hidden bg-[#f6f8fb] relative"
             style={{ height: 520 }}
           >
             <ScriptMindMap

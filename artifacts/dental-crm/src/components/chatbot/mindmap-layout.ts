@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 
-export const LAYOUT_NODE_W = 280;
+export const LAYOUT_NODE_W = 264;
 export const LAYOUT_NODE_H = 120;
 export const LAYOUT_H_GAP = 32;
 export const LAYOUT_V_GAP = 80;
@@ -237,9 +237,9 @@ export function filterFocusGraph(
         id: `focus-bridge-${from}-${to}`,
         source: from,
         target: to,
-        type: "smoothstep",
-        style: { stroke: "#93c5fd", strokeWidth: 2, strokeDasharray: "6 4" },
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#93c5fd" },
+        type: "bezier",
+        style: { stroke: "#dbeafe", strokeWidth: 1, strokeDasharray: "4 6" },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#dbeafe", width: 12, height: 12 },
       } as Edge);
     }
   }
