@@ -22,7 +22,7 @@ describe("mindmap-validator", () => {
     assert.match(cycles[0], /a → b → c → a/);
   });
 
-  it("reports cycle warnings during validation", () => {
+  it("ignores intentional objection re-offer cycles", () => {
     const result = validateMindMapScript({
       nodes: [
         { id: "step3-decision", label: "Decision", content: "", fsmState: "await_decision", isRoot: true },
@@ -37,6 +37,21 @@ describe("mindmap-validator", () => {
     });
 
     assert.equal(result.valid, true);
+    assert.equal(result.warnings.filter((w) => w.startsWith("Cycle in graph:")).length, 0);
+  });
+
+  it("reports unexpected cycle warnings during validation", () => {
+    const result = validateMindMapScript({
+      nodes: [
+        { id: "a", label: "A", content: "", isRoot: true },
+        { id: "b", label: "B", content: "" },
+      ],
+      edges: [
+        { id: "e1", source: "a", target: "b" },
+        { id: "e2", source: "b", target: "a" },
+      ],
+    });
+
     assert.ok(result.warnings.some((w) => w.startsWith("Cycle in graph:")));
   });
 });

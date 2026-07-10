@@ -1,0 +1,73 @@
+/* Mind Map canvas — clean, borderless React Flow overrides */
+
+.mindmap-flow {
+  --mm-canvas-bg: #f6f8fb;
+  --mm-dot: #e2e8f0;
+}
+
+.mindmap-flow .react-flow__pane {
+  cursor: grab;
+}
+
+.mindmap-flow .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+/* Remove default heavy selection ring around nodes */
+.mindmap-flow .react-flow__node {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.mindmap-flow .react-flow__node.selected,
+.mindmap-flow .react-flow__node:focus,
+.mindmap-flow .react-flow__node:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.mindmap-flow .react-flow__node.selectable:focus,
+.mindmap-flow .react-flow__node.selectable:focus-visible {
+  outline: none !important;
+}
+
+.mindmap-flow .react-flow__edge-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mindmap-flow .react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: inherit !important;
+}
+
+.mindmap-flow .react-flow__handle {
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.mindmap-flow .react-flow__node:hover .react-flow__handle,
+.mindmap-flow .react-flow__node.selected .react-flow__handle {
+  opacity: 1;
+}
+
+.mindmap-flow .react-flow__controls {
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06) !important;
+  border: none !important;
+}
+
+.mindmap-flow .react-flow__controls-button {
+  border-bottom: 1px solid #f1f5f9 !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+.mindmap-flow .react-flow__controls-button:hover {
+  background: #f8fafc !important;
+}
+
+.mindmap-flow .react-flow__minimap {
+  border: none !important;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06) !important;
+}
