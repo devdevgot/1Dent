@@ -117,9 +117,7 @@ const AdminCalendarPage = lazyPage(() => import("@/pages/admin-calendar"), <Admi
 const AdminAppointmentNewPage = lazyPage(() => import("@/pages/admin-appointment-new"), <AppointmentNewPageSkeleton />);
 const AdminFinancePage = lazyPage(() => import("@/pages/admin-finance"), <AdminFinancePageSkeleton />);
 const PayrollMyPage = lazyPage(() => import("@/pages/payroll-my"), <PayrollMyPageSkeleton />);
-const PlanPaywall = lazyWithChunkRecovery(() =>
-  import("@/components/billing/plan-paywall").then((m) => ({ default: m.PlanPaywall })),
-);
+const PlanPaywall = lazyWithChunkRecovery(() => import("@/components/billing/plan-paywall"));
 
 // ---------------------------------------------------------------------------
 // Dev auth bypass — set VITE_DEV_BYPASS_AUTH=true in .env.local to skip login
