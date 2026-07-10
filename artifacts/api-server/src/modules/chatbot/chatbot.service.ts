@@ -44,6 +44,7 @@ import {
   mergeReply,
   appendToReply,
   polishReply,
+  conciseReply,
   replyFromText,
   type ChatMessage,
   type ChatbotReply,
@@ -1408,14 +1409,16 @@ function makeTurnResult(
   opts?: { clinicName?: string | null; maxParts?: number; recentMessages?: ChatMessage[] },
 ): TurnResult {
   const baseReply = toChatbotReply(response) ?? replyFromText("...");
-  const outbound = polishReply(baseReply, {
-    clinicName: opts?.clinicName,
-    maxParts: opts?.maxParts,
-    recentAssistantTexts: opts?.recentMessages
-      ?.filter((m) => m.role === "assistant")
-      .slice(-3)
-      .map((m) => m.content),
-  });
+  const outbound = conciseReply(
+    polishReply(baseReply, {
+      clinicName: opts?.clinicName,
+      maxParts: opts?.maxParts,
+      recentAssistantTexts: opts?.recentMessages
+        ?.filter((m) => m.role === "assistant")
+        .slice(-3)
+        .map((m) => m.content),
+    }),
+  );
   return {
     outbound,
     session,
@@ -1601,11 +1604,16 @@ async function finalizeBookingAppointment(params: {
     : `Запись ПОДТВЕРЖДЕНА. Повтори дату ${formattedDate}, время, адрес ${branchToSave}, услугу ${serviceName}, врача ${doctorName}. Контакт клиники — из материалов (сайт/настройки). Напомни взять удостоверение личности. Поблагодари. Спроси, остались ли вопросы.`;
 
   const thankLine = data.isReschedule
-    ? "✅ Ваша запись успешно перенесена! Спасибо за обращение."
-    : "✅ Запись подтверждена! Спасибо, что выбрали нас.";
+    ? "✅ Запись перенесена."
+    : "✅ Запись подтверждена.";
   const detailsFallback = data.isReschedule
-    ? `📅 Время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nНе забудьте удостоверение личности. Будем ждать вас! 😊`
-    : `📅 Дата и время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nНе забудьте удостоверение личности. До встречи! 😊`;
+    ? `📅 ${formattedDate}\n👨‍⚕️ ${doctorName}\n📍 ${branchToSave}`
+    : `📅 ${formattedDate}\n👨‍⚕️ ${doctorName}\n📍 ${branchToSave}\n\nВозьмите удостоверение личности.`;
+
+  if (dryRun) {
+    const response = appendToReply(replyFromText(thankLine), detailsFallback);
+    return { data, response };
+  }
 
   const aiDone = await generateChatbotResponse(
     up(promptState, { backendContext: summaryInstruction }),
@@ -1646,7 +1654,7 @@ function formatSimulateMessageResult(
   };
 }
 
-const PLAYGROUND_TURN_TIMEOUT_MS = 42_000;
+const PLAYGROUND_TURN_TIMEOUT_MS = 55_000;
 
 function buildPlaygroundFallbackResult(
   opts: {

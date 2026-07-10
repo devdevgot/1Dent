@@ -6,6 +6,7 @@ import {
   formatSlotAlternatives,
   getDoctorAvailableSlots,
 } from "./calendar-slots";
+import { formatAlmatyIso, formatAlmatySlotCompact, tryParseAppointmentDatetimeLocal } from "./almaty-time";
 import { resolveBranchFromMessage } from "./clinic-knowledge";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 import type { ClinicCalendarConfig } from "@workspace/db";
@@ -120,17 +121,24 @@ export async function executeChatbotAgentTools(
             sessionData.suggestedDoctorId,
             ctx.calendarConfig ?? undefined,
           );
-          slotsAppendix = formatSlotAlternatives(slots.slice(0, 8));
+          const formatted = formatSlotAlternatives(slots.slice(0, 4), formatAlmatySlotCompact);
+          slotsAppendix = formatted ? `Свободные слоты:\n${formatted}` : "";
           toolNotes.push(`Слоты: ${slots.length} доступно`);
         }
         break;
       }
       case "parse_datetime": {
         const text = action.datetimeText ?? ctx.messageText;
+        const localDate = tryParseAppointmentDatetimeLocal(text);
+        if (localDate) {
+          sessionData.preferredDatetime = formatAlmatyIso(localDate);
+          toolNotes.push(`Время: ${sessionData.preferredDatetime}`);
+          break;
+        }
         const extracted = await extractDatetimeFromText(text);
-        if (extracted?.iso) {
-          sessionData.preferredDatetime = extracted.iso;
-          toolNotes.push(`Время: ${extracted.iso}`);
+        if (extracted) {
+          sessionData.preferredDatetime = formatAlmatyIso(extracted);
+          toolNotes.push(`Время: ${sessionData.preferredDatetime}`);
         }
         break;
       }

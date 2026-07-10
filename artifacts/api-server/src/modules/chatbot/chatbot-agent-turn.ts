@@ -3,7 +3,7 @@ import { logger } from "../../lib/logger";
 import type { ChatbotSettings } from "@workspace/db";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatMessage, ManagerExample } from "./ai-classifier";
-import { mergeReply, appendToReply, replyFromText, joinChatbotReply } from "./ai-classifier";
+import { mergeReply, appendToReply, replyFromText, joinChatbotReply, conciseReply } from "./ai-classifier";
 import type { ChatbotReply } from "./chatbot-reply";
 import { enrichReplyWithFsmFollowUp, replyFromAgentText } from "./chatbot-reply-enrich";
 import { buildAgentOrchestratorPrompt } from "./chatbot-agent-prompt";
@@ -63,7 +63,14 @@ function finalizeAgentReply(
     reply = appendToReply(reply, toolResult.slotsAppendix);
   }
 
-  return reply;
+  if (toolResult.suggestedDoctor && /администратор/i.test(joinChatbotReply(reply))) {
+    const branchLine = ctx.sessionData.selectedBranch
+      ? `Записываем в филиал «${ctx.sessionData.selectedBranch}».`
+      : "Подобрали врача для вашей записи.";
+    reply = appendToReply(replyFromText(branchLine), buildDoctorPresentationFallback(toolResult.suggestedDoctor, urgency));
+  }
+
+  return conciseReply(reply);
 }
 
 export interface AgentTurnDeps {
@@ -195,8 +202,8 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   ];
 
   const llmModel = CHAT_MODEL;
-  const llmTimeoutMs = 35_000;
-  const llmMaxTokens = 1024;
+  const llmTimeoutMs = 28_000;
+  const llmMaxTokens = 400;
 
   let agentTurn = null;
   let usedParseFallback = false;
@@ -206,7 +213,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
         model: llmModel,
         messages,
         response_format: { type: "json_object" },
-        temperature: 0.65,
+        temperature: 0.4,
         max_tokens: llmMaxTokens,
       },
       { timeoutMs: llmTimeoutMs, label: dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn" },

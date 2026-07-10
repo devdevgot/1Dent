@@ -13,10 +13,11 @@ export interface ReplyPolishOptions {
 /** Plain-text style note appended to chat system prompts (no JSON output format). */
 export const CHAT_STYLE_PROMPT = `
 Стиль WhatsApp (живой менеджер клиники, не робот):
-- Дроби диалог на 2–3 коротких сообщения, когда это естественно: сначала ответ/инфо, затем следующий шаг воронки
-- Примеры: инфо об услуге → «Подскажите удобное время для визита?»; «у нас N филиалов» → полный список адресов отдельным сообщением
-- Один вопрос за раз в каждом сообщении
-- Не повторяй вопросы из недавних сообщений
+- Максимум 1–2 коротких предложения на сообщение, без «воды»
+- Дроби на 2 сообщения только когда нужен следующий шаг воронки (время, филиал, врач)
+- ЗАПРЕЩЕНО: скидки, акции, часы работы — если пациент не спрашивал
+- ЗАПРЕЩЕНО: передавать администратору — подбирай врача и слоты сам
+- Один вопрос за раз
 - Отвечай обычным текстом, без JSON и markdown
 `.trim();
 
@@ -210,4 +211,30 @@ export function defaultPauses(parts: string[]): number[] {
 export function estimateTypingPause(previousPart: string): number {
   const len = previousPart.length;
   return Math.min(2800, Math.max(700, 500 + len * 28));
+}
+
+const MARKETING_SENTENCE_RE =
+  /скидк|акци|до\s+\d+\s*%|бесплатн.*консультац|клиника открывается|напомню:\s*первичн/i;
+const ADMIN_HANDOFF_RE = /передаю.*администратор|передал.*администратор|свяжется с вами/i;
+
+/** Trim filler, marketing, and overlong bubbles for WhatsApp. */
+export function conciseReply(raw: ChatbotReply): ChatbotReply {
+  const normalized = normalizeReply(raw);
+  const parts = normalized.parts.map(trimPartConcise).filter(Boolean);
+  if (parts.length === 0 && normalized.parts[0]) {
+    parts.push(trimPartConcise(normalized.parts[0]));
+  }
+  return normalizeReply({ parts, pausesMs: defaultPauses(parts) });
+}
+
+function trimPartConcise(text: string): string {
+  const sentences = text
+    .split(/(?<=[.!?…])\s+/u)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !MARKETING_SENTENCE_RE.test(s) && !ADMIN_HANDOFF_RE.test(s));
+
+  const kept = (sentences.length > 0 ? sentences : [text]).slice(0, 2).join(" ").trim();
+  if (!kept) return text.slice(0, 180).trim();
+  if (kept.length > 200) return `${kept.slice(0, 197).trim()}…`;
+  return kept;
 }

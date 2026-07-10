@@ -16,6 +16,7 @@ export {
   mergeReply,
   appendToReply,
   polishReply,
+  conciseReply,
   normalizeReply,
   parseChatbotReplyJson,
   defaultPauses,

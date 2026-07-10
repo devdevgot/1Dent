@@ -14,6 +14,7 @@ import {
   isInvalidAppointmentTime,
   KZ_UTC_OFFSET_LABEL,
   parseAlmatyDatetime,
+  tryParseAppointmentDatetimeLocal,
 } from "./almaty-time";
 import { detectServiceTypeFromKeywords } from "./service-type-keywords.ts";
 import {
@@ -223,6 +224,7 @@ export {
   polishReply,
   replyFromText,
   splitTextToReply,
+  conciseReply,
 } from "./chatbot-reply";
 
 export async function generateChatbotResponse(
@@ -308,6 +310,9 @@ export async function generateChatbotResponse(
 // ─── Datetime extractor ───────────────────────────────────────────────────────
 
 export async function extractDatetimeFromText(text: string): Promise<Date | null> {
+  const local = tryParseAppointmentDatetimeLocal(text);
+  if (local) return local;
+
   const now = new Date();
   const todayYmd = getAlmatyYmd(now);
   const todayLong = formatAlmatyDateLong(now);

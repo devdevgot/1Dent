@@ -7,6 +7,7 @@ import {
   buildSymptomsPromptFallback,
   isBranchSelectionNode,
 } from "./clinic-knowledge";
+import { isShortYes, isReadyToBook } from "./booking-script";
 
 export interface EnrichReplyContext {
   fsmState: ChatbotState;
@@ -150,7 +151,7 @@ function resolveFsmFollowUp(ctx: EnrichReplyContext): string | null {
       if (isServiceRequest(messageText)) {
         return "Подскажите удобное время для визита?";
       }
-      return "Расскажите, что вас беспокоит?";
+      return "Что вас беспокоит?";
 
     case "collect_qualification":
       if (nodeId === "step2-branch" || sessionData.qualificationPhase === "branch") {
@@ -166,16 +167,22 @@ function resolveFsmFollowUp(ctx: EnrichReplyContext): string | null {
       return buildBranchPromptFallback(false, clinicBranchNames);
 
     case "suggest_doctor":
+      if (isShortYes(messageText) || isReadyToBook(messageText)) {
+        return "Когда вам удобно прийти?";
+      }
       if (sessionData.suggestedDoctorName) {
-        return `Подходит вам ${sessionData.suggestedDoctorName} или подобрать другого врача?`;
+        return `Подходит ${sessionData.suggestedDoctorName}? (Да / другой врач)`;
       }
       return null;
 
     case "await_decision":
-      return "Готовы записаться на приём?";
+      if (isShortYes(messageText) || isReadyToBook(messageText)) {
+        return "Когда вам удобно прийти?";
+      }
+      return "Записать на приём?";
 
     case "collect_datetime":
-      return "Какая дата и время вам удобны для визита?";
+      return "Укажите дату и время визита.";
 
     default:
       return null;

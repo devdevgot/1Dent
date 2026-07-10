@@ -251,3 +251,40 @@ export function computeAlmatyAvailableSlots(
 
   return slots;
 }
+
+/** Fast parse for «завтра в 9:00», «на завтра в 9:00» — avoids LLM on booking turns. */
+export function tryParseAppointmentDatetimeLocal(text: string, now: Date = new Date()): Date | null {
+  const t = text.toLowerCase().trim();
+  if (!t || t.length < 3) return null;
+
+  const hasRelativeDay = /\b(завтра|ертең|сегодня|бүгін)\b/.test(t);
+  const timeMatch =
+    t.match(/(?:в|к\s+)\s*(\d{1,2})[:.](\d{2})/) ??
+    t.match(/(?:в|к\s+)\s*(\d{1,2})(?:\s*(?:час|ч|часа|часов))?(?:\s|$|\.)/);
+  if (!hasRelativeDay && !timeMatch) return null;
+
+  let hour = 10;
+  let minute = 0;
+  if (timeMatch) {
+    hour = parseInt(timeMatch[1]!, 10);
+    minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  }
+
+  const p = getAlmatyParts(now);
+  let year = p.year;
+  let month = p.month;
+  let day = p.day;
+
+  if (/\b(завтра|ертең)\b/.test(t)) {
+    const tomorrow = new Date(buildAlmatyDate(year, month, day, 12, 0, 0).getTime() + 24 * 60 * 60 * 1000);
+    const tp = getAlmatyParts(tomorrow);
+    year = tp.year;
+    month = tp.month;
+    day = tp.day;
+  }
+
+  const date = buildAlmatyDate(year, month, day, hour, minute, 0);
+  if (isInvalidAppointmentTime(date, now)) return null;
+  return date;
+}

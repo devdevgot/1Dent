@@ -5,6 +5,7 @@ import {
   parseChatbotReplyJson,
   replyFromText,
   joinChatbotReply,
+  conciseReply,
 } from "./chatbot-reply-format.ts";
 import {
   enrichReplyWithFsmFollowUp,
@@ -126,5 +127,16 @@ describe("chatbot-reply", () => {
     });
     assert.match(enriched.parts[0]!, /Спасибо/i);
     assert.match(enriched.parts[0]!, /ул\. B 2/);
+  });
+
+  it("conciseReply strips marketing filler", () => {
+    const trimmed = conciseReply({
+      parts: [
+        "Готовы записаться? Напомню: первичная консультация бесплатная, а сейчас скидки до 25% на чистку.",
+        "Когда вам удобно прийти?",
+      ],
+    });
+    assert.doesNotMatch(trimmed.parts[0]!, /скидк/i);
+    assert.match(trimmed.parts[1]!, /удобно прийти/i);
   });
 });
