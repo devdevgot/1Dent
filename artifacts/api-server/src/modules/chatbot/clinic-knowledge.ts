@@ -89,6 +89,61 @@ export function buildSymptomsPromptFallback(): string {
   return "Есть ли сейчас боль или дискомфорт?";
 }
 
+/** Patient asks which branches exist / where clinics are located (not a branch pick). */
+export function isBranchListInquiry(text: string): boolean {
+  const t = text.toLowerCase().trim();
+  return (
+    /какие\s+(у\s+вас\s+)?(есть\s+)?филиал|список\s+филиал|сколько\s+филиал|где\s+(вы\s+)?находит|какие\s+адрес|какие\s+отделени|адрес(а|ы)?\s+филиал|перечисл(и|ите)\s+филиал|расскаж(и|ите)\s+про\s+филиал/i.test(
+      t,
+    )
+  );
+}
+
+const PRICE_INQUIRY_RE =
+  /\b(цен|стоим|сколько\s+стоит|прайс|price|cost|теңge|баға|қымбат)\b/i;
+
+/** Patient asks a question instead of advancing the booking step. */
+export function isPatientInquiry(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (isBranchListInquiry(t)) return true;
+  if (PRICE_INQUIRY_RE.test(t)) return true;
+  if (/\?\s*$/.test(t)) return true;
+  return /^(какие|сколько|где|когда|почему|зачем|можно\s+ли|расскаж|объясн|что\s+такое|как\s+(долго|работает|находится|записаться))/i.test(
+    t,
+  );
+}
+
+export function isPriceInquiry(text: string): boolean {
+  return PRICE_INQUIRY_RE.test(text.trim());
+}
+
+/** Mind-map / FSM node where the patient must pick a branch before advancing. */
+export function isBranchSelectionNode(nodeId: string, fsmState?: string): boolean {
+  return nodeId === "step2-branch" || fsmState === "collect_branch";
+}
+
+/** Server-side reply when the patient is on branch step but did not pick a branch yet. */
+export function resolveBranchStepClarificationReply(opts: {
+  messageText: string;
+  selectedBranch?: string;
+  clinicBranchNames: string[];
+  knowledgeContext?: string;
+}): string {
+  const { messageText, selectedBranch, clinicBranchNames, knowledgeContext } = opts;
+  const hasKnowledge = hasClinicKnowledge(knowledgeContext);
+
+  if (isBranchListInquiry(messageText) && clinicBranchNames.length > 1) {
+    return buildBranchListMessage(clinicBranchNames);
+  }
+
+  if (!selectedBranch && clinicBranchNames.length > 1) {
+    return buildBranchPromptFallback(hasKnowledge, clinicBranchNames);
+  }
+
+  return buildBranchPromptFallback(hasKnowledge, clinicBranchNames);
+}
+
 export function buildRefusalFallback(): string {
   return "Спасибо за обращение! Если понадобится помощь — напишите нам 😊";
 }
@@ -139,6 +194,8 @@ export async function resolveBranchFromMessage(
 ): Promise<string | null> {
   const trimmed = messageText.trim();
   if (!trimmed) return null;
+
+  if (isBranchListInquiry(trimmed)) return null;
 
   const official = options?.officialBranches ?? [];
   const fromOfficial = resolveOfficialBranchFromMessage(trimmed, official);

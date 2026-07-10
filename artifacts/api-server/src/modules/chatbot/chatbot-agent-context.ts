@@ -91,6 +91,11 @@ export function assertAllowedTransition(
 
   const targetNode = mindMap.nodes.find((n) => n.id === toNodeId);
   const fromNode = mindMap.nodes.find((n) => n.id === fromNodeId);
+
+  if (fromNodeId === "step2-branch" && toNodeId === "step2-qualification") {
+    return { allowed: false, reason: "Cannot regress from branch selection to symptoms" };
+  }
+
   if (targetNode?.fsmState && fromNode?.fsmState && targetNode.fsmState === fromNode.fsmState) {
     return { allowed: true };
   }

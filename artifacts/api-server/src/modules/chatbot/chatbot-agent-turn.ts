@@ -24,6 +24,7 @@ import {
   inferAgentActionsForTransition,
   resolveDeterministicNextNodeId,
 } from "./chatbot-agent-orchestrator";
+import { isPatientInquiry, isUsableClinicKnowledge } from "./clinic-knowledge.ts";
 
 type OutboundResponse = ChatbotReply | null;
 
@@ -71,6 +72,42 @@ function buildSessionSummary(data: ChatbotSessionData): string {
   return parts.join(". ");
 }
 
+function enrichFactsForPatientInquiry(
+  facts: ChatbotPromptFacts,
+  messageText: string,
+  knowledgeContext: string,
+  priceListContext: string,
+  clinicBranchNames: string[],
+): ChatbotPromptFacts {
+  if (!isPatientInquiry(messageText)) return facts;
+
+  const enriched = { ...facts };
+  if (isUsableClinicKnowledge(knowledgeContext) && !enriched.knowledgeSnippet) {
+    enriched.knowledgeSnippet = knowledgeContext.slice(0, 1200);
+  }
+  if (clinicBranchNames.length > 0 && !enriched.officialBranches?.length) {
+    enriched.officialBranches = clinicBranchNames;
+  }
+  if (!enriched.priceSnippet && priceListContext?.trim()) {
+    enriched.priceSnippet = priceListContext.slice(0, 800);
+  }
+  return enriched;
+}
+
+function syncQualificationPhase(
+  data: ChatbotSessionData,
+  fromNodeId?: string,
+  toNodeId?: string,
+): ChatbotSessionData {
+  if (fromNodeId === "step2-branch" || toNodeId === "step2-branch") {
+    return { ...data, qualificationPhase: "branch" };
+  }
+  if (fromNodeId === "step2-qualification" || toNodeId === "step2-qualification") {
+    return { ...data, qualificationPhase: "symptoms" };
+  }
+  return data;
+}
+
 /** Run one script-guided agent turn (model orchestrates dialogue + tools). */
 export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTurnOutcome> {
   const {
@@ -96,7 +133,13 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   const safeMindMap = mindMap?.nodes?.length ? mindMap : null;
 
   const fsmForFacts = (scriptCtx.currentFsmState as ChatbotState) ?? state;
-  const facts = buildPromptFacts(fsmForFacts);
+  const facts = enrichFactsForPatientInquiry(
+    buildPromptFacts(fsmForFacts),
+    messageText,
+    knowledgeContext,
+    deps.priceListContext,
+    clinicBranchNames,
+  );
 
   const systemPrompt = buildAgentOrchestratorPrompt({
     clinicName,
@@ -124,7 +167,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
         model: llmModel,
         messages,
         response_format: { type: "json_object" },
-        temperature: 0.55,
+        temperature: 0.65,
         max_tokens: dryRun ? 768 : 1024,
       },
       { timeoutMs: llmTimeoutMs, label: dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn" },
@@ -160,6 +203,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       sessionData: data,
       clinicBranchNames,
       knowledgeContext: deps.knowledgeContext,
+      messageText,
     });
     const actions = inferAgentActionsForTransition(
       fromNode,
@@ -172,6 +216,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
 
     if (toNodeId) data.activeMindMapNodeId = toNodeId;
     if (toNode?.fsmState) state = toNode.fsmState as ChatbotState;
+    data = syncQualificationPhase(data, fromNodeId, toNodeId);
 
     const toolResult = await executeChatbotAgentTools(data, actions, undefined, {
       clinicId,
@@ -230,6 +275,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       state = targetNode.fsmState as ChatbotState;
     }
   }
+  data = syncQualificationPhase(data, fromNodeIdResolved, resolvedToNodeId);
 
   const mergedActions = inferAgentActionsForTransition(
     fromNode,

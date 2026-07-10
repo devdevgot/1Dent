@@ -117,6 +117,9 @@ import {
   buildRefusalFallback,
   resolveBranchFromMessage,
   buildBranchListMessage,
+  isBranchListInquiry,
+  isPatientInquiry,
+  isPriceInquiry,
 } from "./clinic-knowledge";
 import { scheduleAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { scheduleFollowups } from "../followups/followup.queue";
@@ -1045,9 +1048,12 @@ function buildPromptFacts(args: {
 
   const altCandidate = data.doctorCandidates?.[1];
 
-  const includeKnowledge = KNOWLEDGE_STATES.includes(args.fsmState) && isUsableClinicKnowledge(args.knowledgeContext);
+  const includeKnowledge =
+    (KNOWLEDGE_STATES.includes(args.fsmState) || isPatientInquiry(userText)) &&
+    isUsableClinicKnowledge(args.knowledgeContext);
   const includePrice =
     args.fsmState === "dental_qa" ||
+    isPriceInquiry(userText) ||
     /\b(цен|стоим|сколько|прайс|price|cost|теңge|баға|қымбат)\b/i.test(userText);
 
   return {
@@ -2740,6 +2746,7 @@ export class ChatbotService {
         };
 
         const tryProceedWithoutBranch = (): boolean => {
+          if (isBranchListInquiry(messageText)) return false;
           if (clinicBranchNames.length === 1) {
             data.selectedBranch = clinicBranchNames[0];
             return true;
@@ -2752,6 +2759,28 @@ export class ChatbotService {
           }
           return false;
         };
+
+        if (inBranchPhase && isBranchListInquiry(messageText) && clinicBranchNames.length > 1) {
+          data.qualificationPhase = "branch";
+          data.activeMindMapNodeId =
+            resolveMindMapNodeIdForState(mindMapData, "collect_qualification", {
+              activeNodeId: data.activeMindMapNodeId,
+            }) ?? data.activeMindMapNodeId;
+          const aiBranch = await generateChatbotResponse(
+            up("collect_qualification", {
+              backendContext: `${branchBackendContext()} Пациент спрашивает о филиалах — ответь на вопрос по материалам клиники, затем мягко предложи выбрать номер.`,
+            }),
+            recentMessages,
+            messageText,
+            managerExamples,
+          );
+          response = mergeReply(aiBranch, buildBranchPromptFallback(hasKnowledge, clinicBranchNames), {
+            maxParts: 3,
+          });
+          session.state = "collect_qualification";
+          session.data = data;
+          break;
+        }
 
         if (phase === "symptoms" && !symptomsAnswered(data, messageText)) {
           data.qualificationAsked = true;
