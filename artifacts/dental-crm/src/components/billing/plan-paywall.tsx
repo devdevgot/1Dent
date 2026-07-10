@@ -28,19 +28,13 @@ const FEATURE_ICONS = {
   analytics: BarChart3,
 } as const;
 
-export function PlanPaywall() {
+export default function PlanPaywall() {
   const { t } = useTranslation();
   const { clinic, user, setAuth } = useAuthStore();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [loc] = useLocation();
   const [startingTrial, setStartingTrial] = useState(false);
-
-  if (SKIP_PLAN_PAYWALL) return null;
-
-  const status = getSubscriptionStatus(clinic);
-  const isOwner = user?.role === "owner";
-  const showTrialCta = isOwner && canStartTrial(clinic);
 
   const startTrialMutation = useMutation({
     mutationFn: async () => {
@@ -68,6 +62,12 @@ export function PlanPaywall() {
     },
     onSettled: () => setStartingTrial(false),
   });
+
+  if (SKIP_PLAN_PAYWALL) return null;
+
+  const status = getSubscriptionStatus(clinic);
+  const isOwner = user?.role === "owner";
+  const showTrialCta = isOwner && canStartTrial(clinic);
 
   if (status.kind === "active_plan" || status.kind === "active_trial") return null;
   if (loc === "/pricing") return null;

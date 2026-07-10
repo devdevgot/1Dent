@@ -6,6 +6,16 @@ export function clearChunkReloadFlag(): void {
   sessionStorage.removeItem(CHUNK_RELOAD_KEY);
 }
 
+export function isMissingLazyExportError(err: unknown): boolean {
+  if (!(err instanceof TypeError)) return false;
+  const msg = err.message;
+  // Safari/WebKit after a stale deploy: undefined is not an object (evaluating 'e.PlanPaywall')
+  if (/undefined is not an object \(evaluating '/i.test(msg)) return true;
+  // Chromium: Cannot read properties of undefined (reading 'PlanPaywall')
+  if (/cannot read propert(?:y|ies) of undefined/i.test(msg)) return true;
+  return false;
+}
+
 export function isChunkLoadError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message.toLowerCase();
@@ -13,7 +23,9 @@ export function isChunkLoadError(err: unknown): boolean {
     msg.includes("'text/html' is not a valid javascript mime type") ||
     msg.includes("failed to fetch dynamically imported module") ||
     msg.includes("importing a module script failed") ||
-    msg.includes("error loading dynamically imported module")
+    msg.includes("error loading dynamically imported module") ||
+    msg.includes("missing default export") ||
+    isMissingLazyExportError(err)
   );
 }
 
@@ -28,10 +40,19 @@ export function reloadOnceOnChunkError(err: unknown): void {
 function loadWithChunkRecovery<T extends ComponentType<any>>(
   load: () => Promise<{ default: T }>,
 ): Promise<{ default: T }> {
-  return load().catch((err) => {
-    reloadOnceOnChunkError(err);
-    return new Promise<{ default: T }>(() => {});
-  });
+  return load()
+    .then((mod) => {
+      if (!mod?.default) {
+        throw new TypeError(
+          "Failed to fetch dynamically imported module: missing default export",
+        );
+      }
+      return mod;
+    })
+    .catch((err) => {
+      reloadOnceOnChunkError(err);
+      return new Promise<{ default: T }>(() => {});
+    });
 }
 
 /** Drop-in replacement for React.lazy with one-shot auto-reload on stale chunks. */
