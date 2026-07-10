@@ -530,7 +530,7 @@ export function OwnerDashboardSkeleton() {
   );
 }
 
-/** Clinical home (doctor, assistant, nurse): service tiles + promo banners. */
+/** Clinical home (doctor, assistant, nurse): service tiles + promo banners + salary card. */
 export function DoctorDashboardSkeleton() {
   return (
     <div className="dashboard-page min-h-full pb-8">
@@ -546,6 +546,29 @@ export function DoctorDashboardSkeleton() {
         <Bone className="shrink-0 w-[280px] h-[108px] rounded-3xl" />
         <Bone className="shrink-0 w-[280px] h-[108px] rounded-3xl" />
         <Bone className="shrink-0 w-[280px] h-[108px] rounded-3xl" />
+      </div>
+      <div className="mx-4 mt-4 bg-white rounded-3xl border border-[var(--ds-border)] shadow-sm overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <Bone className="h-6 w-36 rounded-lg" />
+          <div className="flex gap-2 mt-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Bone key={i} className="h-9 w-20 rounded-full shrink-0" />
+            ))}
+          </div>
+        </div>
+        <div className="divide-y divide-[var(--surface-2)]">
+          <div className="flex items-center gap-3.5 px-5 py-3.5">
+            <Bone className="w-[52px] h-[52px] rounded-2xl shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Bone className="h-4 w-32 rounded" />
+              <Bone className="h-3 w-24 rounded" />
+            </div>
+            <Bone className="h-4 w-16 rounded" />
+          </div>
+        </div>
+        <div className="mx-4 my-4">
+          <Bone className="h-12 w-full rounded-2xl" />
+        </div>
       </div>
     </div>
   );

@@ -85,14 +85,45 @@ export class PayrollRepository {
       .where(eq(userSalarySettingsTable.clinicId, clinicId));
   }
 
-  private async getDoctorRevenueForPeriod(
+  private startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  private endOfDayExclusive(date: Date): Date {
+    const next = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+    return next;
+  }
+
+  private daysInclusive(from: Date, to: Date): number {
+    const start = this.startOfDay(from).getTime();
+    const end = this.startOfDay(to).getTime();
+    return Math.max(1, Math.floor((end - start) / 86400000) + 1);
+  }
+
+  private prorateFixedAmount(fixedAmount: number, from: Date, to: Date): number {
+    const year = to.getFullYear();
+    const month = to.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month, daysInMonth);
+    const rangeDays = this.daysInclusive(from, to);
+    if (
+      this.startOfDay(from).getTime() <= monthStart.getTime() &&
+      this.startOfDay(to).getTime() >= monthEnd.getTime()
+    ) {
+      return fixedAmount;
+    }
+    return fixedAmount * (rangeDays / daysInMonth);
+  }
+
+  private async getDoctorRevenueForDateRange(
     doctorId: string,
     clinicId: string,
-    year: number,
-    month: number,
+    from: Date,
+    to: Date,
   ): Promise<number> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const startDate = this.startOfDay(from);
+    const endDate = this.endOfDayExclusive(to);
 
     const [result] = await db
       .select({ total: sum(proceduresTable.price) })
@@ -110,13 +141,13 @@ export class PayrollRepository {
     return Number(result?.total ?? 0);
   }
 
-  private async getClinicRevenueForPeriod(
+  private async getClinicRevenueForDateRange(
     clinicId: string,
-    year: number,
-    month: number,
+    from: Date,
+    to: Date,
   ): Promise<number> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const startDate = this.startOfDay(from);
+    const endDate = this.endOfDayExclusive(to);
 
     const [result] = await db
       .select({ total: sum(proceduresTable.price) })
@@ -133,14 +164,14 @@ export class PayrollRepository {
     return Number(result?.total ?? 0);
   }
 
-  private async getUserWorkHoursForPeriod(
+  private async getUserWorkHoursForDateRange(
     userId: string,
     clinicId: string,
-    year: number,
-    month: number,
+    from: Date,
+    to: Date,
   ): Promise<number> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const startDate = this.startOfDay(from);
+    const endDate = this.endOfDayExclusive(to);
 
     const events = await db
       .select({
@@ -174,6 +205,38 @@ export class PayrollRepository {
     }
 
     return totalMs / (1000 * 60 * 60); // hours
+  }
+
+  private async getDoctorRevenueForPeriod(
+    doctorId: string,
+    clinicId: string,
+    year: number,
+    month: number,
+  ): Promise<number> {
+    const from = new Date(year, month - 1, 1);
+    const to = new Date(year, month, 0);
+    return this.getDoctorRevenueForDateRange(doctorId, clinicId, from, to);
+  }
+
+  private async getClinicRevenueForPeriod(
+    clinicId: string,
+    year: number,
+    month: number,
+  ): Promise<number> {
+    const from = new Date(year, month - 1, 1);
+    const to = new Date(year, month, 0);
+    return this.getClinicRevenueForDateRange(clinicId, from, to);
+  }
+
+  private async getUserWorkHoursForPeriod(
+    userId: string,
+    clinicId: string,
+    year: number,
+    month: number,
+  ): Promise<number> {
+    const from = new Date(year, month - 1, 1);
+    const to = new Date(year, month, 0);
+    return this.getUserWorkHoursForDateRange(userId, clinicId, from, to);
   }
 
   private calcSalary(
@@ -346,26 +409,39 @@ export class PayrollRepository {
     return { records: upserted, expense, totalFot };
   }
 
-  async getMySalary(userId: string, clinicId: string, year: number, month: number) {
+  async getMySalary(
+    userId: string,
+    clinicId: string,
+    dateFrom: Date,
+    dateTo: Date,
+  ) {
     const settings = await this.getSalarySettings(userId, clinicId);
-    
+    if (!settings) return null;
+
     const [user] = await db
-      .select({ role: usersTable.role })
+      .select({ role: usersTable.role, name: usersTable.name })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1);
 
     const isDoctor = user?.role === "doctor";
     const revenue = isDoctor
-      ? await this.getDoctorRevenueForPeriod(userId, clinicId, year, month)
-      : await this.getClinicRevenueForPeriod(clinicId, year, month);
+      ? await this.getDoctorRevenueForDateRange(userId, clinicId, dateFrom, dateTo)
+      : await this.getClinicRevenueForDateRange(clinicId, dateFrom, dateTo);
 
-    const workHours = await this.getUserWorkHoursForPeriod(userId, clinicId, year, month);
+    const workHours = await this.getUserWorkHoursForDateRange(userId, clinicId, dateFrom, dateTo);
 
-    const salaryType = (settings?.salaryType ?? "fixed") as "fixed" | "commission" | "fixed_plus_commission" | "hourly";
-    const fixedAmount = Number(settings?.fixedAmount ?? 0);
-    const commissionPercent = Number(settings?.commissionPercent ?? 0);
-    const calculatedSalary = this.calcSalary(salaryType, fixedAmount, commissionPercent, revenue, workHours);
+    const salaryType = (settings.salaryType ?? "fixed") as "fixed" | "commission" | "fixed_plus_commission" | "hourly";
+    const fixedAmount = Number(settings.fixedAmount ?? 0);
+    const commissionPercent = Number(settings.commissionPercent ?? 0);
+    const effectiveFixed =
+      salaryType === "fixed" || salaryType === "fixed_plus_commission"
+        ? this.prorateFixedAmount(fixedAmount, dateFrom, dateTo)
+        : fixedAmount;
+    const calculatedSalary = this.calcSalary(salaryType, effectiveFixed, commissionPercent, revenue, workHours);
+
+    const year = dateTo.getFullYear();
+    const month = dateTo.getMonth() + 1;
 
     const [approvedRecord] = await db
       .select()
@@ -393,6 +469,7 @@ export class PayrollRepository {
       approvedAmount,
       status,
       period: { year, month },
+      userName: user?.name ?? null,
     };
   }
 

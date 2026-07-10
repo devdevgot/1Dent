@@ -327,7 +327,7 @@ function Router() {
         <ProtectedRoute component={DoctorScheduleDayPage} allowedRoles={[...CLINICAL_STAFF_ROLES]} />
       </Route>
       <Route path="/payroll/my">
-        <ProtectedRoute component={PayrollMyPage} allowedRoles={['doctor']} />
+        <ProtectedRoute component={PayrollMyPage} allowedRoles={[...CLINICAL_STAFF_ROLES]} />
       </Route>
       <Route path="/logs">
         <ProtectedRoute component={LogsPage} allowedRoles={['owner']} />
