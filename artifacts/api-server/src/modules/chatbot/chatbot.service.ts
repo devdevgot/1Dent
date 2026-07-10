@@ -89,7 +89,7 @@ import { STANDARD_SCRIPT_BLOCKS, type ScriptBlock } from "./script-templates";
 import { createChatCompletion, FAST_MODEL, parseLlmJson, assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { planLimitsService } from "../../shared/plan-limits.service";
-import { InsufficientAiCreditsError, OpenRouterAiFailedError, PlanLimitExceededError } from "../../shared/errors/index";
+import { InsufficientAiCreditsError, PlanLimitExceededError } from "../../shared/errors/index";
 import {
   renderMindMapCompactPath,
   renderMindMapScript,
@@ -1645,16 +1645,83 @@ function formatSimulateMessageResult(
 
 const PLAYGROUND_TURN_TIMEOUT_MS = 55_000;
 
+const PATIENT_SAFE_FALLBACK_TEXT =
+  "Сейчас не могу обработать запрос. Попробуйте через минуту или напишите «оператор» — администратор поможет.";
+
+const PLAYGROUND_BUSY_FALLBACK_TEXT =
+  "Извините, ответ занял слишком много времени. Попробуйте короче сообщение или повторите через несколько секунд.";
+
+const PLAYGROUND_ERROR_FALLBACK_TEXT =
+  "Сейчас не удалось получить ответ ИИ. Попробуйте ещё раз через несколько секунд.";
+
+const PLAYGROUND_NO_OPENROUTER_TEXT =
+  "ИИ не настроен на сервере (OPENROUTER_API_KEY). Обратитесь к администратору платформы.";
+
+function isRecoverableLlmError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+  return (
+    msg.includes("openrouter") ||
+    msg.includes("openroutertimeout") ||
+    msg.includes("429") ||
+    msg.includes("402") ||
+    msg.includes("503") ||
+    msg.includes("502") ||
+    msg.includes("500")
+  );
+}
+
+async function resolveSessionForErrorTurn(
+  clinicId: string,
+  phone: string,
+  sessionInput?: PlaygroundSessionInput,
+): Promise<SessionRecord> {
+  if (sessionInput) {
+    return {
+      id: randomUUID(),
+      clinicId,
+      phone,
+      state: sessionInput.state,
+      data: { ...sessionInput.data },
+      humanTakeover: sessionInput.humanTakeover ?? false,
+    };
+  }
+
+  const loaded = await loadSession(clinicId, phone).catch(() => null);
+  if (loaded) return loaded;
+
+  return {
+    id: randomUUID(),
+    clinicId,
+    phone,
+    state: "greeting",
+    data: {},
+    humanTakeover: false,
+  };
+}
+
+function buildSafeErrorTurnResult(
+  session: SessionRecord,
+  replyText: string,
+  simulatedActions: string[] = [],
+  opts?: { clinicName?: string | null; recentMessages?: ChatMessage[] },
+): TurnResult {
+  return makeTurnResult(session, replyText, simulatedActions, {
+    clinicName: opts?.clinicName,
+    maxParts: 2,
+    recentMessages: opts?.recentMessages,
+  });
+}
+
 function buildPlaygroundFallbackResult(
   opts: {
     session?: PlaygroundSessionInput;
     userMessage: string;
-    reason?: string;
+    userReply?: string;
+    internalReason?: string;
   },
 ): SimulateMessageResult {
   const state = opts.session?.state ?? "greeting";
-  const reply =
-    "Извините, ответ занял слишком много времени. Попробуйте короче сообщение или повторите через несколько секунд.";
+  const reply = opts.userReply ?? PLAYGROUND_BUSY_FALLBACK_TEXT;
   return {
     reply,
     parts: [reply],
@@ -1663,7 +1730,7 @@ function buildPlaygroundFallbackResult(
     humanTakeover: false,
     sessionData: opts.session?.data ?? {},
     mindMapNode: null,
-    simulatedActions: opts.reason ? [opts.reason] : [],
+    simulatedActions: opts.internalReason ? [`[internal] ${opts.internalReason}`] : [],
   };
 }
 
@@ -1675,17 +1742,54 @@ export class ChatbotService {
     options?: ProcessMessageOptions,
   ): Promise<string | null> {
     return withSessionLock(clinicId, phone, async () => {
-      const turn = await this.executeTurn(clinicId, phone, text, { ...options, dryRun: false });
-      if (!turn?.outbound) {
+      try {
+        const turn = await this.safeExecuteTurn(clinicId, phone, text, { ...options, dryRun: false });
+        if (!turn?.outbound) {
+          sendTypingToPatient(clinicId, phone, false).catch(() => {});
+          return null;
+        }
+        await saveSession(turn.session);
+        await deliverChatbotReply(clinicId, phone, turn.outbound, {
+          onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
+        });
+        return joinChatbotReply(turn.outbound);
+      } catch (err) {
+        logger.error({ err, clinicId, phone }, "[ChatbotService] processMessage failed — patient safe fallback");
         sendTypingToPatient(clinicId, phone, false).catch(() => {});
-        return null;
+        await sendOutboundReply(clinicId, phone, PATIENT_SAFE_FALLBACK_TEXT).catch((sendErr) =>
+          logger.error({ err: sendErr, clinicId, phone }, "[ChatbotService] failed to send patient safe fallback"),
+        );
+        return PATIENT_SAFE_FALLBACK_TEXT;
       }
-      await saveSession(turn.session);
-      await deliverChatbotReply(clinicId, phone, turn.outbound, {
-        onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
-      });
-      return joinChatbotReply(turn.outbound);
     });
+  }
+
+  /** Never throws — returns a safe fallback turn for patients and playground. */
+  private async safeExecuteTurn(
+    clinicId: string,
+    phone: string,
+    text: string,
+    options?: ProcessMessageOptions,
+  ): Promise<TurnResult | null> {
+    const dryRun = options?.dryRun ?? false;
+    try {
+      return await this.executeTurn(clinicId, phone, text, options);
+    } catch (err) {
+      logger.error(
+        { err, clinicId, phone, dryRun },
+        "[ChatbotService] executeTurn threw — returning safe fallback turn",
+      );
+      const session = await resolveSessionForErrorTurn(clinicId, phone, options?.sessionInput);
+      const replyText = dryRun ? PLAYGROUND_ERROR_FALLBACK_TEXT : PATIENT_SAFE_FALLBACK_TEXT;
+      const internalNote =
+        err instanceof Error ? err.message.slice(0, 160) : String(err).slice(0, 160);
+      return buildSafeErrorTurnResult(
+        session,
+        replyText,
+        dryRun ? [`[safe-fallback] ${internalNote}`] : [],
+        { recentMessages: options?.historyInput },
+      );
+    }
   }
 
   private async executeTurn(
@@ -3753,7 +3857,17 @@ export class ChatbotService {
       initGreeting?: boolean;
     },
   ): Promise<SimulateMessageResult> {
-    assertOpenRouterConfigured();
+    try {
+      assertOpenRouterConfigured();
+    } catch (err) {
+      logger.warn({ err, clinicId }, "[ChatbotService] Playground: OpenRouter not configured");
+      return buildPlaygroundFallbackResult({
+        session: opts?.session,
+        userMessage,
+        userReply: PLAYGROUND_NO_OPENROUTER_TEXT,
+        internalReason: "openrouter_not_configured",
+      });
+    }
 
     try {
       try {
@@ -3772,7 +3886,7 @@ export class ChatbotService {
       let raceResult: PlaygroundRaceResult;
       try {
         raceResult = await Promise.race([
-          this.executeTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
+          this.safeExecuteTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
             dryRun: true,
             sessionInput: opts?.session,
             historyInput: opts?.history,
@@ -3784,16 +3898,15 @@ export class ChatbotService {
           }),
         ]);
       } catch (turnErr) {
-        const turnMsg = turnErr instanceof Error ? turnErr.message : String(turnErr);
-        if (turnMsg.includes("OpenRouterTimeout") || turnMsg.includes("PLAYGROUND_TIMEOUT")) {
-          logger.warn({ clinicId, turnMsg }, "[ChatbotService] Playground turn timed out");
-          return buildPlaygroundFallbackResult({
-            session: opts?.session,
-            userMessage,
-            reason: "timeout",
-          });
-        }
-        throw turnErr;
+        logger.warn({ err: turnErr, clinicId }, "[ChatbotService] Playground turn failed");
+        return buildPlaygroundFallbackResult({
+          session: opts?.session,
+          userMessage,
+          userReply: isRecoverableLlmError(turnErr)
+            ? PLAYGROUND_ERROR_FALLBACK_TEXT
+            : PLAYGROUND_BUSY_FALLBACK_TEXT,
+          internalReason: "turn_error",
+        });
       }
 
       if (raceResult.timedOut) {
@@ -3801,7 +3914,7 @@ export class ChatbotService {
         return buildPlaygroundFallbackResult({
           session: opts?.session,
           userMessage,
-          reason: "timeout",
+          internalReason: "timeout",
         });
       }
 
@@ -3819,7 +3932,7 @@ export class ChatbotService {
         };
       }
 
-      const resolved = turn.outbound ?? replyFromText("...");
+      const resolved = turn.outbound ?? replyFromText(PLAYGROUND_ERROR_FALLBACK_TEXT);
       return {
         ...formatSimulateMessageResult(
           { ...turn, outbound: resolved },
@@ -3828,24 +3941,12 @@ export class ChatbotService {
         ),
       };
     } catch (err) {
-      if (err instanceof InsufficientAiCreditsError || err instanceof OpenRouterAiFailedError) {
-        throw err;
-      }
-      const errMsg = err instanceof Error ? err.message : String(err);
-      if (
-        errMsg.includes("OpenRouter") ||
-        errMsg.includes("openrouter") ||
-        errMsg.includes("OpenRouterTimeout") ||
-        errMsg.includes("429") ||
-        errMsg.includes("402")
-      ) {
-        throw new OpenRouterAiFailedError();
-      }
-      logger.error({ err, clinicId }, "[ChatbotService] simulateMessage failed");
+      logger.error({ err, clinicId }, "[ChatbotService] simulateMessage failed — playground safe fallback");
       return buildPlaygroundFallbackResult({
         session: opts?.session,
         userMessage,
-        reason: "error",
+        userReply: PLAYGROUND_ERROR_FALLBACK_TEXT,
+        internalReason: err instanceof Error ? err.message.slice(0, 80) : "error",
       });
     }
   }

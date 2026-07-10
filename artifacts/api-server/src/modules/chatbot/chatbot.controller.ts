@@ -308,12 +308,12 @@ router.post(
   "/test-message",
   roleGuard("owner", "admin"),
   async (req: Request, res: Response, next: NextFunction) => {
-    const parsed = testMessageSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
-    }
-    const result = await service
-      .testMessage(
+    try {
+      const parsed = testMessageSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+      }
+      const result = await service.testMessage(
         req.user!.clinicId,
         parsed.data.userMessage,
         parsed.data.history,
@@ -330,10 +330,11 @@ router.post(
           scenario: parsed.data.scenario,
           initGreeting: parsed.data.initGreeting,
         },
-      )
-      .catch(next);
-    if (!result) return;
-    res.json({ success: true, data: result });
+      );
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
   },
 );
 
