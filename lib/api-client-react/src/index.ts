@@ -25,7 +25,6 @@ import type {
   UseQueryOptions,
 } from "@tanstack/react-query";
 import type {
-  MySalaryResponse,
   UpdateUserStatusRequest,
   UsersListResponse,
   Patient,
@@ -453,7 +452,7 @@ export const useTestChatbotMessage = <TError = unknown>(options?: {
 
 // ─── Custom: payroll ──────────────────────────────────────────────────────────
 
-export type SalaryType = "fixed" | "commission" | "fixed_plus_commission";
+export type SalaryType = "fixed" | "commission" | "fixed_plus_commission" | "hourly";
 export type PayrollStatus = "pending" | "approved" | "paid";
 
 export interface SalarySettings {
@@ -846,18 +845,56 @@ export const useUpdateUserStatus = <TError = unknown>(options?: {
   });
 
 // ─── Custom: get my salary ─────────────────────────────────────────────────────
-export const getMySalary = (options?: RequestInit): Promise<MySalaryResponse> =>
-  customFetch<MySalaryResponse>("/api/payroll/my-salary", {
-    method: "GET",
-    ...options,
-  });
 
-export const useGetMySalary = <TError = unknown>(options?: {
-  query?: UseQueryOptions<MySalaryResponse, TError>;
-}) =>
+export interface MySalaryData {
+  salaryType: SalaryType;
+  fixedAmount: number;
+  commissionPercent: number;
+  revenueThisMonth: number;
+  workHours: number;
+  calculatedSalary: number;
+  approvedAmount: number | null;
+  status: PayrollStatus;
+  period: { year: number; month: number };
+  userName?: string | null;
+}
+
+export interface MySalaryResponse {
+  success: boolean;
+  data: MySalaryData | null;
+}
+
+export type MySalaryParams = {
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export const getMySalary = (
+  params?: MySalaryParams,
+  options?: RequestInit,
+): Promise<MySalaryResponse> => {
+  const search = new URLSearchParams();
+  if (params?.dateFrom) search.set("dateFrom", params.dateFrom);
+  if (params?.dateTo) search.set("dateTo", params.dateTo);
+  const qs = search.toString();
+  return customFetch<MySalaryResponse>(
+    `/api/payroll/my-salary${qs ? `?${qs}` : ""}`,
+    {
+      method: "GET",
+      ...options,
+    },
+  );
+};
+
+export const useGetMySalary = <TError = unknown>(
+  params?: MySalaryParams,
+  options?: {
+    query?: Omit<UseQueryOptions<MySalaryResponse, TError>, "queryKey" | "queryFn">;
+  },
+) =>
   useQuery<MySalaryResponse, TError>({
-    queryKey: ["/api/payroll/my-salary"],
-    queryFn: ({ signal }) => getMySalary({ signal }),
+    queryKey: ["/api/payroll/my-salary", params?.dateFrom ?? null, params?.dateTo ?? null],
+    queryFn: ({ signal }) => getMySalary(params, { signal }),
     ...options?.query,
   });
 

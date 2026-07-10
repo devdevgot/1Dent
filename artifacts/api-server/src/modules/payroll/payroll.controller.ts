@@ -183,14 +183,36 @@ router.get(
   },
 );
 
+const mySalaryDateSchema = z.object({
+  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+
 router.get(
   "/my-salary",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const parsed = mySalaryDateSchema.safeParse(req.query);
+      if (!parsed.success) {
+        throw new ValidationError("Invalid date range");
+      }
+
       const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      const salary = await repo.getMySalary(req.user!.userId, req.user!.clinicId, year, month);
+      const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+      const defaultTo = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      const dateFrom = parsed.data.dateFrom
+        ? new Date(`${parsed.data.dateFrom}T00:00:00`)
+        : defaultFrom;
+      const dateTo = parsed.data.dateTo
+        ? new Date(`${parsed.data.dateTo}T00:00:00`)
+        : defaultTo;
+
+      if (dateFrom > dateTo) {
+        throw new ValidationError("dateFrom must be before dateTo");
+      }
+
+      const salary = await repo.getMySalary(req.user!.userId, req.user!.clinicId, dateFrom, dateTo);
       res.json({ success: true, data: salary });
     } catch (err) {
       next(err);

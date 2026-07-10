@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { HomeServiceTiles, HomePromoBanners } from "@/components/dashboard/home-services";
+import { MySalaryCard } from "@/components/dashboard/my-salary-card";
+import type { FilterPreset } from "@/components/dashboard/owner-dashboard-shared";
 import { SITE } from "@/config/site";
 import "@/styles/dashboard.css";
 
@@ -19,6 +21,7 @@ function getClinicalDashboardTitle(role: string | undefined): string {
 
 export default function DoctorDashboard() {
   const { user } = useAuthStore();
+  const [salaryPeriod, setSalaryPeriod] = useState<FilterPreset>("today");
 
   useEffect(() => {
     document.title = getClinicalDashboardTitle(user?.role);
@@ -33,6 +36,11 @@ export default function DoctorDashboard() {
       <div className="mt-3">
         <HomePromoBanners />
       </div>
+
+      <MySalaryCard
+        listPreset={salaryPeriod}
+        onListPresetChange={setSalaryPeriod}
+      />
     </div>
   );
 }
