@@ -210,7 +210,7 @@ export function defaultPauses(parts: string[]): number[] {
 
 export function estimateTypingPause(previousPart: string): number {
   const len = previousPart.length;
-  return Math.min(2800, Math.max(700, 500 + len * 28));
+  return Math.min(800, Math.max(300, 200 + len * 10));
 }
 
 const MARKETING_SENTENCE_RE =
