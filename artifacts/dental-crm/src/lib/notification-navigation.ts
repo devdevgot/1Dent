@@ -90,7 +90,9 @@ export function getNotificationTarget(
       }
 
       if (kind === "ai_credits_exhausted") {
-        return { href: "/ai-credits" };
+        return role === "owner"
+          ? { href: "/ai-credits" }
+          : { href: getRoleDashboardPath(role) };
       }
 
       if (patientId) {

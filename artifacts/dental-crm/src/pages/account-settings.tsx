@@ -346,13 +346,15 @@ export default function AccountSettings() {
                 </div>
               </IosGroupRow>
 
-              <IosGroupRow onClick={() => setLocation("/ai-credits")}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <SettingsRowIcon icon={Sparkles} className="bg-[#f59e0b] text-white" />
-                  <span className="text-sm">{t("nav.aiCredits")}</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
-              </IosGroupRow>
+              {user?.role === "owner" && (
+                <IosGroupRow onClick={() => setLocation("/ai-credits")}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <SettingsRowIcon icon={Sparkles} className="bg-[#f59e0b] text-white" />
+                    <span className="text-sm">{t("nav.aiCredits")}</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                </IosGroupRow>
+              )}
 
               {user?.role === "owner" && (
                 <IosGroupRow onClick={() => setLocation("/logs")}>
