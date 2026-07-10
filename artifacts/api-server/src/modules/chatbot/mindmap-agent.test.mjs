@@ -280,6 +280,40 @@ test("buildAgentOrchestratorPrompt: playground uses full script like WhatsApp", 
   assert.match(prompt, /ИДЕНТИЧНО реальному WhatsApp/i);
 });
 
+test("buildAgentOrchestratorPrompt: includes multi-message replyParts schema", async () => {
+  const { buildAgentOrchestratorPrompt } = await import("./chatbot-agent-prompt.ts");
+  const prompt = buildAgentOrchestratorPrompt({
+    clinicName: "Test Clinic",
+    channel: "playground",
+    script: {
+      currentNodeId: "step1-intro",
+      currentNodeLabel: "Intro",
+      currentNodeContent: "Приветствие",
+      currentFsmState: "greeting",
+      compactPath: "",
+      fullScript: "",
+      outgoingTransitions: "",
+    },
+    facts: { clinicName: "Test Clinic", nowContext: "now" },
+    fsmState: "greeting",
+  });
+  assert.match(prompt, /replyParts/);
+  assert.match(prompt, /удобное время/i);
+});
+
+test("parseChatbotAgentTurn: parses replyParts array", async () => {
+  const { parseChatbotAgentTurn } = await import("./chatbot-agent-parser.ts");
+  const turn = parseChatbotAgentTurn(
+    JSON.stringify({
+      reply: "Инфо об имплантах.",
+      replyParts: ["Подскажите удобное время для визита?"],
+      actions: [],
+    }),
+  );
+  assert.equal(turn?.reply, "Инфо об имплантах.");
+  assert.deepEqual(turn?.replyParts, ["Подскажите удобное время для визита?"]);
+});
+
 test("buildAgentFallbackReply: stays contextual on qualification", async () => {
   const { buildAgentFallbackReply } = await import("./chatbot-agent-orchestrator.ts");
   const reply = buildAgentFallbackReply({

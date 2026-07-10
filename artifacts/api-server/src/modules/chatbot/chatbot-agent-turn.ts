@@ -3,8 +3,9 @@ import { logger } from "../../lib/logger";
 import type { ChatbotSettings } from "@workspace/db";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatMessage, ManagerExample } from "./ai-classifier";
-import { mergeReply, appendToReply, replyFromText } from "./ai-classifier";
+import { mergeReply, appendToReply, replyFromText, joinChatbotReply } from "./ai-classifier";
 import type { ChatbotReply } from "./chatbot-reply";
+import { enrichReplyWithFsmFollowUp, replyFromAgentText } from "./chatbot-reply-enrich";
 import { buildAgentOrchestratorPrompt } from "./chatbot-agent-prompt";
 import { parseChatbotAgentTurn } from "./chatbot-agent-parser";
 import { buildScriptContextForAgent, assertAllowedTransition } from "./chatbot-agent-context";
@@ -25,8 +26,45 @@ import {
   resolveDeterministicNextNodeId,
 } from "./chatbot-agent-orchestrator";
 import { isPatientInquiry, isUsableClinicKnowledge } from "./clinic-knowledge.ts";
+import type { DoctorCandidate } from "../analytics/analytics.repository";
 
 type OutboundResponse = ChatbotReply | null;
+
+function buildEnrichContext(
+  deps: AgentTurnDeps,
+  state: ChatbotState,
+  data: ChatbotSessionData,
+  messageText: string,
+  branchJustSelected?: string | null,
+) {
+  return {
+    fsmState: state,
+    mindMapNodeId: data.activeMindMapNodeId,
+    sessionData: data,
+    clinicBranchNames: deps.clinicBranchNames,
+    messageText,
+    branchJustSelected,
+  };
+}
+
+function finalizeAgentReply(
+  agentReply: ChatbotReply,
+  ctx: ReturnType<typeof buildEnrichContext>,
+  toolResult: { suggestedDoctor?: DoctorCandidate | null; slotsAppendix?: string },
+  urgency?: string,
+): ChatbotReply {
+  let reply = enrichReplyWithFsmFollowUp(agentReply, ctx);
+
+  if (toolResult.suggestedDoctor && !joinChatbotReply(reply).includes(toolResult.suggestedDoctor.name)) {
+    reply = appendToReply(reply, buildDoctorPresentationFallback(toolResult.suggestedDoctor, urgency));
+  }
+
+  if (toolResult.slotsAppendix) {
+    reply = appendToReply(reply, toolResult.slotsAppendix);
+  }
+
+  return reply;
+}
 
 export interface AgentTurnDeps {
   clinicId: string;
@@ -233,13 +271,14 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     data = toolResult.data;
     state = deriveFsmStateFromAgent(data, toNode?.fsmState, toNode?.fsmState);
 
-    let reply = replyFromText(fallbackReply);
-    if (toolResult.suggestedDoctor) {
-      reply = mergeReply(reply, buildDoctorPresentationFallback(toolResult.suggestedDoctor, data.urgency));
-    }
-    if (toolResult.slotsAppendix) {
-      reply = appendToReply(reply, toolResult.slotsAppendix);
-    }
+    const branchJustSelected =
+      actions.some((a) => a.type === "set_branch") && data.selectedBranch ? data.selectedBranch : null;
+    const reply = finalizeAgentReply(
+      replyFromText(fallbackReply),
+      buildEnrichContext(deps, state, data, messageText, branchJustSelected),
+      toolResult,
+      data.urgency,
+    );
     if (dryRun) {
       noteAction(usedParseFallback ? "Agent JSON fallback — node-aware reply" : "Agent orchestrator fallback");
     }
@@ -341,18 +380,15 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     }
   }
 
-  let reply = replyFromText(agentTurn.reply);
+  const branchJustSelected =
+    mergedActions.some((a) => a.type === "set_branch") && data.selectedBranch ? data.selectedBranch : null;
 
-  if (toolResult.suggestedDoctor && !agentTurn.reply.includes(toolResult.suggestedDoctor.name)) {
-    reply = mergeReply(
-      reply,
-      buildDoctorPresentationFallback(toolResult.suggestedDoctor, data.urgency),
-    );
-  }
-
-  if (toolResult.slotsAppendix) {
-    reply = appendToReply(reply, toolResult.slotsAppendix);
-  }
+  const reply = finalizeAgentReply(
+    replyFromAgentText(agentTurn.reply, agentTurn.replyParts),
+    buildEnrichContext(deps, state, data, messageText, branchJustSelected),
+    toolResult,
+    data.urgency,
+  );
 
   if (toolResult.toolNotes.length > 0 && dryRun) {
     for (const note of toolResult.toolNotes) {

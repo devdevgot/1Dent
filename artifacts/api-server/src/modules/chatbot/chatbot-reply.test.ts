@@ -6,6 +6,10 @@ import {
   replyFromText,
   joinChatbotReply,
 } from "./chatbot-reply-format.ts";
+import {
+  enrichReplyWithFsmFollowUp,
+  replyFromAgentText,
+} from "./chatbot-reply-enrich.ts";
 
 describe("chatbot-reply", () => {
   it("parses valid multi-part JSON replies", () => {
@@ -77,5 +81,50 @@ describe("chatbot-reply", () => {
     );
 
     assert.deepEqual(reply.parts, ["Есть ли боль или дискомфорт?"]);
+  });
+
+  it("replyFromAgentText merges reply and replyParts", () => {
+    const reply = replyFromAgentText("Инфо об имплантах.", ["Подскажите удобное время для визита?"]);
+    assert.deepEqual(reply.parts, [
+      "Инфо об имплантах.",
+      "Подскажите удобное время для визита?",
+    ]);
+  });
+
+  it("enrichReplyWithFsmFollowUp appends visit time after service info", () => {
+    const enriched = enrichReplyWithFsmFollowUp(replyFromText("Имплантация требует консультации специалиста."), {
+      fsmState: "collect_problem",
+      sessionData: {},
+      clinicBranchNames: [],
+      messageText: "Хочу поставить имплант",
+    });
+    assert.equal(enriched.parts.length, 2);
+    assert.match(enriched.parts[1]!, /удобное время/i);
+  });
+
+  it("enrichReplyWithFsmFollowUp splits branch teaser and full list", () => {
+    const branches = ["ул. A 1", "ул. B 2", "ул. C 3", "ул. D 4"];
+    const enriched = enrichReplyWithFsmFollowUp(replyFromText("У нас есть 4 филиала в городе."), {
+      fsmState: "collect_qualification",
+      mindMapNodeId: "step2-branch",
+      sessionData: { qualificationPhase: "branch" },
+      clinicBranchNames: branches,
+      messageText: "хорошо",
+    });
+    assert.equal(enriched.parts.length, 2);
+    assert.match(enriched.parts[1]!, /1️⃣ ул\. A 1/);
+    assert.match(enriched.parts[1]!, /4️⃣ ул\. D 4/);
+  });
+
+  it("enrichReplyWithFsmFollowUp prepends branch thank-you after selection", () => {
+    const enriched = enrichReplyWithFsmFollowUp(replyFromText("Отличный выбор."), {
+      fsmState: "suggest_doctor",
+      sessionData: { selectedBranch: "ул. B 2" },
+      clinicBranchNames: ["ул. A 1", "ул. B 2"],
+      messageText: "2",
+      branchJustSelected: "ул. B 2",
+    });
+    assert.match(enriched.parts[0]!, /Спасибо/i);
+    assert.match(enriched.parts[0]!, /ул\. B 2/);
   });
 });

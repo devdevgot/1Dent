@@ -1600,6 +1600,13 @@ async function finalizeBookingAppointment(params: {
     ? `Запись успешно ПЕРЕНЕСЕНА. Подтверди: филиал ${branchToSave}, врач ${doctorName}, дата ${formattedDate}, услуга ${serviceName}. Контакт клиники — из материалов. Напомни взять удостоверение личности.`
     : `Запись ПОДТВЕРЖДЕНА. Повтори дату ${formattedDate}, время, адрес ${branchToSave}, услугу ${serviceName}, врача ${doctorName}. Контакт клиники — из материалов (сайт/настройки). Напомни взять удостоверение личности. Поблагодари. Спроси, остались ли вопросы.`;
 
+  const thankLine = data.isReschedule
+    ? "✅ Ваша запись успешно перенесена! Спасибо за обращение."
+    : "✅ Запись подтверждена! Спасибо, что выбрали нас.";
+  const detailsFallback = data.isReschedule
+    ? `📅 Время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nНе забудьте удостоверение личности. Будем ждать вас! 😊`
+    : `📅 Дата и время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nНе забудьте удостоверение личности. До встречи! 😊`;
+
   const aiDone = await generateChatbotResponse(
     up(promptState, { backendContext: summaryInstruction }),
     recentMessages,
@@ -1607,12 +1614,7 @@ async function finalizeBookingAppointment(params: {
     managerExamples,
   );
 
-  const response = mergeReply(
-    aiDone,
-    data.isReschedule
-      ? `✅ Ваша запись успешно перенесена!\n\n📅 Время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nНе забудьте удостоверение личности. Будем ждать вас! 😊`
-      : `✅ Запись подтверждена!\n\n📅 Дата и время: *${formattedDate}*\n👨‍⚕️ Врач: *${doctorName}*\n📍 Филиал: *${branchToSave}*\n\nНе забудьте удостоверение личности. До встречи! 😊`,
-  );
+  const response = appendToReply(mergeReply(aiDone, thankLine), detailsFallback);
 
   return { data, response };
 }
@@ -1738,7 +1740,7 @@ export class ChatbotService {
       await persistSession(session);
       return makeTurnResult(session, response, simulatedActions, {
         clinicName: resolvedClinicNameForReply,
-        maxParts: 2,
+        maxParts: 3,
         recentMessages: recentMessagesForReply,
       });
     };
