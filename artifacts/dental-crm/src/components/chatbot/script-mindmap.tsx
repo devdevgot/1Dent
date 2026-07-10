@@ -57,6 +57,7 @@ export interface ScriptMindMapNodeData extends Record<string, unknown> {
   isMainPath?: boolean;
   mainPathStep?: number;
   isBranch?: boolean;
+  compactLayout?: boolean;
 }
 
 export interface ScriptMindMapData {
@@ -84,6 +85,7 @@ function MindMapNodeComponent({ data, selected }: NodeProps) {
   const d = data as ScriptMindMapNodeData;
   const tone = getFsmTone(d.fsmState);
   const isBranch = d.isBranch ?? (!d.isRoot && !d.isMainPath);
+  const compact = d.compactLayout ?? false;
   const fsmLabel = d.fsmState
     ? CHATBOT_FSM_STATES.find((s) => s.value === d.fsmState)?.label ?? d.fsmState
     : null;
@@ -112,7 +114,8 @@ function MindMapNodeComponent({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "group relative w-[264px] min-h-[96px] rounded-[18px] transition-all duration-200 select-none cursor-pointer overflow-hidden",
+        "group relative w-[264px] rounded-[18px] transition-all duration-200 select-none cursor-pointer overflow-hidden",
+        compact ? "min-h-[68px]" : "min-h-[96px]",
         selected && "scale-[1.01]",
         !selected && !isBranch && "hover:-translate-y-px",
       )}
@@ -136,22 +139,31 @@ function MindMapNodeComponent({ data, selected }: NodeProps) {
         style={{ backgroundColor: isBranch ? "#cbd5e1" : tone.accent }}
       />
 
-      <div className="px-3.5 py-3">
+      <div className={cn(compact ? "px-3 py-2" : "px-3.5 py-3")}>
         <div className="flex items-start gap-2.5">
           {d.isMainPath && d.mainPathStep != null && d.mainPathStep > 0 ? (
             <span
-              className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+              className={cn(
+                "mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full font-semibold",
+                compact ? "h-4 min-w-4 text-[9px]" : "h-5 min-w-5 text-[10px]",
+              )}
               style={{ backgroundColor: `${tone.accent}14`, color: tone.accent }}
             >
               {d.mainPathStep}
             </span>
           ) : d.isRoot ? (
-            <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-[#1f75fe]">
-              <Sparkles className="h-3 w-3" />
+            <span className={cn(
+              "mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-[#1f75fe]",
+              compact ? "h-4 w-4" : "h-5 w-5",
+            )}>
+              <Sparkles className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
             </span>
           ) : (
             <span
-              className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full"
+              className={cn(
+                "shrink-0 rounded-full",
+                compact ? "mt-1.5 h-1 w-1" : "mt-2 h-1.5 w-1.5",
+              )}
               style={{ backgroundColor: isBranch ? "#cbd5e1" : `${tone.accent}55` }}
             />
           )}
@@ -159,14 +171,15 @@ function MindMapNodeComponent({ data, selected }: NodeProps) {
           <div className="min-w-0 flex-1">
             <p
               className={cn(
-                "text-[13px] font-medium leading-snug line-clamp-2",
+                "font-medium leading-snug",
+                compact ? "text-[12px] line-clamp-1" : "text-[13px] line-clamp-2",
                 isBranch ? "text-[#64748b]" : d.isRoot ? "text-[#1f75fe]" : "text-[#0f172a]",
               )}
             >
               {d.label || <span className="font-normal italic text-[#94a3b8]">Без названия</span>}
             </p>
 
-            {fsmLabel && !isBranch && (
+            {fsmLabel && !isBranch && !compact && (
               <p className="text-[10px] font-medium mt-1" style={{ color: tone.text }}>
                 {fsmLabel}
               </p>
@@ -175,15 +188,18 @@ function MindMapNodeComponent({ data, selected }: NodeProps) {
             {d.content ? (
               <p
                 className={cn(
-                  "text-[11px] mt-1.5 leading-relaxed line-clamp-2",
-                  isBranch ? "text-[#94a3b8]" : "text-[#64748b]",
+                  "leading-relaxed",
+                  compact
+                    ? "text-[10px] mt-0.5 line-clamp-1 text-[#94a3b8]"
+                    : "text-[11px] mt-1.5 line-clamp-2",
+                  !compact && (isBranch ? "text-[#94a3b8]" : "text-[#64748b]"),
                 )}
               >
                 {d.content}
               </p>
-            ) : (
+            ) : !compact ? (
               <p className="text-[10px] text-[#94a3b8] mt-1.5 italic">Нажмите для настройки</p>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -431,10 +447,11 @@ export function ScriptMindMap({
             isMainPath,
             mainPathStep: isMainPath ? pathIndex : undefined,
             isBranch: !d.isRoot && !isMainPath,
+            compactLayout: !showAllBranches,
           },
         };
       }),
-    [allNodes, pathIdsForDisplay],
+    [allNodes, pathIdsForDisplay, showAllBranches],
   );
 
   const { nodes: displayNodes, edges: displayEdges } = useMemo(() => {
@@ -450,9 +467,9 @@ export function ScriptMindMap({
     const focusIds = showAllBranches ? undefined : focusSpineIds;
     requestAnimationFrame(() => {
       rf.fitView({
-        padding: showAllBranches ? 0.18 : 0.28,
+        padding: showAllBranches ? 0.16 : 0.08,
         minZoom: 0.45,
-        maxZoom: showAllBranches ? 0.85 : 1.15,
+        maxZoom: showAllBranches ? 0.9 : 1.35,
         duration: 280,
         nodes: focusIds?.map((id) => ({ id })),
       });

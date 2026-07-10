@@ -4,8 +4,12 @@ import { MarkerType } from "@xyflow/react";
 export const LAYOUT_NODE_W = 264;
 export const LAYOUT_NODE_H = 120;
 export const LAYOUT_H_GAP = 32;
-export const LAYOUT_V_GAP = 80;
-export const LAYOUT_SPINE_V_GAP = 112;
+export const LAYOUT_V_GAP = 52;
+/** Estimated compact card height in focus spine (matches MindMapNode compact styles). */
+export const LAYOUT_SPINE_NODE_H = 68;
+/** Vertical gap between spine nodes in focus mode. */
+export const LAYOUT_SPINE_GAP = 14;
+export const LAYOUT_SPINE_STEP = LAYOUT_SPINE_NODE_H + LAYOUT_SPINE_GAP;
 export const LAYOUT_MAX_COLS = 3;
 
 /** Meta nodes hidden in focus view for a cleaner spine. */
@@ -156,7 +160,7 @@ export function layoutFocusSpine(nodes: Node[], spineIds: string[]): Node[] {
       ...n,
       position: {
         x: -LAYOUT_NODE_W / 2,
-        y: idx * LAYOUT_SPINE_V_GAP,
+        y: idx * LAYOUT_SPINE_STEP,
       },
     };
   });
