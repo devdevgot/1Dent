@@ -216,6 +216,21 @@ export function estimateTypingPause(previousPart: string): number {
 const MARKETING_SENTENCE_RE =
   /скидк|акци|до\s+\d+\s*%|\d+\s*%\s*\(|бесплатн.*консультац|клиника открывается|напомню:\s*первичн|действует\s+с\s+\d/i;
 const ADMIN_HANDOFF_RE = /передаю.*администратор|передал.*администратор|свяжется с вами/i;
+const WAIT_FILLER_RE =
+  /минутк|секундочк|один момент|подождите|сейчас провер|проверю.*(?:свобод|время|доктор)|проверяю.*(?:слот|время|расписан)/i;
+
+/** Async wait phrases the model must not send — server validates slots synchronously. */
+export function isWaitFillerText(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (WAIT_FILLER_RE.test(t)) return true;
+  return t.length < 40 && /✨/.test(t) && /минут|момент|секунд/i.test(t);
+}
+
+/** Drop wait-only bubbles when a concrete slot result will be appended. */
+export function stripWaitFillerParts(parts: string[]): string[] {
+  return parts.filter((p) => !isWaitFillerText(p));
+}
 
 /** Whether text is promo/filler that should not be sent to the patient unsolicited. */
 export function isPromoOrFillerText(text: string): boolean {
