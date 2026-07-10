@@ -8,8 +8,8 @@ import { Check, Star } from "lucide-react";
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="bg-[#f1ede4] landing-section-sm px-6">
-      <div className="max-w-6xl mx-auto">
+    <section id="pricing" className="bg-[#f1ede4] landing-section-sm px-4 sm:px-6 overflow-hidden">
+      <div className="max-w-6xl mx-auto min-w-0">
         <motion.div {...fadeUp(0)} className="text-center mb-10">
           <div className="landing-badge landing-badge-light font-manrope mb-4">
             <CreditCard size={14} />
@@ -92,8 +92,10 @@ export function PricingSection() {
           })}
         </motion.div>
 
-        <motion.div {...fadeUp(0.1)}>
-          <PlanComparisonTable />
+        <motion.div {...fadeUp(0.1)} className="min-w-0 max-w-full">
+          <div className="landing-mockup-scroll -mx-1 px-1">
+            <PlanComparisonTable />
+          </div>
         </motion.div>
 
         <motion.p {...fadeUp(0.15)} className="text-center font-manrope text-[#94a3b8] text-sm mt-8">

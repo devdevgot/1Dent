@@ -25,7 +25,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="landing-page min-h-screen scroll-smooth">
+    <div className="landing-page min-h-screen scroll-smooth overflow-x-clip w-full max-w-[100vw]">
       <Navbar />
       <Hero />
       <PainPoints />

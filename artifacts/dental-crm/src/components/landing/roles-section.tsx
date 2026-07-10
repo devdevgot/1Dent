@@ -70,8 +70,8 @@ const roles = [
 
 export function RolesSection() {
   return (
-    <section className="bg-white landing-section-sm px-6">
-      <div className="max-w-7xl mx-auto">
+    <section className="bg-white landing-section-sm px-4 sm:px-6 overflow-hidden">
+      <div className="max-w-7xl mx-auto min-w-0">
         <motion.div {...fadeUp(0)} className="text-center mb-6">
           <div className="landing-badge landing-badge-primary font-manrope mb-6">
             <ShieldCheck size={14} />

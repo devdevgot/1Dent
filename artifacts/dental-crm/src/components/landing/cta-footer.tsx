@@ -39,7 +39,7 @@ export function CtaFooter() {
 
   return (
     <>
-      <section id="contact" className="bg-[var(--dark-bg)] landing-section-sm px-6 relative overflow-hidden">
+      <section id="contact" className="bg-[var(--dark-bg)] landing-section-sm px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none landing-dark-grid" />
         <div className="absolute top-0 left-1/3 w-96 h-96 rounded-full filter blur-[140px] opacity-100 pointer-events-none landing-dark-glow-blue" />
         <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full filter blur-[120px] opacity-100 pointer-events-none landing-dark-glow-purple" />
@@ -187,7 +187,7 @@ export function CtaFooter() {
         </div>
       </section>
 
-      <footer className="bg-[#faf8f4] border-t border-[#e8e3d9] px-6 py-12 landing-footer-offset">
+      <footer className="bg-[#faf8f4] border-t border-[#e8e3d9] px-4 sm:px-6 py-12 landing-footer-offset">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
           <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] rounded-lg">
             <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />

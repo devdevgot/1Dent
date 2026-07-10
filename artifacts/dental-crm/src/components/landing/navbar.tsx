@@ -42,7 +42,7 @@ export function Navbar() {
         aria-hidden
       />
 
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between min-w-0">
         <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] focus-visible:ring-offset-2 rounded-lg">
           <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />
         </Link>

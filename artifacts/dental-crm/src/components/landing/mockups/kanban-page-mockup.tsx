@@ -41,17 +41,17 @@ const VISIBLE_COLUMNS = KANBAN_COLUMNS.slice(0, 3);
 export function KanbanPageMockup() {
   return (
     <PagePreviewFrame title="Пациенты — Канбан">
-      <div className="flex gap-2 p-3 overflow-hidden bg-[#faf8f4] min-h-[220px]">
-        {VISIBLE_COLUMNS.map((col) => {
-          const patient = MOCK_PATIENTS.find((p) => p.status === col.id);
-          if (!patient) return null;
+      <div className="landing-mockup-scroll p-3 bg-[#faf8f4] min-h-[200px]">
+        <div className="flex gap-2 w-max sm:w-full min-w-full">
+          {VISIBLE_COLUMNS.map((col) => {
+            const patient = MOCK_PATIENTS.find((p) => p.status === col.id);
+            if (!patient) return null;
 
-          return (
-            <div key={col.id} className="flex-1 min-w-0">
-              <div className={`text-[9px] font-semibold px-2 py-1 rounded-lg mb-2 truncate ${col.headerColor}`}>
-                {col.label}
-              </div>
-              <div className="scale-[0.92] origin-top-left w-[108%]">
+            return (
+              <div key={col.id} className="w-[132px] sm:flex-1 sm:min-w-0 sm:w-auto shrink-0 sm:shrink">
+                <div className={`text-[9px] font-semibold px-2 py-1 rounded-lg mb-2 truncate ${col.headerColor}`}>
+                  {col.label}
+                </div>
                 <PatientCardView
                   patient={patient}
                   progress={
@@ -61,9 +61,9 @@ export function KanbanPageMockup() {
                   }
                 />
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </PagePreviewFrame>
   );

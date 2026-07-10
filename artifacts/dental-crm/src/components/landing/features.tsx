@@ -92,8 +92,8 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="bg-white landing-section-sm px-6">
-      <div className="max-w-6xl mx-auto">
+    <section id="features" className="bg-white landing-section-sm px-4 sm:px-6 overflow-hidden">
+      <div className="max-w-6xl mx-auto min-w-0">
         <motion.div {...fadeUp(0)} className="text-center mb-12">
           <div className="landing-badge landing-badge-primary font-manrope mb-4">
             <Zap size={14} />
@@ -112,7 +112,7 @@ export function Features() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-30px" }}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 min-w-0"
         >
           {features.map((f) => {
             const Mockup = f.mockup;
@@ -120,7 +120,7 @@ export function Features() {
               <motion.div
                 key={f.label}
                 variants={staggerChildVariants}
-                className="landing-card overflow-hidden flex flex-col"
+                className="landing-card overflow-hidden flex flex-col min-w-0"
               >
                 <div className="p-4 pb-2">
                   <div
@@ -132,7 +132,7 @@ export function Features() {
                   </div>
                   <p className="text-sm font-manrope text-[#64748b] leading-snug">{f.desc}</p>
                 </div>
-                <div className="mt-auto px-2 pb-2">
+                <div className="mt-auto px-2 pb-2 min-w-0 max-w-full">
                   <Mockup />
                 </div>
               </motion.div>

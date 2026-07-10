@@ -8,9 +8,11 @@ const stages = PLAN_STAGES["p-1"]?.slice(0, 2) ?? [];
 export function TabletPageMockup() {
   return (
     <PagePreviewFrame title="Slash Tablet">
-      <div className="p-2 bg-[#faf8f4] min-h-[220px]">
-        <div className="scale-[0.85] origin-top">
-          <TabletDentalChart teeth={patient.teeth} selectedFdi={null} planFdis={new Set([16, 24])} />
+      <div className="p-2 bg-[#faf8f4] min-h-[200px]">
+        <div className="landing-mockup-scroll landing-mockup-fit mb-2">
+          <div className="min-w-[280px] sm:min-w-0 scale-[0.88] sm:scale-100 origin-top-left">
+            <TabletDentalChart teeth={patient.teeth} selectedFdi={null} planFdis={new Set([16, 24])} />
+          </div>
         </div>
         <div className="space-y-1 px-1">
           {stages.map((stage) => (

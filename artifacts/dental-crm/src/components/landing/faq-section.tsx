@@ -27,8 +27,8 @@ export function FaqSection() {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="bg-white landing-section-sm px-6">
-      <div className="max-w-2xl mx-auto">
+    <section id="faq" className="bg-white landing-section-sm px-4 sm:px-6 overflow-hidden">
+      <div className="max-w-2xl mx-auto min-w-0">
         <motion.div {...fadeUp(0)} className="text-center mb-8">
           <h2 className="landing-h3 font-manrope text-[#0f172a]">
             Частые вопросы

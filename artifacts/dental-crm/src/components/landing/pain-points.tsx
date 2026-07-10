@@ -27,8 +27,8 @@ const pains = [
 
 export function PainPoints() {
   return (
-    <section className="bg-[#faf8f4] landing-section-sm px-6">
-      <div className="max-w-5xl mx-auto">
+    <section className="bg-[#faf8f4] landing-section-sm px-4 sm:px-6 overflow-hidden">
+      <div className="max-w-5xl mx-auto min-w-0">
         <motion.div {...fadeUp(0)} className="text-center mb-16">
           <h2 className="landing-h2 font-manrope text-[#0f172a] mb-5">
             Стоматология без
@@ -53,7 +53,7 @@ export function PainPoints() {
               key={i}
               variants={staggerChildVariants}
               style={{ willChange: "transform, opacity" }}
-              className="bg-white p-8 flex flex-col gap-4 group hover:bg-[#faf8f4] transition-colors duration-300"
+              className="bg-white p-5 sm:p-8 flex flex-col gap-4 group hover:bg-[#faf8f4] transition-colors duration-300 min-w-0"
             >
               <span className="font-manrope font-extrabold text-5xl text-[var(--ds-border)] group-hover:text-red-100 transition-colors duration-300 leading-none select-none">
                 {pain.num}

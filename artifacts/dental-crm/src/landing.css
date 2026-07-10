@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap');
 
-/* ── Design tokens ───────────────────────────────────────────────────────── */
 .landing-page {
   --bg: #faf8f4;
   --surface: #ffffff;
@@ -38,6 +37,9 @@
   scroll-padding-top: 5rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+  max-width: 100%;
+  width: 100%;
 }
 
 .font-manrope {
@@ -102,6 +104,30 @@ html {
 .landing-section-sm {
   padding-top: 6rem;
   padding-bottom: 6rem;
+}
+
+@media (max-width: 640px) {
+  .landing-section,
+  .landing-section-sm {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+
+  .landing-display {
+    font-size: clamp(2rem, 9vw, 2.75rem);
+    word-break: break-word;
+  }
+
+  .landing-h2 {
+    font-size: clamp(1.75rem, 7vw, 2.25rem);
+  }
+
+  .landing-badge {
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 /* ── Backgrounds ─────────────────────────────────────────────────────────── */
@@ -348,6 +374,9 @@ html {
   border: 1px solid var(--ds-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .landing-page-preview-header {
@@ -375,6 +404,31 @@ html {
 
 .landing-page-preview-body {
   overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Horizontal scroll inside mockups only — never page-level */
+.landing-mockup-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.landing-mockup-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.landing-mockup-scroll::-webkit-scrollbar-thumb {
+  background: var(--ds-border);
+  border-radius: 9999px;
+}
+
+.landing-mockup-fit {
+  overflow: hidden;
+  max-width: 100%;
+  width: 100%;
 }
 
 /* ── Scroll progress ───────────────────────────────────────────────────────── */
@@ -447,6 +501,7 @@ html {
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--ds-border);
   box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
+  max-width: 100vw;
 }
 
 .landing-footer-offset {

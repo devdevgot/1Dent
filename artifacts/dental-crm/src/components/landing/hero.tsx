@@ -16,8 +16,8 @@ export function Hero() {
       <div className="absolute inset-0 pointer-events-none landing-grid-bg" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[min(900px,100vw)] h-[480px] pointer-events-none landing-hero-glow" />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6">
-        <div className="grid lg:grid-cols-2 gap-10 items-center">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 min-w-0">
+        <div className="grid lg:grid-cols-2 gap-10 items-center min-w-0">
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
             <motion.a
               {...fadeUp(0.05)}
@@ -77,7 +77,7 @@ export function Hero() {
             </motion.div>
           </div>
 
-          <motion.div {...fadeUp(0.2)} className="w-full max-w-md mx-auto lg:max-w-none">
+          <motion.div {...fadeUp(0.2)} className="w-full min-w-0 max-w-md mx-auto lg:max-w-none">
             <KanbanPageMockup />
           </motion.div>
         </div>

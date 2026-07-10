@@ -66,8 +66,8 @@ export function AiSection() {
   }, [visibleCount]);
 
   return (
-    <section className="bg-[#faf8f4] landing-section-sm px-6">
-      <div className="max-w-6xl mx-auto">
+    <section className="bg-[#faf8f4] landing-section-sm px-4 sm:px-6 overflow-hidden">
+      <div className="max-w-6xl mx-auto min-w-0">
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <motion.div {...fadeUp(0)}>
             <div className="landing-badge landing-badge-primary font-manrope mb-5">
