@@ -11,8 +11,8 @@ import { customFetch } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { discountedItemPrice } from "@/components/dental-chart/treatment-stage-config";
 import { OneDentLogo } from "./onedent-logo";
+import { itemDisplayPrice } from "./tablet-plan-utils";
 import { TabletDentalChart } from "./tablet-dental-chart";
 import {
   CONDITION_META, fmtTenge, initials,
@@ -43,10 +43,6 @@ const STAGE_ICONS: Record<string, React.ElementType> = {
   orthopedics: Crown,
   other: Layers,
 };
-
-function itemDisplayPrice(item: PlanStage["items"][number]): number {
-  return discountedItemPrice(item.price, item.discount ?? 0);
-}
 
 export function TabletPresentationMode({
   patient,

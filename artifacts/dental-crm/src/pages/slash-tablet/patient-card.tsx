@@ -26,6 +26,7 @@ import {
   type ToothCondition,
 } from "./mock-data";
 import { apiPatientToTablet, apiPlanToStages, apiTeethToMap } from "./tablet-patient-adapter";
+import { itemDisplayPrice } from "./tablet-plan-utils";
 import { KANBAN_COLUMNS, SOURCE_LABELS, SOURCE_COLORS } from "@/lib/patient-utils";
 import { useTabletVideos, filterVideosByCondition, type TabletVideoItem } from "@/hooks/use-tablet-videos";
 import { PatientBroadcastHistory } from "@/components/kanban/patient-broadcast-history";
