@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createChatCompletion, PROMPT_COMPOSER_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
+import { getCachedChatbotPromptComposerConfig } from "../platform-config/platform-config.service";
 import type { ManagerExample } from "./ai-classifier";
 
 export const KNOWLEDGE_CONTEXT_MAX_CHARS = 20_000;
@@ -79,25 +80,12 @@ function buildFallbackComposedPrompt(inputs: ChatbotPromptComposeInputs): string
   ].join("\n");
 }
 
-const OPUS_META_PROMPT = `Ты составляешь SYSTEM PROMPT для AI-ассистента стоматологической клиники в WhatsApp.
-
-На входе — сырые данные клиники. Сформируй один связный system prompt на русском языке со структурой:
-- ROLE (кто ты, тон общения)
-- БАЗА ЗНАНИЙ (все факты из источников — сохрани адреса, цены, услуги, часы, телефоны)
-- ПРАЙС-ЛИСТ
-- ФИЛИАЛЫ
-- ВРАЧИ
-- СТИЛЬ МЕНЕДЖЕРА (из примеров — тон, длина, эмодзи)
-- ПРАВИЛА ДИАЛОГА (естественный диалог без жёстких этапов; не выдумывать факты; короткие ответы)
-
-ВАЖНО:
-- Не добавляй факты, которых нет во входных данных.
-- Не используй mind map, этапы воронки, FSM.
-- Промпт должен быть готов для вставки в LLM как system message.
-Верни ТОЛЬКО текст промпта, без markdown-обёрток и комментариев.`;
-
 export function invalidateComposedPromptCache(clinicId: string): void {
   composedPromptCache.delete(clinicId);
+}
+
+export function invalidateAllComposedPromptCaches(): void {
+  composedPromptCache.clear();
 }
 
 export async function getComposedChatbotPrompt(inputs: ChatbotPromptComposeInputs): Promise<string> {
@@ -127,11 +115,12 @@ export async function getComposedChatbotPrompt(inputs: ChatbotPromptComposeInput
   ].join("\n");
 
   try {
+    const opusMetaPrompt = getCachedChatbotPromptComposerConfig().opusMetaPrompt;
     const completion = await createChatCompletion(
       {
         model: PROMPT_COMPOSER_MODEL,
         messages: [
-          { role: "system", content: OPUS_META_PROMPT },
+          { role: "system", content: opusMetaPrompt },
           { role: "user", content: userPayload },
         ],
         temperature: 0.2,

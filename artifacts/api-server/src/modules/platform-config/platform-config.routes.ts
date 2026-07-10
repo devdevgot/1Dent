@@ -101,6 +101,35 @@ export function createPlatformConfigTmaRouter(): IRouter {
     }
   });
 
+  router.get("/platform/chatbot-prompt-composer", async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const config = await platformConfigService.getChatbotPromptComposerConfig();
+      res.json({ success: true, data: config });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.patch("/platform/chatbot-prompt-composer", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const schema = z.object({
+        opusMetaPrompt: z.string().min(100).max(16000),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return next(new ValidationError(parsed.error.errors[0]?.message ?? "Invalid body"));
+      }
+      const config = await platformConfigService.updateChatbotPromptComposerConfig(parsed.data);
+      const { invalidateAllComposedPromptCaches } = await import(
+        "../chatbot/chatbot-prompt-composer"
+      );
+      invalidateAllComposedPromptCaches();
+      res.json({ success: true, data: config });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.get("/platform/contract-templates", async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const config = await platformConfigService.getContractTemplatesConfig();
