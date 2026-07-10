@@ -5,7 +5,7 @@ import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatMessage } from "./ai-classifier";
 import { mergeReply, appendToReply, replyFromText, joinChatbotReply, conciseReply } from "./ai-classifier";
 import type { ChatbotReply } from "./chatbot-reply";
-import { replyFromAgentText } from "./chatbot-reply-enrich";
+import { replyFromAgentText, enrichReplyWithFsmFollowUp } from "./chatbot-reply-enrich";
 import { buildKnowledgeAgentPrompt } from "./chatbot-knowledge-agent-prompt";
 import { parseChatbotAgentTurn } from "./chatbot-agent-parser";
 import {
@@ -132,7 +132,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
         messages,
         response_format: { type: "json_object" },
         temperature: 0.35,
-        max_tokens: 560,
+        max_tokens: 720,
       },
       {
         timeoutMs: 28_000,
@@ -231,7 +231,15 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   }
 
   const reply = finalizeAgentReply(
-    replyFromAgentText(agentTurn.reply, agentTurn.replyParts),
+    enrichReplyWithFsmFollowUp(
+      replyFromAgentText(agentTurn.reply, agentTurn.replyParts),
+      {
+        fsmState: state,
+        sessionData: data,
+        clinicBranchNames,
+        messageText,
+      },
+    ),
     toolResult,
     data.urgency,
   );
