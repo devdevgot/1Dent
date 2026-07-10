@@ -109,7 +109,6 @@ export function PlaygroundTab() {
     setInput("");
     setSession(null);
     setHumanTakeover(false);
-    setActiveMindMapNode(null);
     setSimulatedActions([]);
   }, []);
 

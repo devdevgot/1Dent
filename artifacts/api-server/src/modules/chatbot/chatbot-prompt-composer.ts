@@ -332,5 +332,6 @@ export async function getComposedChatbotPrompt(inputs: ChatbotPromptComposeInput
     return persisted.prompt;
   }
 
-  return composeChatbotPromptWithOpus(inputs);
+  // Opus compose only via Knowledge tab — runtime uses fast deterministic fallback.
+  return buildFallbackComposedPrompt(inputs);
 }
