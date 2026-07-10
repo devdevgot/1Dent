@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
   AlertCircle, Clock, X, Upload, AlignLeft, ChevronDown, ChevronUp,
-  BookOpen, RefreshCw,
+  BookOpen, RefreshCw, Wand2,
 } from "lucide-react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import { cn } from "@/lib/utils";
 
 // ── Error message helper ──────────────────────────────────────────────────────
 function friendlyError(msg: string | null | undefined): string {
@@ -63,7 +64,13 @@ export function KnowledgeTab() {
   const [loading, setLoading] = useState(true);
   const [urlInput, setUrlInput] = useState("");
   const [addingUrl, setAddingUrl] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [refining, setRefining] = useState(false);
+  const [promptStatus, setPromptStatus] = useState<{ exists: boolean; refined: boolean; length: number }>({
+    exists: false,
+    refined: false,
+    length: 0,
+  });
   const [uploadingFile, setUploadingFile] = useState(false);
   const [fileModalOpen, setFileModalOpen] = useState(false);
   const [textModalOpen, setTextModalOpen] = useState(false);
@@ -75,16 +82,30 @@ export function KnowledgeTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const loadPromptStatus = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/knowledge/prompt-status");
+      setPromptStatus((res.data as { exists: boolean; refined: boolean; length: number }) ?? {
+        exists: false,
+        refined: false,
+        length: 0,
+      });
+    } catch {
+      // silent
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const res = await apiFetch("/api/knowledge");
       setSources((res.data.sources as KnowledgeSource[]) ?? []);
+      await loadPromptStatus();
     } catch {
       // silent
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadPromptStatus]);
 
   useEffect(() => {
     void load();
@@ -195,13 +216,15 @@ export function KnowledgeTab() {
     }
   };
 
-  const handleGenerate = async () => {
-    setGenerating(true);
+  const postPromptAction = async (
+    path: "/api/knowledge/compose-prompt" | "/api/knowledge/refine-prompt",
+    timeoutMs: number,
+  ) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 130_000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const token = getToken();
-      const res = await fetch(`${getBaseUrl()}/api/knowledge/generate`, {
+      const res = await fetch(`${getBaseUrl()}${path}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -213,24 +236,55 @@ export function KnowledgeTab() {
         const body = await res.json().catch(() => ({}));
         throw new Error(getApiErrorMessage({ data: body }, "Ошибка сервера"));
       }
-      const json = await res.json();
+      return await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const handleComposePrompt = async () => {
+    setComposing(true);
+    try {
+      await postPromptAction("/api/knowledge/compose-prompt", 100_000);
+      await loadPromptStatus();
       toast({
-        title: "Промпт обновлён",
-        description: "Claude Opus пересобрал system prompt чатбота из базы знаний.",
+        title: "Промпт создан",
+        description: "Claude Opus 4.8 собрал базовый system prompt. При желании нажмите «Доработать».",
       });
-      void json;
     } catch (err) {
       const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
       toast({
-        title: "Не удалось обновить промпт",
+        title: "Не удалось создать промпт",
         description: isAbort
           ? "Генерация заняла слишком много времени. Попробуйте ещё раз."
           : err instanceof Error ? err.message : "Попробуйте ещё раз.",
         variant: "destructive",
       });
     } finally {
-      clearTimeout(timer);
-      setGenerating(false);
+      setComposing(false);
+    }
+  };
+
+  const handleRefinePrompt = async () => {
+    setRefining(true);
+    try {
+      await postPromptAction("/api/knowledge/refine-prompt", 70_000);
+      await loadPromptStatus();
+      toast({
+        title: "Промпт доработан",
+        description: "Claude Sonnet 5 улучшил структуру и ясность промпта.",
+      });
+    } catch (err) {
+      const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
+      toast({
+        title: "Не удалось доработать промпт",
+        description: isAbort
+          ? "Доработка заняла слишком много времени. Попробуйте ещё раз."
+          : err instanceof Error ? err.message : "Попробуйте ещё раз.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefining(false);
     }
   };
 
@@ -458,26 +512,54 @@ export function KnowledgeTab() {
         </button>
       )}
 
-      {/* Generate button */}
-      <button
-        onClick={() => void handleGenerate()}
-        disabled={generating || readySources.length === 0}
-        className={cn(
-          "w-full flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold transition-all",
-          readySources.length > 0
-            ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8]"
-            : "bg-[#f1ede4] text-[#64748b] cursor-not-allowed",
+      {/* Prompt pipeline: Opus creates, Sonnet refines */}
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={() => void handleComposePrompt()}
+          disabled={composing || refining || readySources.length === 0}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold transition-all",
+            readySources.length > 0 && !composing && !refining
+              ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8]"
+              : "bg-[#f1ede4] text-[#64748b] cursor-not-allowed",
+          )}
+        >
+          {composing
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Создание промпта (Opus)…</>
+            : <><Sparkles className="h-4 w-4" /> Создать промпт</>
+          }
+        </button>
+
+        <button
+          onClick={() => void handleRefinePrompt()}
+          disabled={composing || refining || !promptStatus.exists || promptStatus.refined}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-medium transition-all border",
+            promptStatus.exists && !promptStatus.refined && !composing && !refining
+              ? "border-[#1f75fe] text-[#1f75fe] bg-white hover:bg-[#f0f7ff]"
+              : "border-[#e8e3d9] text-[#64748b] bg-white cursor-not-allowed",
+          )}
+        >
+          {refining
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Доработка (Sonnet)…</>
+            : promptStatus.refined
+              ? <><CheckCircle2 className="h-4 w-4" /> Промпт доработан</>
+              : <><Wand2 className="h-4 w-4" /> Доработать</>
+          }
+        </button>
+
+        {promptStatus.exists && (
+          <p className="text-xs text-center text-[#64748b]">
+            {promptStatus.refined
+              ? `Готовый промпт: ${promptStatus.length.toLocaleString("ru-RU")} символов (Opus + Sonnet)`
+              : `Черновик: ${promptStatus.length.toLocaleString("ru-RU")} символов — можно доработать Sonnet`}
+          </p>
         )}
-      >
-        {generating
-          ? <><Loader2 className="h-4 w-4 animate-spin" /> Составление промпта…</>
-          : <><Sparkles className="h-4 w-4" /> Обновить промпт чатбота</>
-        }
-      </button>
+      </div>
 
       {readySources.length === 0 && sources.length > 0 && pendingSources.length > 0 && (
         <p className="text-xs text-center text-[#64748b]">
-          Дождитесь обработки источников, затем нажмите «Обновить промпт»
+          Дождитесь обработки источников, затем нажмите «Создать промпт»
         </p>
       )}
       {sources.length === 0 && (

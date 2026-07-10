@@ -111,7 +111,7 @@ import {
   detectObjectionType,
 } from "./booking-script";
 import { retrieveRelevantKnowledge } from "./knowledge-retrieval";
-import { KNOWLEDGE_CONTEXT_MAX_CHARS, getComposedChatbotPrompt } from "./chatbot-prompt-composer";
+import { KNOWLEDGE_CONTEXT_MAX_CHARS, getComposedChatbotPrompt, type ChatbotPromptComposeInputs } from "./chatbot-prompt-composer";
 import {
   hasClinicKnowledge,
   isUsableClinicKnowledge,
@@ -4489,4 +4489,41 @@ export class ChatbotService {
       }
     }
   }
+}
+
+export async function loadChatbotPromptComposeInputs(
+  clinicId: string,
+): Promise<ChatbotPromptComposeInputs> {
+  const [
+    settings,
+    managerExamples,
+    knowledgeText,
+    priceListText,
+    doctorsList,
+    clinicNameRow,
+    clinicBranchNames,
+  ] = await Promise.all([
+    getSettings(clinicId),
+    getManagerExamples(clinicId),
+    loadKnowledgeContext(clinicId),
+    loadPriceListContext(clinicId),
+    loadDoctorsContext(clinicId),
+    db
+      .select({ name: clinicsTable.name })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, clinicId))
+      .limit(1)
+      .then((rows) => rows[0]?.name),
+    loadClinicBranchNames(clinicId),
+  ]);
+
+  return {
+    clinicId,
+    clinicName: resolveClinicName(settings, clinicNameRow),
+    knowledgeText,
+    priceListText,
+    officialBranches: clinicBranchNames,
+    doctorsList,
+    managerExamples,
+  };
 }
