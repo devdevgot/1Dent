@@ -1,6 +1,4 @@
 import { motion } from "framer-motion";
-import { ArrowDown, ArrowRight } from "lucide-react";
-import { Link } from "wouter";
 import { fadeUp, staggerParentVariants, staggerChildVariants } from "@/lib/landing-animations";
 import { SITE } from "@/config/site";
 
@@ -29,7 +27,7 @@ const pains = [
 
 export function PainPoints() {
   return (
-    <section className="bg-white landing-section px-6">
+    <section className="bg-[#faf8f4] landing-section-sm px-6">
       <div className="max-w-5xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-16">
           <h2 className="landing-h2 font-manrope text-[#0f172a] mb-5">
@@ -71,15 +69,10 @@ export function PainPoints() {
           ))}
         </motion.div>
 
-        <motion.div {...fadeUp(0.1)} className="mt-16 text-center">
-          <p className="font-manrope font-bold text-[#0f172a] text-2xl mb-6 tracking-tight">
+        <motion.div {...fadeUp(0.1)} className="mt-12 text-center">
+          <p className="font-manrope font-bold text-[#0f172a] text-xl mb-4 tracking-tight">
             {SITE.name} решает всё это одним инструментом
           </p>
-          <Link href="/register" className="landing-btn landing-btn-accent font-manrope mb-6">
-            Попробовать бесплатно
-            <ArrowRight size={16} />
-          </Link>
-          <ArrowDown size={20} className="text-[#94a3b8] mx-auto animate-bounce" aria-hidden />
         </motion.div>
       </div>
     </section>

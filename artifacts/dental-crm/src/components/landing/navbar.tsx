@@ -21,7 +21,6 @@ export function Navbar() {
   }, []);
 
   const links = [
-    { label: "Как работает", href: "#how-it-works" },
     { label: "Возможности", href: "#features" },
     { label: "Тарифы", href: "#pricing" },
     { label: "FAQ", href: "#faq" },
