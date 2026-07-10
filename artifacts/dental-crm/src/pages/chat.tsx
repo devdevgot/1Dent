@@ -30,16 +30,23 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
-import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
+import { WhatsAppConnectModal, WhatsAppIcon, WA_ICON_PATH, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { PageShell } from "@/components/layout/page-shell";
-import { PageHeader } from "@/components/layout/page-header";
+import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { ChatMessagesSkeleton } from "@/components/skeletons";
 import { toast } from "sonner";
+import { useChatNavigationStore } from "@/hooks/use-chat-navigation";
+import { usePageBack } from "@/hooks/use-page-back";
 
-const BRAND      = "#1f75fe";
-const CHAT_BG    = "#faf8f4";
+const BRAND = "#1f75fe";
 
-const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23d4cfc6' fill-opacity='0.35'/%3E%3C/svg%3E")`;
+function HeaderWhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="currentColor" aria-hidden>
+      <path d={WA_ICON_PATH} />
+    </svg>
+  );
+}
 
 const AVATAR_COLORS = [
   { bg: "#fde68a", text: "#92400e" },
@@ -523,23 +530,19 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         sticky={false}
         icon={<Avatar name={patient.name} size={36} />}
         badge={
-          <span className="flex items-center gap-1.5 shrink-0">
-            <WhatsAppIcon size={15} />
-            {hasRedAlert && (
-              <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
-                <AlertTriangle className="w-3 h-3" />
-                {t("chat.redAlert")}
-              </Badge>
-            )}
-          </span>
+          hasRedAlert ? (
+            <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
+              <AlertTriangle className="w-3 h-3" />
+              {t("chat.redAlert")}
+            </Badge>
+          ) : undefined
         }
         className="md:[&>div:first-child>button:first-child]:hidden md:[&>div:first-child>div:first-child]:hidden"
       />
 
       {/* ── Message feed ── */}
       <div
-        className="flex-1 overflow-y-auto overflow-x-hidden py-3 font-manrope"
-        style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
+        className="flex-1 overflow-y-auto overflow-x-hidden py-3 font-manrope bg-[#faf8f4]"
       >
         {isLoading && <ChatMessagesSkeleton />}
 
@@ -657,8 +660,10 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
 
 export default function ChatPage() {
   const { t }                                   = useTranslation();
+  const goBack                                  = usePageBack();
   const { user, clinic, setAuth }               = useAuthStore();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const consumePendingPatient = useChatNavigationStore((s) => s.consumePendingPatient);
   const [search, setSearch]                     = useState("");
   const [waStatus, setWaStatus]                 = useState<WaStatus | null>(null);
   const [waStatusLoading, setWaStatusLoading]   = useState(true);
@@ -679,6 +684,11 @@ export default function ChatPage() {
       // non-critical
     }
   }, []);
+
+  useEffect(() => {
+    const pendingPatientId = consumePendingPatient();
+    if (pendingPatientId) setSelectedPatientId(pendingPatientId);
+  }, [consumePendingPatient]);
 
   useEffect(() => {
     fetchActiveSessions();
@@ -768,7 +778,8 @@ export default function ChatPage() {
   const waConfigured = waStatus?.configured ?? false;
 
   return (
-    <PageShell className="flex overflow-hidden h-full w-full max-w-full" animate={false}>
+    <PageShell className="flex flex-col h-full overflow-hidden" animate={false}>
+      <div className="flex flex-1 min-h-0 overflow-hidden">
       <aside
         className={cn(
           "flex flex-col border-r border-[#e8e3d9] bg-[#faf8f4]",
@@ -777,21 +788,32 @@ export default function ChatPage() {
         )}
       >
         <PageHeader
-          title={t("chat.title")}
-          icon={<WhatsAppIcon size={18} />}
-          sticky={false}
-          className="[&>div:first-child>div:first-child]:hidden"
+          title={t("nav.chat")}
+          onBack={goBack}
+          icon={<HeaderWhatsAppIcon />}
+          subtitle={
+            !waStatusLoading && waConnected && waStatus?.phone
+              ? `+${waStatus.phone}`
+              : undefined
+          }
+          badge={
+            !waStatusLoading && waConnected ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#16a34a]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
+                онлайн
+              </span>
+            ) : !waStatusLoading && !waConnected ? (
+              <span className="text-xs font-medium text-[#d97706]">не подключён</span>
+            ) : undefined
+          }
           right={
             isOwner && (waConnected || waConfigured) ? (
-              <button
-                type="button"
+              <PageHeaderIconButton
                 onClick={handleOpenChangeModal}
                 title="Изменить WhatsApp"
-                className="flex items-center gap-1 text-xs text-[#94a3b8] hover:text-[#64748b] transition-colors px-2 py-1 rounded-xl hover:bg-[#f1ede4]"
               >
-                <Pencil className="w-3 h-3" />
-                <span>Изменить</span>
-              </button>
+                <Pencil className="w-4 h-4" />
+              </PageHeaderIconButton>
             ) : undefined
           }
           bottom={
@@ -801,13 +823,6 @@ export default function ChatPage() {
                   <p className="text-xs text-[#d97706] leading-relaxed">
                     WhatsApp не подключён. Обратитесь к Владельцу клиники, чтобы он подключил WhatsApp.
                   </p>
-                </div>
-              )}
-
-              {!waStatusLoading && waConnected && waStatus?.phone && (
-                <div className="flex items-center gap-1.5 mb-3 px-1">
-                  <div className="w-2 h-2 rounded-full bg-[var(--success)]" />
-                  <p className="text-xs text-[#64748b] font-mono">+{waStatus.phone}</p>
                 </div>
               )}
 
@@ -859,13 +874,8 @@ export default function ChatPage() {
         {selectedPatient ? (
           <ChatPanel patient={selectedPatient} onBack={handleBack} />
         ) : (
-          <div
-            className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center font-manrope"
-            style={{ backgroundColor: CHAT_BG, backgroundImage: DOT_PATTERN }}
-          >
-            <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg border border-[#e8e3d9] bg-[var(--ds-primary)]/10"
-            >
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center font-manrope bg-[#faf8f4]">
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-sm border border-[#e8e3d9] bg-[var(--ds-primary)]/10">
               <WhatsAppIcon size={44} color={BRAND} />
             </div>
             <div>
@@ -875,6 +885,7 @@ export default function ChatPage() {
           </div>
         )}
       </main>
+      </div>
 
       {isOwner && (
         <WhatsAppConnectModal

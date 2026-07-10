@@ -37,6 +37,7 @@ import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progr
 import { PatientTreatmentProgressBar } from "@/components/kanban/patient-treatment-progress-bar";
 import { PatientsTableSkeleton, KanbanSkeleton } from "@/components/skeletons";
 import { usePageBack } from "@/hooks/use-page-back";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 
 type PatientView = "list" | "kanban";
 type SortKey = "name" | "phone" | "dateOfBirth" | "status" | "source" | "createdAt" | "doctor";
@@ -389,6 +390,7 @@ export default function PatientsPage() {
   const urlSearch = useSearch();
   const [, navigate] = useLocation();
   const goBack = usePageBack();
+  const { isOverlay } = useOverlayNavigation();
   const queryClient = useQueryClient();
   const { isCreateOpen, setIsCreateOpen, setSelectedPatientId } = useKanbanStore();
 
@@ -446,10 +448,17 @@ export default function PatientsPage() {
       <PageHeader
         title={t("nav.patients")}
         onBack={goBack}
+        subtitle={
+          isOverlay
+            ? t("kanban.totalPatients", { count: allPatients.length })
+            : undefined
+        }
         badge={
-          <span className="bg-[var(--primary-light)] text-[#1f75fe] text-xs font-semibold px-2 py-0.5 rounded-full">
-            {allPatients.length}
-          </span>
+          !isOverlay && allPatients.length > 0 ? (
+            <span className="bg-[var(--primary-light)] text-[#1f75fe] text-xs font-semibold px-2 py-0.5 rounded-full">
+              {allPatients.length}
+            </span>
+          ) : undefined
         }
         right={
           <>

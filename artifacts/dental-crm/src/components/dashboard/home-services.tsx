@@ -1,7 +1,13 @@
 import type { ReactNode } from "react";
 import { Link } from "wouter";
-import { MENU_SERVICES, HOME_SERVICE_SLUGS } from "@/lib/menu-services";
+import { useTranslation } from "react-i18next";
+import {
+  MENU_SERVICES,
+  getHomeServiceSlugsForRole,
+} from "@/lib/menu-services";
 import { useOpenMenuService } from "@/components/layout/menu-service-overlay";
+import { useAuthStore } from "@/hooks/use-auth";
+import { isDoctorRole } from "@/lib/role-groups";
 
 /*
  * Reference-style home blocks (superapp marketplace):
@@ -54,27 +60,82 @@ function AllServicesTile() {
   );
 }
 
-const homeTiles = HOME_SERVICE_SLUGS.map((slug) => {
-  const service = MENU_SERVICES.find((s) => s.slug === slug);
-  if (!service) return null;
-  const labels: Record<string, string> = {
-    patients: "Пациенты",
-    users: "Сотрудники",
-    services: "Услуги",
-    analytics: "Аналитика",
-    financials: "Финансы",
-    chatbot: "ИИ-бот",
-    "contract-templates": "Договоры",
-  };
-  return {
-    slug,
-    label: labels[slug] ?? slug,
-    img: service.img,
-  };
-}).filter(Boolean) as { slug: string; label: string; img: string }[];
+type PromoBannerProps = {
+  slug: string;
+  title: ReactNode;
+  subtitle: string;
+  img: string;
+  variant?: "gradient" | "light";
+};
+
+function PromoBanner({ slug, title, subtitle, img, variant = "light" }: PromoBannerProps) {
+  const openService = useOpenMenuService();
+  const isGradient = variant === "gradient";
+
+  return (
+    <button
+      type="button"
+      onClick={() => openService(slug)}
+      className={
+        isGradient
+          ? "relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start scroll-ml-0 bg-gradient-to-br from-[#1f75fe] via-[#3b6ef7] to-[#4f46e5] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
+          : "relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-white border border-[#e8e3d9] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
+      }
+    >
+      {isGradient && (
+        <div className="absolute -top-8 -right-6 w-32 h-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+      )}
+      <div className="relative z-10 min-w-0">
+        <p
+          className={
+            isGradient
+              ? "text-white font-extrabold text-[17px] leading-[1.2]"
+              : "text-[#0f172a] font-extrabold text-[17px] leading-[1.2]"
+          }
+        >
+          {title}
+        </p>
+        <p
+          className={
+            isGradient
+              ? "text-white/70 text-xs font-medium mt-1"
+              : "text-[#64748b] text-xs font-medium mt-1"
+          }
+        >
+          {subtitle}
+        </p>
+      </div>
+      <img
+        src={img}
+        alt=""
+        aria-hidden
+        className={
+          isGradient
+            ? "relative z-10 w-[76px] h-[76px] object-contain drop-shadow-xl shrink-0"
+            : "relative z-10 w-[76px] h-[76px] object-contain drop-shadow-lg shrink-0"
+        }
+        draggable={false}
+      />
+    </button>
+  );
+}
 
 export function HomeServiceTiles() {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
   const openService = useOpenMenuService();
+
+  const homeTiles = getHomeServiceSlugsForRole(user?.role)
+    .map((slug) => {
+      const service = MENU_SERVICES.find((s) => s.slug === slug);
+      if (!service) return null;
+      return {
+        slug,
+        label: t(service.nameKey),
+        img: service.img,
+      };
+    })
+    .filter(Boolean) as { slug: string; label: string; img: string }[];
 
   return (
     <HomeScrollRow>
@@ -102,80 +163,126 @@ export function HomeServiceTiles() {
   );
 }
 
-export function HomePromoBanners() {
-  const openService = useOpenMenuService();
+function OwnerPromoBanners() {
+  return (
+    <HomeScrollRow snap>
+      <PromoBanner
+        slug="chatbot"
+        variant="gradient"
+        title={
+          <>
+            ИИ-бот
+            <br />
+            WhatsApp
+          </>
+        }
+        subtitle="Отвечает пациентам 24/7"
+        img="/icons/menu/chatbot.png"
+      />
+      <PromoBanner
+        slug="analytics"
+        title={
+          <>
+            Аналитика
+            <br />
+            клиники
+          </>
+        }
+        subtitle="Выручка, врачи, каналы"
+        img="/icons/menu/analytics.png"
+      />
+      <PromoBanner
+        slug="patients"
+        title={
+          <>
+            База
+            <br />
+            пациентов
+          </>
+        }
+        subtitle="Карточки, воронка, FDI-карта"
+        img="/icons/menu/patients.png"
+      />
+    </HomeScrollRow>
+  );
+}
+
+function ClinicalPromoBanners({ role }: { role: string | undefined }) {
+  const isDoctor = isDoctorRole(role);
 
   return (
     <HomeScrollRow snap>
-      {/* Gradient banner — AI chatbot */}
-      <button
-        type="button"
-        onClick={() => openService("chatbot")}
-        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start scroll-ml-0 bg-gradient-to-br from-[#1f75fe] via-[#3b6ef7] to-[#4f46e5] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
-      >
-        <div className="absolute -top-8 -right-6 w-32 h-32 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-        <div className="relative z-10 min-w-0">
-          <p className="text-white font-extrabold text-[17px] leading-[1.2]">
-            ИИ-бот<br />WhatsApp
-          </p>
-          <p className="text-white/70 text-xs font-medium mt-1">
-            Отвечает пациентам 24/7
-          </p>
-        </div>
-        <img
-          src="/icons/menu/chatbot.png"
-          alt=""
-          aria-hidden
-          className="relative z-10 w-[76px] h-[76px] object-contain drop-shadow-xl shrink-0"
-          draggable={false}
+      <PromoBanner
+        slug="schedule"
+        variant="gradient"
+        title={
+          isDoctor ? (
+            <>
+              Моё
+              <br />
+              расписание
+            </>
+          ) : (
+            <>
+              Расписание
+              <br />
+              клиники
+            </>
+          )
+        }
+        subtitle="Записи и процедуры на сегодня"
+        img="/icons/menu/schedule.png"
+      />
+      <PromoBanner
+        slug="patients"
+        title={
+          <>
+            База
+            <br />
+            пациентов
+          </>
+        }
+        subtitle="Карточки, воронка, FDI-карта"
+        img="/icons/menu/patients.png"
+      />
+      {isDoctor ? (
+        <PromoBanner
+          slug="doctor-analytics"
+          title={
+            <>
+              Моя
+              <br />
+              аналитика
+            </>
+          }
+          subtitle="Выручка и показатели"
+          img="/icons/menu/analytics.png"
         />
-      </button>
-
-      {/* Light banner — analytics */}
-      <button
-        type="button"
-        onClick={() => openService("analytics")}
-        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-white border border-[#e8e3d9] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
-      >
-        <div className="relative z-10 min-w-0">
-          <p className="text-[#0f172a] font-extrabold text-[17px] leading-[1.2]">
-            Аналитика<br />клиники
-          </p>
-          <p className="text-[#64748b] text-xs font-medium mt-1">
-            Выручка, врачи, каналы
-          </p>
-        </div>
-        <img
-          src="/icons/menu/analytics.png"
-          alt=""
-          aria-hidden
-          className="relative z-10 w-[76px] h-[76px] object-contain drop-shadow-lg shrink-0"
-          draggable={false}
+      ) : (
+        <PromoBanner
+          slug="services"
+          title={
+            <>
+              Прайс
+              <br />
+              услуг
+            </>
+          }
+          subtitle="Стоимость и категории"
+          img="/icons/menu/services.png"
         />
-      </button>
-
-      {/* Light banner — patients */}
-      <button
-        type="button"
-        onClick={() => openService("patients")}
-        className="relative shrink-0 w-[280px] h-[108px] rounded-3xl overflow-hidden snap-start bg-white border border-[#e8e3d9] flex items-center justify-between pl-5 pr-3 active:scale-[0.98] transition-transform text-left"
-      >
-        <div className="relative z-10 min-w-0">
-          <p className="text-[#0f172a] font-extrabold text-[17px] leading-[1.2]">
-            База<br />пациентов
-          </p>
-          <p className="text-[#64748b] text-xs font-medium mt-1">
-            Карточки, воронка, FDI-карта
-          </p>
-        </div>
-        <img
-          src="/icons/menu/patients.png"
-          alt=""
-          aria-hidden
-          className="relative z-10 w-[76px] h-[76px] object-contain drop-shadow-lg shrink-0"
-          draggable={false}
-        />
-      </button>
+      )}
     </HomeScrollRow>
   );
+}
+
+export function HomePromoBanners() {
+  const { user } = useAuthStore();
+  const role = user?.role;
+
+  if (role === "owner") {
+    return <OwnerPromoBanners />;
+  }
+
+  return <ClinicalPromoBanners role={role} />;
 }

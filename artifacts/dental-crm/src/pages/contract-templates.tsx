@@ -1,16 +1,16 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, startTransition } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListContractTemplates,
-  usePreviewContractTemplate,
   useUploadContractTemplate,
   useDeleteContractTemplate,
   useUpdateTemplateMappings,
   type ContractTemplate,
   type FieldMappingItem,
 } from "@workspace/api-client-react";
+import { DocumentPreviewDialog, buildTemplatePreviewUrl } from "@/components/contracts/document-preview-dialog";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Upload, Trash2, Loader2, AlertCircle, CheckCircle2, Plus,
@@ -155,42 +155,6 @@ function isSystemTemplate(t: ContractTemplate): boolean {
   return Boolean(t.isSystem ?? (t as ContractTemplate & { is_system?: boolean }).is_system);
 }
 
-function TemplatePreviewPanel({ templateId, open }: { templateId: string; open: boolean }) {
-  const { data, isLoading, isError } = usePreviewContractTemplate(open ? templateId : null);
-
-  if (!open) return null;
-  if (isLoading) {
-    return (
-      <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4] flex justify-center py-4">
-        <Loader2 className="w-4 h-4 text-[#94a3b8] animate-spin" />
-      </div>
-    );
-  }
-
-  const html = data?.data?.html;
-  if (isError || !html) {
-    return (
-      <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4]">
-        <p className="text-xs text-[#94a3b8] italic text-center py-2">Не удалось загрузить предпросмотр</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-3 pb-3 border-t border-[#e8e3d9] pt-2 bg-[#faf8f4]">
-      <p className="text-[10px] text-[#94a3b8] mb-2">Пример с тестовыми данными пациента</p>
-      <div
-        className="bg-white rounded-xl border border-[#e8e3d9] p-2.5 max-h-48 overflow-y-auto text-[11px] text-[#64748b] leading-relaxed prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    </div>
-  );
-}
-
-function SystemTemplatePreview({ templateId, open }: { templateId: string; open: boolean }) {
-  return <TemplatePreviewPanel templateId={templateId} open={open} />;
-}
-
 export default function ContractTemplatesPage() {
   const { user } = useAuthStore();
   const canEdit = user?.role === "owner" || user?.role === "admin";
@@ -202,6 +166,11 @@ export default function ContractTemplatesPage() {
   const [dragOver, setDragOver] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const openPreview = (id: string, name: string) => {
+    startTransition(() => setPreviewTarget({ id, name }));
+  };
 
   const { data, isLoading } = useListContractTemplates();
   const uploadMutation = useUploadContractTemplate();
@@ -443,25 +412,25 @@ export default function ContractTemplatesPage() {
                     {/* Category Header */}
                     <button
                       onClick={() => toggleCategory(category)}
-                      className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-[#faf8f4] transition-colors"
+                      className="w-full min-w-0 px-5 py-4 flex items-center justify-between gap-3 text-left hover:bg-[#faf8f4] transition-colors"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center text-[#1f75fe] shrink-0">
                           {isCatExpanded ? <FolderOpen className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#0f172a]">{category}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[#0f172a] truncate">{category}</p>
                           <p className="text-xs text-[#94a3b8] mt-0.5">{totalDocs} документов в пакете</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         {isCatExpanded ? <ChevronUp className="w-4 h-4 text-[#94a3b8]" /> : <ChevronDown className="w-4 h-4 text-[#94a3b8]" />}
                       </div>
                     </button>
 
                     {/* Subcategories & Files */}
                     {isCatExpanded && (
-                      <div className="border-t border-[#e8e3d9] bg-[#faf8f4]/50 px-5 py-4 space-y-4">
+                      <div className="border-t border-[#e8e3d9] bg-[#faf8f4]/50 px-5 py-4 space-y-4 min-w-0 overflow-hidden">
                         {Object.keys(subcategories).sort().map((subcategory) => {
                           const docs = subcategories[subcategory]!;
                           const subKey = `${category}:${subcategory}`;
@@ -472,10 +441,10 @@ export default function ContractTemplatesPage() {
                               {/* Subcategory Header */}
                               <button
                                 onClick={() => toggleSubcategory(subKey)}
-                                className="flex items-center gap-2 text-xs font-semibold text-[#64748b] hover:text-[#0f172a] transition-colors py-1 outline-none"
+                                className="flex items-center gap-2 min-w-0 max-w-full text-xs font-semibold text-[#64748b] hover:text-[#0f172a] transition-colors py-1 outline-none"
                               >
-                                {isSubExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                                <span>{subcategory}</span>
+                                {isSubExpanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+                                <span className="truncate">{subcategory}</span>
                                 <span className="bg-[#e8e3d9] text-[#64748b] px-1.5 py-0.2 rounded-full text-[10px]">
                                   {docs.length}
                                 </span>
@@ -483,28 +452,24 @@ export default function ContractTemplatesPage() {
 
                               {/* Document list under Subcategory */}
                               {isSubExpanded && (
-                                <div className="pl-4 space-y-2 border-l-2 border-dashed border-[#e8e3d9] ml-1.5 py-1">
-                                  {docs.map((tmpl) => {
-                                    const isExpanded = expandedId === tmpl.id;
-                                    return (
-                                      <div key={tmpl.id} className="bg-white rounded-xl border border-[#e8e3d9] overflow-hidden shadow-sm">
-                                        <div className="p-3 flex items-center justify-between gap-4">
-                                          <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="pl-4 space-y-2 border-l-2 border-dashed border-[#e8e3d9] ml-1.5 py-1 min-w-0">
+                                  {docs.map((tmpl) => (
+                                      <div key={tmpl.id} className="bg-white rounded-xl border border-[#e8e3d9] overflow-hidden shadow-sm min-w-0">
+                                        <div className="p-3 flex items-center gap-2 min-w-0">
+                                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                             <FileText className="w-4 h-4 text-[#d97706] shrink-0" />
                                             <p className="text-xs font-medium text-[#0f172a] truncate">{tmpl.name}</p>
                                           </div>
                                           <button
-                                            onClick={() => setExpandedId(isExpanded ? null : tmpl.id)}
+                                            onClick={() => openPreview(tmpl.id, tmpl.name)}
                                             className="p-1.5 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#f1ede4] transition-colors shrink-0"
                                             title="Предпросмотр с тестовыми данными"
                                           >
-                                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                            <Eye className="w-3.5 h-3.5" />
                                           </button>
                                         </div>
-                                        <SystemTemplatePreview templateId={tmpl.id} open={isExpanded} />
                                       </div>
-                                    );
-                                  })}
+                                    ))}
                                 </div>
                               )}
                             </div>
@@ -591,11 +556,11 @@ export default function ContractTemplatesPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => setExpandedId(isExpanded && !isEditing ? null : tmpl.id)}
+                          onClick={() => openPreview(tmpl.id, tmpl.name)}
                           className="p-2 rounded-xl text-[#94a3b8] hover:text-[#64748b] hover:bg-[#faf8f4] transition-colors"
-                          title={isExpanded && !isEditing ? "Скрыть" : "Предпросмотр с тестовыми данными"}
+                          title="Предпросмотр с тестовыми данными"
                         >
-                          {isExpanded && !isEditing ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          <Eye className="w-4 h-4" />
                         </button>
                         {canEdit && (
                           <button
@@ -611,16 +576,12 @@ export default function ContractTemplatesPage() {
                     </div>
 
                     {/* Expanded mapping view / editor */}
-                    {isExpanded && (
+                    {isExpanded && isEditing && (
                       <div className="px-4 pb-4 border-t border-[#e8e3d9] pt-2">
-                        {isEditing ? (
-                          <MappingEditor
-                            template={tmpl}
-                            onClose={() => { setEditingId(null); setExpandedId(null); }}
-                          />
-                        ) : (
-                          <TemplatePreviewPanel templateId={tmpl.id} open />
-                        )}
+                        <MappingEditor
+                          template={tmpl}
+                          onClose={() => { setEditingId(null); setExpandedId(null); }}
+                        />
                       </div>
                     )}
                   </div>
@@ -630,6 +591,14 @@ export default function ContractTemplatesPage() {
           )}
         </div>
       </div>
+
+      <DocumentPreviewDialog
+        open={previewTarget !== null}
+        onOpenChange={(open) => { if (!open) setPreviewTarget(null); }}
+        title="Предпросмотр договора"
+        description={previewTarget?.name ?? ""}
+        iframeSrc={previewTarget ? buildTemplatePreviewUrl(previewTarget.id) : null}
+      />
     </PageShell>
   );
 }

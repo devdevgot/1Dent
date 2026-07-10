@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import type { CreateActionLogInput } from "./logs.service";
 import { logsService } from "./logs.service";
+import { attachWorkerFailedHandler } from "../error-events/error-events.worker-capture";
 
 const QUEUE_NAME = "action-logs";
 
@@ -14,13 +15,15 @@ if (process.env.REDIS_URL) {
     defaultJobOptions: { attempts: 3, backoff: { type: "exponential", delay: 1000 } },
   });
 
-  new Worker<CreateActionLogInput>(
+  const actionLogWorker = new Worker<CreateActionLogInput>(
     QUEUE_NAME,
     async (job) => {
       await logsService.create(job.data);
     },
     { connection, concurrency: 5 },
   );
+
+  attachWorkerFailedHandler(actionLogWorker, QUEUE_NAME);
 
   console.info("[ActionLogQueue] BullMQ worker started");
 } else {

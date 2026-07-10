@@ -15,10 +15,10 @@ import {
   KZ_UTC_OFFSET_LABEL,
   parseAlmatyDatetime,
 } from "./almaty-time";
+import { detectServiceTypeFromKeywords } from "./service-type-keywords.ts";
 import {
-  HUMAN_MESSAGING_PROMPT,
-  parseChatbotReplyJson,
-  replyFromText,
+  CHAT_STYLE_PROMPT,
+  splitTextToReply,
   type ChatbotReply,
 } from "./chatbot-reply";
 
@@ -163,8 +163,20 @@ export async function classifyPatientRequest(
   message: string,
   history: ChatMessage[] = [],
 ): Promise<ClassificationResult> {
+  const keywordType = detectServiceTypeFromKeywords(message);
+  if (keywordType) {
+    return {
+      serviceType: keywordType,
+      urgency: /болит|ауыра|аура|срочн|қатты|катти|urgent|pain/i.test(message) ? "urgent" : "planned",
+      confidence: "high",
+      patientType: "new",
+      summary: message.slice(0, 100),
+    };
+  }
   return classifyWithRetry(message, history);
 }
+
+export { detectServiceTypeFromKeywords } from "./service-type-keywords.ts";
 
 // ─── AI response generator ───────────────────────────────────────────────────
 
@@ -204,7 +216,14 @@ function detectPatientLanguage(messages: ChatMessage[], currentMessage?: string)
 }
 
 export type { ChatbotReply } from "./chatbot-reply";
-export { joinChatbotReply, mergeReply, appendToReply, polishReply, replyFromText } from "./chatbot-reply";
+export {
+  joinChatbotReply,
+  mergeReply,
+  appendToReply,
+  polishReply,
+  replyFromText,
+  splitTextToReply,
+} from "./chatbot-reply";
 
 export async function generateChatbotResponse(
   systemPrompt: string,
@@ -216,7 +235,7 @@ export async function generateChatbotResponse(
   const fewShot: Array<{ role: "user" | "assistant"; content: string }> = [];
 
   const detectedLang = detectPatientLanguage(history, userMessage);
-  let finalSystemPrompt = `${systemPrompt}\n\n${HUMAN_MESSAGING_PROMPT}`;
+  let finalSystemPrompt = `${systemPrompt}\n\n${CHAT_STYLE_PROMPT}`;
   if (detectedLang === "kz") {
     finalSystemPrompt +=
       "\n\n⚠️ КРИТИЧЕСКИ ВАЖНО: Пациент пишет на КАЗАХСКОМ языке. " +
@@ -237,7 +256,7 @@ export async function generateChatbotResponse(
         "Ниже — примеры стиля общения менеджера клиники. Копируй их ТОН, длину ответов и использование эмодзи. " +
         "НЕ копируй из примеров цены, адреса, имена врачей и акции — эти факты бери только из материалов клиники.",
     });
-    for (const ex of fewShotExamples.slice(0, 8)) {
+    for (const ex of fewShotExamples.slice(0, 3)) {
       fewShot.push({ role: "user", content: ex.userMessage });
       fewShot.push({ role: "assistant", content: ex.managerResponse });
     }
@@ -257,8 +276,7 @@ export async function generateChatbotResponse(
         {
           model: CHAT_MODEL,
           max_tokens: maxTokens,
-          temperature: 0.4,
-          response_format: { type: "json_object" },
+          temperature: 0.55,
           messages,
         },
         { timeoutMs: 25_000, label: "generateChatbotResponse" },
@@ -266,22 +284,14 @@ export async function generateChatbotResponse(
       return response.choices[0]?.message?.content ?? "";
     };
 
-    let content = await runOnce(450);
+    let content = await runOnce(512);
     if (!content.trim()) {
       logger.warn({ model: CHAT_MODEL }, "[AIClassifier] Empty chatbot response — retrying with higher max_tokens");
-      content = await runOnce(750);
-    }
-
-    const parsed = parseChatbotReplyJson(content);
-    if (parsed) return parsed;
-
-    const loose = parseLlmJson<{ parts?: string[]; pausesMs?: number[] }>(content);
-    if (loose?.parts?.length) {
-      return parseChatbotReplyJson(JSON.stringify(loose));
+      content = await runOnce(768);
     }
 
     if (content.trim()) {
-      return replyFromText(content.trim());
+      return splitTextToReply(content.trim());
     }
 
     logger.warn(

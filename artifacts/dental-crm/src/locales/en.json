@@ -204,7 +204,7 @@
     "deleted": "Patient deleted"
   },
   "chat": {
-    "title": "WhatsApp Chat",
+    "title": "Chat",
     "searchPlaceholder": "Search patient...",
     "noPatients": "No patients found",
     "noMessages": "No messages. Start a conversation.",
@@ -243,7 +243,10 @@
     "title": "Notifications",
     "markAllRead": "Mark all read",
     "empty": "No notifications",
-    "redAlerts": "{{count}} alert"
+    "redAlerts": "{{count}} alert",
+    "unreadCount": "{{count}} unread",
+    "new": "New",
+    "read": "Read"
   },
   "patient": {
     "statusLabel": "Status",

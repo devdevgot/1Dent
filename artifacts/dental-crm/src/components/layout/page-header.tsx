@@ -33,19 +33,30 @@ export function PageHeader({
   const { isOverlay } = useOverlayNavigation();
 
   if (isOverlay) {
-    if (!right && !bottom) return null;
+    const hasToolbar = !!(subtitle || badge || right || (!subtitle && !badge && title && right));
+    if (!hasToolbar && !bottom) return null;
+
     return (
       <header
         className={cn(
-          "bg-white border-b border-[#e8e3d9] safe-area-top font-manrope shrink-0",
+          "bg-white border-b border-[#e8e3d9] font-manrope shrink-0",
           sticky && "sticky top-0 z-20",
-          shadow && "shadow-sm",
           className,
         )}
       >
-        {right ? (
-          <div className="flex items-center justify-end gap-1.5 px-4 pt-2 pb-2 min-h-[44px]">
-            {right}
+        {hasToolbar ? (
+          <div className="flex items-center gap-2 px-4 py-2.5 min-h-[48px]">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              {subtitle ? (
+                <p className="text-xs text-[#64748b] truncate">{subtitle}</p>
+              ) : !badge && title && right ? (
+                <p className="text-sm font-semibold text-[#0f172a] truncate">{title}</p>
+              ) : null}
+              {badge}
+            </div>
+            {right ? (
+              <div className="shrink-0 flex items-center gap-1.5">{right}</div>
+            ) : null}
           </div>
         ) : null}
         {bottom ? <div className="px-4 pb-3">{bottom}</div> : null}

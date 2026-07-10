@@ -285,13 +285,28 @@ export function KnowledgeTab({
         throw new Error(getApiErrorMessage({ data: body }, "Ошибка сервера"));
       }
       const json = await res.json();
-      const { primaryScript, repeatScript } = json.data as {
+      const { primaryScript, repeatScript, scriptMindMap, mindMapValidation } = json.data as {
         primaryScript: GeneratedScript;
         repeatScript: GeneratedScript;
+        scriptMindMap?: ScriptMindMapData;
+        mindMapValidation?: { warnings?: string[] };
       };
-      const mindMapData = convertGeneratedScriptsToMindMap(primaryScript, repeatScript);
-      onScriptsGenerated?.(mindMapData);
-      toast({ title: "Скрипты готовы!", description: "ИИ сгенерировал скрипты — смотрите в майнд-мэпе ниже" });
+
+      if (scriptMindMap?.nodes?.length) {
+        onScriptsGenerated?.(scriptMindMap);
+        const warnCount = mindMapValidation?.warnings?.length ?? 0;
+        toast({
+          title: "Скрипт сохранён",
+          description:
+            warnCount > 0
+              ? `Mind map (${scriptMindMap.nodes.length} узлов) сохранён в настройки чатбота. ${warnCount} предупреждений валидации.`
+              : `Mind map (${scriptMindMap.nodes.length} узлов) автоматически сохранён как главный скрипт.`,
+        });
+      } else {
+        const mindMapData = convertGeneratedScriptsToMindMap(primaryScript, repeatScript);
+        onScriptsGenerated?.(mindMapData);
+        toast({ title: "Скрипты готовы!", description: "ИИ сгенерировал скрипты — смотрите в майнд-мэпе ниже" });
+      }
     } catch (err) {
       const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
       toast({
@@ -651,14 +666,15 @@ export function KnowledgeAndScriptModal({
             </button>
           </div>
           <div
-            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white"
-            style={{ height: 320 }}
+            className="rounded-2xl border border-[#e8e3d9] overflow-hidden bg-white relative"
+            style={{ height: 480 }}
           >
             <ScriptMindMap
               key={`${open}-${liveMindMapData?.nodes?.length ?? 0}`}
               initialData={liveMindMapData}
               onSave={handleSaveMindMap}
               saveStatus={mindMapSaveStatus}
+              mode="inline"
             />
           </div>
         </div>

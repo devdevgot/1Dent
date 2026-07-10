@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, lazy, useEffect, useState } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -18,20 +18,21 @@ import { BottomTabBar } from "./bottom-tab-bar";
 import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
 import { MenuServiceOverlay } from "./menu-service-overlay";
 import { isGeoRestrictedPath } from "@/lib/geo-restriction";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 
-const GlobalSearch = lazy(() =>
+const GlobalSearch = lazyWithChunkRecovery(() =>
   import("./global-search").then((m) => ({ default: m.GlobalSearch })),
 );
-const NotificationBell = lazy(() =>
+const NotificationBell = lazyWithChunkRecovery(() =>
   import("./notification-bell").then((m) => ({ default: m.NotificationBell })),
 );
-const AppointmentReminderModal = lazy(() =>
+const AppointmentReminderModal = lazyWithChunkRecovery(() =>
   import("./appointment-reminder-modal").then((m) => ({ default: m.AppointmentReminderModal })),
 );
-const AttendanceCheckModal = lazy(() =>
+const AttendanceCheckModal = lazyWithChunkRecovery(() =>
   import("./attendance-check-modal").then((m) => ({ default: m.AttendanceCheckModal })),
 );
-const TabletScannerSlot = lazy(() =>
+const TabletScannerSlot = lazyWithChunkRecovery(() =>
   import("@/components/tablet/tablet-scanner-slot").then((m) => ({ default: m.TabletScannerSlot })),
 );
 

@@ -19,6 +19,8 @@ import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-heade
 import { PageShell } from "@/components/layout/page-shell";
 import { Bone } from "@/components/skeletons";
 import { seesClinicSchedule } from "@/lib/role-groups";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
+import { usePageBack } from "@/hooks/use-page-back";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -89,18 +91,26 @@ function fmtTime(iso: string) {
 }
 
 /* ─── Component ─────────────────────────────────────────────────────────────── */
-export default function DoctorScheduleDayPage() {
+export default function DoctorScheduleDayPage({
+  overlayDate,
+}: {
+  overlayDate?: string;
+} = {}) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [, navigate] = useLocation();
+  const { isOverlay, popStack } = useOverlayNavigation();
   const params = useParams<{ date: string }>();
 
-  const dateStr  = params.date ?? toStr(new Date());
-  const selDate  = parseDateParam(dateStr);
+  const dateStr = overlayDate ?? params.date ?? toStr(new Date());
+  const selDate = parseDateParam(dateStr);
 
   useEffect(() => {
-    if (!selDate) navigate("/schedule", { replace: true });
-  }, [selDate, navigate]);
+    if (!selDate) {
+      if (isOverlay) popStack();
+      else navigate("/schedule", { replace: true });
+    }
+  }, [selDate, navigate, isOverlay, popStack]);
 
   if (!selDate) return null;
 
@@ -112,6 +122,8 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const { user } = useAuthStore();
   const clinicWideSchedule = seesClinicSchedule(user?.role);
   const [, navigate] = useLocation();
+  const { isOverlay, pushDate } = useOverlayNavigation();
+  const goBack = usePageBack();
 
   const weekDays = getWeek(selDate);
   const todayStr = toStr(new Date());
@@ -190,15 +202,21 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const totalH = (END_H - START_H) * HOUR_H;
 
   /* Week nav */
+  const goToDate = (d: Date, replace = false) => {
+    const ds = toStr(d);
+    if (isOverlay) pushDate(ds, replace);
+    else navigate(`/schedule/${ds}`, { replace });
+  };
+
   const goWeekPrev = () => {
     const d = new Date(selDate);
     d.setDate(d.getDate() - 7);
-    navigate(`/schedule/${toStr(d)}`);
+    goToDate(d);
   };
   const goWeekNext = () => {
     const d = new Date(selDate);
     d.setDate(d.getDate() + 7);
-    navigate(`/schedule/${toStr(d)}`);
+    goToDate(d);
   };
 
   const appointmentSubtitle =
@@ -213,7 +231,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       <PageHeader
         title={`${DOW_FULL[selDate.getDay()]} — ${selDate.getDate()} ${MONTH_GEN[selDate.getMonth()]} ${selDate.getFullYear()} г.`}
         subtitle={appointmentSubtitle}
-        onBack={() => navigate("/schedule")}
+        onBack={goBack}
         backLabel={MONTH_FULL[selDate.getMonth()]}
         right={
           <button
@@ -240,7 +258,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                   <button
                     key={i}
                     type="button"
-                    onClick={() => navigate(`/schedule/${ds}`)}
+                    onClick={() => goToDate(d, true)}
                     className="flex flex-col items-center gap-0.5 py-1 rounded-xl transition-colors"
                   >
                     <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSel ? "text-[#1f75fe]" : "text-[#64748b]"}`}>

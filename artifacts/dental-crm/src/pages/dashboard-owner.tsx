@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useGetOwnerDashboardSummary } from "@workspace/api-client-react";
 import { Layers, ChevronRight } from "lucide-react";
@@ -11,8 +11,9 @@ import { OwnerProfitSheet } from "@/components/dashboard/owner-profit-sheet";
 import type { FilterPreset } from "@/components/dashboard/owner-dashboard-shared";
 import { SITE } from "@/config/site";
 import "@/styles/dashboard.css";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 
-const OnboardingWizard = lazy(() =>
+const OnboardingWizard = lazyWithChunkRecovery(() =>
   import("@/components/dashboard/onboarding-wizard").then((m) => ({ default: m.OnboardingWizard })),
 );
 

@@ -1,5 +1,5 @@
 import "@xyflow/react/dist/style.css";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -7,6 +7,7 @@ import {
   Controls,
   Handle,
   MarkerType,
+  MiniMap,
   Panel,
   Position,
   useEdgesState,
@@ -14,10 +15,31 @@ import {
   type Edge,
   type Node,
   type NodeProps,
+  type ReactFlowInstance,
 } from "@xyflow/react";
-import { CheckCircle2, GitBranch, Loader2, Plus, Save, Trash2, X } from "lucide-react";
+import {
+  CheckCircle2,
+  GitBranch,
+  LayoutGrid,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  Save,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CHATBOT_FSM_STATES } from "@/lib/chatbot-fsm-states";
+import {
+  filterFocusGraph,
+  getServiceBranchIds,
+  hasSavedMindMapPositions,
+  layoutMindMapPipeline,
+  LAYOUT_NODE_W,
+  LAYOUT_V_GAP,
+  resolveMainPathIds,
+} from "./mindmap-layout";
+import { MindMapNodePanel } from "./mindmap-node-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,193 +62,58 @@ export interface ScriptMindMapData {
   edges: { id: string; source: string; target: string; label?: string }[];
 }
 
-// ─── Layout algorithm ─────────────────────────────────────────────────────────
+export type ScriptMindMapMode = "inline" | "fullscreen";
 
-/** Card width used for layout spacing (cards grow vertically with content). */
-const NODE_W = 300;
-const NODE_H = 168;
-/** Horizontal gap between sibling branches. */
-const H_GAP = 40;
-/** Vertical gap between parent and child row. */
-const V_GAP = 56;
+// ─── Custom node (compact card — edit in side panel) ──────────────────────────
 
-function subtreeW(id: string, ch: Record<string, string[]>): number {
-  const kids = ch[id] ?? [];
-  if (!kids.length) return NODE_W;
-  return kids.reduce((s, k) => s + subtreeW(k, ch), 0) + (kids.length - 1) * H_GAP;
-}
-
-function placeNode(
-  id: string,
-  depth: number,
-  leftX: number,
-  ch: Record<string, string[]>,
-  pos: Record<string, { x: number; y: number }>,
-) {
-  const kids = ch[id] ?? [];
-  const y = depth * (NODE_H + V_GAP);
-  if (!kids.length) {
-    pos[id] = { x: leftX, y };
-    return;
-  }
-
-  const rowWidth = subtreeW(id, ch);
-  pos[id] = { x: leftX + Math.max(0, (rowWidth - NODE_W) / 2), y };
-
-  let curX = leftX;
-  for (const childId of kids) {
-    placeNode(childId, depth + 1, curX, ch, pos);
-    curX += subtreeW(childId, ch) + H_GAP;
-  }
-}
-
-function autoLayout(nodes: Node[], edges: Edge[]): Node[] {
-  if (!nodes.length) return nodes;
-  const ch: Record<string, string[]> = {};
-  const hasParent: Record<string, boolean> = {};
-  nodes.forEach((n) => { ch[n.id] = []; hasParent[n.id] = false; });
-  edges.forEach((e) => {
-    ch[e.source] = [...(ch[e.source] ?? []), e.target];
-    hasParent[e.target] = true;
-  });
-  const roots = nodes.filter((n) => !hasParent[n.id]).map((n) => n.id);
-  const pos: Record<string, { x: number; y: number }> = {};
-  let rootX = 0;
-  for (const rootId of roots) {
-    placeNode(rootId, 0, rootX, ch, pos);
-    rootX += subtreeW(rootId, ch) + H_GAP * 3;
-  }
-  return nodes.map((n) => ({ ...n, position: pos[n.id] ?? n.position }));
-}
-
-// ─── Context ──────────────────────────────────────────────────────────────────
-
-type MindMapCbs = {
-  addChild: (parentId: string) => void;
-  fork: (siblingId: string) => void;
-  remove: (id: string) => void;
-  update: (id: string, label: string, content: string, fsmState?: string) => void;
-};
-const MindMapCtx = createContext<MindMapCbs | null>(null);
-const useMindMap = () => useContext(MindMapCtx)!;
-
-// ─── Custom node ──────────────────────────────────────────────────────────────
-
-function MindMapNodeComponent({ id, data }: NodeProps) {
+function MindMapNodeComponent({ id, data, selected }: NodeProps) {
   const d = data as ScriptMindMapNodeData;
-  const [editing, setEditing] = useState(false);
-  const [label, setLabel] = useState(d.label);
-  const [content, setContent] = useState(d.content);
-  const [fsmState, setFsmState] = useState(d.fsmState ?? "");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { addChild, fork, remove, update } = useMindMap();
-
-  const commit = () => {
-    setEditing(false);
-    update(id, label, content, fsmState || undefined);
-  };
+  const fsmLabel = d.fsmState
+    ? CHATBOT_FSM_STATES.find((s) => s.value === d.fsmState)?.label ?? d.fsmState
+    : null;
 
   return (
     <div
       className={cn(
-        "w-[300px] min-h-[120px] rounded-xl border-2 bg-white shadow-sm transition-all select-none",
+        "w-[300px] min-h-[96px] rounded-xl border-2 bg-white shadow-sm transition-all select-none cursor-pointer",
         d.isRoot
-          ? "border-blue-400 bg-blue-50/80"
-          : editing
-            ? "border-blue-400 shadow-md"
-            : "border-[#e8e3d9] hover:border-blue-300 hover:shadow-md",
+          ? "border-[#1f75fe] bg-[#1f75fe]/5"
+          : selected
+            ? "border-[#1f75fe] shadow-md ring-2 ring-[#1f75fe]/20"
+            : "border-[#e8e3d9] hover:border-[#93c5fd] hover:shadow-md",
       )}
-      onClick={() => { if (!editing) { setEditing(true); } }}
     >
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
+        className="!w-2.5 !h-2.5 !bg-[#1f75fe] !border-2 !border-white"
       />
 
-      <div className="p-3.5 pb-2">
-        {editing ? (
-          <>
-            <input
-              autoFocus
-              className="w-full text-sm font-semibold bg-transparent border-b border-blue-300 outline-none mb-1.5 pb-0.5 text-[#0f172a]"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && textareaRef.current?.focus()}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <textarea
-              ref={textareaRef}
-              className="w-full text-xs text-[#64748b] bg-transparent outline-none resize-y leading-relaxed min-h-[72px]"
-              rows={5}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onBlur={commit}
-              onClick={(e) => e.stopPropagation()}
-              placeholder="Что делает бот на этом шаге…"
-            />
-            <select
-              value={fsmState}
-              onChange={(e) => setFsmState(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              className="mt-1.5 w-full text-[10px] border border-[#e8e3d9] rounded-md px-1.5 py-1 bg-white text-[#64748b]"
-            >
-              {CHATBOT_FSM_STATES.map((opt) => (
-                <option key={opt.value || "none"} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </>
+      <div className="p-3.5">
+        <p
+          className={cn(
+            "text-sm font-semibold leading-snug line-clamp-2",
+            d.isRoot ? "text-[#1f75fe]" : "text-[#0f172a]",
+          )}
+        >
+          {d.label || <span className="font-normal italic text-[#64748b]">Без названия</span>}
+        </p>
+        {fsmLabel && (
+          <span className="inline-block mt-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">
+            {fsmLabel}
+          </span>
+        )}
+        {d.content ? (
+          <p className="text-sm text-[#64748b] mt-2 leading-relaxed line-clamp-2">{d.content}</p>
         ) : (
-          <>
-            <p className={cn("text-sm font-semibold leading-snug break-words", d.isRoot ? "text-blue-800" : "text-[#0f172a]")}>
-              {label || <span className="font-normal italic text-[#64748b]">Без названия</span>}
-            </p>
-            {d.fsmState && (
-              <p className="text-[10px] font-medium text-violet-600 mt-1 break-words">
-                этап: {CHATBOT_FSM_STATES.find((s) => s.value === d.fsmState)?.label ?? d.fsmState}
-              </p>
-            )}
-            {content ? (
-              <p className="text-xs text-[#64748b] mt-1.5 leading-relaxed whitespace-pre-wrap break-words">{content}</p>
-            ) : (
-              <p className="text-xs text-[#64748b] mt-1 italic">Нажмите для редактирования</p>
-            )}
-          </>
+          <p className="text-xs text-[#94a3b8] mt-2 italic">Нажмите для редактирования</p>
         )}
       </div>
-
-      {!editing && (
-        <div className="flex items-center gap-1 px-2.5 pb-2.5 pt-0.5">
-          <button
-            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); addChild(id); }}
-            className="flex items-center gap-0.5 text-[10px] font-medium text-blue-600 hover:bg-blue-100 px-1.5 py-0.5 rounded transition-colors"
-            title="Добавить дочерний шаг"
-          >
-            <Plus className="h-2.5 w-2.5" />Шаг
-          </button>
-          <button
-            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); fork(id); }}
-            className="flex items-center gap-0.5 text-[10px] font-medium text-violet-600 hover:bg-violet-100 px-1.5 py-0.5 rounded transition-colors"
-            title="Добавить параллельную ветку от того же родителя"
-          >
-            <GitBranch className="h-2.5 w-2.5" />Ветка
-          </button>
-          {!d.isRoot && (
-            <button
-              onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); remove(id); }}
-              className="ml-auto flex items-center text-[10px] font-medium text-red-400 hover:bg-red-50 px-1.5 py-0.5 rounded transition-colors"
-              title="Удалить узел и все его дочерние"
-            >
-              <Trash2 className="h-2.5 w-2.5" />
-            </button>
-          )}
-        </div>
-      )}
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
+        className="!w-2.5 !h-2.5 !bg-[#1f75fe] !border-2 !border-white"
       />
     </div>
   );
@@ -236,7 +123,6 @@ const nodeTypes = { mindmap: MindMapNodeComponent };
 
 // ─── Default initial mind map ─────────────────────────────────────────────────
 
-/** Default first-touch script (Muslim Dent style) — used when clinic has no saved mind map yet. */
 const DEFAULT_NODES: ScriptMindMapData["nodes"] = [
   {
     id: "greeting",
@@ -278,21 +164,21 @@ const DEFAULT_NODES: ScriptMindMapData["nodes"] = [
     id: "handle_doubts",
     label: "Работа с сомнениями",
     content:
-      "Клиент не уверен или хочет подумать. Мягко уточните, что именно останавливает — цена, страх процедуры или нужно больше информации. Напомните, что консультация бесплатная и ни к чему не обязывает, врач составит индивидуальный план. Упомяните рассрочку 0-0-24 без переплат. Спросите, удобно ли записаться хотя бы на бесплатный осмотр.",
+      "Клиент не уверен или хочет подумать. Мягко уточните, что именно останавливает — цена, страх процедуры или нужно больше информации.",
     fsmState: "dental_qa",
   },
   {
     id: "re_offer_booking",
     label: "Повторное предложение записи",
     content:
-      "Клиент проявил интерес после работы с сомнениями. Предложите конкретное время для визита на бесплатную консультацию в ближайшие дни. Спросите, какой день и время подойдут.",
+      "Клиент проявил интерес после работы с сомнениями. Предложите конкретное время для визита на бесплатную консультацию.",
     fsmState: "collect_datetime",
   },
   {
     id: "refusal_close",
     label: "Завершение (отказ)",
     content:
-      "Клиент отказался записываться. Поблагодарите за обращение, скажите что всегда рады помочь. Оставьте номер для связи: +7 771 800 0065. Напомните, что акции ограничены по времени и они могут вернуться в любой момент.",
+      "Клиент отказался записываться. Поблагодарите за обращение, скажите что всегда рады помочь.",
     fsmState: "done",
   },
 ];
@@ -314,10 +200,10 @@ const EDGE_STYLE = {
   type: "smoothstep" as const,
   style: { stroke: "#93c5fd", strokeWidth: 2 },
   markerEnd: { type: MarkerType.ArrowClosed, color: "#93c5fd" },
-  labelStyle: { fontSize: 10, fill: "#6b7280", fontWeight: 500 },
-  labelBgStyle: { fill: "#f9fafb", fillOpacity: 0.95 },
-  labelBgPadding: [4, 3] as [number, number],
-  labelBgBorderRadius: 4,
+  labelStyle: { fontSize: 11, fill: "#475569", fontWeight: 500 },
+  labelBgStyle: { fill: "#ffffff", fillOpacity: 0.95 },
+  labelBgPadding: [5, 4] as [number, number],
+  labelBgBorderRadius: 6,
 };
 
 function makeFlowEdge(e: ScriptMindMapData["edges"][number]): Edge {
@@ -333,11 +219,14 @@ function makeFlowNode(n: ScriptMindMapData["nodes"][number]): Node {
   };
 }
 
-function toFlowGraph(raw: ScriptMindMapData): { nodes: Node[]; edges: Edge[] } {
+function toFlowGraph(raw: ScriptMindMapData, forceLayout: boolean): { nodes: Node[]; edges: Edge[] } {
   const edges = raw.edges.map(makeFlowEdge);
-  const flowNodes = raw.nodes.map(makeFlowNode);
-  const nodes = autoLayout(flowNodes, edges);
-  return { nodes, edges };
+  let flowNodes = raw.nodes.map(makeFlowNode);
+  const useSaved = !forceLayout && hasSavedMindMapPositions(raw.nodes);
+  if (!useSaved) {
+    flowNodes = layoutMindMapPipeline(flowNodes, edges);
+  }
+  return { nodes: flowNodes, edges };
 }
 
 function genId() {
@@ -350,107 +239,185 @@ interface ScriptMindMapProps {
   initialData?: ScriptMindMapData | null;
   onSave: (data: ScriptMindMapData) => void;
   saveStatus?: "idle" | "saving" | "saved";
+  mode?: ScriptMindMapMode;
 }
 
-export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: ScriptMindMapProps) {
+export function ScriptMindMap({
+  initialData,
+  onSave,
+  saveStatus = "idle",
+  mode = "fullscreen",
+}: ScriptMindMapProps) {
   const seed = initialData?.nodes?.length ? initialData : { nodes: DEFAULT_NODES, edges: DEFAULT_EDGES };
-  const { nodes: initNodes, edges: initEdges } = toFlowGraph(seed);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges);
+  const [showAllBranches, setShowAllBranches] = useState(mode === "fullscreen");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const flowRef = useRef<ReactFlowInstance | null>(null);
   const skipAutoSaveRef = useRef(true);
+
+  const { nodes: initNodes, edges: initEdges } = toFlowGraph(seed, false);
+  const [allNodes, setAllNodes, onNodesChange] = useNodesState(initNodes);
+  const [allEdges, setAllEdges, onEdgesChange] = useEdgesState(initEdges);
+
+  const branchHiddenIds = useMemo(
+    () => getServiceBranchIds(
+      allNodes.map((n) => ({
+        id: n.id,
+        fsmState: (n.data as ScriptMindMapNodeData).fsmState,
+        label: (n.data as ScriptMindMapNodeData).label,
+      })),
+      allEdges.map((e) => ({ source: e.source, target: e.target })),
+    ),
+    [allNodes, allEdges],
+  );
+
+  const mainPathIds = useMemo(
+    () =>
+      resolveMainPathIds(
+        allNodes.map((n) => ({
+          id: n.id,
+          isRoot: (n.data as ScriptMindMapNodeData).isRoot,
+          fsmState: (n.data as ScriptMindMapNodeData).fsmState,
+        })),
+        allEdges.map((e) => ({ source: e.source, target: e.target })),
+      ),
+    [allNodes, allEdges],
+  );
+
+  const { nodes: displayNodes, edges: displayEdges } = useMemo(() => {
+    if (showAllBranches) return { nodes: allNodes, edges: allEdges };
+    return filterFocusGraph(allNodes, allEdges, mainPathIds, branchHiddenIds);
+  }, [showAllBranches, allNodes, allEdges, mainPathIds, branchHiddenIds]);
+
+  const branchCount = branchHiddenIds.size;
+
+  const fitCanvas = useCallback(() => {
+    const rf = flowRef.current;
+    if (!rf) return;
+    const focusIds = showAllBranches ? undefined : mainPathIds;
+    requestAnimationFrame(() => {
+      rf.fitView({
+        padding: showAllBranches ? 0.2 : 0.35,
+        minZoom: 0.5,
+        maxZoom: showAllBranches ? 0.9 : 1.05,
+        duration: 280,
+        nodes: focusIds?.map((id) => ({ id })),
+      });
+    });
+  }, [showAllBranches, mainPathIds]);
+
+  useEffect(() => {
+    fitCanvas();
+  }, [fitCanvas, displayNodes.length, mode]);
 
   const markDirty = useCallback(() => {
     skipAutoSaveRef.current = false;
   }, []);
 
-  const placeChildNode = useCallback((parentId: string, newNode: Node, allNodes: Node[], allEdges: Edge[]): Node => {
-    const parent = allNodes.find((n) => n.id === parentId);
-    if (!parent) return { ...newNode, position: { x: 0, y: NODE_H + V_GAP } };
+  const placeChildNode = useCallback((parentId: string, newNode: Node, nodes: Node[], edges: Edge[]): Node => {
+    const parent = nodes.find((n) => n.id === parentId);
+    if (!parent) return { ...newNode, position: { x: 0, y: LAYOUT_V_GAP } };
 
-    const siblings = allEdges
+    const siblings = edges
       .filter((e) => e.source === parentId)
-      .map((e) => allNodes.find((n) => n.id === e.target))
+      .map((e) => nodes.find((n) => n.id === e.target))
       .filter(Boolean) as Node[];
 
-    const rightmost = siblings.reduce(
-      (max, n) => Math.max(max, n.position.x),
-      parent.position.x,
-    );
+    const cols = Math.min(3, siblings.length + 1);
+    const col = siblings.length % cols;
+    const row = Math.floor(siblings.length / cols);
 
     return {
       ...newNode,
       position: {
-        x: siblings.length > 0 ? rightmost + NODE_W + H_GAP : parent.position.x,
-        y: parent.position.y + NODE_H + V_GAP,
+        x: parent.position.x + col * (LAYOUT_NODE_W + 32) - (cols > 1 ? (cols - 1) * (LAYOUT_NODE_W + 32) / 2 : 0),
+        y: parent.position.y + LAYOUT_V_GAP + row * (LAYOUT_V_GAP * 0.45),
       },
     };
   }, []);
 
-  const addChild = useCallback((parentId: string) => {
+  const relayoutAll = useCallback(() => {
     markDirty();
-    const id = genId();
-    const newNode = makeFlowNode({ id, label: "Новый шаг", content: "" });
-    setEdges((prev) => {
-      const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentId, target: id });
-      const updated = [...prev, newEdge];
-      setNodes((pn) => [...pn, placeChildNode(parentId, newNode, pn, prev)]);
-      return updated;
-    });
-  }, [setNodes, setEdges, markDirty, placeChildNode]);
+    setAllNodes((prev) => layoutMindMapPipeline(prev, allEdges));
+    setTimeout(fitCanvas, 80);
+  }, [allEdges, setAllNodes, markDirty, fitCanvas]);
 
-  const fork = useCallback((siblingId: string) => {
-    markDirty();
-    const id = genId();
-    const newNode = makeFlowNode({ id, label: "Новая ветка", content: "" });
-    setEdges((prev) => {
-      const parentEdge = prev.find((e) => e.target === siblingId);
-      if (!parentEdge) {
-        setNodes((pn) => [...pn, { ...newNode, position: { x: pn.length * (NODE_W + H_GAP), y: 0 } }]);
-        return prev;
-      }
-      const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentEdge.source, target: id });
-      const updated = [...prev, newEdge];
-      setNodes((pn) => {
-        const sibling = pn.find((n) => n.id === siblingId);
-        const placed = sibling
-          ? { ...newNode, position: { x: sibling.position.x + NODE_W + H_GAP, y: sibling.position.y } }
-          : placeChildNode(parentEdge.source, newNode, pn, prev);
-        return [...pn, placed];
+  const addChild = useCallback(
+    (parentId: string) => {
+      markDirty();
+      const id = genId();
+      const newNode = makeFlowNode({ id, label: "Новый шаг", content: "" });
+      setAllEdges((prev) => {
+        const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentId, target: id });
+        setAllNodes((pn) => [...pn, placeChildNode(parentId, newNode, pn, prev)]);
+        return [...prev, newEdge];
       });
-      return updated;
-    });
-  }, [setNodes, setEdges, markDirty, placeChildNode]);
+      setSelectedId(id);
+    },
+    [setAllNodes, setAllEdges, markDirty, placeChildNode],
+  );
 
-  const remove = useCallback((id: string) => {
-    markDirty();
-    setEdges((prevEdges) => {
-      const ch: Record<string, string[]> = {};
-      prevEdges.forEach((e) => { ch[e.source] = [...(ch[e.source] ?? []), e.target]; });
-      const toRemove = new Set<string>();
-      const q = [id];
-      while (q.length) {
-        const cur = q.pop()!;
-        toRemove.add(cur);
-        (ch[cur] ?? []).forEach((k) => q.push(k));
-      }
-      const newEdges = prevEdges.filter((e) => !toRemove.has(e.source) && !toRemove.has(e.target));
-      setNodes((pn) => pn.filter((n) => !toRemove.has(n.id)));
-      return newEdges;
-    });
-  }, [setNodes, setEdges, markDirty]);
+  const fork = useCallback(
+    (siblingId: string) => {
+      markDirty();
+      const id = genId();
+      const newNode = makeFlowNode({ id, label: "Новая ветка", content: "" });
+      setAllEdges((prev) => {
+        const parentEdge = prev.find((e) => e.target === siblingId);
+        if (!parentEdge) {
+          setAllNodes((pn) => [...pn, { ...newNode, position: { x: pn.length * (LAYOUT_NODE_W + 32), y: 0 } }]);
+          return prev;
+        }
+        const newEdge = makeFlowEdge({ id: `e_${id}`, source: parentEdge.source, target: id });
+        setAllNodes((pn) => {
+          const sibling = pn.find((n) => n.id === siblingId);
+          const placed = sibling
+            ? { ...newNode, position: { x: sibling.position.x + LAYOUT_NODE_W + 32, y: sibling.position.y } }
+            : placeChildNode(parentEdge.source, newNode, pn, prev);
+          return [...pn, placed];
+        });
+        return [...prev, newEdge];
+      });
+      setSelectedId(id);
+    },
+    [setAllNodes, setAllEdges, markDirty, placeChildNode],
+  );
 
-  const update = useCallback((id: string, label: string, content: string, fsmState?: string) => {
-    markDirty();
-    setNodes((prev) =>
-      prev.map((n) => n.id === id ? { ...n, data: { ...n.data, label, content, fsmState } } : n),
-    );
-  }, [setNodes, markDirty]);
+  const remove = useCallback(
+    (id: string) => {
+      markDirty();
+      if (selectedId === id) setSelectedId(null);
+      setAllEdges((prevEdges) => {
+        const ch: Record<string, string[]> = {};
+        prevEdges.forEach((e) => { ch[e.source] = [...(ch[e.source] ?? []), e.target]; });
+        const toRemove = new Set<string>();
+        const q = [id];
+        while (q.length) {
+          const cur = q.pop()!;
+          toRemove.add(cur);
+          (ch[cur] ?? []).forEach((k) => q.push(k));
+        }
+        const newEdges = prevEdges.filter((e) => !toRemove.has(e.source) && !toRemove.has(e.target));
+        setAllNodes((pn) => pn.filter((n) => !toRemove.has(n.id)));
+        return newEdges;
+      });
+    },
+    [setAllNodes, setAllEdges, markDirty, selectedId],
+  );
 
-  const cbs = useMemo<MindMapCbs>(() => ({ addChild, fork, remove, update }), [addChild, fork, remove, update]);
+  const update = useCallback(
+    (id: string, label: string, content: string, fsmState?: string) => {
+      markDirty();
+      setAllNodes((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, label, content, fsmState } } : n,
+        ),
+      );
+    },
+    [setAllNodes, markDirty],
+  );
 
   const serializeData = useCallback((): ScriptMindMapData => ({
-    nodes: nodes.map((n) => ({
+    nodes: allNodes.map((n) => ({
       id: n.id,
       label: (n.data as ScriptMindMapNodeData).label,
       content: (n.data as ScriptMindMapNodeData).content,
@@ -458,13 +425,13 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
       fsmState: (n.data as ScriptMindMapNodeData).fsmState,
       position: { x: n.position.x, y: n.position.y },
     })),
-    edges: edges.map((e) => ({
+    edges: allEdges.map((e) => ({
       id: e.id,
       source: e.source,
       target: e.target,
       label: typeof e.label === "string" ? e.label : undefined,
     })),
-  }), [nodes, edges]);
+  }), [allNodes, allEdges]);
 
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
@@ -478,56 +445,151 @@ export function ScriptMindMap({ initialData, onSave, saveStatus = "idle" }: Scri
     if (skipAutoSaveRef.current) return;
     const timer = setTimeout(() => onSaveRef.current(serializeData()), 1200);
     return () => clearTimeout(timer);
-  }, [nodes, edges, serializeData]);
+  }, [allNodes, allEdges, serializeData]);
 
-  const handleNodesChange = useCallback((changes: Parameters<typeof onNodesChange>[0]) => {
-    if (changes.some((c) => c.type === "position" || c.type === "remove")) markDirty();
-    onNodesChange(changes);
-  }, [onNodesChange, markDirty]);
+  const handleNodesChange = useCallback(
+    (changes: Parameters<typeof onNodesChange>[0]) => {
+      if (changes.some((c) => c.type === "position" || c.type === "remove")) markDirty();
+      onNodesChange(changes);
+    },
+    [onNodesChange, markDirty],
+  );
+
+  const selectedNode = allNodes.find((n) => n.id === selectedId);
+  const selectedData = selectedNode?.data as ScriptMindMapNodeData | undefined;
+
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    setSelectedId(node.id);
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedId(null);
+  }, []);
 
   return (
-    <MindMapCtx.Provider value={cbs}>
-      <div className="w-full h-full">
+    <div className="relative flex h-full w-full min-h-0">
+      <div className="flex-1 min-w-0">
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={displayNodes.map((n) => ({ ...n, selected: n.id === selectedId }))}
+          edges={displayEdges}
           onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.15 }}
-          minZoom={0.25}
+          onInit={(inst) => { flowRef.current = inst; fitCanvas(); }}
+          minZoom={0.5}
           maxZoom={1.5}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={EDGE_STYLE}
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#e8e3d9" />
-          <Controls showInteractive={false} className="!shadow-sm !border !border-[#e8e3d9] !rounded-xl !overflow-hidden" />
-          <Panel position="top-right" className="m-3">
-            <button
-              onClick={handleSave}
-              disabled={saveStatus === "saving"}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all",
-                saveStatus === "saved"
-                  ? "bg-emerald-500 text-white shadow-emerald-200"
-                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200",
-                saveStatus === "saving" && "opacity-70 cursor-not-allowed",
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e8e3d9" />
+          <Controls
+            showInteractive={false}
+            className="!shadow-sm !border !border-[#e8e3d9] !rounded-xl !overflow-hidden"
+          />
+          {mode === "fullscreen" && (
+            <MiniMap
+              className="!rounded-xl !border !border-[#e8e3d9] !shadow-sm"
+              nodeColor={(n) => ((n.data as ScriptMindMapNodeData).isRoot ? "#1f75fe" : "#cbd5e1")}
+              maskColor="rgb(250 248 244 / 0.75)"
+            />
+          )}
+          <Panel position="top-right" className="m-3 flex flex-col items-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {branchCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllBranches((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm transition-colors",
+                    showAllBranches
+                      ? "bg-white border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4]"
+                      : "bg-[#1f75fe]/10 border-[#1f75fe]/30 text-[#1f75fe]",
+                  )}
+                >
+                  {showAllBranches ? (
+                    <>
+                      <Minimize2 className="h-3.5 w-3.5" />
+                      Главный путь
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Все ветки (+{branchCount})
+                    </>
+                  )}
+                </button>
               )}
-            >
-              {saveStatus === "saving" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : saveStatus === "saved" ? (
-                <CheckCircle2 className="h-4 w-4" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              {saveStatus === "saving" ? "Сохранение…" : saveStatus === "saved" ? "Сохранено" : "Сохранить"}
-            </button>
+              <button
+                type="button"
+                onClick={relayoutAll}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4] shadow-sm"
+                title="Перестроить расположение узлов"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Перестроить
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saveStatus === "saving"}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium shadow-md transition-all",
+                  saveStatus === "saved"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-[#1f75fe] text-white hover:bg-[#1a6ae8]",
+                  saveStatus === "saving" && "opacity-70 cursor-not-allowed",
+                )}
+              >
+                {saveStatus === "saving" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : saveStatus === "saved" ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {saveStatus === "saving" ? "…" : saveStatus === "saved" ? "OK" : "Сохранить"}
+              </button>
+            </div>
+            {!showAllBranches && branchCount > 0 && (
+              <p className="text-[10px] text-[#64748b] bg-white/90 px-2 py-1 rounded-md border border-[#e8e3d9] shadow-sm max-w-[220px] text-right">
+                Скрыто {branchCount} веток услуг · «Все ветки» для полной карты
+              </p>
+            )}
           </Panel>
+          {mode === "inline" && (
+            <Panel position="bottom-left" className="m-2">
+              <div className="flex items-center gap-1.5 text-[10px] text-[#64748b] bg-white/95 px-2 py-1 rounded-lg border border-[#e8e3d9]">
+                <LayoutGrid className="h-3 w-3" />
+                Нажмите узел для редактирования
+              </div>
+            </Panel>
+          )}
         </ReactFlow>
       </div>
-    </MindMapCtx.Provider>
+
+      {selectedNode && selectedData && (
+        <div
+          className={cn(
+            "shrink-0 border-l border-[#e8e3d9] bg-white z-10",
+            mode === "inline"
+              ? "absolute inset-y-0 right-0 w-[min(100%,320px)] shadow-xl"
+              : "relative w-[min(100%,360px)]",
+          )}
+        >
+          <MindMapNodePanel
+            nodeId={selectedNode.id}
+            data={selectedData}
+            onClose={() => setSelectedId(null)}
+            onUpdate={update}
+            onAddChild={addChild}
+            onFork={fork}
+            onRemove={remove}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -548,8 +610,6 @@ export function ScriptMindMapModal({
   onSave,
   saveStatus,
 }: ScriptMindMapModalProps) {
-
-
   if (!open) return null;
 
   return (
@@ -559,10 +619,11 @@ export function ScriptMindMapModal({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
           <p className="text-xs text-[#64748b] leading-tight">
-            Нажмите на карточку чтобы редактировать · «+Шаг» добавляет дочерний · «Ветка» разветвляет
+            Главный путь по центру · услуги в grid · клик по узлу — редактирование справа
           </p>
         </div>
         <button
+          type="button"
           onClick={onClose}
           className="p-1.5 rounded-lg hover:bg-[#f1ede4] transition-colors shrink-0"
         >
@@ -571,10 +632,11 @@ export function ScriptMindMapModal({
       </div>
       <div className="flex-1 min-h-0">
         <ScriptMindMap
-          key={open ? "open" : "closed"}
+          key="fullscreen"
           initialData={initialData}
           onSave={onSave}
           saveStatus={saveStatus}
+          mode="fullscreen"
         />
       </div>
     </div>

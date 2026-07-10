@@ -21,6 +21,8 @@ import PlatformContractsPage from "./pages/PlatformContractsPage";
 import PlatformChatbotPage from "./pages/PlatformChatbotPage";
 import PlatformWhatsappPage from "./pages/PlatformWhatsappPage";
 import MorePage from "./pages/MorePage";
+import { ErrorBoundary } from "./components/error-boundary";
+import { clearChunkReloadFlag } from "./lib/chunk-reload";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -100,6 +102,7 @@ function Inner() {
 
   return (
     <AppContext.Provider value={{ user }}>
+      <ErrorBoundary>
       <div className="flex flex-col min-h-screen bg-background">
         <main className="flex-1 overflow-auto pb-20">
           <Routes>
@@ -140,11 +143,16 @@ function Inner() {
         </main>
         <BottomNavWrapper />
       </div>
+      </ErrorBoundary>
     </AppContext.Provider>
   );
 }
 
 export default function App() {
+  useEffect(() => {
+    clearChunkReloadFlag();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <HashRouter>

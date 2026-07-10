@@ -806,6 +806,7 @@ export interface ChatbotSettings {
   followup72hTemplate: string;
   followup168hTemplate: string;
   broadcastAiEnabled?: boolean;
+  agentModeEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -817,6 +818,7 @@ export interface ChatbotSettingsUpdate {
   followup72hTemplate?: string;
   followup168hTemplate?: string;
   broadcastAiEnabled?: boolean;
+  agentModeEnabled?: boolean;
 }
 
 export type ChatbotSessionData = { [key: string]: unknown };
@@ -1437,6 +1439,11 @@ export type GetChatbotSettings200 = {
 
 export type UpdateChatbotSettings200Data = {
   settings?: ChatbotSettings;
+  mindMapValidation?: {
+    valid?: boolean;
+    errors?: string[];
+    warnings?: string[];
+  };
 };
 
 export type UpdateChatbotSettings200 = {

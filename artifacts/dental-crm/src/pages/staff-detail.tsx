@@ -27,6 +27,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getBaseUrl } from "@/lib/base-url";
+import { usePageBack } from "@/hooks/use-page-back";
 
 interface GeoEvent {
   id: string;
@@ -45,10 +46,16 @@ const ROLE_LABELS: Record<string, string> = {
   nurse: "Медсестра",
 };
 
-export default function StaffDetailPage() {
+export default function StaffDetailPage({
+  overlayDoctorId,
+}: {
+  overlayDoctorId?: string;
+} = {}) {
   const { t } = useTranslation();
-  const { doctorId } = useParams<{ doctorId: string }>();
+  const { doctorId: routeDoctorId } = useParams<{ doctorId: string }>();
+  const doctorId = overlayDoctorId ?? routeDoctorId;
   const [, setLocation] = useLocation();
+  const goBack = usePageBack({ menuFallback: true });
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
@@ -430,7 +437,7 @@ export default function StaffDetailPage() {
           ROLE_LABELS[selectedUser.role] ?? selectedUser.role,
           selectedUser.specialty,
         ].filter(Boolean).join(" • ")}
-        onBack={() => setLocation("/users")}
+        onBack={goBack}
         icon={
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--ds-primary)] to-[var(--ds-primary)] flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-sm">
             {getInitials(selectedUser.name)}

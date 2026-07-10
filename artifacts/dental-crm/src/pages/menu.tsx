@@ -22,7 +22,7 @@ function CategoryCard({
       <h2 className="px-2 mb-1 text-xs font-semibold text-[#64748b] uppercase tracking-wide">
         {title}
       </h2>
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-3 sm:grid-cols-4">
         {items.map((item) => (
           <button
             key={item.slug}
@@ -58,8 +58,9 @@ export default function MenuPage() {
     prefetchStaffList(queryClient);
   }, [user?.role, queryClient]);
 
-  const navItems = MENU_SERVICES.filter((item) =>
-    user && item.roles.includes(user.role),
+  const navItems = MENU_SERVICES.filter(
+    (item) =>
+      item.showInMenu !== false && user && item.roles.includes(user.role),
   ).map((item) => ({
     ...item,
     name: t(item.nameKey),

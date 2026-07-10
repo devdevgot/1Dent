@@ -1,8 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError, ConflictError } from "../shared/errors";
 import { errorEventsService } from "../modules/error-events/error-events.service";
+import { severityForStatus } from "../modules/error-events/error-events.policy";
 
 const GENERIC_ERROR_MESSAGE = "Произошла ошибка на сервере. Попробуйте позже.";
+
+function captureAppError(err: AppError, req: Request): void {
+  errorEventsService.captureFromRequest(err, req, {
+    code: err.code,
+    severity: severityForStatus(err.statusCode),
+  });
+}
 
 function extractPgCode(err: unknown): string | null {
   let current: unknown = err;
@@ -68,9 +76,7 @@ export function errorHandler(
   const mapped = mapDatabaseError(err);
   if (mapped) {
     req.log?.warn({ err, code: mapped.code }, mapped.message);
-    if (mapped.statusCode >= 500) {
-      errorEventsService.captureFromRequest(mapped, req, { code: mapped.code });
-    }
+    captureAppError(mapped, req);
     res.status(mapped.statusCode).json({
       success: false,
       error: mapped.message,
@@ -81,12 +87,7 @@ export function errorHandler(
 
   if (err instanceof AppError) {
     req.log?.warn({ err, code: err.code }, err.message);
-    if (err.statusCode >= 500) {
-      errorEventsService.captureFromRequest(err, req, {
-        code: err.code,
-        severity: "error",
-      });
-    }
+    captureAppError(err, req);
     res.status(err.statusCode).json({
       success: false,
       error: err.message,

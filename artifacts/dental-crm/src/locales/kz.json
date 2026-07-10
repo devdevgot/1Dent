@@ -204,7 +204,7 @@
     "deleted": "Пациент жойылды"
   },
   "chat": {
-    "title": "WhatsApp Чат",
+    "title": "Чат",
     "searchPlaceholder": "Пациентті іздеу...",
     "noPatients": "Пациенттер табылмады",
     "noMessages": "Хабарлар жоқ. Сөйлесуді бастаңыз.",
@@ -243,7 +243,10 @@
     "title": "Хабарламалар",
     "markAllRead": "Барлығын оқылды деп белгілеу",
     "empty": "Хабарламалар жоқ",
-    "redAlerts": "{{count}} алерт"
+    "redAlerts": "{{count}} алерт",
+    "unreadCount": "{{count}} оқылмаған",
+    "new": "Жаңа",
+    "read": "Оқылған"
   },
   "patient": {
     "statusLabel": "Мәртебе",
