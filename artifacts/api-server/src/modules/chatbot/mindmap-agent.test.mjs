@@ -315,6 +315,42 @@ test("parseChatbotAgentTurn: parses replyParts array", async () => {
   assert.deepEqual(turn?.replyParts, ["Подскажите удобное время для визита?"]);
 });
 
+test("buildAgentFallbackReply: after qualification advances to branch list", async () => {
+  const { buildAgentFallbackReply } = await import("./chatbot-agent-orchestrator.ts");
+  const reply = buildAgentFallbackReply({
+    scriptCtx: {
+      currentNodeId: "step2-qualification",
+      currentNodeLabel: "Квалификация",
+      currentNodeContent: "Профессиональная чистка со скидкой 10%",
+      currentFsmState: "collect_qualification",
+      compactPath: "",
+      fullScript: "",
+      outgoingTransitions: "",
+    },
+    fsmState: "collect_qualification",
+    sessionData: { serviceType: "hygiene" },
+    clinicBranchNames: ["ул. A 1", "ул. B 2"],
+    knowledgeContext: "",
+    messageText: "Плановый осмотр, не лечил ранее",
+    targetNodeId: "step2-branch",
+    targetFsmState: "collect_qualification",
+  });
+  assert.match(reply, /филиал/i);
+  assert.doesNotMatch(reply, /скидк/i);
+});
+
+test("resolveDeterministicNextNodeId: qualification answer advances to branch", async () => {
+  const { resolveDeterministicNextNodeId } = await import("./chatbot-agent-orchestrator.ts");
+  const next = resolveDeterministicNextNodeId(
+    DEFAULT_BOOKING_MIND_MAP,
+    "step2-qualification",
+    "Плановый осмотр, не лечил ранее",
+    { serviceType: "hygiene" },
+    null,
+  );
+  assert.equal(next, "step2-branch");
+});
+
 test("buildAgentFallbackReply: stays contextual on qualification", async () => {
   const { buildAgentFallbackReply } = await import("./chatbot-agent-orchestrator.ts");
   const reply = buildAgentFallbackReply({

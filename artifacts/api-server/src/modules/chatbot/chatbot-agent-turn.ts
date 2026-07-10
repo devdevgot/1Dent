@@ -54,6 +54,15 @@ function finalizeAgentReply(
   urgency?: string,
 ): ChatbotReply {
   let reply = enrichReplyWithFsmFollowUp(agentReply, ctx);
+  reply = conciseReply(reply);
+
+  if (reply.parts.length === 0) {
+    reply = enrichReplyWithFsmFollowUp(replyFromText("Хорошо."), ctx);
+    reply = conciseReply(reply);
+  }
+  if (reply.parts.length === 0) {
+    reply = replyFromText("Подскажите удобное время для визита?");
+  }
 
   if (toolResult.suggestedDoctor && !joinChatbotReply(reply).includes(toolResult.suggestedDoctor.name)) {
     reply = appendToReply(reply, buildDoctorPresentationFallback(toolResult.suggestedDoctor, urgency));
@@ -203,7 +212,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
 
   const llmModel = CHAT_MODEL;
   const llmTimeoutMs = 28_000;
-  const llmMaxTokens = 400;
+  const llmMaxTokens = 560;
 
   let agentTurn = null;
   let usedParseFallback = false;
@@ -250,6 +259,8 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       clinicBranchNames,
       knowledgeContext: deps.knowledgeContext,
       messageText,
+      targetNodeId: toNodeId,
+      targetFsmState: toNode?.fsmState as ChatbotState | undefined,
     });
     const actions = inferAgentActionsForTransition(
       fromNode,

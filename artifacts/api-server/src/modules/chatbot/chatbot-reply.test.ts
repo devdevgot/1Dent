@@ -129,14 +129,21 @@ describe("chatbot-reply", () => {
     assert.match(enriched.parts[0]!, /ул\. B 2/);
   });
 
-  it("conciseReply strips marketing filler", () => {
+  it("conciseReply strips marketing filler but keeps clean questions", () => {
     const trimmed = conciseReply({
       parts: [
-        "Готовы записаться? Напомню: первичная консультация бесплатная, а сейчас скидки до 25% на чистку.",
+        "Готовы записаться?",
         "Когда вам удобно прийти?",
       ],
     });
-    assert.doesNotMatch(trimmed.parts[0]!, /скидк/i);
+    assert.match(trimmed.parts[0]!, /Готовы записаться/i);
     assert.match(trimmed.parts[1]!, /удобно прийти/i);
+  });
+
+  it("conciseReply drops pure promo messages", () => {
+    const trimmed = conciseReply({
+      parts: ["Профессиональная чистка сейчас доступна со скидкой 10% (акция действует с 1.12.23 по 31.05.24)?"],
+    });
+    assert.equal(trimmed.parts.length, 0);
   });
 });

@@ -1,6 +1,7 @@
 import type { ChatbotSessionData, ChatbotState } from "./chatbot.types";
 import type { ChatbotAgentAction } from "./chatbot-agent.types";
 import type { AgentScriptContext } from "./chatbot-agent-context.ts";
+import { isPromoOrFillerText, stripPromoFromText } from "./chatbot-reply-format.ts";
 import {
   buildBranchPromptFallback,
   buildSymptomsPromptFallback,
@@ -87,6 +88,17 @@ export function resolveDeterministicNextNodeId(
   });
   if (branch) return branch.node.id;
 
+  if (
+    (fromNode.fsmState === "collect_qualification" || fromNode.id === "step2-qualification") &&
+    trimmed.length >= 3 &&
+    !isPatientInquiry(trimmed)
+  ) {
+    const branchStep = outgoing.find(
+      (o) => o.target.id === "step2-branch" || isBranchSelectionNode(o.target.id, o.target.fsmState),
+    );
+    if (branchStep) return branchStep.target.id;
+  }
+
   if (fromNode.fsmState === "collect_problem" && trimmed.length >= 2) {
     const qual = outgoing.find((o) => o.target.fsmState === "collect_qualification");
     if (qual) return qual.target.id;
@@ -158,12 +170,33 @@ export function buildAgentFallbackReply(opts: {
   clinicBranchNames: string[];
   knowledgeContext: string;
   messageText?: string;
+  targetNodeId?: string;
+  targetFsmState?: ChatbotState;
 }): string {
-  const { scriptCtx, fsmState, sessionData, clinicBranchNames, knowledgeContext, messageText } = opts;
+  const {
+    scriptCtx,
+    fsmState,
+    sessionData,
+    clinicBranchNames,
+    knowledgeContext,
+    messageText,
+    targetNodeId,
+    targetFsmState,
+  } = opts;
   const hasKnowledge = hasClinicKnowledge(knowledgeContext);
+  const effectiveFsm = targetFsmState ?? fsmState;
+  const effectiveNodeId = targetNodeId ?? scriptCtx.currentNodeId;
+  const trimmedMessage = messageText?.trim() ?? "";
+  const qualificationDone =
+    trimmedMessage.length >= 3 &&
+    !isPatientInquiry(trimmedMessage) &&
+    (effectiveNodeId === "step2-branch" ||
+      effectiveFsm === "suggest_doctor" ||
+      (effectiveFsm === "collect_qualification" && scriptCtx.currentNodeId === "step2-qualification"));
 
   if (
-    isBranchSelectionNode(scriptCtx.currentNodeId, scriptCtx.currentFsmState) ||
+    isBranchSelectionNode(effectiveNodeId, effectiveFsm) ||
+    effectiveNodeId === "step2-branch" ||
     (messageText && isBranchListInquiry(messageText))
   ) {
     return resolveBranchStepClarificationReply({
@@ -174,13 +207,23 @@ export function buildAgentFallbackReply(opts: {
     });
   }
 
-  switch (fsmState) {
+  if (qualificationDone) {
+    if (!sessionData.selectedBranch && clinicBranchNames.length > 1) {
+      return buildBranchPromptFallback(hasKnowledge, clinicBranchNames);
+    }
+    if (!sessionData.selectedBranch && clinicBranchNames.length === 1) {
+      return `Запишем вас в филиал «${clinicBranchNames[0]}»?`;
+    }
+    if (sessionData.suggestedDoctorName) {
+      return `Подходит ${sessionData.suggestedDoctorName}? (Да / другой врач)`;
+    }
+    return "Подберём врача — подскажите удобное время для визита?";
+  }
+
+  switch (effectiveFsm) {
     case "greeting":
     case "collect_problem":
-      if (scriptCtx.currentNodeContent?.trim()) {
-        return shortenNodePrompt(scriptCtx.currentNodeContent);
-      }
-      return "Здравствуйте! Чем могу помочь — лечение, чистка, консультация или другая услуга?";
+      return "Подскажите, какая услуга вас интересует?";
     case "collect_qualification":
       if (scriptCtx.currentNodeId === "step2-qualification") {
         return buildSymptomsPromptFallback();
@@ -204,21 +247,20 @@ export function buildAgentFallbackReply(opts: {
     case "confirm_appointment":
       return "Подтверждаем запись? Если всё верно — напишите «да».";
     default:
-      if (scriptCtx.currentNodeContent?.trim()) {
-        return shortenNodePrompt(scriptCtx.currentNodeContent);
-      }
       return scriptCtx.currentNodeLabel
-        ? `Продолжим этап «${scriptCtx.currentNodeLabel}». Расскажите подробнее?`
+        ? `Продолжим запись. Расскажите подробнее?`
         : "Расскажите подробнее, пожалуйста.";
   }
 }
 
 function shortenNodePrompt(content: string): string {
-  const first = content.split(/\n+/)[0]?.trim() ?? content.trim();
-  const sentence = first.split(/(?<=[.!?])\s+/)[0]?.trim() ?? first;
-  const clipped = sentence.slice(0, 180).trim();
-  if (!clipped) return "Расскажите подробнее, пожалуйста.";
-  return clipped.endsWith("?") ? clipped : `${clipped.replace(/[.!]$/, "")}?`;
+  const cleaned = stripPromoFromText(content);
+  if (cleaned && !isPromoOrFillerText(cleaned)) {
+    const first = cleaned.split(/(?<=[.!?])\s+/)[0]?.trim() ?? cleaned;
+    const clipped = first.slice(0, 160).trim();
+    if (clipped) return clipped.endsWith("?") ? clipped : `${clipped.replace(/[.!]$/, "")}?`;
+  }
+  return "Расскажите подробнее, пожалуйста?";
 }
 
 /** Server-side tools when the algorithm advances the node (LLM may omit actions). */
@@ -234,6 +276,14 @@ export function inferAgentActionsForTransition(
   const has = (type: ChatbotAgentAction["type"]) => actions.some((a) => a.type === type);
 
   if (toNode?.fsmState === "suggest_doctor" && !sessionData.suggestedDoctorId && !has("suggest_doctor")) {
+    actions.push({ type: "suggest_doctor" });
+  }
+
+  if (
+    (toNode?.id === "step2-doctor" || toNode?.fsmState === "suggest_doctor") &&
+    !sessionData.suggestedDoctorId &&
+    !has("suggest_doctor")
+  ) {
     actions.push({ type: "suggest_doctor" });
   }
 
