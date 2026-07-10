@@ -172,7 +172,7 @@ export function deriveFsmStateFromAgent(
   fsmHint?: string | null,
   mindMapFsm?: string,
 ): ChatbotState {
-  const hint = (fsmHint ?? mindMapFsm ?? sessionData.activeMindMapNodeId) as ChatbotState | undefined;
+  const hint = (fsmHint ?? undefined) as ChatbotState | undefined;
   const valid: ChatbotState[] = [
     "greeting",
     "collect_problem",

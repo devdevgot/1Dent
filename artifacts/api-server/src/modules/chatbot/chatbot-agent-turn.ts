@@ -2,66 +2,30 @@ import { createChatCompletion, CHAT_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import type { ChatbotSettings } from "@workspace/db";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
-import type { ChatMessage, ManagerExample } from "./ai-classifier";
+import type { ChatMessage } from "./ai-classifier";
 import { mergeReply, appendToReply, replyFromText, joinChatbotReply, conciseReply } from "./ai-classifier";
 import type { ChatbotReply } from "./chatbot-reply";
-import { enrichReplyWithFsmFollowUp, replyFromAgentText } from "./chatbot-reply-enrich";
-import { buildAgentOrchestratorPrompt } from "./chatbot-agent-prompt";
+import { replyFromAgentText } from "./chatbot-reply-enrich";
+import { buildKnowledgeAgentPrompt } from "./chatbot-knowledge-agent-prompt";
 import { parseChatbotAgentTurn } from "./chatbot-agent-parser";
-import { buildScriptContextForAgent, assertAllowedTransition } from "./chatbot-agent-context";
 import {
   executeChatbotAgentTools,
   deriveFsmStateFromAgent,
   buildDoctorPresentationFallback,
 } from "./chatbot-tools";
-import type { ScriptMindMapData } from "./mindmap-utils";
-import { findMindMapNodeByFsmState } from "./mindmap-utils";
-import {
-  filterFactsForState,
-  type ChatbotPromptFacts,
-} from "./chatbot-prompt-builder";
-import {
-  buildAgentFallbackReply,
-  inferAgentActionsForTransition,
-  resolveDeterministicNextNodeId,
-} from "./chatbot-agent-orchestrator";
-import { isPatientInquiry, isUsableClinicKnowledge } from "./clinic-knowledge.ts";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 
 type OutboundResponse = ChatbotReply | null;
 
-function buildEnrichContext(
-  deps: AgentTurnDeps,
-  state: ChatbotState,
-  data: ChatbotSessionData,
-  messageText: string,
-  branchJustSelected?: string | null,
-) {
-  return {
-    fsmState: state,
-    mindMapNodeId: data.activeMindMapNodeId,
-    sessionData: data,
-    clinicBranchNames: deps.clinicBranchNames,
-    messageText,
-    branchJustSelected,
-  };
-}
-
 function finalizeAgentReply(
   agentReply: ChatbotReply,
-  ctx: ReturnType<typeof buildEnrichContext>,
   toolResult: { suggestedDoctor?: DoctorCandidate | null; slotsAppendix?: string },
   urgency?: string,
 ): ChatbotReply {
-  let reply = enrichReplyWithFsmFollowUp(agentReply, ctx);
-  reply = conciseReply(reply);
+  let reply = conciseReply(agentReply);
 
   if (reply.parts.length === 0) {
-    reply = enrichReplyWithFsmFollowUp(replyFromText("Хорошо."), ctx);
-    reply = conciseReply(reply);
-  }
-  if (reply.parts.length === 0) {
-    reply = replyFromText("Подскажите удобное время для визита?");
+    reply = replyFromText("Подскажите, чем могу помочь?");
   }
 
   if (toolResult.suggestedDoctor && !joinChatbotReply(reply).includes(toolResult.suggestedDoctor.name)) {
@@ -73,13 +37,27 @@ function finalizeAgentReply(
   }
 
   if (toolResult.suggestedDoctor && /администратор/i.test(joinChatbotReply(reply))) {
-    const branchLine = ctx.sessionData.selectedBranch
-      ? `Записываем в филиал «${ctx.sessionData.selectedBranch}».`
-      : "Подобрали врача для вашей записи.";
-    reply = appendToReply(replyFromText(branchLine), buildDoctorPresentationFallback(toolResult.suggestedDoctor, urgency));
+    reply = appendToReply(
+      replyFromText("Подобрали врача для вашей записи."),
+      buildDoctorPresentationFallback(toolResult.suggestedDoctor, urgency),
+    );
   }
 
   return conciseReply(reply);
+}
+
+function buildKnowledgeFallbackReply(data: ChatbotSessionData): string {
+  if (data.createdProcedureId) return "Ваша запись уже оформлена. Если нужно изменить время — напишите.";
+  if (data.preferredDatetime && data.suggestedDoctorName) {
+    return `Записываем к ${data.suggestedDoctorName} на ${data.preferredDatetime}. Подтвердите, пожалуйста.`;
+  }
+  if (data.suggestedDoctorName && !data.preferredDatetime) {
+    return `Подобрали ${data.suggestedDoctorName}. Когда вам удобно прийти?`;
+  }
+  if (data.selectedBranch && !data.suggestedDoctorName) {
+    return `Отлично, филиал «${data.selectedBranch}». Подскажите, с чем обращаетесь?`;
+  }
+  return "Подскажите, чем могу помочь?";
 }
 
 export interface AgentTurnDeps {
@@ -88,18 +66,15 @@ export interface AgentTurnDeps {
   messageText: string;
   dryRun: boolean;
   settings: ChatbotSettings;
-  mindMap: ScriptMindMapData;
   clinicName: string;
+  composedSystemPrompt: string;
   knowledgeContext: string;
-  priceListContext: string;
   clinicBranchNames: string[];
   calendarConfig: ChatbotSettings["calendarConfig"];
   recentMessages: ChatMessage[];
-  managerExamples: ManagerExample[];
   sessionState: ChatbotState;
   sessionData: ChatbotSessionData;
   noteAction: (msg: string) => void;
-  buildPromptFacts: (fsmState: ChatbotState) => ChatbotPromptFacts;
   finalizeBooking?: (params: {
     data: ChatbotSessionData;
     branchToSave: string;
@@ -114,94 +89,32 @@ export interface AgentTurnOutcome {
   humanTakeover: boolean;
 }
 
-function buildSessionSummary(data: ChatbotSessionData): string {
-  const parts: string[] = [];
-  if (data.patientName) parts.push(`Имя: ${data.patientName}`);
-  if (data.serviceType) parts.push(`Услуга: ${data.serviceType}`);
-  if (data.urgency) parts.push(`Срочность: ${data.urgency}`);
-  if (data.selectedBranch) parts.push(`Филиал: ${data.selectedBranch}`);
-  if (data.suggestedDoctorName) parts.push(`Врач: ${data.suggestedDoctorName}`);
-  if (data.preferredDatetime) parts.push(`Время: ${data.preferredDatetime}`);
-  if (data.activeMindMapNodeId) parts.push(`Узел скрипта: ${data.activeMindMapNodeId}`);
-  return parts.join(". ");
-}
-
-function enrichFactsForPatientInquiry(
-  facts: ChatbotPromptFacts,
-  messageText: string,
-  knowledgeContext: string,
-  priceListContext: string,
-  clinicBranchNames: string[],
-): ChatbotPromptFacts {
-  if (!isPatientInquiry(messageText)) return facts;
-
-  const enriched = { ...facts };
-  if (isUsableClinicKnowledge(knowledgeContext) && !enriched.knowledgeSnippet) {
-    enriched.knowledgeSnippet = knowledgeContext.slice(0, 1200);
-  }
-  if (clinicBranchNames.length > 0 && !enriched.officialBranches?.length) {
-    enriched.officialBranches = clinicBranchNames;
-  }
-  if (!enriched.priceSnippet && priceListContext?.trim()) {
-    enriched.priceSnippet = priceListContext.slice(0, 800);
-  }
-  return enriched;
-}
-
-function syncQualificationPhase(
-  data: ChatbotSessionData,
-  fromNodeId?: string,
-  toNodeId?: string,
-): ChatbotSessionData {
-  if (fromNodeId === "step2-branch" || toNodeId === "step2-branch") {
-    return { ...data, qualificationPhase: "branch" };
-  }
-  if (fromNodeId === "step2-qualification" || toNodeId === "step2-qualification") {
-    return { ...data, qualificationPhase: "symptoms" };
-  }
-  return data;
-}
-
-/** Run one script-guided agent turn (model orchestrates dialogue + tools). */
+/** Run one knowledge-guided agent turn (Gemini dialogue + server tools). */
 export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTurnOutcome> {
   const {
     clinicId,
     phone,
     messageText,
     dryRun,
-    mindMap,
     clinicName,
+    composedSystemPrompt,
     knowledgeContext,
     clinicBranchNames,
     calendarConfig,
     recentMessages,
     noteAction,
-    buildPromptFacts,
     finalizeBooking,
   } = deps;
 
   let data = { ...deps.sessionData };
   let state = deps.sessionState;
 
-  const scriptCtx = buildScriptContextForAgent(mindMap, data.activeMindMapNodeId);
-  const safeMindMap = mindMap?.nodes?.length ? mindMap : null;
-
-  const fsmForFacts = (scriptCtx.currentFsmState as ChatbotState) ?? state;
-  const facts = enrichFactsForPatientInquiry(
-    buildPromptFacts(fsmForFacts),
-    messageText,
-    knowledgeContext,
-    deps.priceListContext,
-    clinicBranchNames,
-  );
-
-  const systemPrompt = buildAgentOrchestratorPrompt({
+  const systemPrompt = buildKnowledgeAgentPrompt({
+    composedBasePrompt: composedSystemPrompt,
     clinicName,
     channel: dryRun ? "playground" : "whatsapp",
-    script: scriptCtx,
-    facts: filterFactsForState(facts, fsmForFacts),
-    fsmState: fsmForFacts,
-    sessionSummary: buildSessionSummary(data),
+    phone,
+    sessionData: data,
   });
 
   const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -210,24 +123,19 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     { role: "user", content: messageText },
   ];
 
-  const llmModel = CHAT_MODEL;
-  const llmTimeoutMs = 28_000;
-  const llmMaxTokens = 560;
-
   let agentTurn = null;
-  let usedParseFallback = false;
 
   try {
     const completion = await createChatCompletion(
       {
-        model: llmModel,
+        model: CHAT_MODEL,
         messages,
         response_format: { type: "json_object" },
         temperature: 0.35,
-        max_tokens: llmMaxTokens,
+        max_tokens: 560,
       },
       {
-        timeoutMs: llmTimeoutMs,
+        timeoutMs: 28_000,
         label: dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn",
       },
     );
@@ -238,51 +146,10 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     }
   } catch (err) {
     logger.error({ err }, "[AgentTurn] LLM call failed");
-    usedParseFallback = true;
   }
 
   if (!agentTurn) {
-    usedParseFallback = true;
-  }
-
-  const fromNodeId = scriptCtx.currentNodeId;
-  const fromNode = safeMindMap?.nodes.find((n) => n.id === fromNodeId);
-
-  const toNodeId = resolveDeterministicNextNodeId(
-    safeMindMap,
-    fromNodeId,
-    messageText,
-    data,
-    agentTurn?.mindMapNodeId,
-    clinicBranchNames,
-  );
-  const toNode = safeMindMap?.nodes.find((n) => n.id === toNodeId);
-
-  if (!agentTurn) {
-    const fallbackReply = buildAgentFallbackReply({
-      scriptCtx,
-      fsmState: fsmForFacts,
-      sessionData: data,
-      clinicBranchNames,
-      knowledgeContext: deps.knowledgeContext,
-      messageText,
-      targetNodeId: toNodeId,
-      targetFsmState: toNode?.fsmState as ChatbotState | undefined,
-    });
-    const actions = inferAgentActionsForTransition(
-      fromNode,
-      toNode,
-      data,
-      messageText,
-      clinicBranchNames,
-      [],
-    );
-
-    if (toNodeId) data.activeMindMapNodeId = toNodeId;
-    if (toNode?.fsmState) state = toNode.fsmState as ChatbotState;
-    data = syncQualificationPhase(data, fromNodeId, toNodeId);
-
-    const toolResult = await executeChatbotAgentTools(data, actions, undefined, {
+    const toolResult = await executeChatbotAgentTools(data, [], undefined, {
       clinicId,
       phone,
       messageText,
@@ -292,27 +159,13 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       officialBranches: clinicBranchNames,
       noteAction,
     });
-
     data = toolResult.data;
-    state = deriveFsmStateFromAgent(data, toNode?.fsmState, toNode?.fsmState);
-
-    const branchJustSelected =
-      actions.some((a) => a.type === "set_branch") && data.selectedBranch ? data.selectedBranch : null;
-    const reply = finalizeAgentReply(
-      replyFromText(fallbackReply),
-      buildEnrichContext(deps, state, data, messageText, branchJustSelected),
-      toolResult,
-      data.urgency,
-    );
+    state = deriveFsmStateFromAgent(data, state);
+    const reply = finalizeAgentReply(replyFromText(buildKnowledgeFallbackReply(data)), toolResult, data.urgency);
     if (dryRun) {
-      for (const note of toolResult.toolNotes) {
-        noteAction(note);
-      }
-      if (usedParseFallback) {
-        logger.info({ fromNodeId, toNodeId }, "[AgentTurn] Deterministic fallback reply (JSON unavailable)");
-      }
+      for (const note of toolResult.toolNotes) noteAction(note);
+      noteAction("Fallback: JSON недоступен");
     }
-
     return { state, data, response: reply, humanTakeover: false };
   }
 
@@ -327,38 +180,9 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     };
   }
 
-  const fromNodeIdResolved = fromNodeId;
-  let resolvedToNodeId = toNodeId;
-  const transition = assertAllowedTransition(safeMindMap, fromNodeIdResolved, resolvedToNodeId ?? undefined);
-  if (!transition.allowed) {
-    logger.warn(
-      { reason: transition.reason, fromNodeId: fromNodeIdResolved, toNodeId: resolvedToNodeId },
-      "[AgentTurn] Blocked transition — staying on node",
-    );
-    resolvedToNodeId = fromNodeIdResolved;
-  }
-
-  if (resolvedToNodeId) {
-    data.activeMindMapNodeId = resolvedToNodeId;
-    const targetNode = safeMindMap?.nodes.find((n) => n.id === resolvedToNodeId);
-    if (targetNode?.fsmState) {
-      state = targetNode.fsmState as ChatbotState;
-    }
-  }
-  data = syncQualificationPhase(data, fromNodeIdResolved, resolvedToNodeId);
-
-  const mergedActions = inferAgentActionsForTransition(
-    fromNode,
-    safeMindMap?.nodes.find((n) => n.id === resolvedToNodeId),
-    data,
-    messageText,
-    clinicBranchNames,
-    agentTurn.actions ?? [],
-  );
-
   const toolResult = await executeChatbotAgentTools(
     data,
-    mergedActions,
+    agentTurn.actions ?? [],
     agentTurn.intent,
     {
       clinicId,
@@ -373,11 +197,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   );
 
   data = toolResult.data;
-  state = deriveFsmStateFromAgent(
-    data,
-    agentTurn.fsmHint,
-    safeMindMap?.nodes.find((n) => n.id === resolvedToNodeId)?.fsmState,
-  );
+  state = deriveFsmStateFromAgent(data, agentTurn.fsmHint);
 
   if (toolResult.handoff) {
     return {
@@ -410,12 +230,8 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     }
   }
 
-  const branchJustSelected =
-    mergedActions.some((a) => a.type === "set_branch") && data.selectedBranch ? data.selectedBranch : null;
-
   const reply = finalizeAgentReply(
     replyFromAgentText(agentTurn.reply, agentTurn.replyParts),
-    buildEnrichContext(deps, state, data, messageText, branchJustSelected),
     toolResult,
     data.urgency,
   );
@@ -424,11 +240,6 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     for (const note of toolResult.toolNotes) {
       noteAction(note);
     }
-  }
-
-  if (!data.activeMindMapNodeId && state) {
-    const byFsm = findMindMapNodeByFsmState(safeMindMap, state);
-    if (byFsm) data.activeMindMapNodeId = byFsm.id;
   }
 
   return {

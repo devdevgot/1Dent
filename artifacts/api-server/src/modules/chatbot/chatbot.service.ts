@@ -111,6 +111,7 @@ import {
   detectObjectionType,
 } from "./booking-script";
 import { retrieveRelevantKnowledge } from "./knowledge-retrieval";
+import { KNOWLEDGE_CONTEXT_MAX_CHARS, getComposedChatbotPrompt, type ChatbotPromptComposeInputs } from "./chatbot-prompt-composer";
 import {
   hasClinicKnowledge,
   isUsableClinicKnowledge,
@@ -446,9 +447,9 @@ async function loadKnowledgeContext(clinicId: string, query?: string): Promise<s
   }
 
   if (query?.trim()) {
-    return retrieveRelevantKnowledge(fullText, query, { maxChars: 3500, topK: 4 });
+    return retrieveRelevantKnowledge(fullText, query, { maxChars: KNOWLEDGE_CONTEXT_MAX_CHARS, topK: 8 });
   }
-  return fullText.slice(0, 3500);
+  return fullText.slice(0, KNOWLEDGE_CONTEXT_MAX_CHARS);
 }
 
 async function loadDoctorsContext(clinicId: string): Promise<string> {
@@ -640,19 +641,7 @@ async function getSettings(clinicId: string): Promise<ChatbotSettings> {
 }
 
 function getEffectiveSettings(settings: ChatbotSettings): ChatbotSettings {
-  const raw = settings.scriptMindMap as ScriptMindMapData | undefined;
-  if (!raw?.nodes?.length) {
-    return { ...settings, scriptMindMap: DEFAULT_BOOKING_MIND_MAP };
-  }
-  const validation = validateMindMapScript(raw);
-  const map = validation.valid ? raw : mergeMindMapWithDefault(raw);
-  return {
-    ...settings,
-    scriptMindMap: {
-      nodes: map.nodes,
-      edges: Array.isArray(map.edges) ? map.edges : [],
-    },
-  };
+  return settings;
 }
 
 // ─── Red alert escalation ────────────────────────────────────────────────────
@@ -2086,11 +2075,17 @@ export class ChatbotService {
       !session.humanTakeover &&
       state !== "collect_iin"
     ) {
-      const mindMap = settings.scriptMindMap as ScriptMindMapData;
-      if (!data.activeMindMapNodeId) {
-        const rootId = findMindMapRootId(mindMap);
-        if (rootId) data.activeMindMapNodeId = rootId;
-      }
+      const resolvedName = resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName);
+      const doctorsList = await loadDoctorsContext(clinicId);
+      const composedSystemPrompt = await getComposedChatbotPrompt({
+        clinicId,
+        clinicName: resolvedName,
+        knowledgeText: knowledgeContext,
+        priceListText: priceListContext,
+        officialBranches: clinicBranchNames,
+        doctorsList,
+        managerExamples,
+      });
 
       const agentOutcome = await runChatbotAgentTurn({
         clinicId,
@@ -2098,29 +2093,15 @@ export class ChatbotService {
         messageText,
         dryRun,
         settings,
-        mindMap,
-        clinicName: resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName),
+        clinicName: resolvedName,
+        composedSystemPrompt,
         knowledgeContext,
-        priceListContext,
         clinicBranchNames,
         calendarConfig,
         recentMessages,
-        managerExamples,
         sessionState: state,
         sessionData: data,
         noteAction,
-        buildPromptFacts: (fsmState) =>
-          buildPromptFacts({
-            settings,
-            clinicName,
-            doctorsWithSlots,
-            knowledgeContext,
-            priceListContext,
-            officialBranches: clinicBranchNames,
-            sessionData: data,
-            fsmState,
-            userText: messageText,
-          }),
         finalizeBooking: async ({ data: bookingData, branchToSave, promptState }) =>
           finalizeBookingAppointment({
             clinicId,
@@ -4089,25 +4070,21 @@ export class ChatbotService {
       followup168hTemplate?: string;
       stepInstructions?: StepInstructions;
       scriptBlocks?: ScriptBlock[];
-      scriptMindMap?: ScriptMindMapData;
       calendarConfig?: ChatbotSettings["calendarConfig"];
       abTestEnabled?: boolean;
       broadcastAiEnabled?: boolean;
       agentModeEnabled?: boolean;
       scriptVariants?: ChatbotSettings["scriptVariants"];
     },
-  ): Promise<{ settings: ChatbotSettings; mindMapValidation?: ReturnType<typeof validateMindMapScript> }> {
+  ): Promise<{ settings: ChatbotSettings }> {
     const settings = await getSettings(clinicId);
-    const mindMapValidation =
-      updates.scriptMindMap !== undefined ? validateMindMapScript(updates.scriptMindMap) : undefined;
     const [updated] = await db
       .update(chatbotSettingsTable)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(chatbotSettingsTable.id, settings.id))
       .returning();
-    // Invalidate cache
     settingsCache.delete(clinicId);
-    return { settings: updated!, ...(mindMapValidation ? { mindMapValidation } : {}) };
+    return { settings: updated! };
   }
 
   // ─── Manager Examples CRUD ────────────────────────────────────────────────
@@ -4512,4 +4489,41 @@ export class ChatbotService {
       }
     }
   }
+}
+
+export async function loadChatbotPromptComposeInputs(
+  clinicId: string,
+): Promise<ChatbotPromptComposeInputs> {
+  const [
+    settings,
+    managerExamples,
+    knowledgeText,
+    priceListText,
+    doctorsList,
+    clinicNameRow,
+    clinicBranchNames,
+  ] = await Promise.all([
+    getSettings(clinicId),
+    getManagerExamples(clinicId),
+    loadKnowledgeContext(clinicId),
+    loadPriceListContext(clinicId),
+    loadDoctorsContext(clinicId),
+    db
+      .select({ name: clinicsTable.name })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, clinicId))
+      .limit(1)
+      .then((rows) => rows[0]?.name),
+    loadClinicBranchNames(clinicId),
+  ]);
+
+  return {
+    clinicId,
+    clinicName: resolveClinicName(settings, clinicNameRow),
+    knowledgeText,
+    priceListText,
+    officialBranches: clinicBranchNames,
+    doctorsList,
+    managerExamples,
+  };
 }

@@ -171,6 +171,12 @@ export const FAST_MODEL =
   process.env["CHATBOT_FAST_MODEL"] ?? "anthropic/claude-sonnet-5";
 export const CHAT_MODEL =
   process.env["CHATBOT_CHAT_MODEL"] ?? "google/gemini-2.5-pro";
+/** Composes the chatbot system prompt from knowledge base (Claude Opus). */
+export const PROMPT_COMPOSER_MODEL =
+  process.env["CHATBOT_PROMPT_MODEL"] ?? "anthropic/claude-opus-4.8";
+/** Refines the composed chatbot prompt (Claude Sonnet 5). */
+export const PROMPT_REFINER_MODEL =
+  process.env["CHATBOT_PROMPT_REFINER_MODEL"] ?? "anthropic/claude-sonnet-5";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

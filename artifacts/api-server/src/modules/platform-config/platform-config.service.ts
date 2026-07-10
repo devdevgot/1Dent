@@ -2,9 +2,11 @@ import { eq } from "drizzle-orm";
 import { db, platformSettingsTable, chatbotSettingsTable, clinicsTable } from "@workspace/db";
 import {
   DEFAULT_CHATBOT_DEFAULTS,
+  DEFAULT_CHATBOT_PROMPT_COMPOSER,
   getDefaultPlatformPlans,
   buildDefaultContractTemplatesConfig,
   type PlatformChatbotDefaults,
+  type PlatformChatbotPromptComposerConfig,
   type PlatformContractTemplatesConfig,
   type PlatformPlansConfig,
 } from "./platform-config.defaults";
@@ -13,11 +15,13 @@ import { seedAllClinicsContractTemplates } from "../../seeds/contract-templates.
 const KEYS = {
   plans: "plans",
   chatbotDefaults: "chatbot_defaults",
+  chatbotPromptComposer: "chatbot_prompt_composer",
   contractTemplates: "contract_templates",
 } as const;
 
 let plansCache: PlatformPlansConfig | null = null;
 let chatbotDefaultsCache: PlatformChatbotDefaults = DEFAULT_CHATBOT_DEFAULTS;
+let chatbotPromptComposerCache: PlatformChatbotPromptComposerConfig = DEFAULT_CHATBOT_PROMPT_COMPOSER;
 
 function getPlansCache(): PlatformPlansConfig {
   if (!plansCache) plansCache = getDefaultPlatformPlans();
@@ -30,6 +34,10 @@ export function getCachedPlansConfig(): PlatformPlansConfig {
 
 export function getCachedChatbotDefaults(): PlatformChatbotDefaults {
   return chatbotDefaultsCache;
+}
+
+export function getCachedChatbotPromptComposerConfig(): PlatformChatbotPromptComposerConfig {
+  return chatbotPromptComposerCache;
 }
 
 async function readSetting<T>(key: string, fallback: T): Promise<T> {
@@ -58,6 +66,7 @@ export class PlatformConfigService {
   async warmCache(): Promise<void> {
     plansCache = await this.getPlansConfig();
     chatbotDefaultsCache = await this.getChatbotDefaults();
+    chatbotPromptComposerCache = await this.getChatbotPromptComposerConfig();
   }
 
   async getPlansConfig(): Promise<PlatformPlansConfig> {
@@ -93,6 +102,24 @@ export class PlatformConfigService {
     const next = { ...current, ...patch };
     await writeSetting(KEYS.chatbotDefaults, next);
     chatbotDefaultsCache = next;
+    return next;
+  }
+
+  async getChatbotPromptComposerConfig(): Promise<PlatformChatbotPromptComposerConfig> {
+    chatbotPromptComposerCache = await readSetting(
+      KEYS.chatbotPromptComposer,
+      DEFAULT_CHATBOT_PROMPT_COMPOSER,
+    );
+    return chatbotPromptComposerCache;
+  }
+
+  async updateChatbotPromptComposerConfig(
+    patch: Partial<PlatformChatbotPromptComposerConfig>,
+  ): Promise<PlatformChatbotPromptComposerConfig> {
+    const current = await this.getChatbotPromptComposerConfig();
+    const next = { ...current, ...patch };
+    await writeSetting(KEYS.chatbotPromptComposer, next);
+    chatbotPromptComposerCache = next;
     return next;
   }
 

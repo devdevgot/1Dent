@@ -9,15 +9,19 @@ import {
   knowledgeSourcesTable,
   knowledgeScriptsTable,
   clinicsTable,
-  chatbotSettingsTable,
   clinicBranchesTable,
 } from "@workspace/db";
 import { assertOpenRouterConfigured } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { scrapeUrl, extractFileText } from "./knowledge.service";
 import { generateKnowledgeScripts } from "./knowledge-generate.service";
-import { generateMindMapFromKnowledge } from "./knowledge-mindmap-generate.service";
-import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.service";
+import { invalidateComposedPromptCache } from "../chatbot/chatbot-prompt-composer";
+import {
+  composeChatbotPromptWithOpus,
+  refineComposedChatbotPrompt,
+  getComposedPromptCacheStatus,
+} from "../chatbot/chatbot-prompt-composer";
+import { loadChatbotPromptComposeInputs } from "../chatbot/chatbot.service";
 
 const router: IRouter = Router();
 
@@ -198,6 +202,90 @@ router.patch("/knowledge/scripts", ownerAdmin, async (req: Request, res: Respons
   } catch (err) { next(err); }
 });
 
+// ── GET /api/knowledge/prompt-status ─────────────────────────────────────────
+router.get("/knowledge/prompt-status", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.user!.clinicId;
+    const status = getComposedPromptCacheStatus(clinicId);
+    res.json({ success: true, data: status });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/knowledge/compose-prompt — Opus 4.8 creates base prompt ─────────
+router.post("/knowledge/compose-prompt", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    assertOpenRouterConfigured();
+    const clinicId = req.user!.clinicId;
+    const inputs = await loadChatbotPromptComposeInputs(clinicId);
+    if (!inputs.knowledgeText.trim()) {
+      return next(new ValidationError("Нет готовых источников знаний. Добавьте материалы о клинике."));
+    }
+
+    const prompt = await composeChatbotPromptWithOpus(inputs);
+
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId: req.user!.id,
+      feature: "knowledge_parse",
+      description: "Создание промпта чатбота (Opus)",
+    });
+
+    res.json({
+      success: true,
+      data: {
+        promptLength: prompt.length,
+        refined: false,
+        model: "opus",
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/knowledge/refine-prompt — Sonnet 5 improves composed prompt ────
+router.post("/knowledge/refine-prompt", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    assertOpenRouterConfigured();
+    const clinicId = req.user!.clinicId;
+    const inputs = await loadChatbotPromptComposeInputs(clinicId);
+
+    let prompt: string;
+    try {
+      prompt = await refineComposedChatbotPrompt(inputs);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg === "NO_COMPOSED_PROMPT") {
+        return next(new ValidationError("Сначала создайте промпт кнопкой «Создать промпт» (Opus)."));
+      }
+      if (msg === "REFINE_FAILED") {
+        return next(new OpenRouterAiFailedError("Sonnet не смог доработать промпт. Попробуйте ещё раз."));
+      }
+      throw e;
+    }
+
+    await aiCreditsService.consumeCredits({
+      clinicId,
+      userId: req.user!.id,
+      feature: "knowledge_parse",
+      description: "Доработка промпта чатбота (Sonnet)",
+    });
+
+    res.json({
+      success: true,
+      data: {
+        promptLength: prompt.length,
+        refined: true,
+        model: "sonnet",
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── POST /api/knowledge/generate ─────────────────────────────────────────────
 router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -236,12 +324,8 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
     const branchNames = branchRows.map((r) => r.name).filter(Boolean);
 
     let generated;
-    let mindMapResult;
     try {
-      [generated, mindMapResult] = await Promise.all([
-        generateKnowledgeScripts(clinicNameNote, knowledgeText),
-        generateMindMapFromKnowledge(clinicNameNote, knowledgeText, branchNames),
-      ]);
+      generated = await generateKnowledgeScripts(clinicNameNote, knowledgeText);
     } catch (err) {
       req.log?.error({ err, clinicId }, "[KnowledgeGenerate] generation failed");
       const message = err instanceof Error ? err.message : String(err);
@@ -275,41 +359,13 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
         },
       });
 
-    const scriptMindMap = mindMapResult.mindMap;
-
-    const existingSettings = await db
-      .select({ id: chatbotSettingsTable.id })
-      .from(chatbotSettingsTable)
-      .where(eq(chatbotSettingsTable.clinicId, clinicId))
-      .limit(1);
-
-    if (existingSettings.length > 0) {
-      await db
-        .update(chatbotSettingsTable)
-        .set({ scriptMindMap: scriptMindMap as never, updatedAt: new Date() })
-        .where(eq(chatbotSettingsTable.clinicId, clinicId));
-    } else {
-      const defaults = chatbotDefaultsForNewClinic();
-      await db.insert(chatbotSettingsTable).values({
-        id: randomUUID(),
-        clinicId,
-        ...defaults,
-        scriptMindMap: scriptMindMap as never,
-      });
-    }
-
-    req.log?.info(
-      { clinicId, mindMapNodes: scriptMindMap.nodes.length, warnings: mindMapResult.validation.warnings },
-      "[KnowledgeGenerate] Saved scriptMindMap to chatbot_settings",
-    );
+    invalidateComposedPromptCache(clinicId);
 
     res.json({
       success: true,
       data: {
         primaryScript: generated.primaryScript,
         repeatScript: generated.repeatScript,
-        scriptMindMap,
-        mindMapValidation: mindMapResult.validation,
       },
     });
   } catch (err) { next(err); }

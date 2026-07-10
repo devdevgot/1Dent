@@ -2,15 +2,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
   AlertCircle, Clock, X, Upload, AlignLeft, ChevronDown, ChevronUp,
-  BookOpen, GitBranch, Maximize2, RefreshCw,
+  BookOpen, RefreshCw, Wand2,
 } from "lucide-react";
-import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData, type MindMapSaveMeta } from "./script-mindmap";
 import { AppDialog } from "@/components/layout/app-dialog";
-import { cn } from "@/lib/utils";
-import { guessFsmStateFromLabel } from "@/lib/chatbot-fsm-states";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import { cn } from "@/lib/utils";
 
 // ── Error message helper ──────────────────────────────────────────────────────
 function friendlyError(msg: string | null | undefined): string {
@@ -59,76 +57,20 @@ interface KnowledgeSource {
   createdAt: string;
 }
 
-interface ScriptNode {
-  id: string;
-  label: string;
-  detail?: string;
-  children?: ScriptNode[];
-}
-
-interface GeneratedScript {
-  title: string;
-  nodes: ScriptNode[];
-}
-
-// ── Convert AI-generated scripts to ScriptMindMapData ─────────────────────────
-function convertGeneratedScriptsToMindMap(
-  primaryScript?: GeneratedScript,
-  repeatScript?: GeneratedScript,
-): ScriptMindMapData {
-  const nodes: ScriptMindMapData["nodes"] = [];
-  const edges: ScriptMindMapData["edges"] = [];
-
-  nodes.push({ id: "root", label: "Скрипты продаж", content: "", isRoot: true });
-
-  function flattenTree(node: ScriptNode, parentId: string, prefix: string) {
-    const id = `${prefix}_${node.id}`;
-    nodes.push({
-      id,
-      label: node.label,
-      content: node.detail ?? "",
-      fsmState: guessFsmStateFromLabel(node.label),
-    });
-    edges.push({
-      id: `e_${parentId}_${id}`,
-      source: parentId,
-      target: id,
-      label: node.label,
-    });
-    for (const child of node.children ?? []) {
-      flattenTree(child, id, prefix);
-    }
-  }
-
-  if (primaryScript) {
-    nodes.push({ id: "p_root", label: primaryScript.title, content: "" });
-    edges.push({ id: "e_root_p_root", source: "root", target: "p_root" });
-    for (const n of primaryScript.nodes) flattenTree(n, "p_root", "p");
-  }
-
-  if (repeatScript) {
-    nodes.push({ id: "r_root", label: repeatScript.title, content: "" });
-    edges.push({ id: "e_root_r_root", source: "root", target: "r_root" });
-    for (const n of repeatScript.nodes) flattenTree(n, "r_root", "r");
-  }
-
-  return { nodes, edges };
-}
-
 // ── Main KnowledgeTab component ───────────────────────────────────────────────
-export function KnowledgeTab({
-  onScriptsGenerated,
-  hasExistingMindMap = false,
-}: {
-  onScriptsGenerated?: (data: ScriptMindMapData) => void;
-  hasExistingMindMap?: boolean;
-}) {
+export function KnowledgeTab() {
   const { toast } = useToast();
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [urlInput, setUrlInput] = useState("");
   const [addingUrl, setAddingUrl] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [refining, setRefining] = useState(false);
+  const [promptStatus, setPromptStatus] = useState<{ exists: boolean; refined: boolean; length: number }>({
+    exists: false,
+    refined: false,
+    length: 0,
+  });
   const [uploadingFile, setUploadingFile] = useState(false);
   const [fileModalOpen, setFileModalOpen] = useState(false);
   const [textModalOpen, setTextModalOpen] = useState(false);
@@ -140,16 +82,30 @@ export function KnowledgeTab({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const loadPromptStatus = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/knowledge/prompt-status");
+      setPromptStatus((res.data as { exists: boolean; refined: boolean; length: number }) ?? {
+        exists: false,
+        refined: false,
+        length: 0,
+      });
+    } catch {
+      // silent
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const res = await apiFetch("/api/knowledge");
       setSources((res.data.sources as KnowledgeSource[]) ?? []);
+      await loadPromptStatus();
     } catch {
       // silent
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadPromptStatus]);
 
   useEffect(() => {
     void load();
@@ -260,19 +216,15 @@ export function KnowledgeTab({
     }
   };
 
-  const handleGenerate = async () => {
-    if (hasExistingMindMap) {
-      const ok = window.confirm(
-        "Текущий майнд-мэп скрипта будет заменён новой генерацией. Продолжить?",
-      );
-      if (!ok) return;
-    }
-    setGenerating(true);
+  const postPromptAction = async (
+    path: "/api/knowledge/compose-prompt" | "/api/knowledge/refine-prompt",
+    timeoutMs: number,
+  ) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 130_000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const token = getToken();
-      const res = await fetch(`${getBaseUrl()}/api/knowledge/generate`, {
+      const res = await fetch(`${getBaseUrl()}${path}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -284,41 +236,55 @@ export function KnowledgeTab({
         const body = await res.json().catch(() => ({}));
         throw new Error(getApiErrorMessage({ data: body }, "Ошибка сервера"));
       }
-      const json = await res.json();
-      const { primaryScript, repeatScript, scriptMindMap, mindMapValidation } = json.data as {
-        primaryScript: GeneratedScript;
-        repeatScript: GeneratedScript;
-        scriptMindMap?: ScriptMindMapData;
-        mindMapValidation?: { warnings?: string[] };
-      };
+      return await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
-      if (scriptMindMap?.nodes?.length) {
-        onScriptsGenerated?.(scriptMindMap);
-        const warnCount = mindMapValidation?.warnings?.length ?? 0;
-        toast({
-          title: "Скрипт сохранён",
-          description:
-            warnCount > 0
-              ? `Mind map (${scriptMindMap.nodes.length} узлов) сохранён в настройки чатбота. ${warnCount} предупреждений валидации.`
-              : `Mind map (${scriptMindMap.nodes.length} узлов) автоматически сохранён как главный скрипт.`,
-        });
-      } else {
-        const mindMapData = convertGeneratedScriptsToMindMap(primaryScript, repeatScript);
-        onScriptsGenerated?.(mindMapData);
-        toast({ title: "Скрипты готовы!", description: "ИИ сгенерировал скрипты — смотрите в майнд-мэпе ниже" });
-      }
+  const handleComposePrompt = async () => {
+    setComposing(true);
+    try {
+      await postPromptAction("/api/knowledge/compose-prompt", 100_000);
+      await loadPromptStatus();
+      toast({
+        title: "Промпт создан",
+        description: "Claude Opus 4.8 собрал базовый system prompt. При желании нажмите «Доработать».",
+      });
     } catch (err) {
       const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
       toast({
-        title: "Не удалось сгенерировать скрипты",
+        title: "Не удалось создать промпт",
         description: isAbort
           ? "Генерация заняла слишком много времени. Попробуйте ещё раз."
           : err instanceof Error ? err.message : "Попробуйте ещё раз.",
         variant: "destructive",
       });
     } finally {
-      clearTimeout(timer);
-      setGenerating(false);
+      setComposing(false);
+    }
+  };
+
+  const handleRefinePrompt = async () => {
+    setRefining(true);
+    try {
+      await postPromptAction("/api/knowledge/refine-prompt", 70_000);
+      await loadPromptStatus();
+      toast({
+        title: "Промпт доработан",
+        description: "Claude Sonnet 5 улучшил структуру и ясность промпта.",
+      });
+    } catch (err) {
+      const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
+      toast({
+        title: "Не удалось доработать промпт",
+        description: isAbort
+          ? "Доработка заняла слишком много времени. Попробуйте ещё раз."
+          : err instanceof Error ? err.message : "Попробуйте ещё раз.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefining(false);
     }
   };
 
@@ -334,7 +300,7 @@ export function KnowledgeTab({
       <div>
         <p className="text-sm font-semibold text-[#0f172a]">База знаний</p>
         <p className="text-xs text-[#64748b] mt-0.5">
-          Добавьте ссылки и файлы — ИИ обучится на них и сгенерирует скрипты в майнд-мэпе
+          Добавьте ссылки и файлы — Claude Opus составит единый промпт, Gemini ведёт диалог
         </p>
       </div>
 
@@ -546,83 +512,85 @@ export function KnowledgeTab({
         </button>
       )}
 
-      {/* Generate button */}
-      <button
-        onClick={() => void handleGenerate()}
-        disabled={generating || readySources.length === 0}
-        className={cn(
-          "w-full flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold transition-all",
-          readySources.length > 0
-            ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8]"
-            : "bg-[#f1ede4] text-[#64748b] cursor-not-allowed",
+      {/* Prompt pipeline: Opus creates, Sonnet refines */}
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={() => void handleComposePrompt()}
+          disabled={composing || refining || readySources.length === 0}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold transition-all",
+            readySources.length > 0 && !composing && !refining
+              ? "bg-[#1f75fe] text-white hover:bg-[#1a65e8]"
+              : "bg-[#f1ede4] text-[#64748b] cursor-not-allowed",
+          )}
+        >
+          {composing
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Создание промпта (Opus)…</>
+            : <><Sparkles className="h-4 w-4" /> Создать промпт</>
+          }
+        </button>
+
+        <button
+          onClick={() => void handleRefinePrompt()}
+          disabled={composing || refining || !promptStatus.exists || promptStatus.refined}
+          className={cn(
+            "w-full flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-medium transition-all border",
+            promptStatus.exists && !promptStatus.refined && !composing && !refining
+              ? "border-[#1f75fe] text-[#1f75fe] bg-white hover:bg-[#f0f7ff]"
+              : "border-[#e8e3d9] text-[#64748b] bg-white cursor-not-allowed",
+          )}
+        >
+          {refining
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Доработка (Sonnet)…</>
+            : promptStatus.refined
+              ? <><CheckCircle2 className="h-4 w-4" /> Промпт доработан</>
+              : <><Wand2 className="h-4 w-4" /> Доработать</>
+          }
+        </button>
+
+        {promptStatus.exists && (
+          <p className="text-xs text-center text-[#64748b]">
+            {promptStatus.refined
+              ? `Готовый промпт: ${promptStatus.length.toLocaleString("ru-RU")} символов (Opus + Sonnet)`
+              : `Черновик: ${promptStatus.length.toLocaleString("ru-RU")} символов — можно доработать Sonnet`}
+          </p>
         )}
-      >
-        {generating
-          ? <><Loader2 className="h-4 w-4 animate-spin" /> Генерация скриптов…</>
-          : <><Sparkles className="h-4 w-4" /> Сгенерировать скрипты продаж</>
-        }
-      </button>
+      </div>
 
       {readySources.length === 0 && sources.length > 0 && pendingSources.length > 0 && (
         <p className="text-xs text-center text-[#64748b]">
-          Дождитесь обработки источников, затем нажмите «Сгенерировать»
+          Дождитесь обработки источников, затем нажмите «Создать промпт»
         </p>
       )}
       {sources.length === 0 && (
         <p className="text-xs text-center text-[#64748b]">
-          Добавьте хотя бы один источник, чтобы ИИ мог создать скрипты
+          Добавьте хотя бы один источник — чатбот будет отвечать по вашим материалам
         </p>
       )}
     </div>
   );
 }
 
-// ── Combined knowledge + script modal ─────────────────────────────────────────
-interface KnowledgeAndScriptModalProps {
+// ── Knowledge modal (fullscreen) ──────────────────────────────────────────────
+interface KnowledgeModalProps {
   open: boolean;
   onClose: () => void;
-  initialMindMapData?: ScriptMindMapData | null;
-  onSaveMindMap: (data: ScriptMindMapData, meta?: MindMapSaveMeta) => void;
-  mindMapSaveStatus?: "idle" | "saving" | "saved";
 }
 
-export function KnowledgeAndScriptModal({
-  open,
-  onClose,
-  initialMindMapData,
-  onSaveMindMap,
-  mindMapSaveStatus,
-}: KnowledgeAndScriptModalProps) {
-  const [mapExpanded, setMapExpanded] = useState(false);
-  const [liveMindMapData, setLiveMindMapData] = useState<ScriptMindMapData | null | undefined>(initialMindMapData);
-
-  // Sync if parent data changes (e.g. on first load)
-  useEffect(() => {
-    setLiveMindMapData(initialMindMapData);
-  }, [initialMindMapData]);
-
-  const handleScriptsGenerated = useCallback((data: ScriptMindMapData) => {
-    setLiveMindMapData(data);
-    onSaveMindMap(data);
-  }, [onSaveMindMap]);
-
-  const handleSaveMindMap = useCallback((data: ScriptMindMapData, meta?: MindMapSaveMeta) => {
-    setLiveMindMapData(data);
-    onSaveMindMap(data, meta);
-  }, [onSaveMindMap]);
-
+export function KnowledgeModal({ open, onClose }: KnowledgeModalProps) {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#f1f5f9] font-manrope">
-      {/* Header */}
       <div className="shrink-0 flex items-center gap-4 px-5 py-4 bg-white border-b border-[#e8e3d9] shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1f75fe] to-[#60a5fa] text-white shadow-sm shrink-0">
           <BookOpen className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-base font-semibold text-[#0f172a]">База знаний и скрипт</p>
-          <p className="text-xs text-[#64748b] leading-tight mt-0.5">Обучение чат-бота и визуальный сценарий разговора</p>
+          <p className="text-base font-semibold text-[#0f172a]">База знаний</p>
+          <p className="text-xs text-[#64748b] leading-tight mt-0.5">
+            Материалы клиники → Claude Opus составляет промпт → Gemini ведёт диалог
+          </p>
         </div>
         <button
           onClick={onClose}
@@ -631,67 +599,12 @@ export function KnowledgeAndScriptModal({
           <X className="h-5 w-5 text-[#64748b]" />
         </button>
       </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Knowledge base */}
-        <div className="px-4 py-5">
-          <KnowledgeTab
-            onScriptsGenerated={handleScriptsGenerated}
-            hasExistingMindMap={(liveMindMapData?.nodes?.length ?? 0) > 0}
-          />
-        </div>
-
-        {/* Divider */}
-        <div className="h-px bg-[var(--ds-border)] mx-4" />
-
-        {/* Mind map inline section */}
-        <div className="px-4 py-4 pb-8 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f75fe] to-[#60a5fa] text-white shadow-sm shrink-0">
-                <GitBranch className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
-                <p className="text-xs text-[#64748b] mt-0.5 truncate">
-                  {liveMindMapData?.nodes?.length
-                    ? "Основной сценарий сверху вниз · «Все ветки» для деталей"
-                    : "Сгенерируйте скрипты выше — они появятся здесь"}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setMapExpanded(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-[#64748b] hover:text-[#0f172a] px-3 py-2 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#f8fafc] shadow-sm transition-colors shrink-0"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              На весь экран
-            </button>
-          </div>
-          <div
-            className="rounded-2xl overflow-hidden bg-[#f6f8fb] relative"
-            style={{ height: 520 }}
-          >
-            <ScriptMindMap
-              key={`${open}-${liveMindMapData?.nodes?.length ?? 0}`}
-              initialData={liveMindMapData}
-              onSave={handleSaveMindMap}
-              saveStatus={mindMapSaveStatus}
-              mode="inline"
-            />
-          </div>
-        </div>
+      <div className="flex-1 overflow-y-auto px-4 py-5">
+        <KnowledgeTab />
       </div>
-
-      {/* Fullscreen overlay for mind map */}
-      <ScriptMindMapModal
-        open={mapExpanded}
-        onClose={() => setMapExpanded(false)}
-        initialData={liveMindMapData}
-        onSave={handleSaveMindMap}
-        saveStatus={mindMapSaveStatus}
-      />
     </div>
   );
 }
+
+/** @deprecated Use KnowledgeModal */
+export const KnowledgeAndScriptModal = KnowledgeModal;

@@ -30,6 +30,30 @@ export interface PlatformChatbotDefaults {
   followup168hTemplate: string;
 }
 
+/** Platform-wide meta-prompt for Claude Opus that composes per-clinic chatbot system prompts. */
+export interface PlatformChatbotPromptComposerConfig {
+  opusMetaPrompt: string;
+}
+
+export const DEFAULT_CHATBOT_PROMPT_COMPOSER: PlatformChatbotPromptComposerConfig = {
+  opusMetaPrompt: `Ты составляешь SYSTEM PROMPT для AI-ассистента стоматологической клиники в WhatsApp.
+
+На входе — сырые данные клиники. Сформируй один связный system prompt на русском языке со структурой:
+- ROLE (кто ты, тон общения)
+- БАЗА ЗНАНИЙ (все факты из источников — сохрани адреса, цены, услуги, часы, телефоны)
+- ПРАЙС-ЛИСТ
+- ФИЛИАЛЫ
+- ВРАЧИ
+- СТИЛЬ МЕНЕДЖЕРА (из примеров — тон, длина, эмодзи)
+- ПРАВИЛА ДИАЛОГА (естественный диалог без жёстких этапов; не выдумывать факты; короткие ответы)
+
+ВАЖНО:
+- Не добавляй факты, которых нет во входных данных.
+- Не используй mind map, этапы воронки, FSM.
+- Промпт должен быть готов для вставки в LLM как system message.
+Верни ТОЛЬКО текст промпта, без markdown-обёрток и комментариев.`,
+};
+
 export interface PlatformContractTemplateEntry {
   id: string;
   name: string;
