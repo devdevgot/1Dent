@@ -15,10 +15,10 @@ import {
   KZ_UTC_OFFSET_LABEL,
   parseAlmatyDatetime,
 } from "./almaty-time";
+import { detectServiceTypeFromKeywords } from "./service-type-keywords.ts";
 import {
-  HUMAN_MESSAGING_PROMPT,
-  parseChatbotReplyJson,
-  replyFromText,
+  CHAT_STYLE_PROMPT,
+  splitTextToReply,
   type ChatbotReply,
 } from "./chatbot-reply";
 
@@ -163,8 +163,20 @@ export async function classifyPatientRequest(
   message: string,
   history: ChatMessage[] = [],
 ): Promise<ClassificationResult> {
+  const keywordType = detectServiceTypeFromKeywords(message);
+  if (keywordType) {
+    return {
+      serviceType: keywordType,
+      urgency: /болит|ауыра|аура|срочн|қатты|катти|urgent|pain/i.test(message) ? "urgent" : "planned",
+      confidence: "high",
+      patientType: "new",
+      summary: message.slice(0, 100),
+    };
+  }
   return classifyWithRetry(message, history);
 }
+
+export { detectServiceTypeFromKeywords } from "./service-type-keywords.ts";
 
 // ─── AI response generator ───────────────────────────────────────────────────
 
@@ -204,7 +216,14 @@ function detectPatientLanguage(messages: ChatMessage[], currentMessage?: string)
 }
 
 export type { ChatbotReply } from "./chatbot-reply";
-export { joinChatbotReply, mergeReply, appendToReply, polishReply, replyFromText } from "./chatbot-reply";
+export {
+  joinChatbotReply,
+  mergeReply,
+  appendToReply,
+  polishReply,
+  replyFromText,
+  splitTextToReply,
+} from "./chatbot-reply";
 
 export async function generateChatbotResponse(
   systemPrompt: string,
@@ -216,7 +235,7 @@ export async function generateChatbotResponse(
   const fewShot: Array<{ role: "user" | "assistant"; content: string }> = [];
 
   const detectedLang = detectPatientLanguage(history, userMessage);
-  let finalSystemPrompt = `${systemPrompt}\n\n${HUMAN_MESSAGING_PROMPT}`;
+  let finalSystemPrompt = `${systemPrompt}\n\n${CHAT_STYLE_PROMPT}`;
   if (detectedLang === "kz") {
     finalSystemPrompt +=
       "\n\n⚠️ КРИТИЧЕСКИ ВАЖНО: Пациент пишет на КАЗАХСКОМ языке. " +
@@ -237,7 +256,7 @@ export async function generateChatbotResponse(
         "Ниже — примеры стиля общения менеджера клиники. Копируй их ТОН, длину ответов и использование эмодзи. " +
         "НЕ копируй из примеров цены, адреса, имена врачей и акции — эти факты бери только из материалов клиники.",
     });
-    for (const ex of fewShotExamples.slice(0, 8)) {
+    for (const ex of fewShotExamples.slice(0, 3)) {
       fewShot.push({ role: "user", content: ex.userMessage });
       fewShot.push({ role: "assistant", content: ex.managerResponse });
     }
@@ -257,8 +276,7 @@ export async function generateChatbotResponse(
         {
           model: CHAT_MODEL,
           max_tokens: maxTokens,
-          temperature: 0.65,
-          response_format: { type: "json_object" },
+          temperature: 0.55,
           messages,
         },
         { timeoutMs: 25_000, label: "generateChatbotResponse" },
@@ -266,22 +284,14 @@ export async function generateChatbotResponse(
       return response.choices[0]?.message?.content ?? "";
     };
 
-    let content = await runOnce(1200);
+    let content = await runOnce(512);
     if (!content.trim()) {
       logger.warn({ model: CHAT_MODEL }, "[AIClassifier] Empty chatbot response — retrying with higher max_tokens");
-      content = await runOnce(2400);
-    }
-
-    const parsed = parseChatbotReplyJson(content);
-    if (parsed) return parsed;
-
-    const loose = parseLlmJson<{ parts?: string[]; pausesMs?: number[] }>(content);
-    if (loose?.parts?.length) {
-      return parseChatbotReplyJson(JSON.stringify(loose));
+      content = await runOnce(768);
     }
 
     if (content.trim()) {
-      return replyFromText(content.trim());
+      return splitTextToReply(content.trim());
     }
 
     logger.warn(
@@ -346,13 +356,23 @@ export async function extractDatetimeFromText(text: string): Promise<Date | null
 
 // ─── Branch/address extractor ──────────────────────────────────────────────────
 
-export async function extractBranchFromText(text: string, knowledgeContext: string): Promise<string | null> {
-  const systemPrompt = `Тебе предоставлена информация о клинике, включая её филиалы и адреса:
-${knowledgeContext}
+export async function extractBranchFromText(
+  text: string,
+  knowledgeContext: string,
+  officialBranches?: string[],
+): Promise<string | null> {
+  const officialList =
+    officialBranches && officialBranches.length > 0
+      ? `\n\nОФИЦИАЛЬНЫЙ СПИСОК ФИЛИАЛОВ (единственные допустимые варианты):\n${officialBranches.map((b) => `• ${b}`).join("\n")}`
+      : "";
+
+  const systemPrompt = `Тебе предоставлена информация о клинике:
+${knowledgeContext}${officialList}
 
 Твоя задача — определить, какой именно филиал или адрес выбрал пациент в своем сообщении.
-Если пациент выбрал конкретный филиал/адрес из списка, верни JSON: {"branch": "Краткое название филиала/адреса"}.
-Если в тексте нет явного выбора филиала или указанный адрес не соответствует материалам клиники, верни {"branch": null}.
+Если пациент выбрал конкретный филиал/адрес из официального списка или материалов клиники, верни JSON: {"branch": "Точное название из списка"}.
+Если в тексте нет явного выбора филиала, указан адрес которого нет в списке, или пациент не отвечает на вопрос о филиале — верни {"branch": null}.
+НИКОГДА не возвращай адрес, которого нет в официальном списке или материалах.
 
 Отвечай ТОЛЬКО валидным JSON без markdown-обёрток.`;
 

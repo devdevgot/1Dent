@@ -17,12 +17,15 @@ import type { ProcedureStatus, PaymentMethod } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
 import { logger } from "../../lib/logger";
 import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../followups/appointment-reminders.queue";
+import { PatientsRepository } from "../patients/patients.repository";
+import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable, proceduresTable, notificationsTable } from "@workspace/db";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 const repo = new ProceduresRepository();
 const inventoryRepo = new InventoryRepository();
+const patientsRepo = new PatientsRepository();
 
 /**
  * Incrementally update the doctor_kpis row for a given doctor + month.
@@ -116,7 +119,7 @@ const updateTemplateSchema = z.object({
 
 router.use(authMiddleware);
 
-const allRoles = roleGuard("owner", "admin", "doctor", "accountant", "warehouse");
+const allRoles = roleGuard("owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse");
 const writeRoles = roleGuard("owner", "admin", "doctor");
 const deleteRoles = roleGuard("owner", "admin");
 const ownerAdminRoles = roleGuard("owner", "admin");
@@ -264,6 +267,21 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   }
 
   analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+
+  if (procedure.patientId) {
+    const patient = await patientsRepo.findById(procedure.patientId, clinicId).catch(() => undefined);
+    if (patient?.status === "new_request") {
+      await transitionPatientStage({
+        patientId: procedure.patientId,
+        clinicId,
+        toStatus: "initial_consultation",
+        trigger: PATIENT_STAGE_TRIGGERS.APPOINTMENT_CREATED,
+        actorId: userId,
+      }).catch((err) => {
+        logger.warn({ err, patientId: procedure.patientId }, "Failed to transition patient to initial_consultation after booking");
+      });
+    }
+  }
 
   if (scheduledAt && procedure.patientId) {
     const scheduledDate = new Date(scheduledAt);

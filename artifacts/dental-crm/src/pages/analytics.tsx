@@ -20,6 +20,7 @@ import {
   useGetPatientMetrics, type ChannelStat,
 } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { usePageBack } from "@/hooks/use-page-back";
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4", "#6366f1"];
 
@@ -52,9 +53,9 @@ function getPeriodDates(period: Period, customFrom: string, customTo: string): {
 type StatusLevel = "good" | "normal" | "warn";
 
 function statusConfig(level: StatusLevel) {
-  if (level === "good")   return { label: "Хорошо",          bg: "bg-[#f0fdf4]", border: "border-[#16a34a]/20", badge: "bg-[#f0fdf4] text-[var(--success)]", dot: "bg-[var(--success)]" };
-  if (level === "warn")   return { label: "Требует внимания", bg: "bg-[#fef2f2]", border: "border-[#dc2626]/20", badge: "bg-[#fef2f2] text-[var(--danger)]", dot: "bg-[var(--danger)]" };
-  return                         { label: "Норма",            bg: "bg-[#fef3c7]", border: "border-[#d97706]/20", badge: "bg-[#fef3c7] text-[var(--warning)]", dot: "bg-[var(--warning)]" };
+  if (level === "good")   return { label: "Хорошо",          bg: "bg-[#f0fdf4]", border: "border-[#16a34a]/20", badge: "bg-[#f0fdf4] text-[#16a34a]", dot: "bg-[var(--success)]" };
+  if (level === "warn")   return { label: "Требует внимания", bg: "bg-[#fef2f2]", border: "border-[#dc2626]/20", badge: "bg-[#fef2f2] text-[#dc2626]", dot: "bg-[var(--danger)]" };
+  return                         { label: "Норма",            bg: "bg-[#fef3c7]", border: "border-[#d97706]/20", badge: "bg-[#fef3c7] text-[#d97706]", dot: "bg-[var(--warning)]" };
 }
 
 interface QACardProps {
@@ -70,12 +71,12 @@ interface QACardProps {
 function QACard({ question, value, sub, hint, level, loading }: QACardProps) {
   const cfg = level ? statusConfig(level) : null;
   return (
-    <div className={`bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md p-4 flex flex-col gap-1 ${cfg ? `${cfg.border}` : ""}`}>
+    <div className={`bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-4 flex flex-col gap-1 ${cfg ? `${cfg.border}` : ""}`}>
       {/* Question — primary focus */}
       <div className="flex items-start justify-between gap-2">
-        <p className="text-base font-bold text-[var(--text)] leading-snug">{question}</p>
+        <p className="text-base font-bold text-[#0f172a] leading-snug">{question}</p>
         {cfg && (
-          <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-micro font-semibold ${cfg.badge}`}>
+          <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.badge}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
             {cfg.label}
           </span>
@@ -83,17 +84,17 @@ function QACard({ question, value, sub, hint, level, loading }: QACardProps) {
       </div>
       {/* Value — secondary */}
       {loading ? (
-        <div className="h-7 w-20 bg-[var(--surface-2)] animate-pulse rounded-xl mt-2" />
+        <div className="h-7 w-20 bg-[#f1ede4] animate-pulse rounded-xl mt-2" />
       ) : (
-        <p className="text-stat font-extrabold text-[var(--ds-primary)] tracking-tight leading-none mt-2">{value}</p>
+        <p className="text-xl font-extrabold text-[#1f75fe] tracking-tight leading-none mt-2">{value}</p>
       )}
       {/* Sub line */}
       {!loading && sub && (
-        <p className="text-caption text-[var(--text-secondary)] mt-0.5 leading-snug">{sub}</p>
+        <p className="text-xs text-[#64748b] mt-0.5 leading-snug">{sub}</p>
       )}
       {/* Hint */}
       {!loading && hint && (
-        <p className={`text-caption mt-1 font-medium ${level === "warn" ? "text-[var(--danger)]" : level === "normal" ? "text-[var(--warning)]" : "text-[var(--text-secondary)]"}`}>{hint}</p>
+        <p className={`text-xs mt-1 font-medium ${level === "warn" ? "text-[#dc2626]" : level === "normal" ? "text-[#d97706]" : "text-[#64748b]"}`}>{hint}</p>
       )}
     </div>
   );
@@ -111,26 +112,26 @@ function DoctorCard({ doctor, index, t }: { doctor: any; index: number; t: any }
   const npsVal = doctor.nps ?? 0;
 
   return (
-    <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-5 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-4">
+    <div className="bg-white rounded-2xl border border-[#e8e3d9] p-5 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-4">
       {/* Header: Avatar, Name, NPS */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-caption shrink-0 select-none shadow-sm"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 select-none shadow-sm"
             style={{ backgroundColor: bg }}
           >
             {initials}
           </div>
           <div>
-            <h4 className="font-semibold text-[var(--text)] text-body leading-tight">{doctor.doctorName || ""}</h4>
-            <p className="text-micro text-[var(--text-secondary)] mt-0.5">{t("analytics.doctorName")}</p>
+            <h4 className="font-semibold text-[#0f172a] text-sm leading-tight">{doctor.doctorName || ""}</h4>
+            <p className="text-xs text-[#64748b] mt-0.5">{t("analytics.doctorName")}</p>
           </div>
         </div>
         <div className="flex flex-col items-end">
           {npsVal > 0 && (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-micro font-bold ${
-            npsVal >= 70 ? "bg-[#f0fdf4] text-[var(--success)] border border-[#16a34a]/20" :
-            npsVal >= 50 ? "bg-[#fef3c7] text-[var(--warning)] border border-[#d97706]/20"    : "bg-[#fef2f2] text-[var(--danger)] border border-[#dc2626]/20"
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+            npsVal >= 70 ? "bg-[#f0fdf4] text-[#16a34a] border border-[#16a34a]/20" :
+            npsVal >= 50 ? "bg-[#fef3c7] text-[#d97706] border border-[#d97706]/20"    : "bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20"
           }`}>
             NPS: {npsVal}%
           </span>
@@ -139,36 +140,36 @@ function DoctorCard({ doctor, index, t }: { doctor: any; index: number; t: any }
       </div>
 
       {/* Grid of stats */}
-      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[var(--ds-border)]">
+      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#e8e3d9]">
         <div>
-          <span className="text-micro text-[var(--text-secondary)] font-medium block uppercase tracking-wider">
+          <span className="text-xs text-[#64748b] font-medium block uppercase tracking-wider">
             {t("analytics.revenue")}
           </span>
-          <span className="text-body font-bold text-[var(--text)] block mt-0.5">
+          <span className="text-sm font-bold text-[#0f172a] block mt-0.5">
             ₸{(doctor.revenueTotal ?? 0).toLocaleString()}
           </span>
         </div>
         <div>
-          <span className="text-micro text-[var(--text-secondary)] font-medium block uppercase tracking-wider">
+          <span className="text-xs text-[#64748b] font-medium block uppercase tracking-wider">
             {t("analytics.avgCheck")}
           </span>
-          <span className="text-body font-bold text-[var(--text)] block mt-0.5">
+          <span className="text-sm font-bold text-[#0f172a] block mt-0.5">
             ₸{Math.round(doctor.averageCheck ?? 0).toLocaleString()}
           </span>
         </div>
         <div>
-          <span className="text-micro text-[var(--text-secondary)] font-medium block uppercase tracking-wider">
+          <span className="text-xs text-[#64748b] font-medium block uppercase tracking-wider">
             {t("analytics.patients")}
           </span>
-          <span className="text-body font-semibold text-[var(--text)] block mt-0.5">
+          <span className="text-sm font-semibold text-[#0f172a] block mt-0.5">
             {doctor.patientsCount ?? 0}
           </span>
         </div>
         <div>
-          <span className="text-micro text-[var(--text-secondary)] font-medium block uppercase tracking-wider">
+          <span className="text-xs text-[#64748b] font-medium block uppercase tracking-wider">
             {t("analytics.procedures")}
           </span>
-          <span className="text-body font-semibold text-[var(--text)] block mt-0.5">
+          <span className="text-sm font-semibold text-[#0f172a] block mt-0.5">
             {doctor.proceduresCount ?? 0}
           </span>
         </div>
@@ -197,6 +198,7 @@ const PATIENT_STATUS_LABELS: Record<string, string> = {
 };
 
 export default function AnalyticsPage() {
+  const goBack = usePageBack();
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
@@ -291,11 +293,11 @@ export default function AnalyticsPage() {
       <PageHeader
         title={t("analytics.title")}
         subtitle={t("analytics.subtitle")}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         bottom={
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
-              <CalendarDays className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
+              <CalendarDays className="w-3.5 h-3.5 text-[#64748b] shrink-0" />
               <PeriodPills
                 value={period}
                 options={(Object.keys(PERIOD_LABELS) as Period[]).map((p) => ({
@@ -312,15 +314,15 @@ export default function AnalyticsPage() {
                   value={customFrom}
                   max={customTo || undefined}
                   onChange={(e) => setCustomFrom(e.target.value)}
-                  className="text-caption border border-[var(--ds-border)] rounded-xl px-2.5 py-1.5 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36 transition-colors"
+                  className="text-xs border border-[#e8e3d9] rounded-xl px-2.5 py-1.5 bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36 transition-colors"
                 />
-                <span className="text-caption text-[var(--text-secondary)]">—</span>
+                <span className="text-xs text-[#64748b]">—</span>
                 <input
                   type="date"
                   value={customTo}
                   min={customFrom || undefined}
                   onChange={(e) => setCustomTo(e.target.value)}
-                  className="text-caption border border-[var(--ds-border)] rounded-xl px-2.5 py-1.5 bg-[var(--ds-surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36 transition-colors"
+                  className="text-xs border border-[#e8e3d9] rounded-xl px-2.5 py-1.5 bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 focus:border-[var(--ds-primary)] w-36 transition-colors"
                 />
               </div>
             )}
@@ -334,11 +336,11 @@ export default function AnalyticsPage() {
 
           {analyticsError && (
             <div className="bg-[#fef2f2] border border-[#dc2626]/20 rounded-2xl p-4 flex items-center justify-between gap-3">
-              <p className="text-body text-[var(--danger)]">Не удалось загрузить аналитику. Попробуйте обновить.</p>
+              <p className="text-sm text-[#dc2626]">Не удалось загрузить аналитику. Попробуйте обновить.</p>
               <button
                 type="button"
                 onClick={() => refetchAnalytics()}
-                className="text-caption font-semibold px-3 py-1.5 rounded-xl bg-[var(--ds-surface)] border border-[#dc2626]/20 text-[var(--danger)] hover:bg-[#fef2f2]"
+                className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white border border-[#dc2626]/20 text-[#dc2626] hover:bg-[#fef2f2]"
               >
                 Повторить
               </button>
@@ -347,7 +349,7 @@ export default function AnalyticsPage() {
 
           {pmError && pmEnabled && (
             <div className="bg-[#fef3c7] border border-[#d97706]/20 rounded-2xl p-4">
-              <p className="text-body text-[var(--warning)]">Не удалось загрузить метрики лояльности за выбранный период.</p>
+              <p className="text-sm text-[#d97706]">Не удалось загрузить метрики лояльности за выбранный период.</p>
             </div>
           )}
 
@@ -429,8 +431,8 @@ export default function AnalyticsPage() {
           {pmEnabled && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-[var(--ds-primary)]" />
-                <h2 className="text-body font-bold text-[var(--text)]">Лояльность и конверсия</h2>
+                <Heart className="h-4 w-4 text-[#1f75fe]" />
+                <h2 className="text-sm font-bold text-[#0f172a]">Лояльность и конверсия</h2>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -468,8 +470,8 @@ export default function AnalyticsPage() {
 
               {/* Cohort retention table */}
               {!pmLoading && pm && pm.retentionCohorts.some((c) => c.newPatients > 0) && (
-                <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 shadow-md">
-                  <h4 className="text-body font-semibold text-[var(--text)] mb-3">{t("analytics.cohortTitle")}</h4>
+                <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-md">
+                  <h4 className="text-sm font-semibold text-[#0f172a] mb-3">{t("analytics.cohortTitle")}</h4>
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -484,8 +486,8 @@ export default function AnalyticsPage() {
                       <TableBody>
                         {pm.retentionCohorts.map((cohort) => (
                           <TableRow key={cohort.month}>
-                            <TableCell className="font-medium text-[var(--text)]">{cohort.month}</TableCell>
-                            <TableCell className="text-right text-[var(--text)]">{cohort.newPatients}</TableCell>
+                            <TableCell className="font-medium text-[#0f172a]">{cohort.month}</TableCell>
+                            <TableCell className="text-right text-[#0f172a]">{cohort.newPatients}</TableCell>
                             {([
                               { count: cohort.returnedIn3m,  total: cohort.newPatients },
                               { count: cohort.returnedIn6m,  total: cohort.newPatients },
@@ -494,8 +496,8 @@ export default function AnalyticsPage() {
                               <TableCell key={ci} className="text-right">
                                 {cell.total > 0 ? (
                                   <span className={`px-1.5 py-0.5 rounded font-medium ${
-                                    cell.count / cell.total >= 0.5 ? "bg-[#f0fdf4] text-[var(--success)]" :
-                                    cell.count > 0               ? "bg-[#fef3c7] text-[var(--warning)]"   : "text-[var(--text-secondary)]"
+                                    cell.count / cell.total >= 0.5 ? "bg-[#f0fdf4] text-[#16a34a]" :
+                                    cell.count > 0               ? "bg-[#fef3c7] text-[#d97706]"   : "text-[#64748b]"
                                   }`}>
                                     {cell.count > 0
                                       ? `${cell.count} (${Math.round((cell.count / cell.total) * 100)}%)`
@@ -514,38 +516,38 @@ export default function AnalyticsPage() {
 
               {/* Top patients by LTV — owner/admin only */}
               {isOwnerOrAdmin && (
-                <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 shadow-md">
+                <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-md">
                   <div className="flex items-center gap-2 mb-3">
-                    <Crown className="h-4 w-4 text-[var(--warning)]" />
-                    <h4 className="text-body font-semibold text-[var(--text)]">{t("analytics.topByLtv")}</h4>
+                    <Crown className="h-4 w-4 text-[#d97706]" />
+                    <h4 className="text-sm font-semibold text-[#0f172a]">{t("analytics.topByLtv")}</h4>
                   </div>
                   {pmLoading ? (
                     <div className="space-y-3">
                       {[...Array(3)].map((_, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
-                          <div className="h-3 flex-1 bg-[var(--surface-2)] animate-pulse rounded" />
-                          <div className="h-3 w-16 bg-[var(--surface-2)] animate-pulse rounded" />
+                          <div className="w-6 h-6 rounded-full bg-[#f1ede4] animate-pulse shrink-0" />
+                          <div className="h-3 flex-1 bg-[#f1ede4] animate-pulse rounded" />
+                          <div className="h-3 w-16 bg-[#f1ede4] animate-pulse rounded" />
                         </div>
                       ))}
                     </div>
                   ) : pm && pm.topPatientsByLtv.length > 0 ? (
                     <div className="space-y-2">
                       {pm.topPatientsByLtv.map((p, idx) => (
-                        <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[var(--ds-border)] last:border-0">
-                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-caption font-bold shrink-0 ${
-                            idx === 0 ? "bg-[#fef3c7] text-[var(--warning)]" :
-                            idx === 1 ? "bg-[var(--surface-2)] text-[var(--text-secondary)]" :
-                            idx === 2 ? "bg-[#fef3c7] text-[var(--warning)]" : "bg-[var(--surface-2)] text-[var(--text-secondary)]"
+                        <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[#e8e3d9] last:border-0">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                            idx === 0 ? "bg-[#fef3c7] text-[#d97706]" :
+                            idx === 1 ? "bg-[#f1ede4] text-[#64748b]" :
+                            idx === 2 ? "bg-[#fef3c7] text-[#d97706]" : "bg-[#f1ede4] text-[#64748b]"
                           }`}>{idx + 1}</span>
-                          <span className="text-body text-[var(--text)] font-medium flex-1 truncate">{p.name}</span>
-                          <span className="text-caption text-[var(--text-secondary)]">{p.procedureCount} {t("analytics.procedures")}</span>
-                          <span className="text-body font-semibold text-[var(--text)]">₸{p.totalSpent.toLocaleString()}</span>
+                          <span className="text-sm text-[#0f172a] font-medium flex-1 truncate">{p.name}</span>
+                          <span className="text-xs text-[#64748b]">{p.procedureCount} {t("analytics.procedures")}</span>
+                          <span className="text-sm font-semibold text-[#0f172a]">₸{p.totalSpent.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-caption text-[var(--text-secondary)] text-center py-4">{t("analytics.noData", "—")}</p>
+                    <p className="text-xs text-[#64748b] text-center py-4">{t("analytics.noData", "—")}</p>
                   )}
                 </div>
               )}
@@ -554,8 +556,8 @@ export default function AnalyticsPage() {
 
           {/* ── Section 3: Patient distribution pie ── */}
           {statusData.length > 0 && (
-            <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] p-4 shadow-md">
-              <h3 className="section-label mb-3">На каком этапе находятся пациенты?</h3>
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 shadow-md">
+              <h3 className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-3">На каком этапе находятся пациенты?</h3>
               <div className="flex flex-col lg:flex-row gap-4 items-center">
                 <div className="w-full lg:w-56 shrink-0">
                   <ResponsiveContainer width="100%" height={200}>
@@ -581,10 +583,10 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex-1 grid grid-cols-1">
                   {statusData.map((item, index) => (
-                    <div key={item.name} className="flex items-center gap-2.5 py-2.5 border-b border-[var(--ds-border)] last:border-0">
+                    <div key={item.name} className="flex items-center gap-2.5 py-2.5 border-b border-[#e8e3d9] last:border-0">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                      <span className="text-caption text-[var(--text-secondary)] flex-1">{item.name}</span>
-                      <span className="text-body font-bold text-[var(--text)]">{String(item.value)}</span>
+                      <span className="text-xs text-[#64748b] flex-1">{item.name}</span>
+                      <span className="text-sm font-bold text-[#0f172a]">{String(item.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -595,7 +597,7 @@ export default function AnalyticsPage() {
           {/* ── Section 4: Doctor KPIs (Cards Layout) ── */}
           {doctorKpis.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-body font-bold text-[var(--text)]">{t("analytics.doctorKpis")}</h3>
+              <h3 className="text-sm font-bold text-[#0f172a]">{t("analytics.doctorKpis")}</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left side: first 3 rows */}
@@ -617,24 +619,24 @@ export default function AnalyticsPage() {
 
           {/* ── Section 5: Channel analytics ── */}
           {isOwnerOrAdmin && (
-            <div className="bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-md overflow-hidden">
+            <div className="bg-white rounded-2xl border border-[#e8e3d9] shadow-md overflow-hidden">
               <button
                 onClick={() => setChannelOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--bg)] transition-colors"
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#faf8f4] transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <Radio className="h-4 w-4 text-[var(--ds-primary)]" />
-                  <span className="text-body font-bold text-[var(--text)]">Откуда к нам приходят люди?</span>
+                  <Radio className="h-4 w-4 text-[#1f75fe]" />
+                  <span className="text-sm font-bold text-[#0f172a]">Откуда к нам приходят люди?</span>
                 </div>
                 {channelOpen
-                  ? <ChevronUp className="w-4 h-4 text-[var(--text-secondary)]" />
-                  : <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />}
+                  ? <ChevronUp className="w-4 h-4 text-[#64748b]" />
+                  : <ChevronDown className="w-4 h-4 text-[#64748b]" />}
               </button>
 
               {channelOpen && (
                 <div className="px-5 pb-5">
                   {channelStats.length === 0 ? (
-                    <p className="text-caption text-[var(--text-secondary)] text-center py-8">{t("channelAnalytics.noData")}</p>
+                    <p className="text-xs text-[#64748b] text-center py-8">{t("channelAnalytics.noData")}</p>
                   ) : (
                     <div className="space-y-4">
                       {/* Bar-style channel breakdown */}
@@ -650,17 +652,17 @@ export default function AnalyticsPage() {
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                <span className="text-body font-medium text-[var(--text)]">{s.channelName}</span>
+                                <span className="text-sm font-medium text-[#0f172a]">{s.channelName}</span>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                <span className={`text-micro font-semibold px-1.5 py-0.5 rounded-full ${convCfg.badge}`}>
+                                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${convCfg.badge}`}>
                                   {s.conversionRate}%
                                 </span>
-                                <span className="text-caption font-bold text-[var(--text)]">{s.patientCount} чел.</span>
-                                <span className="text-caption text-[var(--text-secondary)]">₸{s.totalRevenue.toLocaleString()}</span>
+                                <span className="text-xs font-bold text-[#0f172a]">{s.patientCount} чел.</span>
+                                <span className="text-xs text-[#64748b]">₸{s.totalRevenue.toLocaleString()}</span>
                               </div>
                             </div>
-                            <div className="h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
+                            <div className="h-2 bg-[#f1ede4] rounded-full overflow-hidden">
                               <div
                                 className="h-full rounded-full transition-all"
                                 style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}

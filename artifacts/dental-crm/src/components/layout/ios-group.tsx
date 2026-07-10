@@ -11,7 +11,7 @@ export function IosSection({ title, children, className }: IosSectionProps) {
   return (
     <section className={cn("px-4", className)}>
       {title ? (
-        <p className="section-label mb-2.5 px-1">{title}</p>
+        <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2.5 px-1">{title}</p>
       ) : null}
       {children}
     </section>
@@ -27,7 +27,7 @@ export function IosGroup({ children, className }: IosGroupProps) {
   return (
     <div
       className={cn(
-        "bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] overflow-hidden",
+        "bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden",
         className,
       )}
     >
@@ -55,10 +55,10 @@ export function IosGroupRow({
       type={as === "button" ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "flex items-center justify-between gap-3 px-4 py-3.5 text-body text-[var(--text)] font-manrope",
-        "border-b border-[var(--ds-border)]/60 last:border-b-0",
+        "flex items-center justify-between gap-3 px-4 py-3.5 text-sm text-[#0f172a] font-manrope",
+        "border-b border-[#e8e3d9]/60 last:border-b-0",
         (onClick || as === "button") &&
-          "w-full text-left active:bg-[var(--surface-2)] transition-colors",
+          "w-full text-left active:bg-[#f1ede4] transition-colors",
         className,
       )}
     >

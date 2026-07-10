@@ -8,8 +8,10 @@ import {
 
 export type { ChatbotReply } from "./chatbot-reply-format";
 export {
+  CHAT_STYLE_PROMPT,
   HUMAN_MESSAGING_PROMPT,
   replyFromText,
+  splitTextToReply,
   joinChatbotReply,
   mergeReply,
   appendToReply,

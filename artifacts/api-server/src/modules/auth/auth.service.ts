@@ -18,6 +18,11 @@ import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.s
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
 import { TabletService } from "../tablet/tablet.service";
 import { planLimitsService } from "../../shared/plan-limits.service";
+import {
+  whatsappOtpService,
+  buildStaffInviteWhatsAppMessage,
+} from "./whatsapp-otp.service";
+import { sendPlatformWhatsApp } from "../../shared/platform-whatsapp";
 
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -49,11 +54,26 @@ export class AuthService {
     name: string;
     email: string;
     password: string;
+    phone?: string;
+    phoneVerificationToken?: string;
   }): Promise<AuthResult> {
     const normalizedEmail = data.email.toLowerCase();
     const existing = await this.repo.findUserByEmail(normalizedEmail);
     if (existing) {
       throw new ConflictError("Этот email уже зарегистрирован");
+    }
+
+    let verifiedPhone: string | null = null;
+    if (data.phone && data.phoneVerificationToken) {
+      verifiedPhone = whatsappOtpService.assertVerificationToken(
+        data.phone,
+        data.phoneVerificationToken,
+        "register",
+      );
+      const phoneUsers = await this.repo.findUsersByPhone(verifiedPhone);
+      if (phoneUsers.length > 0) {
+        throw new ConflictError("Этот номер WhatsApp уже привязан к другому аккаунту");
+      }
     }
 
     const clinic = await this.repo.createClinic({
@@ -87,6 +107,7 @@ export class AuthService {
       email: normalizedEmail,
       passwordHash,
       role: "owner",
+      phone: verifiedPhone,
     });
 
     const token = this.generateToken(user, clinic.id);
@@ -116,6 +137,28 @@ export class AuthService {
 
     const token = this.generateToken(user, user.clinicId);
     const { passwordHash: _, ...safeUser } = user;
+    return { user: safeUser, clinic, token };
+  }
+
+  async loginViaWhatsapp(data: { phone: string; code: string }): Promise<AuthResult> {
+    const normalized = whatsappOtpService.consumeVerificationForLogin(data.phone, data.code);
+    const matches = await this.repo.findUsersByPhone(normalized);
+
+    if (matches.length === 0) {
+      throw new UnauthorizedError("Аккаунт с этим номером не найден");
+    }
+    if (matches.length > 1) {
+      throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
+    }
+
+    const user = matches[0]!;
+    const clinic = await this.repo.findClinicById(user.clinicId);
+    if (!clinic) {
+      throw new UnauthorizedError("Clinic not found");
+    }
+
+    const token = this.generateToken(user, user.clinicId);
+    const { passwordHash: __, ...safeUser } = user;
     return { user: safeUser, clinic, token };
   }
 
@@ -325,6 +368,15 @@ export class AuthService {
     if (data.role === "owner") {
       throw new ForbiddenError("Cannot invite users with owner role");
     }
+    if (!data.phone?.trim()) {
+      throw new ValidationError("Укажите номер WhatsApp сотрудника");
+    }
+
+    const normalizedPhone = whatsappOtpService.normalizePhone(data.phone);
+    const phoneUsers = await this.repo.findUsersByPhone(normalizedPhone);
+    if (phoneUsers.length > 0) {
+      throw new ConflictError("Сотрудник с этим номером WhatsApp уже существует");
+    }
 
     const existing = await this.repo.findUserByEmail(data.email.toLowerCase());
     if (existing) throw new ConflictError("Email already in use");
@@ -341,7 +393,7 @@ export class AuthService {
       email: data.email.toLowerCase(),
       passwordHash,
       role: data.role,
-      phone: data.phone ?? null,
+      phone: normalizedPhone,
       position: data.position ?? null,
       specialty: data.specialty ?? null,
       hireDate: data.hireDate ?? null,
@@ -349,18 +401,15 @@ export class AuthService {
 
     const clinic = await this.repo.findClinicById(data.clinicId);
     const clinicName = clinic?.name ?? "1Dent";
+    const loginUrl = process.env["FRONTEND_URL"] ?? "https://app.1dent.kz";
 
-    console.log(
-      `[Invite] Staff invitation for ${data.email}:\n` +
-      `  Clinic: ${clinicName}\n` +
-      `  Name: ${data.name}\n` +
-      `  Temp password: ${tempPassword}\n` +
-      `  Login URL: ${process.env["FRONTEND_URL"] ?? "https://app.1dent.kz"}\n` +
-      `  Instruction: Please change your password after first login.`,
-    );
+    const waMessage = buildStaffInviteWhatsAppMessage(data.name, clinicName, tempPassword, loginUrl);
+    sendPlatformWhatsApp(normalizedPhone, waMessage).catch((err) => {
+      logger.error({ err, phone: normalizedPhone.slice(0, 5) + "***" }, "Failed to send staff invite via WhatsApp");
+    });
 
     sendStaffInvitationEmail(data.email, data.name, tempPassword, clinicName).catch((err) => {
-      logger.error({ err, email: data.email }, "Failed to send staff invitation email");
+      logger.error({ err, email: data.email }, "Failed to send staff invitation email (fallback)");
     });
 
     return { userId: user.id, tempPassword, clinicName };

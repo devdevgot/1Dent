@@ -37,13 +37,13 @@ export function RevenueEmptyState() {
         className="w-full max-w-[176px] h-auto object-contain mb-5 rounded-[40px] shadow-[0_10px_30px_-12px_rgba(31,117,254,0.25)]"
       />
 
-      <h3 className="text-lg font-bold text-[var(--text)] tracking-tight">
+      <h3 className="text-lg font-bold text-[#0f172a] tracking-tight">
         {t("ownerDashboard.revenueEmptyTitle")}
       </h3>
-      <p className="text-caption text-[var(--text-secondary)] mt-2 max-w-[300px] leading-relaxed">
+      <p className="text-xs text-[#64748b] mt-2 max-w-[300px] leading-relaxed">
         {t("ownerDashboard.revenueEmptyDesc")}
       </p>
-      <p className="text-caption text-[var(--text-subtle)] mt-2.5 max-w-[280px] leading-relaxed">
+      <p className="text-xs text-[#94a3b8] mt-2.5 max-w-[280px] leading-relaxed">
         {t("ownerDashboard.revenueEmptyHint")}
       </p>
 

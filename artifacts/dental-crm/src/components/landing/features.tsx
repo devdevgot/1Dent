@@ -66,13 +66,13 @@ function KanbanPreview() {
   const stages = ["Новая", "Консульт.", "Лечение", "Завершено"];
   const counts = [3, 5, 4, 8];
   return (
-    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Канбан-доска</div>
+    <div className="landing-mockup bg-white p-4 w-full">
+      <div className="text-xs font-manrope font-bold text-[#0f172a] mb-3">Канбан-доска</div>
       <div className="flex gap-2">
         {stages.map((s, i) => (
-          <div key={s} className="flex-1 bg-[var(--bg)] rounded-xl p-2">
-            <div className="text-[9px] font-manrope text-[var(--text-secondary)] mb-1">{s}</div>
-            <div className="text-lg font-manrope font-bold text-[var(--text)]">{counts[i]}</div>
+          <div key={s} className="flex-1 bg-[#faf8f4] rounded-xl p-2">
+            <div className="text-[9px] font-manrope text-[#64748b] mb-1">{s}</div>
+            <div className="text-lg font-manrope font-bold text-[#0f172a]">{counts[i]}</div>
             <div className="space-y-1 mt-2">
               {Array.from({ length: Math.min(counts[i], 2) }).map((_, j) => (
                 <div key={j} className="h-1.5 bg-[var(--ds-primary)]/20 rounded-full" />
@@ -93,17 +93,17 @@ function WhatsAppPreview() {
     { from: "bot", text: "Отлично! Записал вас на 10:00" },
   ];
   return (
-    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
+    <div className="landing-mockup bg-white p-4 w-full">
       <div className="flex items-center gap-2 mb-3">
         <FaWhatsapp size={14} color="#22c55e" />
-        <span className="text-caption font-manrope font-bold text-[var(--text)]">WhatsApp чат</span>
+        <span className="text-xs font-manrope font-bold text-[#0f172a]">WhatsApp чат</span>
         <span className="ml-auto w-2 h-2 bg-green-400 rounded-full animate-pulse" />
       </div>
       <div className="space-y-2">
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.from === "bot" ? "justify-end" : "justify-start"}`}>
             <div className={`text-[10px] font-manrope rounded-xl px-3 py-1.5 max-w-[80%] ${
-              m.from === "bot" ? "bg-[var(--ds-primary)] text-white" : "bg-[var(--surface-2)] text-[var(--text)]"
+              m.from === "bot" ? "bg-[var(--ds-primary)] text-white" : "bg-[#f1ede4] text-[#0f172a]"
             }`}>
               {m.text}
             </div>
@@ -116,8 +116,8 @@ function WhatsAppPreview() {
 
 function FinancePreview() {
   return (
-    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Финансы июнь</div>
+    <div className="landing-mockup bg-white p-4 w-full">
+      <div className="text-xs font-manrope font-bold text-[#0f172a] mb-3">Финансы июнь</div>
       <div className="grid grid-cols-2 gap-2 mb-3">
         {[
           { label: "Доходы", value: "4.2M ₸", color: "#d1fae5", text: "#065f46" },
@@ -155,9 +155,9 @@ const DEMO_TEETH = new Map<number, ToothCondition>([
 
 function ToothPreview() {
   return (
-    <div className="landing-mockup bg-[var(--ds-surface)] w-full overflow-hidden">
+    <div className="landing-mockup bg-white w-full overflow-hidden">
       <div className="px-3 pt-3 pb-1">
-        <div className="text-caption font-manrope font-bold text-[var(--text)]">FDI зубная карта</div>
+        <div className="text-xs font-manrope font-bold text-[#0f172a]">FDI зубная карта</div>
       </div>
       <div className="px-2 pb-3">
         <FdiChart teethData={DEMO_TEETH} selectedFdi={null} className="border-0 shadow-none p-2" />
@@ -168,8 +168,8 @@ function ToothPreview() {
 
 function ContractPreview() {
   return (
-    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Договор</div>
+    <div className="landing-mockup bg-white p-4 w-full">
+      <div className="text-xs font-manrope font-bold text-[#0f172a] mb-3">Договор</div>
       <div className="space-y-2">
         {[
           { label: "Пациент", value: "Асель Нурова" },
@@ -178,8 +178,8 @@ function ContractPreview() {
           { label: "Статус", value: "Подписан", signed: true },
         ].map((row) => (
           <div key={row.label} className="flex justify-between items-center py-1 border-b border-[var(--surface-2)]">
-            <span className="text-[10px] font-manrope text-[var(--text-subtle)]">{row.label}</span>
-            <span className={`text-[10px] font-manrope font-semibold flex items-center gap-1 ${"signed" in row && row.signed ? "text-green-600" : "text-[var(--text)]"}`}>
+            <span className="text-[10px] font-manrope text-[#94a3b8]">{row.label}</span>
+            <span className={`text-[10px] font-manrope font-semibold flex items-center gap-1 ${"signed" in row && row.signed ? "text-green-600" : "text-[#0f172a]"}`}>
               {"signed" in row && row.signed && <CheckCircle size={9} className="text-green-500" />}
               {row.value}
             </span>
@@ -198,16 +198,16 @@ function AnalyticsPreview() {
     { label: "Другое", pct: 13, color: "#94a3b8" },
   ];
   return (
-    <div className="landing-mockup bg-[var(--ds-surface)] p-4 w-full">
-      <div className="text-caption font-manrope font-bold text-[var(--text)] mb-3">Источники пациентов</div>
+    <div className="landing-mockup bg-white p-4 w-full">
+      <div className="text-xs font-manrope font-bold text-[#0f172a] mb-3">Источники пациентов</div>
       <div className="space-y-2">
         {channels.map((c) => (
           <div key={c.label}>
             <div className="flex justify-between mb-0.5">
-              <span className="text-[10px] font-manrope text-[var(--text-secondary)]">{c.label}</span>
-              <span className="text-[10px] font-manrope font-bold text-[var(--text)]">{c.pct}%</span>
+              <span className="text-[10px] font-manrope text-[#64748b]">{c.label}</span>
+              <span className="text-[10px] font-manrope font-bold text-[#0f172a]">{c.pct}%</span>
             </div>
-            <div className="h-1.5 bg-[var(--surface-2)] rounded-full">
+            <div className="h-1.5 bg-[#f1ede4] rounded-full">
               <div className="h-1.5 rounded-full" style={{ width: `${c.pct}%`, backgroundColor: c.color }} />
             </div>
           </div>
@@ -224,14 +224,14 @@ const mockupComponents: Record<string, React.ComponentType> = {
 
 export function Features() {
   return (
-    <section id="features" className="bg-[var(--bg)] landing-section-sm px-6">
+    <section id="features" className="bg-[#faf8f4] landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-20">
           <div className="landing-badge landing-badge-primary font-manrope mb-6">
             <Zap size={14} />
             <span>Всё что нужно — внутри</span>
           </div>
-          <h2 className="landing-h2 font-manrope text-[var(--text)]">
+          <h2 className="landing-h2 font-manrope text-[#0f172a]">
             Что умеет {SITE.name}
           </h2>
         </motion.div>
@@ -252,13 +252,13 @@ export function Features() {
               >
                 <div className={!isEven ? "lg:col-start-2" : ""}>
                   <div
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-body font-manrope font-medium mb-5"
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-manrope font-medium mb-5"
                     style={{ backgroundColor: feature.color, color: feature.accent }}
                   >
                     <feature.icon size={14} />
                     <span>{feature.label}</span>
                   </div>
-                  <h3 className="landing-h3 font-manrope text-[var(--text)] mb-4">
+                  <h3 className="landing-h3 font-manrope text-[#0f172a] mb-4">
                     {feature.title}
                   </h3>
                   <p className="landing-lead font-manrope">{feature.desc}</p>

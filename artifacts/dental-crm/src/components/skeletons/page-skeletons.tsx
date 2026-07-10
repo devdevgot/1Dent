@@ -530,45 +530,22 @@ export function OwnerDashboardSkeleton() {
   );
 }
 
-/** Doctor home: date strip + salary card + schedule widget + actions. */
+/** Clinical home (doctor, assistant, nurse): service tiles + promo banners. */
 export function DoctorDashboardSkeleton() {
   return (
     <div className="dashboard-page min-h-full pb-8">
-      <div className="mx-4 py-3 flex items-center justify-between">
-        <Bone className="h-5 w-36 rounded" />
-        <Bone className="h-7 w-24 rounded-xl" />
-      </div>
-      <SkeletonCard className="mx-4 mt-3 p-5 space-y-3">
-        <Bone className="h-3 w-28 rounded" />
-        <Bone className="h-9 w-40 rounded-xl" />
-        <div className="border-t border-[var(--ds-border)] pt-3 flex items-center justify-between">
-          <div className="space-y-1.5">
-            <Bone className="h-2.5 w-16 rounded" />
-            <Bone className="h-5 w-24 rounded" />
+      <div className="pt-4 px-4 flex gap-3 overflow-hidden">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5 shrink-0 w-[68px]">
+            <Bone className="w-[56px] h-[56px] rounded-[18px]" />
+            <Bone className="h-2.5 w-12 rounded" />
           </div>
-          <Bone className="h-4 w-20 rounded" />
-        </div>
-      </SkeletonCard>
-      <SkeletonCard className="mx-4 mt-4 overflow-hidden">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
-          <Bone className="h-4 w-40 rounded" />
-          <Bone className="h-3 w-10 rounded" />
-        </div>
-        <div className="flex gap-2 px-4 pb-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Bone key={i} className="flex-1 h-[72px] rounded-2xl" />
-          ))}
-        </div>
-        <div className="px-4 pb-4 space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Bone key={i} className="h-14 w-full rounded-xl" />
-          ))}
-        </div>
-      </SkeletonCard>
-      <div className="mx-4 mt-4 grid grid-cols-2 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Bone key={i} className="h-20 rounded-2xl" />
         ))}
+      </div>
+      <div className="mt-3 px-4 flex gap-3 overflow-hidden">
+        <Bone className="shrink-0 w-[280px] h-[108px] rounded-3xl" />
+        <Bone className="shrink-0 w-[280px] h-[108px] rounded-3xl" />
+        <Bone className="shrink-0 w-[280px] h-[108px] rounded-3xl" />
       </div>
     </div>
   );

@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { haptic, hapticNotify, tgAlert, useTgBackButton } from "../hooks/useTgBackButton";
+import { haptic, hapticNotify, tgAlert } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
 
 interface ContractTemplateEntry {
   id: string;
@@ -14,7 +15,6 @@ interface ContractTemplateEntry {
 
 export default function PlatformContractsPage() {
   const navigate = useNavigate();
-  useTgBackButton(() => navigate("/content"));
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -69,13 +69,11 @@ export default function PlatformContractsPage() {
   const enabledCount = templates.filter((t) => t.enabled).length;
 
   return (
-    <div className="px-4 pt-5 pb-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Шаблоны договоров</h1>
-        <p className="text-sm text-muted-foreground">
-          {enabledCount} из {templates.length} активны · системный каталог
-        </p>
-      </div>
+    <TmaPage
+      title="Шаблоны договоров"
+      subtitle={`${enabledCount} из ${templates.length} активны · системный каталог`}
+      onBack={() => navigate("/content")}
+    >
 
       <input
         value={search}
@@ -149,6 +147,6 @@ export default function PlatformContractsPage() {
           {reseed.isPending ? "..." : "Пересев"}
         </button>
       </div>
-    </div>
+    </TmaPage>
   );
 }

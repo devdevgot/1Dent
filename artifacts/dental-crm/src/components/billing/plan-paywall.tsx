@@ -89,7 +89,7 @@ export function PlanPaywall() {
           : "paywall.descNoPlanStaff";
 
   return (
-    <div className="fixed inset-0 z-[200] bg-[var(--bg)] font-manrope flex flex-col items-center justify-center px-4 py-8 overflow-y-auto">
+    <div className="fixed inset-0 z-[200] bg-[#faf8f4] font-manrope flex flex-col items-center justify-center px-4 py-8 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -98,15 +98,15 @@ export function PlanPaywall() {
       >
         <PlanPaywallIllustration className="w-44 h-44 mx-auto mb-5" />
 
-        <span className="inline-flex items-center gap-1.5 bg-[var(--warning-light)] text-[var(--warning)] rounded-full px-3 py-1 text-caption font-semibold mb-3">
+        <span className="inline-flex items-center gap-1.5 bg-[var(--warning-light)] text-[#d97706] rounded-full px-3 py-1 text-xs font-semibold mb-3">
           <CreditCard className="w-3.5 h-3.5" />
           {t("paywall.badge")}
         </span>
 
-        <h1 className="text-[22px] font-bold text-[var(--text)] tracking-tight leading-tight">
+        <h1 className="text-[22px] font-bold text-[#0f172a] tracking-tight leading-tight">
           {t(titleKey)}
         </h1>
-        <p className="text-body text-[var(--text-secondary)] mt-3 leading-relaxed max-w-sm mx-auto">
+        <p className="text-sm text-[#64748b] mt-3 leading-relaxed max-w-sm mx-auto">
           {t(descKey, { app: SITE.name })}
         </p>
 
@@ -114,9 +114,9 @@ export function PlanPaywall() {
           {FEATURE_KEYS.map((key) => {
             const Icon = FEATURE_ICONS[key];
             return (
-              <li key={key} className="flex items-center gap-3 text-body text-[var(--text-secondary)]">
+              <li key={key} className="flex items-center gap-3 text-sm text-[#64748b]">
                 <div className="w-8 h-8 rounded-xl bg-[var(--primary-light)] flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-[var(--ds-primary)]" />
+                  <Icon className="w-4 h-4 text-[#1f75fe]" />
                 </div>
                 {t(`paywall.features.${key}`)}
               </li>
@@ -130,7 +130,7 @@ export function PlanPaywall() {
               type="button"
               disabled={startingTrial}
               onClick={() => startTrialMutation.mutate()}
-              className="dash-btn dash-btn-primary w-full py-3.5 shadow-md bg-[#1f75fe] hover:bg-[var(--primary-hover)] text-white disabled:opacity-65"
+              className="dash-btn dash-btn-primary w-full py-3.5 shadow-md bg-[#1f75fe] hover:bg-[#1a65e8] text-white disabled:opacity-65"
             >
               {startingTrial ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -154,14 +154,14 @@ export function PlanPaywall() {
             href={`https://wa.me/${SUPPORT_WHATSAPP}`}
             target="_blank"
             rel="noreferrer"
-            className="dash-btn dash-btn-ghost w-full py-3 text-[var(--text-secondary)]"
+            className="dash-btn dash-btn-ghost w-full py-3 text-[#64748b]"
           >
             <MessageCircle className="w-4 h-4" />
             {t("paywall.contactUs")}
           </a>
         </div>
 
-        <p className="text-[11px] text-[var(--text-subtle)] mt-5 leading-relaxed">
+        <p className="text-[11px] text-[#94a3b8] mt-5 leading-relaxed">
           {t("paywall.footer", { app: SITE.name })}
         </p>
       </motion.div>

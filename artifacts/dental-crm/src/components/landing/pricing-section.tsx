@@ -97,14 +97,14 @@ function formatPrice(price: number) {
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="bg-[var(--surface-2)] landing-section-sm px-6">
+    <section id="pricing" className="bg-[#f1ede4] landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-16">
           <div className="landing-badge landing-badge-light font-manrope mb-6">
             <CreditCard size={14} />
             <span>Простые тарифы</span>
           </div>
-          <h2 className="landing-h2 font-manrope text-[var(--text)] mb-4">
+          <h2 className="landing-h2 font-manrope text-[#0f172a] mb-4">
             Выберите план
           </h2>
           <p className="landing-lead font-manrope max-w-xl mx-auto">
@@ -131,7 +131,7 @@ export function PricingSection() {
             >
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-[var(--ds-primary)] text-white text-caption font-manrope font-semibold px-4 py-1.5 rounded-full whitespace-nowrap shadow-[var(--shadow-sm)]">
+                  <span className="bg-[var(--ds-primary)] text-white text-xs font-manrope font-semibold px-4 py-1.5 rounded-full whitespace-nowrap shadow-[var(--shadow-sm)]">
                     {plan.badge}
                   </span>
                 </div>
@@ -145,8 +145,8 @@ export function PricingSection() {
                   <plan.icon size={20} style={{ color: plan.accent }} />
                 </div>
                 <div>
-                  <h3 className="font-manrope font-bold text-[var(--text)] text-xl tracking-tight">{plan.name}</h3>
-                  <p className="font-manrope text-[var(--text-subtle)] text-xs">{plan.subtitle}</p>
+                  <h3 className="font-manrope font-bold text-[#0f172a] text-xl tracking-tight">{plan.name}</h3>
+                  <p className="font-manrope text-[#94a3b8] text-xs">{plan.subtitle}</p>
                 </div>
               </div>
 
@@ -159,7 +159,7 @@ export function PricingSection() {
                     {formatPrice(plan.price)}
                   </span>
                 </div>
-                <span className="font-manrope text-[var(--text-subtle)] text-sm">/месяц</span>
+                <span className="font-manrope text-[#94a3b8] text-sm">/месяц</span>
               </div>
 
               <ul className="space-y-3 mb-6">
@@ -171,16 +171,16 @@ export function PricingSection() {
                     >
                       <Check size={11} style={{ color: plan.accent }} strokeWidth={3} />
                     </div>
-                    <span className="font-manrope text-[var(--text)] text-body leading-snug">{f}</span>
+                    <span className="font-manrope text-[#0f172a] text-sm leading-snug">{f}</span>
                   </li>
                 ))}
               </ul>
 
-              <div className="bg-[var(--bg)] rounded-2xl p-4 mb-6 border border-[var(--ds-border)]">
-                <div className="font-manrope font-semibold text-[var(--text)] text-caption mb-2">Лимиты:</div>
+              <div className="bg-[#faf8f4] rounded-2xl p-4 mb-6 border border-[#e8e3d9]">
+                <div className="font-manrope font-semibold text-[#0f172a] text-xs mb-2">Лимиты:</div>
                 <ul className="space-y-1.5">
                   {plan.limits.map((l, j) => (
-                    <li key={j} className="font-manrope text-[var(--text-secondary)] text-caption flex items-center gap-1.5">
+                    <li key={j} className="font-manrope text-[#64748b] text-xs flex items-center gap-1.5">
                       <span
                         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: plan.accent }}
@@ -208,10 +208,10 @@ export function PricingSection() {
 
         <motion.p
           {...fadeUp(0.2)}
-          className="text-center font-manrope text-[var(--text-subtle)] text-body mt-10"
+          className="text-center font-manrope text-[#94a3b8] text-sm mt-10"
         >
           Нужен индивидуальный тариф для сети клиник?{" "}
-          <a href="#contact" className="text-[var(--ds-primary)] hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] rounded">
+          <a href="#contact" className="text-[#1f75fe] hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] rounded">
             Свяжитесь с нами
           </a>
         </motion.p>

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { haptic, hapticNotify, tgAlert } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
+import { EmptyState } from "@/components/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -104,22 +106,21 @@ export default function PlanRequestsPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-24 bg-card rounded-xl animate-pulse" />
-        ))}
-      </div>
+      <TmaPage title="Заявки на подключение" withTabBarOffset>
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 bg-white rounded-xl animate-pulse" />
+          ))}
+        </div>
+      </TmaPage>
     );
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-lg font-bold text-foreground">📋 Заявки на подключение</h1>
+    <TmaPage title="Заявки на подключение" withTabBarOffset>
 
       {requests.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          Заявок пока нет
-        </div>
+        <EmptyState text="Заявок пока нет" />
       )}
 
       {pending.length > 0 && (
@@ -233,7 +234,7 @@ export default function PlanRequestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </TmaPage>
   );
 }
 
@@ -286,13 +287,13 @@ function RequestCard({
             onClick={onApprove}
             className="flex-1 py-2 bg-green-500/20 text-green-400 rounded-lg text-xs font-semibold hover:bg-green-500/30"
           >
-            ✓ Одобрить
+            Одобрить
           </button>
           <button
             onClick={onReject}
             className="flex-1 py-2 bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold hover:bg-red-500/30"
           >
-            ✕ Отклонить
+            Отклонить
           </button>
         </div>
       )}

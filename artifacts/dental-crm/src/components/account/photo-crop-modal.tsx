@@ -185,7 +185,7 @@ export default function PhotoCropModal({
               type="button"
               onClick={() => setZoom((z) => clampZoom(z - 0.2))}
               disabled={isSaving}
-              className="p-1 rounded-lg hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50"
+              className="p-1 rounded-lg hover:bg-[#f1ede4] transition-colors disabled:opacity-50"
             >
               <ZoomOut className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -203,7 +203,7 @@ export default function PhotoCropModal({
               type="button"
               onClick={() => setZoom((z) => clampZoom(z + 0.2))}
               disabled={isSaving}
-              className="p-1 rounded-lg hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50"
+              className="p-1 rounded-lg hover:bg-[#f1ede4] transition-colors disabled:opacity-50"
             >
               <ZoomIn className="w-4 h-4 text-muted-foreground" />
             </button>

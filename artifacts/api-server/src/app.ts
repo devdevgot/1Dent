@@ -12,7 +12,7 @@ import tmaRouter from "./modules/tma/tma.controller";
 import { logger } from "./lib/logger";
 import { dbReadyMiddleware } from "./middlewares/db-ready.middleware";
 import { errorHandler } from "./middlewares/error.middleware";
-import { resolveCrmDistDir, resolveTmaDistDir } from "./shared/static-dirs";
+import { resolveCrmDistDir, resolveTmaDistDir, isStaticAssetPath, setSpaStaticCacheHeaders } from "./shared/static-dirs";
 
 const app: Express = express();
 
@@ -84,11 +84,18 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/tg-admin", express.static(tmaDistDir, { redirect: false }));
+app.use("/tg-admin", express.static(tmaDistDir, {
+  redirect: false,
+  setHeaders: setSpaStaticCacheHeaders,
+}));
 // SPA fallback — any /tg-admin/* path not matched by static files gets index.html
-app.use("/tg-admin", (_req, res) => {
+app.use("/tg-admin", (req, res) => {
   if (!tmaStaticReady) {
     res.status(503).type("text/plain").send("TMA build missing on server");
+    return;
+  }
+  if (isStaticAssetPath(req.path)) {
+    res.status(404).type("text/plain").send("Not found");
     return;
   }
   res.sendFile(tmaIndexPath);
@@ -99,7 +106,10 @@ const crmDistDir = resolveCrmDistDir();
 const crmIndexPath = path.join(crmDistDir, "index.html");
 const crmReservedPrefixes = ["/api", "/p", "/tg-admin", "/r", "/ref", "/wa"];
 
-app.use(express.static(crmDistDir, { index: false }));
+app.use(express.static(crmDistDir, {
+  index: false,
+  setHeaders: setSpaStaticCacheHeaders,
+}));
 
 // Express 5 / path-to-regexp v8: bare "*" is invalid — use middleware fallback instead.
 app.use((req, res, next) => {
@@ -107,6 +117,10 @@ app.use((req, res, next) => {
   const urlPath = req.path;
   if (crmReservedPrefixes.some((prefix) => urlPath === prefix || urlPath.startsWith(`${prefix}/`))) {
     return next();
+  }
+  if (isStaticAssetPath(urlPath)) {
+    res.status(404).type("text/plain").send("Not found");
+    return;
   }
   res.sendFile(crmIndexPath, (err) => {
     if (err) next();

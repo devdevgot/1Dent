@@ -6,7 +6,8 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, WhatsappNotConnectedError } from "../../shared/errors";
 import { ContractsRepository } from "./contracts.repository";
 import { analyzeContractFields, renderContractHtml, PATIENT_FIELDS } from "./contracts.ai";
-import { getExtractionTemplateDef } from "./extraction-templates";
+import { getExtractionTemplateDef, renderExtractionTemplate, getExtractionTemplateText } from "./extraction-templates";
+import { textToHtml, wrapContractPreviewDocument } from "./contract-render";
 import { sendToPatient } from "../../shared/messaging";
 import { getPublicAppBaseUrl } from "../../shared/public-url";
 import { logger } from "../../lib/logger";
@@ -114,6 +115,110 @@ router.get(
   },
 );
 
+async function renderTemplatePreviewBody(
+  id: string,
+  clinicId: string,
+): Promise<{ html: string; title: string } | null> {
+  const template = await repo.findTemplate(id, clinicId);
+  if (!template) return null;
+
+  const [clinicRow] = await db
+    .select({
+      name: clinicsTable.name,
+      whatsappPhone: clinicsTable.whatsappPhone,
+      contractLegalName: clinicsTable.contractLegalName,
+      contractCity: clinicsTable.contractCity,
+      contractAddress: clinicsTable.contractAddress,
+      contractLicense: clinicsTable.contractLicense,
+      contractDirector: clinicsTable.contractDirector,
+    })
+    .from(clinicsTable)
+    .where(eq(clinicsTable.id, clinicId))
+    .limit(1);
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const year = String(today.getFullYear());
+  const clinicName = clinicRow?.contractLegalName?.trim() || clinicRow?.name || "Стоматология «Пример»";
+
+  let html: string;
+  if (template.isSystem && template.systemType) {
+    const def = getExtractionTemplateDef(template.systemType);
+    const rawText = template.extractedText || def?.text || "";
+    const vars: Record<string, string> = {
+      patient_name: "Иванов Иван Иванович",
+      clinic_name: clinicName,
+      clinic_phone: clinicRow?.whatsappPhone ?? "+7 777 123 45 67",
+      doctor_name: "Петров Петр Петрович",
+      date: dateStr,
+      year,
+      iin: "123456789012",
+      dob: "01.01.1990",
+      phone: "+7 777 123 45 67",
+      clinic_city: clinicRow?.contractCity ?? "г. Алматы",
+      clinic_address: clinicRow?.contractAddress ?? "г. Алматы, ул. Примерная, 1",
+      clinic_license: clinicRow?.contractLicense ?? "18021758",
+      clinic_director: clinicRow?.contractDirector ?? "Иванов И.И.",
+    };
+    const text = rawText || getExtractionTemplateText(template.systemType);
+    html = textToHtml(renderExtractionTemplate(text, vars));
+  } else {
+    const filledData: Record<string, string> = {
+      "patient.name": "Иванов Иван Иванович",
+      "patient.phone": "+7 777 123 45 67",
+      "patient.iin": "123456789012",
+      "patient.dateOfBirth": "01.01.1990",
+      "patient.gender": "мужской",
+      "doctor.name": "Петров Петр Петрович",
+      "clinic.name": clinicName,
+      "date.today": dateStr,
+      "date.year": year,
+    };
+    const fieldMappings = parseFieldMappings(template.fieldMappings);
+    html = renderContractHtml(template.extractedText ?? "", fieldMappings, filledData);
+  }
+
+  return { html, title: template.name };
+}
+
+// GET /contracts/templates/:id/preview/html — full HTML document for iframe (no JSON parse in CRM)
+router.get(
+  "/templates/:id/preview/html",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = String(req.params["id"]);
+    const clinicId = req.user!.clinicId;
+    const result = await renderTemplatePreviewBody(id, clinicId).catch(next);
+    if (result === undefined) return;
+    if (!result) return next(new NotFoundError("Шаблон не найден"));
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "private, max-age=300");
+    return res.send(wrapContractPreviewDocument(result.html, result.title));
+  },
+);
+
+// GET /contracts/templates/:id/preview — render with sample patient data (JSON)
+router.get(
+  "/templates/:id/preview",
+  authMiddleware,
+  docRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = String(req.params["id"]);
+    const clinicId = req.user!.clinicId;
+    const result = await renderTemplatePreviewBody(id, clinicId).catch(next);
+    if (result === undefined) return;
+    if (!result) return next(new NotFoundError("Шаблон не найден"));
+
+    res.json({ success: true, data: { html: result.html } });
+  },
+);
+
 // POST /contracts/templates/upload — upload DOCX/PDF, run AI analysis
 router.post(
   "/templates/upload",
@@ -187,7 +292,7 @@ router.post(
     }
 
     // 3. AI analysis — detect fields
-    const fieldMappings = await analyzeContractFields(extractedText, req.user!.clinicId, req.user!.id);
+    const fieldMappings = await analyzeContractFields(extractedText, req.user!.clinicId, req.user!.userId ?? null);
 
     // 4. Save template
     const template = await repo
@@ -428,6 +533,10 @@ async function loadBundleContext(
   patientDoctorId: string | null;
   clinicName: string;
   clinicPhone: string;
+  clinicCity: string;
+  clinicAddress: string;
+  clinicLicense: string;
+  clinicDirector: string;
   doctorName: string;
 } | null> {
   const [patientRow] = await db
@@ -448,6 +557,11 @@ async function loadBundleContext(
     .select({
       name: clinicsTable.name,
       whatsappPhone: clinicsTable.whatsappPhone,
+      contractLegalName: clinicsTable.contractLegalName,
+      contractCity: clinicsTable.contractCity,
+      contractAddress: clinicsTable.contractAddress,
+      contractLicense: clinicsTable.contractLicense,
+      contractDirector: clinicsTable.contractDirector,
     })
     .from(clinicsTable)
     .where(eq(clinicsTable.id, clinicId))
@@ -473,8 +587,12 @@ async function loadBundleContext(
     patientIin: patientRow.iin ?? "",
     patientDob: patientRow.dateOfBirth ?? "",
     patientDoctorId: patientRow.doctorId ?? null,
-    clinicName: clinicRow?.name ?? "",
+    clinicName: clinicRow?.contractLegalName?.trim() || clinicRow?.name || "",
     clinicPhone: clinicRow?.whatsappPhone ?? "",
+    clinicCity: clinicRow?.contractCity?.trim() ?? "",
+    clinicAddress: clinicRow?.contractAddress?.trim() ?? "",
+    clinicLicense: clinicRow?.contractLicense?.trim() ?? "",
+    clinicDirector: clinicRow?.contractDirector?.trim() ?? "",
     doctorName,
   };
 }
@@ -514,6 +632,10 @@ router.post(
         patientDob: ctx.patientDob,
         clinicName: ctx.clinicName,
         clinicPhone: ctx.clinicPhone,
+        clinicCity: ctx.clinicCity,
+        clinicAddress: ctx.clinicAddress,
+        clinicLicense: ctx.clinicLicense,
+        clinicDirector: ctx.clinicDirector,
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),
@@ -648,6 +770,10 @@ router.post(
         patientDob: ctx.patientDob,
         clinicName: ctx.clinicName,
         clinicPhone: ctx.clinicPhone,
+        clinicCity: ctx.clinicCity,
+        clinicAddress: ctx.clinicAddress,
+        clinicLicense: ctx.clinicLicense,
+        clinicDirector: ctx.clinicDirector,
         doctorName: ctx.doctorName,
         date: dateStr,
         year: String(today.getFullYear()),

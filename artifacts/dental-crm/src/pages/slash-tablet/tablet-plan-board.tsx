@@ -160,7 +160,7 @@ export function TabletPlanBoard({
   if (!hasDiagnosis) {
     if (embedded) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-[var(--text-subtle)]">
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-[#94a3b8]">
           <ClipboardList className="h-8 w-8 opacity-40" />
           <p className="text-sm">Заполните зубную карту слева</p>
         </div>
@@ -168,18 +168,18 @@ export function TabletPlanBoard({
     }
     return (
       <div className="flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--bg)]">
-          <ClipboardList className="h-7 w-7 text-[var(--text-subtle)]" />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#faf8f4]">
+          <ClipboardList className="h-7 w-7 text-[#94a3b8]" />
         </div>
         <div>
-          <p className="font-semibold text-[var(--text)]">Зубная карта не заполнена</p>
-          <p className="mx-auto mt-1 max-w-xs text-caption text-[var(--text-secondary)]">
+          <p className="font-semibold text-[#0f172a]">Зубная карта не заполнена</p>
+          <p className="mx-auto mt-1 max-w-xs text-xs text-[#64748b]">
             Сначала проведите осмотр зубов пациента на вкладке «Карта зубов»
           </p>
         </div>
         <button
           onClick={onGoToChart}
-          className="rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-2.5 text-body font-semibold text-[var(--text)] transition-colors hover:bg-[var(--bg)]"
+          className="rounded-xl border border-[#e8e3d9] bg-white px-4 py-2.5 text-sm font-semibold text-[#0f172a] transition-colors hover:bg-[#faf8f4]"
         >
           Перейти к зубной карте
         </button>
@@ -196,15 +196,15 @@ export function TabletPlanBoard({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100">
               <RotateCcw className="h-5 w-5 text-amber-600" />
             </div>
-            <p className="text-body font-semibold text-amber-800">Нужна повторная диагностика</p>
-            <p className="text-caption text-amber-600">Проведите осмотр на карте слева</p>
+            <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
+            <p className="text-xs text-amber-600">Проведите осмотр на карте слева</p>
           </>
         ) : (
           <>
-            <ClipboardList className="h-8 w-8 text-[var(--text-subtle)] opacity-40" />
-            <p className="text-body text-[var(--text-subtle)]">План лечения ещё не создан</p>
+            <ClipboardList className="h-8 w-8 text-[#94a3b8] opacity-40" />
+            <p className="text-sm text-[#94a3b8]">План лечения ещё не создан</p>
             <button
-              className="flex items-center gap-2 rounded-xl bg-[#1f75fe] px-4 py-2.5 text-body font-semibold text-white transition-colors hover:bg-[var(--primary-hover)]"
+              className="flex items-center gap-2 rounded-xl bg-[#1f75fe] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1a65e8]"
               onClick={() => createPlanMutation.mutate({ id: patientId, data: {} })}
               disabled={createPlanMutation.isPending}
             >
@@ -233,24 +233,24 @@ export function TabletPlanBoard({
 
     return (
       <div className="space-y-3 p-4">
-        <p className="text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Активный план</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Активный план</p>
 
         {activePlan ? (
           <button
             onClick={() => setPlanDetailId(activePlan.id)}
-            className="w-full overflow-hidden rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-left shadow-sm transition-shadow hover:shadow-md"
+            className="w-full overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white text-left shadow-sm transition-shadow hover:shadow-md"
           >
             <div className="h-1 bg-[#1f75fe]" />
             <div className="px-4 py-4">
               <div className="mb-4 flex items-start justify-between">
                 <div>
-                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-subtle)]">
+                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#94a3b8]">
                     Активный план
                   </p>
-                  <p className="text-[15px] font-bold text-[var(--text)]">
+                  <p className="text-[15px] font-bold text-[#0f172a]">
                     План #{String(activePlan.planNumber).padStart(4, "0")}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-[var(--text-subtle)]">
+                  <p className="mt-0.5 text-[11px] text-[#94a3b8]">
                     Создан {new Date(activePlan.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "long", year: "numeric" })}
                   </p>
                 </div>
@@ -262,15 +262,15 @@ export function TabletPlanBoard({
               <div className="mb-4 flex items-center gap-4">
                 <RingChart pct={apPct} />
                 <div className="min-w-0 flex-1">
-                  <p className="mb-0.5 text-[11px] text-[var(--text-subtle)]">Итого по плану</p>
-                  <p className="text-[22px] font-bold leading-none text-[var(--text)]">
+                  <p className="mb-0.5 text-[11px] text-[#94a3b8]">Итого по плану</p>
+                  <p className="text-[22px] font-bold leading-none text-[#0f172a]">
                     {activePlan.totalCost.toLocaleString("ru-KZ")} ₸
                   </p>
                   <div className="mt-2 space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
-                        <span className="text-[11px] text-[var(--text-secondary)]">Выполнено</span>
+                        <span className="text-[11px] text-[#64748b]">Выполнено</span>
                       </div>
                       <span className="text-[11px] font-semibold text-emerald-600">
                         {apPaid.toLocaleString("ru-KZ")} ₸
@@ -279,9 +279,9 @@ export function TabletPlanBoard({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="h-2 w-2 shrink-0 rounded-full bg-[#1f75fe]/30" />
-                        <span className="text-[11px] text-[var(--text-secondary)]">Остаток</span>
+                        <span className="text-[11px] text-[#64748b]">Остаток</span>
                       </div>
-                      <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                      <span className="text-[11px] font-semibold text-[#64748b]">
                         {(activePlan.totalCost - apPaid).toLocaleString("ru-KZ")} ₸
                       </span>
                     </div>
@@ -289,8 +289,8 @@ export function TabletPlanBoard({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end border-t border-[var(--ds-border)] pt-3">
-                <div className="flex items-center gap-1 text-[12px] font-semibold text-[var(--ds-primary)]">
+              <div className="flex items-center justify-end border-t border-[#e8e3d9] pt-3">
+                <div className="flex items-center gap-1 text-[12px] font-semibold text-[#1f75fe]">
                   Открыть план <ChevronRight className="h-3.5 w-3.5" />
                 </div>
               </div>
@@ -302,13 +302,13 @@ export function TabletPlanBoard({
               <RotateCcw className="h-4 w-4 text-amber-600" />
             </div>
             <div className="flex-1">
-              <p className="text-body font-semibold text-amber-800">Нужна повторная диагностика</p>
-              <p className="mt-0.5 text-caption text-amber-600">
+              <p className="text-sm font-semibold text-amber-800">Нужна повторная диагностика</p>
+              <p className="mt-0.5 text-xs text-amber-600">
                 Для создания плана {allPlans.length + 1} проведите повторный осмотр
               </p>
               <button
                 onClick={onGoToChart}
-                className="mt-2 text-caption font-semibold text-amber-700 underline underline-offset-2"
+                className="mt-2 text-xs font-semibold text-amber-700 underline underline-offset-2"
               >
                 Перейти к зубной карте →
               </button>
@@ -316,7 +316,7 @@ export function TabletPlanBoard({
           </div>
         ) : (
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--ds-border)] py-4 text-body font-medium text-[var(--text-subtle)] transition-colors hover:bg-[var(--bg)]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#e8e3d9] py-4 text-sm font-medium text-[#94a3b8] transition-colors hover:bg-[#faf8f4]"
             onClick={() => createPlanMutation.mutate({ id: patientId, data: {} })}
             disabled={createPlanMutation.isPending}
           >
@@ -331,7 +331,7 @@ export function TabletPlanBoard({
 
         {activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && !needsRediagnosis && (
           <button
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--ds-border)] py-3 text-body font-medium text-[var(--text-subtle)] transition-colors hover:bg-[var(--bg)]"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#e8e3d9] py-3 text-sm font-medium text-[#94a3b8] transition-colors hover:bg-[#faf8f4]"
             onClick={() => createPlanMutation.mutate({ id: patientId, data: {} })}
             disabled={createPlanMutation.isPending}
           >
@@ -347,7 +347,7 @@ export function TabletPlanBoard({
         {/* Архив планов */}
         {pastPlans.length > 0 && (
           <>
-            <p className="pt-2 text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+            <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-[#64748b]">
               Прошлые планы
             </p>
             <div className="space-y-2">
@@ -357,13 +357,13 @@ export function TabletPlanBoard({
                   <button
                     key={p.id}
                     onClick={() => setPlanDetailId(p.id)}
-                    className="flex w-full items-center justify-between rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-3 text-left transition-colors hover:bg-[var(--bg)]"
+                    className="flex w-full items-center justify-between rounded-2xl border border-[#e8e3d9] bg-white px-4 py-3 text-left transition-colors hover:bg-[#faf8f4]"
                   >
                     <div>
-                      <p className="text-body font-semibold text-[var(--text)]">
+                      <p className="text-sm font-semibold text-[#0f172a]">
                         План #{String(p.planNumber).padStart(4, "0")}
                       </p>
-                      <p className="text-[11px] text-[var(--text-subtle)]">
+                      <p className="text-[11px] text-[#94a3b8]">
                         {new Date(p.createdAt).toLocaleDateString("ru", { day: "2-digit", month: "short", year: "numeric" })}
                         {" · "}
                         {p.totalCost.toLocaleString("ru-KZ")} ₸
@@ -391,10 +391,10 @@ export function TabletPlanBoard({
   if (!detailPlan) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-        <p className="text-body text-[var(--text-secondary)]">План не найден или ещё загружается</p>
+        <p className="text-sm text-[#64748b]">План не найден или ещё загружается</p>
         <button
           onClick={() => setPlanDetailId(null)}
-          className="rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-2 text-body font-semibold text-[var(--text)] hover:bg-[var(--bg)]"
+          className="rounded-xl border border-[#e8e3d9] bg-white px-4 py-2 text-sm font-semibold text-[#0f172a] hover:bg-[#faf8f4]"
         >
           К списку планов
         </button>
@@ -417,21 +417,21 @@ export function TabletPlanBoard({
       {!embedded && (pastPlans.length > 0 || !isActive) && (
         <button
           onClick={() => setPlanDetailId(null)}
-          className="text-caption font-semibold text-[var(--ds-primary)] underline-offset-2 hover:underline"
+          className="text-xs font-semibold text-[#1f75fe] underline-offset-2 hover:underline"
         >
           ← К списку планов
         </button>
       )}
 
       {filterFdi != null && (
-        <p className={cn("text-caption font-medium text-[var(--ds-primary)]", embedded ? "px-4 pt-3" : "")}>
+        <p className={cn("text-xs font-medium text-[#1f75fe]", embedded ? "px-4 pt-3" : "")}>
           Показаны позиции по зубу {filterFdi}
         </p>
       )}
 
       {/* Financial summary */}
       <div className={cn(
-        "overflow-hidden border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-sm",
+        "overflow-hidden border border-[#e8e3d9] bg-white shadow-sm",
         embedded ? "mx-3 mt-3 rounded-2xl" : "rounded-2xl",
       )}>
         <div className="h-0.5 bg-[#1f75fe]" />
@@ -439,11 +439,11 @@ export function TabletPlanBoard({
           <div className="mb-4 flex items-center gap-4">
             <RingChart pct={pct} />
             <div className="min-w-0 flex-1">
-              <p className="mb-0.5 text-[11px] text-[var(--text-subtle)]">Сумма плана</p>
-              <p className="text-[22px] font-bold leading-none text-[var(--text)]">
+              <p className="mb-0.5 text-[11px] text-[#94a3b8]">Сумма плана</p>
+              <p className="text-[22px] font-bold leading-none text-[#0f172a]">
                 {detailPlan.totalCost.toLocaleString("ru-KZ")} ₸
               </p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-subtle)]">
+              <p className="mt-0.5 text-[11px] text-[#94a3b8]">
                 Оплачено {done} из {nc.length} услуг
               </p>
             </div>
@@ -452,7 +452,7 @@ export function TabletPlanBoard({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-400" />
-                <span className="text-[12px] text-[var(--text-secondary)]">Выполнено</span>
+                <span className="text-[12px] text-[#64748b]">Выполнено</span>
               </div>
               <span className="text-[13px] font-bold text-emerald-600">
                 {paid.toLocaleString("ru-KZ")} ₸
@@ -461,9 +461,9 @@ export function TabletPlanBoard({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#1f75fe]/30" />
-                <span className="text-[12px] text-[var(--text-secondary)]">Остаток к оплате</span>
+                <span className="text-[12px] text-[#64748b]">Остаток к оплате</span>
               </div>
-              <span className="text-[13px] font-bold text-[var(--text)]">
+              <span className="text-[13px] font-bold text-[#0f172a]">
                 {(detailPlan.totalCost - paid).toLocaleString("ru-KZ")} ₸
               </span>
             </div>
@@ -475,7 +475,7 @@ export function TabletPlanBoard({
       {!embedded && isActive && activePlan && (activePlan.status === "completed" || activePlan.status === "in_progress") && (
         needsRediagnosis ? (
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 py-3 text-body font-semibold text-amber-700 transition-colors hover:bg-amber-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 py-3 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50"
             onClick={onGoToChart}
           >
             <RotateCcw className="h-4 w-4" />
@@ -483,7 +483,7 @@ export function TabletPlanBoard({
           </button>
         ) : (
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#1f75fe]/30 py-3 text-body font-semibold text-[var(--ds-primary)] transition-colors hover:bg-[#1f75fe]/5"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#1f75fe]/30 py-3 text-sm font-semibold text-[#1f75fe] transition-colors hover:bg-[#1f75fe]/5"
             onClick={() => createPlanMutation.mutate({ id: patientId, data: {} })}
             disabled={createPlanMutation.isPending}
           >
@@ -514,7 +514,7 @@ export function TabletPlanBoard({
       {!isActive && (
         <div className={cn("space-y-2", embedded && "px-3 pb-3")}>
           {nc.length === 0 ? (
-            <p className="py-6 text-center text-body text-[var(--text-subtle)]">Нет позиций</p>
+            <p className="py-6 text-center text-sm text-[#94a3b8]">Нет позиций</p>
           ) : (
             nc.map((item) => (
               <div
@@ -522,7 +522,7 @@ export function TabletPlanBoard({
                 className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 shadow-sm ${
                   item.status === "completed"
                     ? "border-emerald-100 bg-emerald-50/60"
-                    : "border-[var(--ds-border)] bg-[var(--ds-surface)]"
+                    : "border-[#e8e3d9] bg-white"
                 }`}
               >
                 {item.status === "completed" ? (
@@ -531,25 +531,25 @@ export function TabletPlanBoard({
                   <Circle className="h-5 w-5 shrink-0 text-[#e8e3d9]" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className={`truncate text-[13px] font-medium leading-snug ${item.status === "completed" ? "text-[var(--text-subtle)] line-through" : "text-[var(--text)]"}`}>
+                  <p className={`truncate text-[13px] font-medium leading-snug ${item.status === "completed" ? "text-[#94a3b8] line-through" : "text-[#0f172a]"}`}>
                     {item.title}
                   </p>
                   {item.toothFdi != null && (
-                    <p className="mt-0.5 text-[11px] text-[var(--text-subtle)]">Зуб №{item.toothFdi}</p>
+                    <p className="mt-0.5 text-[11px] text-[#94a3b8]">Зуб №{item.toothFdi}</p>
                   )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end text-right">
                   {(item.discount ?? 0) > 0 ? (
                     <>
-                      <span className="text-[10px] leading-none text-[var(--text-subtle)] line-through">
+                      <span className="text-[10px] leading-none text-[#94a3b8] line-through">
                         {item.price.toLocaleString("ru-KZ")} ₸
                       </span>
-                      <span className={`mt-0.5 text-[13px] font-bold leading-tight ${item.status === "completed" ? "text-emerald-600" : "text-[var(--text)]"}`}>
+                      <span className={`mt-0.5 text-[13px] font-bold leading-tight ${item.status === "completed" ? "text-emerald-600" : "text-[#0f172a]"}`}>
                         {(item.price * (1 - (item.discount ?? 0) / 100)).toLocaleString("ru-KZ")} ₸
                       </span>
                     </>
                   ) : (
-                    <span className={`text-[13px] font-semibold ${item.status === "completed" ? "text-emerald-600" : "text-[var(--text-secondary)]"}`}>
+                    <span className={`text-[13px] font-semibold ${item.status === "completed" ? "text-emerald-600" : "text-[#64748b]"}`}>
                       {item.price.toLocaleString("ru-KZ")} ₸
                     </span>
                   )}

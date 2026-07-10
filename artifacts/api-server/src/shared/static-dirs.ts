@@ -1,8 +1,48 @@
 import fs from "fs";
 import path from "path";
+import type { Response } from "express";
+
+const STATIC_ASSET_EXTENSIONS = new Set([
+  ".js",
+  ".mjs",
+  ".css",
+  ".map",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".eot",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".svg",
+  ".webp",
+  ".ico",
+  ".json",
+  ".wasm",
+  ".txt",
+]);
 
 function distExists(distDir: string): boolean {
   return fs.existsSync(path.join(distDir, "index.html"));
+}
+
+/** True for hashed bundles and other files that must never receive SPA index.html fallback. */
+export function isStaticAssetPath(urlPath: string): boolean {
+  const pathname = urlPath.split("?")[0] ?? urlPath;
+  if (pathname.startsWith("/assets/")) return true;
+  const ext = path.extname(pathname).toLowerCase();
+  return STATIC_ASSET_EXTENSIONS.has(ext);
+}
+
+export function setSpaStaticCacheHeaders(res: Response, filePath: string): void {
+  if (filePath.endsWith(`${path.sep}index.html`)) {
+    res.setHeader("Cache-Control", "no-cache");
+    return;
+  }
+  if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  }
 }
 
 /** Resolve SPA dist directory — works in monorepo (artifacts/*) and flat Railway layouts. */

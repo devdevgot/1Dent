@@ -59,7 +59,7 @@ export function Navbar() {
           type="button"
           aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
           aria-expanded={menuOpen}
-          className="md:hidden p-2 rounded-xl hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
+          className="md:hidden p-2 rounded-xl hover:bg-[#f1ede4] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)]"
           onClick={() => setMenuOpen(!menuOpen)}
         >
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -72,14 +72,14 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[var(--bg)] border-t border-[var(--ds-border)] px-6 py-6 flex flex-col gap-2"
+            className="md:hidden bg-[#faf8f4] border-t border-[#e8e3d9] px-6 py-6 flex flex-col gap-2"
           >
             {links.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="font-manrope text-[var(--text)] font-medium py-3 border-b border-[var(--ds-border)] last:border-0"
+                className="font-manrope text-[#0f172a] font-medium py-3 border-b border-[#e8e3d9] last:border-0"
               >
                 {link.label}
               </a>

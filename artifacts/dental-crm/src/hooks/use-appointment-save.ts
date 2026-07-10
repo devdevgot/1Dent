@@ -4,8 +4,6 @@ import {
   useUpdateProcedure,
   useUpdateProcedureStatus,
   useDeleteProcedure,
-  useUpdatePatientStatus,
-  useListPatients,
   getListProceduresQueryKey,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
@@ -27,7 +25,6 @@ export interface AppointmentSaveData {
 
 export function useAppointmentSave({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
-  const { data: patientData } = useListPatients();
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
@@ -39,7 +36,6 @@ export function useAppointmentSave({ onDone }: { onDone: () => void }) {
   const updateMutation        = useUpdateProcedure({ mutation: { onSuccess: invalidate } });
   const updateStatusMutation  = useUpdateProcedureStatus({ mutation: { onSuccess: invalidate } });
   const deleteMutation        = useDeleteProcedure({ mutation: { onSuccess: invalidate } });
-  const updatePatientStatusMutation = useUpdatePatientStatus({ mutation: { onSuccess: invalidate } });
 
   async function save(data: AppointmentSaveData, editingProcedure?: ProcedureItem | null) {
     if (editingProcedure) {
@@ -94,15 +90,6 @@ export function useAppointmentSave({ onDone }: { onDone: () => void }) {
         await updateMutation.mutateAsync({
           id: createdId,
           data: { paymentMethod: data.paymentMethod },
-        });
-      }
-      const patientFull = (patientData?.data?.patients ?? []).find(
-        (p) => p.id === resolvedPatientId,
-      );
-      if (!data.newPatient && patientFull?.status === "new_request") {
-        await updatePatientStatusMutation.mutateAsync({
-          id: resolvedPatientId,
-          data: { status: "initial_consultation" },
         });
       }
     }

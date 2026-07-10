@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { haptic, hapticNotify, tgAlert, tgConfirm, useTgBackButton } from "../hooks/useTgBackButton";
+import { haptic, hapticNotify, tgAlert, tgConfirm } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
 
 interface ChatbotDefaults {
   defaultEnabled: boolean;
@@ -14,7 +15,6 @@ interface ChatbotDefaults {
 
 export default function PlatformChatbotPage() {
   const navigate = useNavigate();
-  useTgBackButton(() => navigate("/content"));
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -76,13 +76,11 @@ export default function PlatformChatbotPage() {
   );
 
   return (
-    <div className="px-4 pt-5 pb-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Чатбот — глобально</h1>
-        <p className="text-sm text-muted-foreground">
-          Дефолтные тексты для новых клиник. Используйте {"{{clinic_name}}"}.
-        </p>
-      </div>
+    <TmaPage
+      title="Чатбот — глобально"
+      subtitle={'Дефолтные тексты для новых клиник. Используйте {{clinic_name}}.'}
+      onBack={() => navigate("/content")}
+    >
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
         {field("Статус по умолчанию", "defaultEnabled")}
@@ -114,6 +112,6 @@ export default function PlatformChatbotPage() {
       >
         {applyAll.isPending ? "Применение..." : "Применить ко всем клиникам"}
       </button>
-    </div>
+    </TmaPage>
   );
 }

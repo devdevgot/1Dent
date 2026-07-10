@@ -148,7 +148,7 @@ function AiToothSection({
 
   if (!analysis) {
     return (
-      <p className="text-[12px] text-[var(--text-subtle)] py-1">
+      <p className="text-[12px] text-[#94a3b8] py-1">
         Проведите диагностику зуба для получения анализа
       </p>
     );
@@ -176,7 +176,7 @@ function AiToothSection({
 
       <div className="px-3 py-2.5 space-y-2.5">
         {sections.length === 0 ? (
-          <p className="text-[12px] text-[var(--text-secondary)]">Анализ недоступен</p>
+          <p className="text-[12px] text-[#64748b]">Анализ недоступен</p>
         ) : (
           sections.map((sec) => (
             <div key={sec.title}>
@@ -184,7 +184,7 @@ function AiToothSection({
                 {sec.title}
               </p>
               {sec.lines.map((line, i) => (
-                <p key={i} className="text-[12px] text-[var(--text)] leading-snug flex gap-1.5 mb-0.5">
+                <p key={i} className="text-[12px] text-[#0f172a] leading-snug flex gap-1.5 mb-0.5">
                   <span className="text-primary/60 shrink-0 mt-0.5">•</span>
                   {line}
                 </p>
@@ -193,7 +193,7 @@ function AiToothSection({
           ))
         )}
         {fetchedAt && (
-          <p className="text-[10px] text-[var(--text-subtle)] pt-0.5">
+          <p className="text-[10px] text-[#94a3b8] pt-0.5">
             Обновлено: {fetchedAt.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
           </p>
         )}
@@ -278,13 +278,13 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
     <div className="fixed inset-0 z-[70] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className={cn(
-        "relative z-10 bg-[var(--ds-surface)] rounded-2xl border border-[var(--ds-border)] shadow-xl w-full mx-4 overflow-hidden",
+        "relative z-10 bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-full mx-4 overflow-hidden",
         isTablet ? "max-w-lg" : "max-w-sm",
       )}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--ds-border)]">
-          <p className="font-semibold text-[var(--text)] text-[15px]">Назначить дату лечения</p>
-          <button onClick={onClose} className="text-[var(--text-subtle)] hover:text-[var(--text-secondary)] transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]">
+          <p className="font-semibold text-[#0f172a] text-[15px]">Назначить дату лечения</p>
+          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#64748b] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -292,19 +292,19 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
         {/* Calendar */}
         <div className="px-5 pt-4 pb-2">
           <div className="flex items-center justify-between mb-3">
-            <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] transition-colors">
-              <ChevronLeft className="w-4 h-4 text-[var(--text-secondary)]" />
+            <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
+              <ChevronLeft className="w-4 h-4 text-[#64748b]" />
             </button>
-            <span className="text-body font-semibold text-[var(--text)]">
+            <span className="text-sm font-semibold text-[#0f172a]">
               {MONTHS_RU[viewMonth]} {viewYear}
             </span>
-            <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface-2)] transition-colors">
-              <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+            <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#f1ede4] transition-colors">
+              <ChevronRight className="w-4 h-4 text-[#64748b]" />
             </button>
           </div>
           <div className="grid grid-cols-7 mb-1">
             {DAYS_RU.map(d => (
-              <div key={d} className="text-center text-caption font-medium text-[var(--text-subtle)] py-1">{d}</div>
+              <div key={d} className="text-center text-xs font-medium text-[#94a3b8] py-1">{d}</div>
             ))}
           </div>
           {weeks.map((week, wi) => (
@@ -323,12 +323,12 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
                     disabled={!day || isPast}
                     onClick={() => day && selectDay(day)}
                     className={cn(
-                      "aspect-square flex items-center justify-center text-body rounded-full transition-all m-0.5",
+                      "aspect-square flex items-center justify-center text-sm rounded-full transition-all m-0.5",
                       !day && "invisible",
-                      isPast && day && "text-[var(--text-subtle)] cursor-not-allowed",
+                      isPast && day && "text-[#94a3b8] cursor-not-allowed",
                       isSelected && "bg-primary text-white font-semibold shadow-sm",
                       !isSelected && isToday && "text-primary font-semibold",
-                      !isSelected && !isToday && day && !isPast && "text-[var(--text)] hover:bg-primary/10",
+                      !isSelected && !isToday && day && !isPast && "text-[#0f172a] hover:bg-primary/10",
                     )}
                   >
                     {day}
@@ -339,13 +339,13 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
           ))}
         </div>
 
-        <div className="mx-5 border-t border-[var(--ds-border)] my-1" />
+        <div className="mx-5 border-t border-[#e8e3d9] my-1" />
 
         {/* Time list */}
         <div className="px-5 pb-2">
           <div className="flex items-center gap-1.5 mb-2">
-            <Clock className="w-3.5 h-3.5 text-[var(--text-subtle)]" />
-            <span className="text-caption font-medium text-[var(--text-secondary)] uppercase tracking-wide">Время</span>
+            <Clock className="w-3.5 h-3.5 text-[#94a3b8]" />
+            <span className="text-xs font-medium text-[#64748b] uppercase tracking-wide">Время</span>
           </div>
           <div ref={timeRef} className="h-36 overflow-y-scroll custom-scrollbar space-y-0.5 pr-1">
             {SCHEDULE_TIME_SLOTS.map(slot => (
@@ -355,10 +355,10 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
                 type="button"
                 onClick={() => setSelTime(slot)}
                 className={cn(
-                  "w-full text-left px-3 py-1.5 rounded-lg text-body transition-all",
+                  "w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all",
                   slot === selTime
                     ? "bg-primary text-white font-semibold"
-                    : "text-[var(--text)] hover:bg-primary/10",
+                    : "text-[#0f172a] hover:bg-primary/10",
                 )}
               >
                 {slot}
@@ -368,7 +368,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-[var(--ds-border)] flex gap-3">
+        <div className="px-5 py-4 border-t border-[#e8e3d9] flex gap-3">
           {onClear && (
             <button
               type="button"
@@ -381,7 +381,7 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
           <button
             type="button"
             onClick={onClose}
-            className="dash-btn dash-btn-secondary flex-1 py-2 text-body font-semibold"
+            className="dash-btn dash-btn-secondary flex-1 py-2 text-sm font-semibold"
           >
             Отмена
           </button>
@@ -390,10 +390,10 @@ function TreatmentSchedulePicker({ scheduledAt, onConfirm, onClear, onClose }: T
             disabled={!selDate}
             onClick={() => onConfirm(selDate, selTime)}
             className={cn(
-              "dash-btn flex-1 py-2 text-body font-semibold",
+              "dash-btn flex-1 py-2 text-sm font-semibold",
               selDate
                 ? "dash-btn-primary"
-                : "!bg-[var(--surface-2)] !text-[var(--text-subtle)] cursor-not-allowed border-[var(--ds-border)]"
+                : "!bg-[#f1ede4] !text-[#94a3b8] cursor-not-allowed border-[#e8e3d9]"
             )}
           >
             Готово
@@ -868,13 +868,13 @@ export function PlanItemDetailModal({
         )}
 
         {/* ── Header ── */}
-        <div className="px-4 pt-3 pb-3 border-b border-[var(--ds-border)] shrink-0">
+        <div className="px-4 pt-3 pb-3 border-b border-[#e8e3d9] shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-bold text-[var(--text)] leading-snug">{item.title}</p>
+              <p className="text-[15px] font-bold text-[#0f172a] leading-snug">{item.title}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {item.toothFdi != null && (
-                  <span className="text-[11px] text-[var(--text-secondary)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] text-[#64748b] bg-[#f1ede4] px-2 py-0.5 rounded-full">
                     Зуб №{item.toothFdi}
                   </span>
                 )}
@@ -887,13 +887,13 @@ export function PlanItemDetailModal({
                   {isCompleted ? "Завершена" : isCancelled ? "Отменена" : "В ожидании"}
                 </span>
                 {item.discount > 0 ? (
-                  <span className="text-[12px] font-semibold text-[var(--text)] flex items-center gap-1.5">
-                    <span className="line-through text-[var(--text-subtle)]">{item.price.toLocaleString("ru-KZ")} ₸</span>
+                  <span className="text-[12px] font-semibold text-[#0f172a] flex items-center gap-1.5">
+                    <span className="line-through text-[#94a3b8]">{item.price.toLocaleString("ru-KZ")} ₸</span>
                     <span className="text-emerald-600 font-bold">{(item.price * (1 - item.discount / 100)).toLocaleString("ru-KZ")} ₸</span>
                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-600 border border-rose-100">-{item.discount}%</span>
                   </span>
                 ) : (
-                  <span className="text-[12px] font-semibold text-[var(--text)]">
+                  <span className="text-[12px] font-semibold text-[#0f172a]">
                     {item.price.toLocaleString("ru-KZ")} ₸
                   </span>
                 )}
@@ -901,7 +901,7 @@ export function PlanItemDetailModal({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--text-subtle)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[#94a3b8] hover:bg-[#f1ede4] hover:text-[#0f172a] transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -915,7 +915,7 @@ export function PlanItemDetailModal({
                 onClick={() => setTab(id)}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors",
-                  tab === id ? "bg-primary/10 text-primary" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
+                  tab === id ? "bg-primary/10 text-primary" : "text-[#64748b] hover:bg-[#f1ede4]"
                 )}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -988,16 +988,16 @@ export function PlanItemDetailModal({
                           </div>
 
                           {/* Documents list */}
-                          <div className="bg-[var(--ds-surface)]/80 border border-blue-100/50 rounded-xl p-3 space-y-2">
+                          <div className="bg-white/80 border border-blue-100/50 rounded-xl p-3 space-y-2">
                             {bundleContracts.length === 0 ? (
-                              <div className="flex items-center gap-2 text-[11px] text-[var(--text-subtle)]">
+                              <div className="flex items-center gap-2 text-[11px] text-[#94a3b8]">
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 Загрузка списка документов...
                               </div>
                             ) : (
                               bundleContracts.map((c) => (
                                 <div key={c.id} className="flex items-center justify-between text-[11px] gap-2">
-                                  <span className="text-[var(--text)] font-medium truncate flex-1">{c.templateName}</span>
+                                  <span className="text-[#0f172a] font-medium truncate flex-1">{c.templateName}</span>
                                   <span className={cn(
                                     "px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0",
                                     c.status === "signed" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-orange-50 text-orange-600 border border-orange-100"
@@ -1013,7 +1013,7 @@ export function PlanItemDetailModal({
                             <button
                               onClick={handleSendBundle}
                               disabled={sendingBundle}
-                              className="flex-1 h-9 rounded-xl border border-blue-200 bg-[var(--ds-surface)] hover:bg-blue-50 text-blue-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                              className="flex-1 h-9 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                             >
                               {sendingBundle ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1026,7 +1026,7 @@ export function PlanItemDetailModal({
                               href={`${window.location.origin}/p/bundle/${bundleToken}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="h-9 px-3 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:bg-[var(--bg)] text-[var(--text-secondary)] text-[11px] font-medium flex items-center justify-center gap-1 transition-colors"
+                              className="h-9 px-3 rounded-xl border border-[#e8e3d9] bg-white hover:bg-[#faf8f4] text-[#64748b] text-[11px] font-medium flex items-center justify-center gap-1 transition-colors"
                             >
                               Открыть пакет
                             </a>
@@ -1054,7 +1054,7 @@ export function PlanItemDetailModal({
                   <div className="bg-gradient-to-br from-primary/5 to-blue-50 rounded-2xl p-4 border border-primary/10">
                     <div className="flex items-center gap-2 mb-3">
                       <Clock className="w-4 h-4 text-primary" />
-                      <span className="text-[13px] font-semibold text-[var(--text)]">Таймер лечения</span>
+                      <span className="text-[13px] font-semibold text-[#0f172a]">Таймер лечения</span>
                     </div>
 
                     {isTimerRunning ? (
@@ -1063,12 +1063,12 @@ export function PlanItemDetailModal({
                           <div className="text-[32px] font-bold text-primary tabular-nums">
                             {remaining != null ? formatTimer(remaining) : formatTimer(elapsed)}
                           </div>
-                          <p className="text-[11px] text-[var(--text-subtle)] mt-0.5">
+                          <p className="text-[11px] text-[#94a3b8] mt-0.5">
                             {remaining != null ? "осталось" : "прошло"}
                           </p>
                         </div>
                         {duration && (
-                          <div className="h-1.5 bg-[var(--ds-surface)]/80 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-white/80 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-primary rounded-full transition-all"
                               style={{ width: `${Math.min(100, ((elapsed) / duration) * 100)}%` }}
@@ -1092,7 +1092,7 @@ export function PlanItemDetailModal({
                           "w-full h-11 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-2 transition-all shadow-sm",
                           allSigned
                             ? "bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
-                            : "bg-[var(--surface-2)] text-[var(--text-subtle)] cursor-not-allowed border border-[var(--ds-border)]"
+                            : "bg-[#f1ede4] text-[#94a3b8] cursor-not-allowed border border-[#e8e3d9]"
                         )}
                       >
                         {allSigned ? <Play className="w-4 h-4" /> : <Lock className="w-3.5 h-3.5" />}
@@ -1103,29 +1103,29 @@ export function PlanItemDetailModal({
                 </div>
               )}              {/* Doctor assignment */}
               <div>
-                <p className="text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">Врач</p>
+                <p className="text-[12px] font-semibold text-[#64748b] uppercase tracking-wide mb-2">Врач</p>
                 <div className="relative">
                   <button
                     onClick={() => !isAdmin && setShowDoctorPicker(!showDoctorPicker)}
                     disabled={isAdmin}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:border-primary/40 transition-colors",
-                      isAdmin && "cursor-default opacity-85 hover:border-[var(--ds-border)]"
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#e8e3d9] bg-white hover:border-primary/40 transition-colors",
+                      isAdmin && "cursor-default opacity-85 hover:border-[#e8e3d9]"
                     )}
                   >
                     <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <UserRound className="w-3.5 h-3.5 text-primary" />
                     </div>
-                    <span className="flex-1 text-left text-[13px] font-medium text-[var(--text)]">
+                    <span className="flex-1 text-left text-[13px] font-medium text-[#0f172a]">
                       {assignedUser?.name ?? "Не назначен"}
                     </span>
-                    {!isAdmin && <ChevronDown className={cn("w-4 h-4 text-[var(--text-subtle)] transition-transform", showDoctorPicker && "rotate-180")} />}
+                    {!isAdmin && <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", showDoctorPicker && "rotate-180")} />}
                   </button>
                   {showDoctorPicker && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-lg z-10 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-10 overflow-hidden">
                       <button
                         onClick={() => void handleAssignDoctor("")}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[var(--bg)] text-[13px] text-[var(--text-secondary)] transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[#faf8f4] text-[13px] text-[#64748b] transition-colors"
                       >
                         Не назначен
                       </button>
@@ -1135,7 +1135,7 @@ export function PlanItemDetailModal({
                           onClick={() => void handleAssignDoctor(u.id)}
                           className={cn(
                             "w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary/5 text-[13px] transition-colors",
-                            selectedDoctor === u.id ? "text-primary font-semibold bg-primary/5" : "text-[var(--text)]"
+                            selectedDoctor === u.id ? "text-primary font-semibold bg-primary/5" : "text-[#0f172a]"
                           )}
                         >
                           <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
@@ -1152,39 +1152,39 @@ export function PlanItemDetailModal({
               {/* Schedule date/time */}
               {isPending && (
                 <div>
-                  <p className="text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-2">Дата лечения</p>
+                  <p className="text-[12px] font-semibold text-[#64748b] uppercase tracking-wide mb-2">Дата лечения</p>
                   <div className="relative">
                     <button
                       onClick={() => !isAdmin && setShowSchedulePicker(!showSchedulePicker)}
                       disabled={isAdmin}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] hover:border-primary/40 transition-colors",
-                        isAdmin && "cursor-default opacity-85 hover:border-[var(--ds-border)]"
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-[#e8e3d9] bg-white hover:border-primary/40 transition-colors",
+                        isAdmin && "cursor-default opacity-85 hover:border-[#e8e3d9]"
                       )}
                     >
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <CalendarDays className="w-3.5 h-3.5 text-primary" />
                       </div>
                       {scheduledAt ? (
-                        <span className="flex-1 text-left text-[13px] font-medium text-[var(--text)] flex items-center gap-2">
+                        <span className="flex-1 text-left text-[13px] font-medium text-[#0f172a] flex items-center gap-2">
                           <span>
                             {new Date(scheduledAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
                           </span>
-                          <span className="text-[var(--text-subtle)]">·</span>
-                          <Clock className="w-3 h-3 text-[var(--text-subtle)]" />
+                          <span className="text-[#94a3b8]">·</span>
+                          <Clock className="w-3 h-3 text-[#94a3b8]" />
                           <span>
                             {new Date(scheduledAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </span>
                       ) : (
-                        <span className="flex-1 text-left text-[13px] text-[var(--text-subtle)]">
+                        <span className="flex-1 text-left text-[13px] text-[#94a3b8]">
                           Дата не назначена
                         </span>
                       )}
                       {!isAdmin && (
                         savingSchedule
-                          ? <Loader2 className="w-4 h-4 text-[var(--text-subtle)] animate-spin" />
-                          : <ChevronDown className={cn("w-4 h-4 text-[var(--text-subtle)] transition-transform", showSchedulePicker && "rotate-180")} />
+                          ? <Loader2 className="w-4 h-4 text-[#94a3b8] animate-spin" />
+                          : <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", showSchedulePicker && "rotate-180")} />
                       )}
                     </button>
 
@@ -1208,7 +1208,7 @@ export function PlanItemDetailModal({
 
               {/* Scheduled date badge (for completed/cancelled items) */}
               {!isPending && scheduledAt && (
-                <div className="flex items-center gap-2 text-[12px] text-[var(--text-secondary)]">
+                <div className="flex items-center gap-2 text-[12px] text-[#64748b]">
                   <CalendarDays className="w-3.5 h-3.5" />
                   <span>
                     Было назначено: {new Date(scheduledAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}{" "}
@@ -1220,7 +1220,7 @@ export function PlanItemDetailModal({
               {/* Notes */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide flex items-center gap-1.5">
+                  <p className="text-[12px] font-semibold text-[#64748b] uppercase tracking-wide flex items-center gap-1.5">
                     <StickyNote className="w-3.5 h-3.5" /> Заметки
                   </p>
                   {notesDirty && !isAdmin && (
@@ -1241,7 +1241,7 @@ export function PlanItemDetailModal({
                   onBlur={() => { if (notesDirty && !isAdmin) void handleSaveNotes(); }}
                   placeholder={isAdmin ? "Нет заметок" : "Добавьте заметки по процедуре…"}
                   rows={4}
-                  className="w-full px-3 py-2.5 rounded-xl border border-[var(--ds-border)] text-[13px] text-[var(--text)] placeholder:text-[var(--text-subtle)] resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#e8e3d9] text-[13px] text-[#0f172a] placeholder:text-[#94a3b8] resize-none focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
                 />
               </div>
 
@@ -1270,9 +1270,9 @@ export function PlanItemDetailModal({
                   <Brain className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-[13px] font-semibold text-[var(--text)]">ИИ-анализ</p>
+                  <p className="text-[13px] font-semibold text-[#0f172a]">ИИ-анализ</p>
                   {item.toothFdi != null && (
-                    <p className="text-[11px] text-[var(--text-subtle)]">Зуб №{item.toothFdi}</p>
+                    <p className="text-[11px] text-[#94a3b8]">Зуб №{item.toothFdi}</p>
                   )}
                 </div>
               </div>
@@ -1286,11 +1286,11 @@ export function PlanItemDetailModal({
 
               {/* Camera viewfinder */}
               {showCamera && (
-                <div className="rounded-2xl overflow-hidden border border-[var(--ds-border)] bg-black relative">
+                <div className="rounded-2xl overflow-hidden border border-[#e8e3d9] bg-black relative">
                   {cameraError ? (
                     <div className="flex flex-col items-center gap-2 py-10 text-center px-4">
-                      <Camera className="w-8 h-8 text-[var(--text-subtle)]" />
-                      <p className="text-[13px] text-[var(--text-subtle)]">{cameraError}</p>
+                      <Camera className="w-8 h-8 text-[#94a3b8]" />
+                      <p className="text-[13px] text-[#94a3b8]">{cameraError}</p>
                       <button
                         onClick={stopCamera}
                         className="mt-1 text-[12px] text-primary font-semibold"
@@ -1312,14 +1312,14 @@ export function PlanItemDetailModal({
                       <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-t from-black/60 to-transparent">
                         <button
                           onClick={stopCamera}
-                          className="w-9 h-9 rounded-full bg-[var(--ds-surface)]/20 flex items-center justify-center text-white hover:bg-[var(--ds-surface)]/30 transition-colors"
+                          className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                         >
                           <X className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => void handleCapture()}
                           disabled={uploadingFile}
-                          className="w-14 h-14 rounded-full bg-[var(--ds-surface)] flex items-center justify-center shadow-lg hover:scale-105 transition-transform disabled:opacity-50"
+                          className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform disabled:opacity-50"
                         >
                           {uploadingFile
                             ? <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -1327,7 +1327,7 @@ export function PlanItemDetailModal({
                         </button>
                         <button
                           onClick={() => void handleFlipCamera()}
-                          className="w-9 h-9 rounded-full bg-[var(--ds-surface)]/20 flex items-center justify-center text-white hover:bg-[var(--ds-surface)]/30 transition-colors"
+                          className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                         >
                           <FlipHorizontal className="w-4 h-4" />
                         </button>
@@ -1343,22 +1343,22 @@ export function PlanItemDetailModal({
                   <button
                     onClick={() => void handleOpenCamera("environment")}
                     disabled={uploadingFile}
-                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-[var(--ds-border)] hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-[#e8e3d9] hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
                   >
-                    <Camera className="w-6 h-6 text-[var(--text-subtle)]" />
-                    <span className="text-[12px] font-medium text-[var(--text-secondary)]">Сделать фото</span>
+                    <Camera className="w-6 h-6 text-[#94a3b8]" />
+                    <span className="text-[12px] font-medium text-[#64748b]">Сделать фото</span>
                   </button>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingFile}
-                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-[var(--ds-border)] hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                    className="flex flex-col items-center gap-2 py-4 rounded-2xl border-2 border-dashed border-[#e8e3d9] hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
                   >
                     {uploadingFile ? (
                       <Loader2 className="w-6 h-6 text-primary animate-spin" />
                     ) : (
-                      <Upload className="w-6 h-6 text-[var(--text-subtle)]" />
+                      <Upload className="w-6 h-6 text-[#94a3b8]" />
                     )}
-                    <span className="text-[12px] font-medium text-[var(--text-secondary)]">
+                    <span className="text-[12px] font-medium text-[#64748b]">
                       {uploadingFile ? "Загружаем…" : "Загрузить файл"}
                     </span>
                   </button>
@@ -1381,12 +1381,12 @@ export function PlanItemDetailModal({
               {attachments.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6 text-center">
                   <FileText className="w-8 h-8 text-[#e8e3d9]" />
-                  <p className="text-[12px] text-[var(--text-subtle)]">Нет прикреплённых файлов</p>
+                  <p className="text-[12px] text-[#94a3b8]">Нет прикреплённых файлов</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {attachments.map((path) => (
-                    <div key={path} className="flex items-center gap-3 p-3 bg-[var(--ds-surface)] border border-[var(--ds-border)] rounded-xl shadow-sm">
+                    <div key={path} className="flex items-center gap-3 p-3 bg-white border border-[#e8e3d9] rounded-xl shadow-sm">
                       {isImage(path) || isVideo(path) ? (
                         <button
                           type="button"
@@ -1397,10 +1397,10 @@ export function PlanItemDetailModal({
                             <img
                               src={fileUrl(path)}
                               alt={fileName(path)}
-                              className="w-10 h-10 rounded-lg object-cover border border-[var(--ds-border)] group-hover/img:opacity-85 transition-opacity"
+                              className="w-10 h-10 rounded-lg object-cover border border-[#e8e3d9] group-hover/img:opacity-85 transition-opacity"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center shrink-0 border border-[var(--ds-border)] relative group-hover/img:opacity-85 transition-opacity">
+                            <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center shrink-0 border border-[#e8e3d9] relative group-hover/img:opacity-85 transition-opacity">
                               <Play className="w-4 h-4 text-white fill-white absolute" />
                             </div>
                           )}
@@ -1418,18 +1418,18 @@ export function PlanItemDetailModal({
                         <button
                           type="button"
                           onClick={() => setPreviewPath(path)}
-                          className="text-[12px] font-medium text-[var(--text)] truncate block hover:text-primary transition-colors text-left w-full focus:outline-none"
+                          className="text-[12px] font-medium text-[#0f172a] truncate block hover:text-primary transition-colors text-left w-full focus:outline-none"
                         >
                           {fileName(path)}
                         </button>
-                        <span className="text-[10px] text-[var(--text-subtle)] block">
+                        <span className="text-[10px] text-[#94a3b8] block">
                           {isImage(path) ? "Изображение" : isVideo(path) ? "Видео" : isPdf(path) ? "Документ PDF" : "Файл"}
                         </span>
                       </div>
                       {!isAdmin && (
                         <button
                           onClick={() => void handleRemoveAttachment(path)}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-subtle)] hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-[#94a3b8] hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1455,7 +1455,7 @@ export function PlanItemDetailModal({
               }
               setIsFullscreen(false);
             }}
-            className="absolute top-4 right-4 p-2 rounded-full bg-[var(--ds-surface)]/10 hover:bg-[var(--ds-surface)]/20 text-white z-50 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-50 transition-colors"
             title="Закрыть"
           >
             <X className="w-6 h-6" />
@@ -1465,7 +1465,7 @@ export function PlanItemDetailModal({
           {(isImage(previewPath) || isVideo(previewPath)) && (
             <button
               onClick={handleFullscreenToggle}
-              className="absolute top-4 right-16 p-2 rounded-full bg-[var(--ds-surface)]/10 hover:bg-[var(--ds-surface)]/20 text-white z-50 transition-colors"
+              className="absolute top-4 right-16 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-50 transition-colors"
               title={isFullscreen ? "Свернуть" : "На весь экран"}
             >
               {isFullscreen ? (
@@ -1506,13 +1506,13 @@ export function PlanItemDetailModal({
                 )}
               />
             ) : isPdf(previewPath) ? (
-              <div className="w-full h-[75vh] flex flex-col bg-[var(--ds-surface)] rounded-2xl overflow-hidden shadow-2xl">
-                <div className="px-4 py-3 bg-[var(--bg)] border-b border-[var(--ds-border)] flex items-center justify-between">
-                  <span className="text-caption font-semibold text-[var(--text)] truncate">{fileName(previewPath)}</span>
+              <div className="w-full h-[75vh] flex flex-col bg-white rounded-2xl overflow-hidden shadow-2xl">
+                <div className="px-4 py-3 bg-[#faf8f4] border-b border-[#e8e3d9] flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#0f172a] truncate">{fileName(previewPath)}</span>
                   <a
                     href={fileUrl(previewPath)}
                     download
-                    className="text-caption font-semibold text-primary hover:underline"
+                    className="text-xs font-semibold text-primary hover:underline"
                   >
                     Скачать
                   </a>
@@ -1524,20 +1524,20 @@ export function PlanItemDetailModal({
               </div>
             ) : (
               <div className={cn(
-                "bg-[var(--ds-surface)] rounded-3xl p-8 w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200",
+                "bg-white rounded-3xl p-8 w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200",
                 isTablet ? "max-w-md" : "max-w-sm",
               )}>
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
                   <File className="w-8 h-8 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-body font-bold text-[var(--text)] truncate px-2">{fileName(previewPath)}</h3>
-                  <p className="text-caption text-[var(--text-subtle)] mt-1">Данный формат не поддерживается для предпросмотра</p>
+                  <h3 className="text-sm font-bold text-[#0f172a] truncate px-2">{fileName(previewPath)}</h3>
+                  <p className="text-xs text-[#94a3b8] mt-1">Данный формат не поддерживается для предпросмотра</p>
                 </div>
                 <a
                   href={fileUrl(previewPath)}
                   download
-                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-primary text-white text-caption font-semibold hover:bg-primary/95 shadow-sm transition-colors w-full"
+                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/95 shadow-sm transition-colors w-full"
                 >
                   Скачать файл
                 </a>
@@ -1552,31 +1552,31 @@ export function PlanItemDetailModal({
         return (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-150">
             <div className={cn(
-              "bg-[var(--ds-surface)] w-full rounded-2xl p-5 shadow-xl border border-[var(--ds-border)] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150",
+              "bg-white w-full rounded-2xl p-5 shadow-xl border border-[#e8e3d9] flex flex-col text-center space-y-4 animate-in zoom-in-95 duration-150",
               isTablet ? "max-w-lg" : "max-w-[340px]",
             )}>
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
                 <UserRound className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-[var(--text)] text-[16px]">Передача лечения</h3>
-                <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+                <h3 className="font-semibold text-[#0f172a] text-[16px]">Передача лечения</h3>
+                <p className="text-[13px] text-[#64748b] leading-relaxed">
                   Вы точно хотите передать это лечение врачу{" "}
-                  <span className="font-semibold text-[var(--text)]">{targetDoctor?.name}</span>? 
+                  <span className="font-semibold text-[#0f172a]">{targetDoctor?.name}</span>? 
                   Имя нового врача обновится на канбан-доске и во всех списках.
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setDoctorToTransfer(null)}
-                  className="dash-btn dash-btn-secondary flex-1 py-2 text-body font-semibold"
+                  className="dash-btn dash-btn-secondary flex-1 py-2 text-sm font-semibold"
                 >
                   Нет
                 </button>
                 <button
                   onClick={handleConfirmTransfer}
                   disabled={updatePatientMutation.isPending || updateMutation.isPending}
-                  className="dash-btn dash-btn-primary flex-1 py-2 text-body font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="dash-btn dash-btn-primary flex-1 py-2 text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {(updatePatientMutation.isPending || updateMutation.isPending) ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

@@ -1,62 +1,44 @@
 import { useNavigate } from "react-router-dom";
 import { haptic } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
+import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
+import { SectionIconBox, type SectionIconName } from "@/components/section-icons";
 
-const items = [
-  {
-    path: "/tablet",
-    icon: "🎬",
-    title: "Видео планшета",
-    desc: "Ролики по кариесу, пульпиту, гигиене и др.",
-  },
-  {
-    path: "/platform/plans",
-    icon: "💳",
-    title: "Тарифы",
-    desc: "Цены, лимиты и условия подписок",
-  },
-  {
-    path: "/platform/contracts",
-    icon: "📝",
-    title: "Шаблоны договоров",
-    desc: "Системные шаблоны и пересев по клиникам",
-  },
-  {
-    path: "/platform/chatbot",
-    icon: "🤖",
-    title: "Чатбот (глобально)",
-    desc: "Приветствие и follow-up для новых клиник",
-  },
+const items: { path: string; icon: SectionIconName; title: string; desc: string }[] = [
+  { path: "/tablet", icon: "tablet", title: "Видео планшета", desc: "Ролики по кариесу, пульпиту, гигиене и др." },
+  { path: "/platform/plans", icon: "plans", title: "Тарифы", desc: "Цены, лимиты и условия подписок" },
+  { path: "/platform/contracts", icon: "contracts", title: "Шаблоны договоров", desc: "Системные шаблоны и пересев по клиникам" },
+  { path: "/platform/chatbot", icon: "chatbot", title: "Чатбот (глобально)", desc: "Приветствие и follow-up для новых клиник" },
+  { path: "/platform/whatsapp", icon: "whatsapp", title: "WhatsApp 1Dent", desc: "Системные инстансы для OTP и приглашений" },
 ];
 
 export default function ContentHubPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="px-4 pt-5 pb-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Контент платформы</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Управление тарифами, договорами, чатботом и видео
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        {items.map((item) => (
-          <button
-            key={item.path}
-            type="button"
-            onClick={() => { haptic("light"); navigate(item.path); }}
-            className="w-full flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
-          >
-            <span className="text-2xl">{item.icon}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">{item.title}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-            </div>
-            <span className="ml-auto text-muted-foreground">›</span>
-          </button>
-        ))}
-      </div>
-    </div>
+    <TmaPage
+      title="Контент платформы"
+      subtitle="Тарифы, договоры, чатбот и видео"
+      withTabBarOffset
+    >
+      <IosSection>
+        <IosGroup>
+          {items.map((item) => (
+            <IosGroupRow
+              key={item.path}
+              as="button"
+              showChevron
+              onClick={() => { haptic("light"); navigate(item.path); }}
+            >
+              <SectionIconBox name={item.icon} />
+              <div className="min-w-0 text-left">
+                <p className="text-sm font-semibold text-[#0f172a]">{item.title}</p>
+                <p className="text-xs text-[#64748b] mt-0.5">{item.desc}</p>
+              </div>
+            </IosGroupRow>
+          ))}
+        </IosGroup>
+      </IosSection>
+    </TmaPage>
   );
 }

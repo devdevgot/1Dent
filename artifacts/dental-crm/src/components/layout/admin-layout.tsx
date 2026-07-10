@@ -23,6 +23,8 @@ import { useTranslation } from "react-i18next";
 import { clearAuthToken } from "@/lib/auth-token";
 import { clearPersistedQueryCache } from "@/lib/query-persist";
 import { clearBranchContext } from "@/lib/branch-context";
+import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
+import { MenuServiceOverlay } from "./menu-service-overlay";
 
 const ADMIN_NAV_ITEMS = [
   { nameKey: "nav.dashboard",            href: "/dashboard/admin",         icon: LayoutDashboard, badge: null },
@@ -84,16 +86,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     <div className={cn("flex flex-col h-full font-manrope", mobile ? "w-72" : "w-full")}>
       {/* Logo area */}
       <div className={cn(
-        "flex items-center gap-3 px-4 py-5 border-b border-[var(--ds-border)] shrink-0",
+        "flex items-center gap-3 px-4 py-5 border-b border-[#e8e3d9] shrink-0",
         collapsed && !mobile ? "justify-center px-2" : "",
       )}>
         <div className="w-9 h-9 rounded-xl bg-[var(--ds-primary)]/10 flex items-center justify-center shrink-0">
-          <Stethoscope className="w-5 h-5 text-[var(--ds-primary)]" />
+          <Stethoscope className="w-5 h-5 text-[#1f75fe]" />
         </div>
         {(!collapsed || mobile) && (
           <div className="min-w-0">
-            <p className="font-bold text-[var(--text)] text-body leading-tight truncate">1Dent</p>
-            <p className="text-[var(--text-secondary)] text-caption truncate">{t("adminNav.adminPanel")}</p>
+            <p className="font-bold text-[#0f172a] text-sm leading-tight truncate">1Dent</p>
+            <p className="text-[#64748b] text-xs truncate">{t("adminNav.adminPanel")}</p>
           </div>
         )}
       </div>
@@ -111,21 +113,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 "flex items-center gap-3 rounded-xl transition-colors group relative",
                 collapsed && !mobile ? "justify-center p-2.5" : "px-3 py-2.5",
                 isActive
-                  ? "bg-[var(--ds-primary)]/10 text-[var(--ds-primary)] font-semibold"
-                  : "text-[var(--text-secondary)] font-medium hover:bg-[var(--surface-2)] hover:text-[var(--text)]",
+                  ? "bg-[var(--ds-primary)]/10 text-[#1f75fe] font-semibold"
+                  : "text-[#64748b] font-medium hover:bg-[#f1ede4] hover:text-[#0f172a]",
               )}
             >
               <item.icon
                 className={cn(
                   "w-5 h-5 shrink-0",
-                  isActive ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)] group-hover:text-[var(--text)]",
+                  isActive ? "text-[#1f75fe]" : "text-[#64748b] group-hover:text-[#0f172a]",
                 )}
               />
               {(!collapsed || mobile) && (
-                <span className="text-body truncate">{item.name}</span>
+                <span className="text-sm truncate">{item.name}</span>
               )}
               {collapsed && !mobile && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-[var(--text)] text-white text-caption rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-[var(--text)] text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
                   {item.name}
                 </div>
               )}
@@ -135,36 +137,36 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </nav>
 
       {/* Bottom: user + logout */}
-      <div className="shrink-0 border-t border-[var(--ds-border)] p-3 space-y-1">
+      <div className="shrink-0 border-t border-[#e8e3d9] p-3 space-y-1">
         <Link
           href="/account-settings"
           onClick={() => setMobileOpen(false)}
           className={cn(
-            "flex items-center gap-3 rounded-xl transition-colors hover:bg-[var(--surface-2)] group",
+            "flex items-center gap-3 rounded-xl transition-colors hover:bg-[#f1ede4] group",
             collapsed && !mobile ? "justify-center p-2" : "px-3 py-2",
           )}
         >
-          <div className="w-8 h-8 rounded-full bg-[var(--ds-primary)]/10 flex items-center justify-center shrink-0 text-[var(--ds-primary)] text-caption font-bold">
+          <div className="w-8 h-8 rounded-full bg-[var(--ds-primary)]/10 flex items-center justify-center shrink-0 text-[#1f75fe] text-xs font-bold">
             {initials}
           </div>
           {(!collapsed || mobile) && (
             <div className="flex-1 min-w-0">
-              <p className="text-body font-medium text-[var(--text)] truncate">{user?.name}</p>
-              <p className="text-caption text-[var(--text-secondary)] truncate">{t("roles.admin")}</p>
+              <p className="text-sm font-medium text-[#0f172a] truncate">{user?.name}</p>
+              <p className="text-xs text-[#64748b] truncate">{t("roles.admin")}</p>
             </div>
           )}
           {(!collapsed || mobile) && (
-            <UserCircle className="w-4 h-4 text-[var(--text-subtle)] group-hover:text-[var(--text-secondary)] shrink-0" />
+            <UserCircle className="w-4 h-4 text-[#94a3b8] group-hover:text-[#64748b] shrink-0" />
           )}
         </Link>
 
         <div className="flex gap-1">
           <button
             onClick={handleLogout}
-            className="flex-1 px-3 py-2 flex items-center gap-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors"
+            className="flex-1 px-3 py-2 flex items-center gap-2 rounded-xl text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a] transition-colors"
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            <span className="text-caption font-medium">{t("account.signOut")}</span>
+            <span className="text-xs font-medium">{t("account.signOut")}</span>
           </button>
         </div>
       </div>
@@ -172,12 +174,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   );
 
   return (
-    <div className="flex h-[100dvh] bg-[var(--bg)] overflow-hidden font-manrope">
+    <OverlayNavigationProvider>
+    <div className="flex h-[100dvh] bg-[#faf8f4] overflow-hidden font-manrope">
       {/* Desktop/Tablet sidebar — shown at ≥768px */}
       {!isMobile && (
         <aside
           className={cn(
-            "flex flex-col bg-[var(--bg)] border-r border-[var(--ds-border)] transition-all duration-200 ease-in-out shrink-0 z-30",
+            "flex flex-col bg-[#faf8f4] border-r border-[#e8e3d9] transition-all duration-200 ease-in-out shrink-0 z-30",
             collapsed ? "w-16" : "w-60",
           )}
         >
@@ -192,11 +195,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative z-10 bg-[var(--bg)] border-r border-[var(--ds-border)] flex flex-col">
+          <aside className="relative z-10 bg-[#faf8f4] border-r border-[#e8e3d9] flex flex-col">
             <SidebarContent mobile />
           </aside>
           <button
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[var(--ds-surface)] border border-[var(--ds-border)] text-[var(--text-secondary)] flex items-center justify-center hover:bg-[var(--surface-2)] transition-colors"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white border border-[#e8e3d9] text-[#64748b] flex items-center justify-center hover:bg-[#f1ede4] transition-colors"
             onClick={() => setMobileOpen(false)}
           >
             <X className="w-4 h-4" />
@@ -207,11 +210,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar — minimal chrome; pages own their PageHeader */}
-        <header className="flex-none h-12 bg-[var(--ds-surface)] border-b border-[var(--ds-border)] flex items-center gap-3 px-4 z-10">
+        <header className="flex-none h-12 bg-white border-b border-[#e8e3d9] flex items-center gap-3 px-4 z-10">
           {isMobile ? (
             <button
               type="button"
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a] transition-colors"
               onClick={() => setMobileOpen(true)}
             >
               <Menu className="w-5 h-5" />
@@ -232,6 +235,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+
+      <MenuServiceOverlay />
     </div>
+    </OverlayNavigationProvider>
   );
 }

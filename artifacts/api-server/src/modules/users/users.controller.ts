@@ -28,7 +28,7 @@ const inviteSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   role: z.enum(["admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]),
-  phone: z.string().optional(),
+  phone: z.string().min(10),
   position: z.string().optional(),
   specialty: z.string().optional(),
   hireDate: z.string().optional(),
@@ -101,7 +101,8 @@ router.post(
     }
 
     const emailKey = parsed.data.email.toLowerCase();
-    const lastSent = inviteRateLimit.get(emailKey);
+    const phoneKey = parsed.data.phone.replace(/\D/g, "");
+    const lastSent = inviteRateLimit.get(emailKey) ?? inviteRateLimit.get(phoneKey);
     if (lastSent && Date.now() - lastSent < INVITE_COOLDOWN_MS) {
       const remaining = Math.ceil((INVITE_COOLDOWN_MS - (Date.now() - lastSent)) / 1000);
       return next(new TooManyRequestsError(`Invitation already sent. Try again in ${remaining}s.`));
@@ -143,7 +144,11 @@ router.post(
       }
 
       inviteRateLimit.set(emailKey, Date.now());
-      setTimeout(() => inviteRateLimit.delete(emailKey), INVITE_COOLDOWN_MS);
+      inviteRateLimit.set(phoneKey, Date.now());
+      setTimeout(() => {
+        inviteRateLimit.delete(emailKey);
+        inviteRateLimit.delete(phoneKey);
+      }, INVITE_COOLDOWN_MS);
 
       res.status(201).json({ success: true });
     } catch (err) {

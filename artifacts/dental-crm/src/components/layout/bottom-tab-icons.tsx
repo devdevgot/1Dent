@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { WA_ICON_PATH } from "@/components/whatsapp/whatsapp-connect-modal";
 
 export const TAB_ACTIVE = "#22c55e";
 export const TAB_INACTIVE = "#94a3b8";
@@ -156,22 +157,21 @@ export function TabServicesIcon(props: TabIconProps) {
   );
 }
 
-export function TabMessagesIcon(props: TabIconProps) {
+export function TabWhatsAppIcon(props: TabIconProps) {
   return (
-    <TabIconShell {...props} highlightId="tab-messages">
+    <TabIconShell {...props} highlightId="tab-whatsapp">
       {(gradId) => (
-        <>
-          <path d="M6 5.75h12c.97 0 1.75.78 1.75 1.75v6.5c0 .97-.78 1.75-1.75 1.75H11l-3.2 2.4c-.55.41-1.3-.02-1.3-.7V16.5H6A1.75 1.75 0 0 1 4.25 14.75v-6.5C4.25 6.53 5.03 5.75 6 5.75Z" />
-          <rect x="9" y="10.5" width="6" height="1.5" rx=".75" fill="white" fillOpacity={props.active ? 0.85 : 0.65} />
-          <path
-            d="M6 5.75h12c.97 0 1.75.78 1.75 1.75v6.5c0 .97-.78 1.75-1.75 1.75H11l-3.2 2.4c-.55.41-1.3-.02-1.3-.7V16.5H6A1.75 1.75 0 0 1 4.25 14.75v-6.5C4.25 6.53 5.03 5.75 6 5.75Z"
-            fill={`url(#${gradId})`}
-          />
-        </>
+        <g transform="translate(12 12) scale(0.72) translate(-12 -12)">
+          <path d={WA_ICON_PATH} />
+          <path d={WA_ICON_PATH} fill={`url(#${gradId})`} />
+        </g>
       )}
     </TabIconShell>
   );
 }
+
+/** @deprecated Use TabWhatsAppIcon */
+export const TabMessagesIcon = TabWhatsAppIcon;
 
 export function TabMoreIcon(props: TabIconProps) {
   const color = props.active ? TAB_ACTIVE : TAB_INACTIVE;

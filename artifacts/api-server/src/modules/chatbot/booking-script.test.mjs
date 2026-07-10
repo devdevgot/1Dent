@@ -25,9 +25,16 @@ assert.equal(usesBookingFlow(null), true);
 
 assert.equal(hasClinicKnowledge(""), false);
 assert.equal(hasClinicKnowledge("   "), false);
-assert.equal(hasClinicKnowledge("=== сайт ===\nул. Пример 1"), true);
+assert.equal(
+  hasClinicKnowledge(
+    "=== сайт ===\nул. Пример 1, Алматы. Стоматологическая клиника. Часы работы: пн-пт 9:00-20:00. Телефон: +7 777 000 00 00.",
+  ),
+  true,
+);
+assert.equal(hasClinicKnowledge("Sign in to continue to view this channel"), false);
 
-assert.match(buildBranchPromptFallback(true), /клиник/i);
+assert.match(buildBranchPromptFallback(true), /адрес|филиал/i);
+assert.match(buildBranchPromptFallback(true, ["Центр", "Юг"]), /Центр/);
 assert.doesNotMatch(buildBranchPromptFallback(false), /Тургут|Майлина/);
 
 assert.equal(isReadyToBook("давайте запишите"), true);

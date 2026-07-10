@@ -1,8 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Play, Plus } from "lucide-react";
 import { api, apiUpload, type TabletVideo, type TabletVideoSection } from "../lib/api";
-import { haptic, hapticNotify, useTgBackButton } from "../hooks/useTgBackButton";
+import { haptic, hapticNotify } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
+import { EmptyState } from "@/components/empty-state";
 
 function formatDuration(sec: number | null): string {
   if (!sec || sec <= 0) return "—";
@@ -20,13 +23,11 @@ function formatSize(bytes: number | null): string {
 function SectionChip({
   active,
   label,
-  icon,
   count,
   onClick,
 }: {
   active: boolean;
   label: string;
-  icon: string;
   count?: number;
   onClick: () => void;
 }) {
@@ -36,14 +37,13 @@ function SectionChip({
       onClick={onClick}
       className={`shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
         active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "bg-card border border-border text-muted-foreground"
+          ? "bg-[#1f75fe] text-white shadow-sm"
+          : "bg-white border border-[#e8e3d9] text-[#64748b]"
       }`}
     >
-      <span>{icon}</span>
       <span>{label}</span>
       {count !== undefined && (
-        <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? "bg-white/20" : "bg-muted"}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? "bg-white/20" : "bg-[#f1ede4]"}`}>
           {count}
         </span>
       )}
@@ -65,8 +65,8 @@ function VideoCard({
   return (
     <div className={`rounded-xl border bg-card p-3 space-y-2 ${video.isActive ? "border-border" : "border-dashed border-muted-foreground/40 opacity-70"}`}>
       <div className="flex items-start gap-3">
-        <div className="w-14 h-14 rounded-lg bg-accent flex items-center justify-center text-2xl shrink-0">
-          ▶️
+        <div className="w-14 h-14 rounded-lg bg-[var(--primary-light)] flex items-center justify-center shrink-0">
+          <Play className="w-6 h-6 text-[#1f75fe]" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground leading-snug">{video.title}</p>
@@ -107,7 +107,6 @@ function VideoCard({
 
 export default function TabletVideosPage() {
   const navigate = useNavigate();
-  useTgBackButton(() => navigate("/content"));
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [section, setSection] = useState<string>("all");
@@ -204,22 +203,20 @@ export default function TabletVideosPage() {
   };
 
   return (
-    <div className="px-4 pt-5 pb-4 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Видео планшета</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Загрузка обучающих роликов по разделам: кариес, пульпит и др.
-          </p>
-        </div>
+    <TmaPage
+      title="Видео планшета"
+      subtitle="Обучающие ролики по разделам"
+      onBack={() => navigate("/content")}
+      right={
         <button
           type="button"
           onClick={() => { haptic("light"); setShowUpload((v) => !v); }}
-          className="shrink-0 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold shadow-sm"
+          className="flex items-center gap-1 rounded-full bg-[#1f75fe] text-white px-3 py-1.5 text-xs font-semibold"
         >
-          {showUpload ? "Отмена" : "+ Видео"}
+          {showUpload ? "Отмена" : <><Plus className="w-3.5 h-3.5" /> Видео</>}
         </button>
-      </div>
+      }
+    >
 
       {showUpload && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-3 shadow-sm">
@@ -231,7 +228,7 @@ export default function TabletVideosPage() {
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
           >
             {sections.map((s) => (
-              <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
+              <option key={s.id} value={s.id}>{s.label}</option>
             ))}
           </select>
           <input
@@ -325,7 +322,6 @@ export default function TabletVideosPage() {
         <SectionChip
           active={section === "all"}
           label="Все"
-          icon="📚"
           count={videos.length}
           onClick={() => { haptic("light"); setSection("all"); }}
         />
@@ -334,7 +330,6 @@ export default function TabletVideosPage() {
             key={s.id}
             active={section === s.id}
             label={s.label}
-            icon={s.icon}
             count={counts[s.id] ?? 0}
             onClick={() => { haptic("light"); setSection(s.id); }}
           />
@@ -348,11 +343,7 @@ export default function TabletVideosPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 space-y-2">
-          <p className="text-4xl">🎬</p>
-          <p className="text-sm font-medium text-foreground">Нет видео в этом разделе</p>
-          <p className="text-xs text-muted-foreground">Нажмите «+ Видео», чтобы загрузить ролик</p>
-        </div>
+        <EmptyState text="Нет видео в этом разделе" />
       ) : (
         <div className="space-y-3">
           {filtered.map((v) => (
@@ -366,6 +357,6 @@ export default function TabletVideosPage() {
           ))}
         </div>
       )}
-    </div>
+    </TmaPage>
   );
 }

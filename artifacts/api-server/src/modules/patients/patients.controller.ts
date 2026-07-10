@@ -30,8 +30,11 @@ const patientStatusValues = [
   "diagnostics",
   "treatment_assigned",
   "treatment_in_progress",
+  "payment_processing",
   "post_op_monitoring",
   "completed",
+  "repeat_sale",
+  "rejected",
 ] as const;
 
 const interactionTypeValues = [
@@ -84,7 +87,7 @@ const addInteractionSchema = z.object({
 
 router.use(authMiddleware);
 
-const patientReadRoles = roleGuard("owner", "admin", "doctor", "accountant");
+const patientReadRoles = roleGuard("owner", "admin", "doctor", "accountant", "assistant", "nurse");
 const patientCreateRoles = roleGuard("owner", "admin", "doctor");
 const patientWriteRoles = roleGuard("owner", "admin");
 const patientDeleteRoles = roleGuard("owner", "admin");

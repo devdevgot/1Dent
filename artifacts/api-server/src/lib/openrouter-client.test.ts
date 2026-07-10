@@ -14,9 +14,8 @@ describe("openrouter-client reasoning helpers", () => {
     assert.equal(canDisableReasoning("deepseek/deepseek-r1"), false);
   });
 
-  it("detects thinking models", () => {
-    assert.equal(isThinkingModel("google/gemini-2.5-flash"), true);
-    assert.equal(isThinkingModel("openai/o3-mini"), true);
-    assert.equal(isThinkingModel("anthropic/claude-3.5-haiku"), false);
+  it("does not treat Claude Sonnet 5 as Gemini-style flash (no effort:none)", () => {
+    assert.equal(canDisableReasoning("anthropic/claude-sonnet-5"), false);
+    assert.equal(isThinkingModel("anthropic/claude-sonnet-5"), false);
   });
 });

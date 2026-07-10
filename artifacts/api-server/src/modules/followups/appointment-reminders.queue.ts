@@ -12,6 +12,7 @@ import {
 import { eq, and, lte, inArray } from "drizzle-orm";
 import { sendWhatsAppMessage } from "../../shared/whatsapp";
 import { logger } from "../../lib/logger";
+import { attachWorkerFailedHandler } from "../error-events/error-events.worker-capture";
 
 const QUEUE_NAME = "appointment-reminders";
 
@@ -149,13 +150,15 @@ if (process.env["REDIS_URL"]) {
     defaultJobOptions: { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
   });
 
-  new Worker<AppointmentReminderJobData>(
+  const reminderWorker = new Worker<AppointmentReminderJobData>(
     QUEUE_NAME,
     async (job) => {
       await processReminderJob(job.data);
     },
     { connection, concurrency: 3 },
   );
+
+  attachWorkerFailedHandler(reminderWorker, QUEUE_NAME);
 
   logger.info("[AppointmentReminders] BullMQ worker started for appointment reminders");
 } else {

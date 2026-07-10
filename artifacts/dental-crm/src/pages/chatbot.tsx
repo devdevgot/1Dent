@@ -48,16 +48,17 @@ import { cn } from "@/lib/utils";
 import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import { usePageBack } from "@/hooks/use-page-back";
 
 
 const STATE_COLORS: Record<string, string> = {
   greeting: "bg-[#e0f2fe] text-[#0284c7] border-[#e0f2fe]",
-  collect_name: "bg-[#1f75fe]/10 text-[var(--ds-primary)] border-[#1f75fe]/20",
-  collect_problem: "bg-[#fef3c7] text-[var(--warning)] border-[#fef3c7]",
+  collect_name: "bg-[#1f75fe]/10 text-[#1f75fe] border-[#1f75fe]/20",
+  collect_problem: "bg-[#fef3c7] text-[#d97706] border-[#fef3c7]",
   suggest_doctor: "bg-[#e0f2fe] text-[#0284c7] border-[#e0f2fe]",
-  confirm_appointment: "bg-[#fef3c7] text-[var(--warning)] border-[#fef3c7]",
-  done: "bg-[#f0fdf4] text-[var(--success)] border-[#f0fdf4]",
-  human_takeover: "bg-[#fef2f2] text-[var(--danger)] border-[#fef2f2]",
+  confirm_appointment: "bg-[#fef3c7] text-[#d97706] border-[#fef3c7]",
+  done: "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]",
+  human_takeover: "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
 };
 
 function formatRelative(dateStr: string, lang: string = "ru") {
@@ -199,19 +200,19 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="shrink-0 flex items-center gap-2.5 px-4 py-3 border-b border-[var(--ds-border)] bg-[var(--ds-surface)]">
+      <div className="shrink-0 flex items-center gap-2.5 px-4 py-3 border-b border-[#e8e3d9] bg-white">
         <button
           onClick={onBack}
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--surface-2)] transition-colors text-[var(--text-secondary)] shrink-0"
+          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1ede4] transition-colors text-[#64748b] shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="h-8 w-8 rounded-full bg-[#1f75fe]/10 flex items-center justify-center">
-          <Phone className="h-3.5 w-3.5 text-[var(--ds-primary)]" />
+          <Phone className="h-3.5 w-3.5 text-[#1f75fe]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-body font-semibold text-[var(--text)] truncate">{phone}</p>
-          <p className="text-caption text-[var(--text-secondary)]">
+          <p className="text-sm font-semibold text-[#0f172a] truncate">{phone}</p>
+          <p className="text-xs text-[#64748b]">
             {t("chatbot.title", "AI-чатбот")} · {t("chatbot.messagesCount", "{{count}} сообщений").replace("{{count}}", String(messages.length))}
             {humanTakeover && ` · ${t("chatbot.operatorMode", "Оператор")}`}
           </p>
@@ -230,31 +231,31 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
         </button>
         <button
           onClick={() => refetch()}
-          className="p-1.5 rounded-xl text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
+          className="p-1.5 rounded-xl text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] transition-colors"
         >
           <RefreshCw className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-[var(--bg)]">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-[#faf8f4]">
         {isLoading ? (
           <ChatMessagesSkeleton />
         ) : isError ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center">
-            <AlertCircle className="h-8 w-8 text-[var(--danger)]/60" />
-            <p className="text-body text-[var(--text-secondary)]">{t("chatbot.loadError", "Не удалось загрузить сообщения")}</p>
+            <AlertCircle className="h-8 w-8 text-[#dc2626]/60" />
+            <p className="text-sm text-[#64748b]">{t("chatbot.loadError", "Не удалось загрузить сообщения")}</p>
             <button
               type="button"
               onClick={() => void refetch()}
-              className="text-caption font-medium text-[var(--ds-primary)] hover:underline"
+              className="text-xs font-medium text-[#1f75fe] hover:underline"
             >
               {t("common.retry", "Повторить")}
             </button>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
-            <MessageSquare className="h-8 w-8 text-[var(--text-subtle)]/40" />
-            <p className="text-body text-[var(--text-secondary)]">{t("chatbot.noMessages", "Сообщений пока нет")}</p>
+            <MessageSquare className="h-8 w-8 text-[#94a3b8]/40" />
+            <p className="text-sm text-[#64748b]">{t("chatbot.noMessages", "Сообщений пока нет")}</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -267,22 +268,22 @@ function SessionChat({ phone, onBack }: { phone: string; onBack: () => void }) {
                 {showDateSep && (
                   <div className="flex items-center gap-2 my-2">
                     <div className="flex-1 h-px bg-[#e8e3d9]" />
-                    <span className="text-[10px] text-[var(--text-subtle)] font-medium">{msgDate}</span>
+                    <span className="text-[10px] text-[#94a3b8] font-medium">{msgDate}</span>
                     <div className="flex-1 h-px bg-[#e8e3d9]" />
                   </div>
                 )}
                 <div className={`flex ${isBot ? "justify-start" : "justify-end"} mb-1`}>
                   <div className="max-w-[80%] group">
                     <div
-                      className={`px-3 py-2 rounded-2xl text-body leading-relaxed whitespace-pre-wrap ${
+                      className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                         isBot
-                          ? "bg-[var(--ds-surface)] border border-[var(--ds-border)] text-[var(--text)] rounded-tl-sm"
+                          ? "bg-white border border-[#e8e3d9] text-[#0f172a] rounded-tl-sm"
                           : "bg-[#1f75fe] text-white rounded-tr-sm"
                       }`}
                     >
                       {msg.content}
                     </div>
-                    <p className={`text-[10px] text-[var(--text-subtle)] mt-0.5 ${isBot ? "text-left pl-1" : "text-right pr-1"}`}>
+                    <p className={`text-[10px] text-[#94a3b8] mt-0.5 ${isBot ? "text-left pl-1" : "text-right pr-1"}`}>
                       {isBot ? t("chatbot.botLabel", "🤖 Бот") : t("chatbot.clientLabel", "👤 Клиент")} · {formatTime(msg.createdAt, lang)}
                     </p>
                   </div>
@@ -308,10 +309,10 @@ const STATUS_LABEL: Record<DentalBroadcastRun["status"], string> = {
 };
 
 const STATUS_COLOR: Record<DentalBroadcastRun["status"], string> = {
-  pending: "bg-[#fef3c7] text-[var(--warning)] border-[#fef3c7]",
+  pending: "bg-[#fef3c7] text-[#d97706] border-[#fef3c7]",
   running: "bg-[#e0f2fe] text-[#0284c7] border-[#e0f2fe]",
-  completed: "bg-[#f0fdf4] text-[var(--success)] border-[#f0fdf4]",
-  failed: "bg-[#fef2f2] text-[var(--danger)] border-[#fef2f2]",
+  completed: "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]",
+  failed: "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
 };
 
 const BROADCAST_MESSAGE_PREVIEW =
@@ -413,14 +414,14 @@ function AiBroadcastTab() {
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-md p-4 space-y-2">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4 space-y-2">
         <div className="flex items-start gap-3">
           <div className="h-8 w-8 rounded-xl bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-            <Megaphone className="h-4 w-4 text-[var(--ds-primary)]" />
+            <Megaphone className="h-4 w-4 text-[#1f75fe]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-body font-medium text-[var(--text)]">Рассылка по WhatsApp</p>
-            <p className="text-caption text-[var(--text-secondary)] mt-0.5">
+            <p className="text-sm font-medium text-[#0f172a]">Рассылка по WhatsApp</p>
+            <p className="text-xs text-[#64748b] mt-0.5">
               {broadcastAiEnabled
                 ? "ИИ формирует персональное сообщение по зубной карте и плану лечения для пациентов с нелечёными находками. При ошибке или нехватке кредитов используется шаблон."
                 : "Формирует персональное сообщение по данным зубной карты и плана лечения для пациентов с нелечёными находками. Текст собирается по шаблону."}{" "}
@@ -428,12 +429,12 @@ function AiBroadcastTab() {
             </p>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3 pt-1 border-t border-[var(--ds-border)]/60">
+        <div className="flex items-center justify-between gap-3 pt-1 border-t border-[#e8e3d9]/60">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles className="h-4 w-4 text-[#7c3aed] shrink-0" />
             <div>
-              <p className="text-caption font-medium text-[var(--text)]">ИИ-генерация текста</p>
-              <p className="text-[11px] text-[var(--text-subtle)]">2 кредита за сообщение · fallback на шаблон</p>
+              <p className="text-xs font-medium text-[#0f172a]">ИИ-генерация текста</p>
+              <p className="text-[11px] text-[#94a3b8]">2 кредита за сообщение · fallback на шаблон</p>
             </div>
           </div>
           <Switch
@@ -444,7 +445,7 @@ function AiBroadcastTab() {
             className={cn(
               "h-6 w-11 shrink-0 border-transparent shadow-none transition-colors duration-200 ease-out",
               "data-[state=checked]:bg-[#7c3aed] data-[state=unchecked]:bg-[#cbd5e1]",
-              "[&>span]:h-5 [&>span]:w-5 [&>span]:bg-[var(--ds-surface)] [&>span]:shadow",
+              "[&>span]:h-5 [&>span]:w-5 [&>span]:bg-white [&>span]:shadow",
               "[&>span]:transition-transform [&>span]:duration-200 [&>span]:ease-out",
               "[&>span]:data-[state=checked]:translate-x-5 [&>span]:data-[state=unchecked]:translate-x-0.5",
             )}
@@ -454,67 +455,67 @@ function AiBroadcastTab() {
 
       {!chatbotEnabled && (
         <div className="rounded-2xl border border-[#fef3c7] bg-[#fef3c7] p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-[var(--warning)] shrink-0 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-[#d97706] shrink-0 mt-0.5" />
           <div>
-            <p className="text-body font-medium text-[var(--warning)]">Чатбот выключен</p>
-            <p className="text-caption text-[var(--warning)] mt-0.5">
+            <p className="text-sm font-medium text-[#d97706]">Чатбот выключен</p>
+            <p className="text-xs text-[#d97706] mt-0.5">
               Чатбот выключен: ответы пациентов не будут обработаны автоматически. Рассылку можно отправить, но пациенты, написавшие «Продолжить», не получат автоматический ответ.
             </p>
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-md p-4 space-y-2">
-        <p className="text-caption font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Пример сообщения</p>
-        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--bg)] px-3 py-2.5">
-          <p className="text-body leading-relaxed text-[var(--text)] whitespace-pre-wrap">{BROADCAST_MESSAGE_PREVIEW}</p>
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4 space-y-2">
+        <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">Пример сообщения</p>
+        <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] px-3 py-2.5">
+          <p className="text-sm leading-relaxed text-[#0f172a] whitespace-pre-wrap">{BROADCAST_MESSAGE_PREVIEW}</p>
         </div>
-        <p className="text-[11px] text-[var(--text-subtle)]">
+        <p className="text-[11px] text-[#94a3b8]">
           Имя, зубы и формулировки подставляются из карты пациента и плана лечения.
         </p>
       </div>
 
       {latestRun && !isRunning && (
-        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-md p-4 space-y-3">
+        <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-body font-medium text-[var(--text)]">Последний запуск</p>
+            <p className="text-sm font-medium text-[#0f172a]">Последний запуск</p>
             <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${STATUS_COLOR[latestRun.status]}`}>
               {latestRun.status === "running" && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
               {STATUS_LABEL[latestRun.status]}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-[var(--bg)] border border-[var(--ds-border)] px-3 py-2.5 text-center">
-              <p className="text-lg font-semibold text-[var(--text)]">{latestRun.messagesSent}</p>
-              <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 uppercase tracking-wide">Отправлено</p>
+            <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
+              <p className="text-lg font-semibold text-[#0f172a]">{latestRun.messagesSent}</p>
+              <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">Отправлено</p>
             </div>
-            <div className="rounded-xl bg-[var(--bg)] border border-[var(--ds-border)] px-3 py-2.5 text-center">
+            <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
               <p className="text-lg font-semibold text-[#059669]">
                 {latestRun.replyRate ?? 0}%
               </p>
-              <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 uppercase tracking-wide">
+              <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">
                 Ответили ({latestRun.repliesCount ?? 0})
               </p>
             </div>
-            <div className="rounded-xl bg-[var(--bg)] border border-[var(--ds-border)] px-3 py-2.5 text-center">
+            <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
               <p className="text-lg font-semibold text-[#2563eb]">
                 {latestRun.bookingRate ?? 0}%
               </p>
-              <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 uppercase tracking-wide">
+              <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">
                 Записались ({latestRun.bookingsCount ?? 0})
               </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-[var(--bg)] border border-[var(--ds-border)] px-3 py-2.5 text-center">
-              <p className={`text-lg font-semibold ${latestRun.errorsCount > 0 ? "text-[var(--danger)]" : "text-[var(--text)]"}`}>
+            <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
+              <p className={`text-lg font-semibold ${latestRun.errorsCount > 0 ? "text-[#dc2626]" : "text-[#0f172a]"}`}>
                 {latestRun.errorsCount}
               </p>
-              <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 uppercase tracking-wide">Ошибок</p>
+              <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">Ошибок</p>
             </div>
-            <div className="rounded-xl bg-[var(--bg)] border border-[var(--ds-border)] px-3 py-2.5 text-center">
-              <p className="text-caption font-semibold text-[var(--text)] leading-tight">{formatCompletedAt(latestRun.completedAt)}</p>
-              <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 uppercase tracking-wide">Завершено</p>
+            <div className="rounded-xl bg-[#faf8f4] border border-[#e8e3d9] px-3 py-2.5 text-center">
+              <p className="text-xs font-semibold text-[#0f172a] leading-tight">{formatCompletedAt(latestRun.completedAt)}</p>
+              <p className="text-[10px] text-[#64748b] mt-0.5 uppercase tracking-wide">Завершено</p>
             </div>
           </div>
         </div>
@@ -524,10 +525,10 @@ function AiBroadcastTab() {
         <div className="rounded-2xl border border-[#e0f2fe] bg-[#e0f2fe] p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 text-[#0284c7] animate-spin" />
-            <p className="text-body font-medium text-[#0284c7]">Рассылка выполняется…</p>
+            <p className="text-sm font-medium text-[#0284c7]">Рассылка выполняется…</p>
           </div>
           <div className="space-y-1.5">
-            <div className="flex justify-between text-caption text-[#0284c7]">
+            <div className="flex justify-between text-xs text-[#0284c7]">
               <span>Обработано {latestRun.processedPatients} из {latestRun.totalPatients} пациентов</span>
               <span>{progressPercent}%</span>
             </div>
@@ -535,26 +536,26 @@ function AiBroadcastTab() {
               <div className="h-full rounded-full bg-[#1f75fe] transition-all duration-700" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
-          <p className="text-caption text-[#0284c7]">Отправлено сообщений: {latestRun.messagesSent}</p>
+          <p className="text-xs text-[#0284c7]">Отправлено сообщений: {latestRun.messagesSent}</p>
         </div>
       )}
 
       {latestRun?.status === "failed" && (
         <div className="rounded-2xl border border-[#fef2f2] bg-[#fef2f2] p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-[var(--danger)] shrink-0 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-[#dc2626] shrink-0 mt-0.5" />
           <div>
-            <p className="text-body font-medium text-[var(--danger)]">Рассылка завершилась с ошибкой</p>
-            <p className="text-caption text-[var(--danger)] mt-0.5">Попробуйте запустить снова.</p>
+            <p className="text-sm font-medium text-[#dc2626]">Рассылка завершилась с ошибкой</p>
+            <p className="text-xs text-[#dc2626] mt-0.5">Попробуйте запустить снова.</p>
           </div>
         </div>
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-caption text-[var(--text-secondary)]">История запусков</p>
+        <p className="text-xs text-[#64748b]">История запусков</p>
         <button
           onClick={() => setShowConfirm(true)}
           disabled={isRunning || trigger.isPending}
-          className="flex items-center gap-1.5 text-caption px-4 py-2 rounded-full font-semibold bg-[#1f75fe] text-white hover:bg-[var(--primary-hover)] hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-full font-semibold bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           {trigger.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
           Запустить рассылку
@@ -564,47 +565,47 @@ function AiBroadcastTab() {
       {isLoading ? (
         <ListRowsSkeleton rows={4} avatar={false} card />
       ) : runs.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--bg)] p-10 text-center">
-          <Megaphone className="h-8 w-8 text-[var(--text-subtle)]/40 mx-auto mb-2" />
-          <p className="text-body text-[var(--text-secondary)]">Рассылки ещё не проводились</p>
+        <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-10 text-center">
+          <Megaphone className="h-8 w-8 text-[#94a3b8]/40 mx-auto mb-2" />
+          <p className="text-sm text-[#64748b]">Рассылки ещё не проводились</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-md overflow-hidden">
+        <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md overflow-hidden">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[var(--ds-border)] bg-[var(--bg)]">
-                <th className="text-left px-4 py-2.5 font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Дата</th>
-                <th className="text-left px-4 py-2.5 font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Статус</th>
-                <th className="text-right px-4 py-2.5 font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Охвачено</th>
-                <th className="text-right px-4 py-2.5 font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Отправлено</th>
-                <th className="text-right px-4 py-2.5 font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Ответы</th>
-                <th className="text-right px-4 py-2.5 font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Записи</th>
-                <th className="text-right px-4 py-2.5 font-semibold text-[var(--text-secondary)] uppercase tracking-wide">Ошибок</th>
+              <tr className="border-b border-[#e8e3d9] bg-[#faf8f4]">
+                <th className="text-left px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Дата</th>
+                <th className="text-left px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Статус</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Охвачено</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Отправлено</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Ответы</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Записи</th>
+                <th className="text-right px-4 py-2.5 font-semibold text-[#64748b] uppercase tracking-wide">Ошибок</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e8e3d9]">
               {(runs as DentalBroadcastRun[]).map((run) => (
-                <tr key={run.id} className="hover:bg-[var(--bg)] transition-colors">
-                  <td className="px-4 py-2.5 text-[var(--text)]">{formatDate(run.startedAt, lang)}</td>
+                <tr key={run.id} className="hover:bg-[#faf8f4] transition-colors">
+                  <td className="px-4 py-2.5 text-[#0f172a]">{formatDate(run.startedAt, lang)}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${STATUS_COLOR[run.status]}`}>
                       {run.status === "running" && <Loader2 className="h-2.5 w-2.5 animate-spin" />}
                       {STATUS_LABEL[run.status]}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-right text-[var(--text-secondary)]">
+                  <td className="px-4 py-2.5 text-right text-[#64748b]">
                     {run.status === "running" ? `${run.processedPatients}/${run.totalPatients}` : run.totalPatients}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-[var(--text)] font-medium">{run.messagesSent}</td>
+                  <td className="px-4 py-2.5 text-right text-[#0f172a] font-medium">{run.messagesSent}</td>
                   <td className="px-4 py-2.5 text-right text-[#059669] font-medium">
                     {run.repliesCount ?? 0}
-                    <span className="text-[var(--text-subtle)] font-normal ml-1">({run.replyRate ?? 0}%)</span>
+                    <span className="text-[#94a3b8] font-normal ml-1">({run.replyRate ?? 0}%)</span>
                   </td>
                   <td className="px-4 py-2.5 text-right text-[#2563eb] font-medium">
                     {run.bookingsCount ?? 0}
-                    <span className="text-[var(--text-subtle)] font-normal ml-1">({run.bookingRate ?? 0}%)</span>
+                    <span className="text-[#94a3b8] font-normal ml-1">({run.bookingRate ?? 0}%)</span>
                   </td>
-                  <td className={`px-4 py-2.5 text-right font-medium ${run.errorsCount > 0 ? "text-[var(--danger)]" : "text-[var(--text-secondary)]"}`}>
+                  <td className={`px-4 py-2.5 text-right font-medium ${run.errorsCount > 0 ? "text-[#dc2626]" : "text-[#64748b]"}`}>
                     {run.errorsCount}
                   </td>
                 </tr>
@@ -616,14 +617,14 @@ function AiBroadcastTab() {
 
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-[var(--ds-surface)] rounded-2xl shadow-xl border border-[var(--ds-border)] p-6 max-w-sm w-full space-y-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#e8e3d9] p-6 max-w-sm w-full space-y-4">
             <div className="flex items-start gap-3">
               <div className="h-9 w-9 rounded-xl bg-[#fef3c7] flex items-center justify-center shrink-0">
-                <Megaphone className="h-4 w-4 text-[var(--warning)]" />
+                <Megaphone className="h-4 w-4 text-[#d97706]" />
               </div>
               <div>
-                <p className="text-body font-semibold text-[var(--text)]">Запустить рассылку?</p>
-                <p className="text-caption text-[var(--text-secondary)] mt-1">
+                <p className="text-sm font-semibold text-[#0f172a]">Запустить рассылку?</p>
+                <p className="text-xs text-[#64748b] mt-1">
                   {broadcastAiEnabled
                     ? "Пациенты с нелечёными находками получат персональное WhatsApp-сообщение, сгенерированное ИИ (2 кредита/сообщение)."
                     : "Пациенты с нелечёными находками получат персональное WhatsApp-сообщение по шаблону."}
@@ -631,13 +632,13 @@ function AiBroadcastTab() {
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowConfirm(false)} className="text-caption px-3 py-2 rounded-xl font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-2)] transition-colors">
+              <button onClick={() => setShowConfirm(false)} className="text-xs px-3 py-2 rounded-xl font-medium text-[#64748b] hover:bg-[#f1ede4] transition-colors">
                 Отмена
               </button>
               <button
                 onClick={() => trigger.mutate()}
                 disabled={trigger.isPending}
-                className="flex items-center gap-1.5 text-caption px-4 py-2 rounded-full font-semibold bg-[#1f75fe] text-white hover:bg-[var(--primary-hover)] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-full font-semibold bg-[#1f75fe] text-white hover:bg-[#1a65e8] hover:scale-105 transition-all disabled:opacity-50 disabled:hover:scale-100"
               >
                 {trigger.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Запустить
@@ -653,6 +654,7 @@ function AiBroadcastTab() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ChatbotPage() {
+  const goBack = usePageBack();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
   const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast" | "analytics" | "examples">("sessions");
@@ -674,6 +676,7 @@ export default function ChatbotPage() {
   const sessions = sessionsRes?.data?.sessions ?? [];
 
   const effectiveEnabled = localSettings.enabled ?? settings?.enabled ?? true;
+  const effectiveAgentModeEnabled = localSettings.agentModeEnabled ?? settings?.agentModeEnabled ?? true;
 
   // Seed local settings from server once loaded
   useEffect(() => {
@@ -682,6 +685,7 @@ export default function ChatbotPage() {
       if (Object.keys(prev).length > 0) return prev;
       return {
         enabled: settings.enabled,
+        agentModeEnabled: settings.agentModeEnabled ?? true,
         calendarConfig: settings.calendarConfig,
         abTestEnabled: settings.abTestEnabled,
         scriptVariants: settings.scriptVariants,
@@ -691,6 +695,7 @@ export default function ChatbotPage() {
       if (Object.keys(prev).length > 0) return prev;
       return {
         enabled: settings.enabled,
+        agentModeEnabled: settings.agentModeEnabled ?? true,
         calendarConfig: settings.calendarConfig,
         abTestEnabled: settings.abTestEnabled,
         scriptVariants: settings.scriptVariants,
@@ -737,10 +742,20 @@ export default function ChatbotPage() {
     updateSettings.mutate(
       { data: { scriptMindMap: data } as ChatbotSettingsUpdate },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
           setMindMapSaveStatus("saved");
           setTimeout(() => setMindMapSaveStatus("idle"), 2000);
           refetchSettings();
+          const validation = response?.data?.mindMapValidation;
+          if (validation?.errors?.length) {
+            toast.error(`Mind map: ${validation.errors[0]}`);
+          } else if (validation?.warnings?.length) {
+            toast.warning(
+              `Mind map сохранён с ${validation.warnings.length} предупреждением(ями): ${validation.warnings.slice(0, 2).join("; ")}${validation.warnings.length > 2 ? "…" : ""}`,
+            );
+          } else {
+            toast.success("Mind map сохранён");
+          }
         },
         onError: () => setMindMapSaveStatus("idle"),
       },
@@ -760,11 +775,11 @@ export default function ChatbotPage() {
       <PageHeader
         title={t("chatbot.title")}
         subtitle={t("chatbot.subtitle")}
-        onBack={() => window.history.back()}
+        onBack={goBack}
         right={
           <div className={cn(
-            "flex items-center gap-1.5 text-caption px-2.5 py-1 rounded-full border font-medium",
-            effectiveEnabled ? "bg-[#f0fdf4] text-[var(--success)] border-[#f0fdf4]" : "bg-[#fef2f2] text-[var(--danger)] border-[#fef2f2]",
+            "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium",
+            effectiveEnabled ? "bg-[#f0fdf4] text-[#16a34a] border-[#f0fdf4]" : "bg-[#fef2f2] text-[#dc2626] border-[#fef2f2]",
           )}>
             <Power className="h-3 w-3" />
             {effectiveEnabled ? t("chatbot.enabled") : t("chatbot.disabled")}
@@ -784,8 +799,8 @@ export default function ChatbotPage() {
                 key={key}
                 onClick={() => setTab(key)}
                 className={cn(
-                  "flex items-center gap-1.5 text-caption px-3 py-1.5 rounded-xl font-medium transition-colors shrink-0",
-                  tab === key ? "bg-[var(--primary-light)] text-[var(--ds-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-2)]",
+                  "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium transition-colors shrink-0",
+                  tab === key ? "bg-[var(--primary-light)] text-[#1f75fe]" : "text-[#64748b] hover:bg-[#f1ede4]",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -796,16 +811,23 @@ export default function ChatbotPage() {
         }
       />
 
-      <div className={cn("flex-1 p-4 min-h-0", tab === "playground" ? "overflow-hidden flex flex-col" : "overflow-y-auto")}>
+      <div
+        className={cn(
+          "flex-1 min-h-0",
+          tab === "playground"
+            ? "overflow-hidden flex flex-col px-3 py-2 sm:px-4 sm:py-3"
+            : "overflow-y-auto p-4",
+        )}
+      >
 
         {/* Sessions tab */}
         {tab === "sessions" && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-caption text-[var(--text-secondary)]">
-                {t("chatbot.activeSessions")}: <span className="font-semibold text-[var(--text)]">{sessions.length}</span>
+              <p className="text-xs text-[#64748b]">
+                {t("chatbot.activeSessions")}: <span className="font-semibold text-[#0f172a]">{sessions.length}</span>
               </p>
-              <button onClick={() => refetchSessions()} className="flex items-center gap-1 text-caption text-[var(--text-secondary)] hover:text-[var(--text)]">
+              <button onClick={() => refetchSessions()} className="flex items-center gap-1 text-xs text-[#64748b] hover:text-[#0f172a]">
                 <RefreshCw className="h-3 w-3" />
                 {t("common.refresh")}
               </button>
@@ -814,12 +836,12 @@ export default function ChatbotPage() {
             {sessionsLoading ? (
               <ListRowsSkeleton rows={5} avatar card />
             ) : sessions.length === 0 ? (
-              <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--bg)] p-10 text-center">
-                <Bot className="h-8 w-8 text-[var(--text-subtle)]/40 mx-auto mb-2" />
-                <p className="text-body text-[var(--text-secondary)]">{t("chatbot.sessionsEmpty")}</p>
+              <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-10 text-center">
+                <Bot className="h-8 w-8 text-[#94a3b8]/40 mx-auto mb-2" />
+                <p className="text-sm text-[#64748b]">{t("chatbot.sessionsEmpty")}</p>
               </div>
             ) : (
-              <div className="divide-y divide-[#e8e3d9] rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-md overflow-hidden">
+              <div className="divide-y divide-[#e8e3d9] rounded-2xl border border-[#e8e3d9] bg-white shadow-md overflow-hidden">
                 {sessions.map((session) => (
                   <div
                     key={session.id}
@@ -832,35 +854,35 @@ export default function ChatbotPage() {
                         setSelectedPhone(session.phone);
                       }
                     }}
-                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-[var(--bg)] active:bg-[var(--surface-2)] transition-colors text-left cursor-pointer"
+                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-[#faf8f4] active:bg-[#f1ede4] transition-colors text-left cursor-pointer"
                   >
-                    <div className="h-8 w-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center shrink-0 mt-0.5">
-                      <MessageSquare className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+                    <div className="h-8 w-8 rounded-full bg-[#f1ede4] flex items-center justify-center shrink-0 mt-0.5">
+                      <MessageSquare className="h-3.5 w-3.5 text-[#64748b]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-medium text-[var(--text)] truncate">{session.phone}</p>
+                      <p className="text-sm font-medium text-[#0f172a] truncate">{session.phone}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={cn("inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full border", STATE_COLORS[session.state] ?? "bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--ds-border)]")}>
+                        <span className={cn("inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full border", STATE_COLORS[session.state] ?? "bg-[#f1ede4] text-[#64748b] border-[#e8e3d9]")}>
                           {t(`chatbot.states.${session.state}`, FSM_STATE_LABELS[session.state] ?? session.state)}
                         </span>
-                        <span className="text-[10px] text-[var(--text-subtle)]">{formatRelative(session.updatedAt, lang)}</span>
+                        <span className="text-[10px] text-[#94a3b8]">{formatRelative(session.updatedAt, lang)}</span>
                         {session.humanTakeover && (
-                          <span className="inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#fef2f2] text-[var(--danger)] border border-[#fef2f2]">
+                          <span className="inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[#fef2f2] text-[#dc2626] border border-[#fef2f2]">
                             {t("chatbot.operatorMode")}
                           </span>
                         )}
                       </div>
                       {session.data && (
-                        <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 truncate">
+                        <p className="text-[11px] text-[#64748b] mt-0.5 truncate">
                           {getSessionSummary(session.data, t)}
                         </p>
                       )}
                     </div>
-                    <ChevronRight className="h-4 w-4 text-[var(--text-secondary)] shrink-0 mt-1" />
+                    <ChevronRight className="h-4 w-4 text-[#64748b] shrink-0 mt-1" />
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setConfirmResetPhone(session.phone); }}
-                      className="shrink-0 p-1.5 rounded-xl text-[var(--text-secondary)] hover:text-[var(--danger)] hover:bg-[#fef2f2] transition-colors"
+                      className="shrink-0 p-1.5 rounded-xl text-[#64748b] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -876,11 +898,11 @@ export default function ChatbotPage() {
           <div className="space-y-4 max-w-2xl">
 
             {/* Bot on/off */}
-            <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-md p-4">
+            <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4">
               <div className="flex items-center gap-3 justify-between">
                 <div className="min-w-0">
-                  <p className="text-body font-medium text-[var(--text)]">{t("chatbot.settings.enableBot")}</p>
-                  <p className="text-caption text-[var(--text-secondary)]">{t("chatbot.settings.enableBotDesc")}</p>
+                  <p className="text-sm font-medium text-[#0f172a]">{t("chatbot.settings.enableBot")}</p>
+                  <p className="text-xs text-[#64748b]">{t("chatbot.settings.enableBotDesc")}</p>
                 </div>
                 <button
                   onClick={() => setLocalSettings((p) => ({ ...p, enabled: !effectiveEnabled }))}
@@ -889,29 +911,57 @@ export default function ChatbotPage() {
                     effectiveEnabled ? "bg-[var(--success)]" : "bg-[#94a3b8]/40",
                   )}
                 >
-                  <span className={cn("inline-block h-4 w-4 rounded-full bg-[var(--ds-surface)] shadow transition-transform", effectiveEnabled ? "translate-x-6" : "translate-x-1")} />
+                  <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", effectiveEnabled ? "translate-x-6" : "translate-x-1")} />
                 </button>
               </div>
               {autosaveStatus !== "idle" && (
-                <p className={cn("text-caption mt-2", autosaveStatus === "saved" ? "text-[var(--success)]" : "text-[var(--text-secondary)]")}>
+                <p className={cn("text-xs mt-2", autosaveStatus === "saved" ? "text-[#16a34a]" : "text-[#64748b]")}>
                   {autosaveStatus === "saving" ? "Сохранение…" : "Сохранено"}
                 </p>
               )}
             </div>
 
+            {/* Agent mode (mind map as main scenario) */}
+            <div className="rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4">
+              <div className="flex items-center gap-3 justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[#0f172a]">Agent mode (mind map)</p>
+                  <p className="text-xs text-[#64748b]">
+                    AI ведёт диалог по mind map. Playground всегда; WhatsApp — при CHATBOT_AGENT_MODE=1
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setLocalSettings((p) => ({ ...p, agentModeEnabled: !effectiveAgentModeEnabled }))
+                  }
+                  className={cn(
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none",
+                    effectiveAgentModeEnabled ? "bg-[var(--success)]" : "bg-[#94a3b8]/40",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 rounded-full bg-white shadow transition-transform",
+                      effectiveAgentModeEnabled ? "translate-x-6" : "translate-x-1",
+                    )}
+                  />
+                </button>
+              </div>
+            </div>
+
             {/* Combined knowledge + script button */}
             <button
               onClick={() => setCombinedOpen(true)}
-              className="w-full flex items-center gap-3 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-md p-4 hover:bg-[var(--bg)] transition-colors text-left"
+              className="w-full flex items-center gap-3 rounded-2xl border border-[#e8e3d9] bg-white shadow-md p-4 hover:bg-[#faf8f4] transition-colors text-left"
             >
-              <BookOpen className="h-4 w-4 text-[var(--ds-primary)] shrink-0" />
+              <BookOpen className="h-4 w-4 text-[#1f75fe] shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-body font-medium text-[var(--text)]">База знаний и скрипт</p>
-                <p className="text-caption text-[var(--text-secondary)] mt-0.5 truncate">
+                <p className="text-sm font-medium text-[#0f172a]">База знаний и скрипт</p>
+                <p className="text-xs text-[#64748b] mt-0.5 truncate">
                   Ссылки, файлы и визуальный сценарий разговора
                 </p>
               </div>
-              <ChevronRight className="h-4 w-4 text-[var(--text-secondary)] shrink-0" />
+              <ChevronRight className="h-4 w-4 text-[#64748b] shrink-0" />
             </button>
 
             <ChatbotCalendarAbSettings
@@ -923,7 +973,11 @@ export default function ChatbotPage() {
           </div>
         )}
 
-        {tab === "playground" && <PlaygroundTab />}
+        {tab === "playground" && (
+          <div className="flex-1 min-h-0 flex flex-col">
+            <PlaygroundTab />
+          </div>
+        )}
         {tab === "ai-broadcast" && <AiBroadcastTab />}
         {tab === "analytics" && <ChatbotAnalyticsTab />}
         {tab === "examples" && <ManagerExamplesTab />}

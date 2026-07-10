@@ -452,25 +452,32 @@ export async function customFetch<T = unknown>(
     }
 
     if (
-      response.status >= 500 &&
+      response.status >= 400 &&
       !requestInfo.url.includes("/api/errors/report")
     ) {
-      void fetch("/api/errors/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          source: "dental-crm",
-          message: apiError.message,
-          code: `HTTP_${response.status}`,
-          url: requestInfo.url,
-          metadata: {
-            method: requestInfo.method,
-            statusText: response.statusText,
-            data: errorData,
-          },
-        }),
-      }).catch(() => {});
+      const skipAuthNoise =
+        response.status === 401 &&
+        SKIP_UNAUTHORIZED_PATHS.some((p) => requestInfo.url.includes(p));
+
+      if (!skipAuthNoise) {
+        void fetch("/api/errors/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            source: "dental-crm",
+            severity: response.status >= 500 ? "error" : "warning",
+            message: apiError.message,
+            code: `HTTP_${response.status}`,
+            url: requestInfo.url,
+            metadata: {
+              method: requestInfo.method,
+              statusText: response.statusText,
+              data: errorData,
+            },
+          }),
+        }).catch(() => {});
+      }
     }
 
     throw apiError;

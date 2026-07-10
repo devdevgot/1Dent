@@ -116,6 +116,8 @@ export const chatbotSettingsTable = pgTable("chatbot_settings", {
   calendarConfig: jsonb("calendar_config").$type<ClinicCalendarConfig>().default({}),
   abTestEnabled: boolean("ab_test_enabled").default(false).notNull(),
   broadcastAiEnabled: boolean("broadcast_ai_enabled").default(false).notNull(),
+  /** Per-clinic kill switch for mind-map agent mode (playground + WhatsApp when env flag set). */
+  agentModeEnabled: boolean("agent_mode_enabled").default(true).notNull(),
   scoringConfig: jsonb("scoring_config").$type<ScoringConfig>().default({}),
   scriptVariants: jsonb("script_variants").$type<ScriptVariant[]>().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

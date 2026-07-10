@@ -94,9 +94,9 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
 
   if (isLoading || !patient) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-[var(--bg)]">
+      <div className="flex h-[100dvh] items-center justify-center bg-[#faf8f4]">
         {isError ? (
-          <p className="text-body text-[var(--danger)]">{t("kanban.loadError")}</p>
+          <p className="text-sm text-[#dc2626]">{t("kanban.loadError")}</p>
         ) : (
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#1f75fe]/20 border-t-[#1f75fe]" />
         )}
@@ -119,36 +119,36 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
   }
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col bg-[var(--bg)] font-manrope">
+    <div className="flex h-[100dvh] w-full flex-col bg-[#faf8f4] font-manrope">
       {/* Верхняя панель */}
-      <header className="flex items-center justify-between border-b border-[var(--ds-border)] bg-[var(--ds-surface)] px-5 py-3">
+      <header className="flex items-center justify-between border-b border-[#e8e3d9] bg-white px-5 py-3">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-body font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg)]"
+          className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[#64748b] transition-colors hover:bg-[#faf8f4]"
         >
           <ArrowLeft className="h-5 w-5" /> Пациенты
         </button>
 
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f75fe]/10 text-body font-bold text-[var(--ds-primary)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f75fe]/10 text-sm font-bold text-[#1f75fe]">
             {initials(patient.name)}
           </div>
           <div className="text-center">
-            <p className="text-base font-extrabold leading-tight text-[var(--text)]">{patient.name}</p>
-            <p className="text-caption text-[var(--text-subtle)]">{patient.age} лет · {patient.visitType || KANBAN_COLUMNS.find((c) => c.id === patient.status)?.label}</p>
+            <p className="text-base font-extrabold leading-tight text-[#0f172a]">{patient.name}</p>
+            <p className="text-xs text-[#94a3b8]">{patient.age} лет · {patient.visitType || KANBAN_COLUMNS.find((c) => c.id === patient.status)?.label}</p>
           </div>
         </div>
 
         <button
           onClick={() => setPresentation(true)}
-          className="flex items-center gap-2 rounded-xl bg-[#0f172a] px-4 py-2.5 text-body font-bold text-white transition-colors hover:bg-[#1e293b]"
+          className="flex items-center gap-2 rounded-xl bg-[#0f172a] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#1e293b]"
         >
           <Eye className="h-4 w-4" /> Показать пациенту
         </button>
       </header>
 
       {/* Табы */}
-      <nav className="flex items-center gap-1 border-b border-[var(--ds-border)] bg-[var(--ds-surface)] px-4">
+      <nav className="flex items-center gap-1 border-b border-[#e8e3d9] bg-white px-4">
         {TABS.map((t) => {
           const active = tab === t.id;
           return (
@@ -156,8 +156,8 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "relative flex items-center gap-2 px-4 py-3 text-body font-semibold transition-colors",
-                active ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)] hover:text-[var(--text)]",
+                "relative flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors",
+                active ? "text-[#1f75fe]" : "text-[#64748b] hover:text-[#0f172a]",
               )}
             >
               <t.icon className="h-4 w-4" /> {t.label}
@@ -197,7 +197,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
               )}
             </div>
             {/* Правая: план */}
-            <div className="h-full overflow-hidden rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)]">
+            <div className="h-full overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white">
               <TabletPlanBoard
                 patientId={patientId}
                 onGoToChart={() => setTab("chart")}
@@ -251,7 +251,7 @@ function ToothDetail({
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-5"
+      className="rounded-2xl border border-[#e8e3d9] bg-white p-5"
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -260,25 +260,25 @@ function ToothDetail({
             {fdi}
           </div>
           <div>
-            <p className="text-base font-bold text-[var(--text)]">Зуб {fdi}</p>
-            <p className="text-body font-semibold" style={{ color: meta.color }}>{meta.label}</p>
+            <p className="text-base font-bold text-[#0f172a]">Зуб {fdi}</p>
+            <p className="text-sm font-semibold" style={{ color: meta.color }}>{meta.label}</p>
           </div>
         </div>
-        <button onClick={onClose} className="rounded-lg p-1.5 text-[var(--text-subtle)] hover:bg-[var(--bg)]">
+        <button onClick={onClose} className="rounded-lg p-1.5 text-[#94a3b8] hover:bg-[#faf8f4]">
           <X className="h-5 w-5" />
         </button>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <button className="flex items-center gap-1.5 rounded-xl bg-[#1f75fe] px-4 py-2.5 text-body font-semibold text-white transition-colors hover:bg-[var(--primary-hover)]">
+        <button className="flex items-center gap-1.5 rounded-xl bg-[#1f75fe] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1a65e8]">
           <Plus className="h-4 w-4" /> Добавить в план
         </button>
         {relatedVideos[0] && (
           <button
             onClick={() => onPlayVideo(relatedVideos[0]!)}
-            className="flex items-center gap-1.5 rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-4 py-2.5 text-body font-semibold text-[var(--text)] transition-colors hover:bg-[var(--bg)]"
+            className="flex items-center gap-1.5 rounded-xl border border-[#e8e3d9] bg-white px-4 py-2.5 text-sm font-semibold text-[#0f172a] transition-colors hover:bg-[#faf8f4]"
           >
-            <PlayCircle className="h-4 w-4 text-[var(--ds-primary)]" /> Видео: {relatedVideos[0]!.title}
+            <PlayCircle className="h-4 w-4 text-[#1f75fe]" /> Видео: {relatedVideos[0]!.title}
           </button>
         )}
       </div>
@@ -304,15 +304,15 @@ function VideoLibrary({ videos, onPlay }: { videos: TabletVideoItem[]; onPlay: (
           <button
             key={v.id}
             onClick={() => onPlay(v)}
-            className="group overflow-hidden rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] text-left transition-all hover:shadow-md active:scale-[0.99]"
+            className="group overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white text-left transition-all hover:shadow-md active:scale-[0.99]"
           >
             <div className="relative flex aspect-video items-center justify-center bg-gradient-to-br from-[#1f75fe]/10 to-[#7c3aed]/10">
-              <PlayCircle className="h-14 w-14 text-[var(--ds-primary)] transition-transform group-hover:scale-110" />
-              <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-caption font-medium text-white">{v.duration}</span>
+              <PlayCircle className="h-14 w-14 text-[#1f75fe] transition-transform group-hover:scale-110" />
+              <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">{v.duration}</span>
             </div>
             <div className="p-3">
-              <p className="text-body font-bold text-[var(--text)]">{v.title}</p>
-              <p className="mt-0.5 text-caption text-[var(--text-subtle)]">{v.category}</p>
+              <p className="text-sm font-bold text-[#0f172a]">{v.title}</p>
+              <p className="mt-0.5 text-xs text-[#94a3b8]">{v.category}</p>
             </div>
           </button>
         ))}
@@ -326,8 +326,8 @@ function CatChip({ active, onClick, children }: { active: boolean; onClick: () =
     <button
       onClick={onClick}
       className={cn(
-        "rounded-full px-4 py-2 text-body font-semibold transition-colors",
-        active ? "bg-[#1f75fe] text-white" : "border border-[var(--ds-border)] bg-[var(--ds-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg)]",
+        "rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+        active ? "bg-[#1f75fe] text-white" : "border border-[#e8e3d9] bg-white text-[#64748b] hover:bg-[#faf8f4]",
       )}
     >
       {children}
@@ -345,9 +345,9 @@ function VideoPlayer({ video, onClose }: { video: TabletVideoItem; onClose: () =
       <div className="flex items-center justify-between text-white mb-3">
         <div className="min-w-0 pr-4">
           <p className="text-lg font-bold truncate">{video.title}</p>
-          <p className="text-body text-white/60">{video.category} · {video.duration}</p>
+          <p className="text-sm text-white/60">{video.category} · {video.duration}</p>
         </div>
-        <button type="button" onClick={onClose} className="rounded-xl bg-[var(--ds-surface)]/10 p-2 hover:bg-[var(--ds-surface)]/20 shrink-0">
+        <button type="button" onClick={onClose} className="rounded-xl bg-white/10 p-2 hover:bg-white/20 shrink-0">
           <X className="h-6 w-6" />
         </button>
       </div>
@@ -487,18 +487,18 @@ function PatientInfo({
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 pb-6">
       {/* Заголовок карточки */}
-      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-5">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-5">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1f75fe]/10 text-xl font-bold text-[var(--ds-primary)]">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1f75fe]/10 text-xl font-bold text-[#1f75fe]">
             {initials(patient.name)}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-xl font-extrabold text-[var(--text)]">{patient.name}</p>
+            <p className="truncate text-xl font-extrabold text-[#0f172a]">{patient.name}</p>
             {registeredAt && (
-              <p className="text-caption text-[var(--text-subtle)]">Зарегистрирован: {registeredAt}</p>
+              <p className="text-xs text-[#94a3b8]">Зарегистрирован: {registeredAt}</p>
             )}
             <span
-              className="mt-1 inline-block rounded-full px-2.5 py-0.5 text-caption font-semibold"
+              className="mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold"
               style={{ color: statusColor, backgroundColor: statusBg }}
             >
               {statusLabel}
@@ -508,27 +508,27 @@ function PatientInfo({
       </div>
 
       {/* Контакты */}
-      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4 space-y-3">
-        <p className="text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">Контакты</p>
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">Контакты</p>
 
         <a href={`tel:${apiPatient.phone}`} className="flex items-center gap-3 group">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1f75fe]/10">
-            <Phone className="h-4 w-4 text-[var(--ds-primary)]" />
+            <Phone className="h-4 w-4 text-[#1f75fe]" />
           </div>
-          <span className="font-mono text-body font-semibold text-[var(--text)] group-hover:text-[var(--ds-primary)] transition-colors">
+          <span className="font-mono text-sm font-semibold text-[#0f172a] group-hover:text-[#1f75fe] transition-colors">
             {apiPatient.phone}
           </span>
         </a>
 
         {apiPatient.dateOfBirth && (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg)]">
-              <UserIcon className="h-4 w-4 text-[var(--text-subtle)]" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#faf8f4]">
+              <UserIcon className="h-4 w-4 text-[#94a3b8]" />
             </div>
-            <p className="text-body text-[var(--text)]">
+            <p className="text-sm text-[#0f172a]">
               {calculateAge(apiPatient.dateOfBirth)} лет · {formatDateOfBirth(apiPatient.dateOfBirth)}
               {apiPatient.gender && (
-                <span className="ml-1 text-caption text-[var(--text-secondary)]">
+                <span className="ml-1 text-xs text-[#64748b]">
                   ({apiPatient.gender === "male" ? "муж." : apiPatient.gender === "female" ? "жен." : "другой"})
                 </span>
               )}
@@ -538,23 +538,23 @@ function PatientInfo({
 
         {apiPatient.iin && (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg)]">
-              <IdCard className="h-4 w-4 text-[var(--text-subtle)]" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#faf8f4]">
+              <IdCard className="h-4 w-4 text-[#94a3b8]" />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-subtle)]">ИИН</p>
-              <p className="font-mono text-body text-[var(--text)]">{maskIIN(apiPatient.iin)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-[#94a3b8]">ИИН</p>
+              <p className="font-mono text-sm text-[#0f172a]">{maskIIN(apiPatient.iin)}</p>
             </div>
           </div>
         )}
 
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg)]">
-            <Calendar className="h-4 w-4 text-[var(--text-subtle)]" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#faf8f4]">
+            <Calendar className="h-4 w-4 text-[#94a3b8]" />
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-[var(--text-subtle)]">Источник</p>
-            <span className={cn("inline-block rounded-full px-2 py-0.5 text-caption font-medium", sourceColor)}>
+            <p className="text-[10px] uppercase tracking-wide text-[#94a3b8]">Источник</p>
+            <span className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium", sourceColor)}>
               {sourceLabel}
             </span>
           </div>
@@ -562,33 +562,33 @@ function PatientInfo({
       </div>
 
       {/* Лечащий врач */}
-      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4">
-        <p className="mb-3 text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748b]">
           Лечащий врач
         </p>
         {doctorUser ? (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-body font-bold text-[var(--ds-primary)]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-sm font-bold text-[#1f75fe]">
               {doctorUser.name[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-body font-semibold text-[var(--text)]">{doctorUser.name}</p>
-              <p className="truncate text-caption text-[var(--text-subtle)]">{doctorUser.email}</p>
+              <p className="truncate text-sm font-semibold text-[#0f172a]">{doctorUser.name}</p>
+              <p className="truncate text-xs text-[#94a3b8]">{doctorUser.email}</p>
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--bg)]">
-              <Stethoscope className="h-4 w-4 text-[var(--text-subtle)]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#faf8f4]">
+              <Stethoscope className="h-4 w-4 text-[#94a3b8]" />
             </div>
-            <p className="text-body italic text-[var(--text-subtle)]">Врач не назначен</p>
+            <p className="text-sm italic text-[#94a3b8]">Врач не назначен</p>
           </div>
         )}
       </div>
 
       {/* WhatsApp broadcasts */}
-      <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--bg)] p-4 space-y-3">
-        <p className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+      <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-4 space-y-3">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#64748b]">
           <Megaphone className="h-3.5 w-3.5" />
           Рассылки WhatsApp
         </p>
@@ -597,38 +597,38 @@ function PatientInfo({
 
       {/* Статус лечения */}
       {canChangeStatus && (
-        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4">
-          <p className="mb-3 text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+        <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748b]">
             Статус лечения
           </p>
           <div className="relative">
             <button
               onClick={() => setIsStatusOpen((v) => !v)}
-              className="flex w-full items-center justify-between rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] px-3.5 py-2.5 text-body font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg)]"
+              className="flex w-full items-center justify-between rounded-xl border border-[#e8e3d9] bg-white px-3.5 py-2.5 text-sm font-medium text-[#0f172a] transition-colors hover:bg-[#faf8f4]"
             >
               <span>{currentColumn?.label ?? apiPatient.status}</span>
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 text-[var(--text-subtle)] transition-transform",
+                  "h-4 w-4 text-[#94a3b8] transition-transform",
                   isStatusOpen && "rotate-180",
                 )}
               />
             </button>
             {isStatusOpen && (
-              <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-[var(--ds-border)] bg-[var(--ds-surface)] shadow-xl">
+              <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-[#e8e3d9] bg-white shadow-xl">
                 {KANBAN_COLUMNS.map((col) => (
                   <button
                     key={col.id}
                     onClick={() => handleStatusChange(col.id as PatientStatus)}
                     disabled={statusMutation.isPending}
                     className={cn(
-                      "flex w-full items-center justify-between px-4 py-2.5 text-left text-body transition-colors hover:bg-[var(--bg)]",
-                      apiPatient.status === col.id && "bg-[#1f75fe]/5 font-semibold text-[var(--ds-primary)]",
+                      "flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#faf8f4]",
+                      apiPatient.status === col.id && "bg-[#1f75fe]/5 font-semibold text-[#1f75fe]",
                     )}
                   >
                     <span>{col.label}</span>
                     {statusMutation.isPending && apiPatient.status !== col.id && (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--text-subtle)]" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#94a3b8]" />
                     )}
                   </button>
                 ))}
@@ -641,12 +641,12 @@ function PatientInfo({
       {/* Аллергии — если приходят от бэка */}
       {patient.allergies && patient.allergies.length > 0 && (
         <div className="rounded-2xl border border-[#fecaca] bg-[#fef2f2] p-4">
-          <p className="mb-2 flex items-center gap-2 text-body font-bold text-[var(--danger)]">
+          <p className="mb-2 flex items-center gap-2 text-sm font-bold text-[#dc2626]">
             <AlertTriangle className="h-4 w-4" /> Аллергии и предупреждения
           </p>
           <div className="flex flex-wrap gap-2">
             {patient.allergies.map((a) => (
-              <span key={a} className="rounded-full bg-[var(--ds-surface)] px-3 py-1 text-body font-medium text-[var(--danger)]">
+              <span key={a} className="rounded-full bg-white px-3 py-1 text-sm font-medium text-[#dc2626]">
                 {a}
               </span>
             ))}
@@ -657,26 +657,26 @@ function PatientInfo({
       {/* Заметки */}
       {apiPatient.notes && (
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-          <p className="mb-2 flex items-center gap-2 text-body font-bold text-amber-700">
+          <p className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-700">
             <Sparkles className="h-4 w-4 text-amber-500" /> Примечания
           </p>
-          <p className="text-body leading-relaxed text-amber-900">{apiPatient.notes}</p>
+          <p className="text-sm leading-relaxed text-amber-900">{apiPatient.notes}</p>
         </div>
       )}
 
       {/* Финансы */}
       {!isDoctor && (
-        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4 space-y-3">
+        <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-3">
           <button
             onClick={() => setFinancialCollapsed((v) => !v)}
             className="flex w-full items-center justify-between"
           >
-            <span className="text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">
               Финансы
             </span>
             <ChevronDown
               className={cn(
-                "h-3.5 w-3.5 text-[var(--text-subtle)] transition-transform",
+                "h-3.5 w-3.5 text-[#94a3b8] transition-transform",
                 !financialCollapsed && "rotate-180",
               )}
             />
@@ -686,30 +686,30 @@ function PatientInfo({
             <>
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-2xl bg-[#1f75fe]/5 p-3.5 text-center">
-                  <p className="text-xl font-bold text-[var(--ds-primary)]">
+                  <p className="text-xl font-bold text-[#1f75fe]">
                     {financials.paid.toLocaleString("ru-RU")} ₸
                   </p>
-                  <p className="mt-0.5 text-caption text-[var(--text-secondary)]">Оплачено</p>
+                  <p className="mt-0.5 text-xs text-[#64748b]">Оплачено</p>
                 </div>
-                <div className="rounded-2xl bg-[var(--bg)] p-3.5 text-center">
-                  <p className="text-xl font-bold text-[var(--text)]">{patientProcedures.length}</p>
-                  <p className="mt-0.5 text-caption text-[var(--text-secondary)]">Процедур</p>
+                <div className="rounded-2xl bg-[#faf8f4] p-3.5 text-center">
+                  <p className="text-xl font-bold text-[#0f172a]">{patientProcedures.length}</p>
+                  <p className="mt-0.5 text-xs text-[#64748b]">Процедур</p>
                 </div>
               </div>
 
               {Object.keys(financials.methodCounts).length > 0 && (
-                <div className="rounded-2xl bg-[var(--bg)] p-4 space-y-2">
-                  <p className="mb-1 text-caption font-semibold text-[var(--text-secondary)]">Способы оплаты</p>
+                <div className="rounded-2xl bg-[#faf8f4] p-4 space-y-2">
+                  <p className="mb-1 text-xs font-semibold text-[#64748b]">Способы оплаты</p>
                   {Object.entries(financials.methodCounts).map(([method, data]) => (
                     <div key={method} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="h-3.5 w-3.5 text-[var(--text-subtle)]" />
-                        <span className="text-[var(--text-secondary)]">
+                        <CreditCard className="h-3.5 w-3.5 text-[#94a3b8]" />
+                        <span className="text-[#64748b]">
                           {PAYMENT_LABELS[method] ?? method}
                         </span>
-                        <span className="text-caption text-[var(--text-subtle)]">×{data.count}</span>
+                        <span className="text-xs text-[#94a3b8]">×{data.count}</span>
                       </div>
-                      <span className="font-semibold text-[var(--text)]">
+                      <span className="font-semibold text-[#0f172a]">
                         {data.sum.toLocaleString("ru-RU")} ₸
                       </span>
                     </div>
@@ -723,17 +723,17 @@ function PatientInfo({
 
       {/* История процедур */}
       {!isDoctor && patientProcedures.length > 0 && (
-        <div className="rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-4 space-y-3">
+        <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4 space-y-3">
           <button
             onClick={() => setProceduresCollapsed((v) => !v)}
             className="flex w-full items-center justify-between"
           >
-            <span className="text-caption font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">
               История процедур ({patientProcedures.length})
             </span>
             <ChevronDown
               className={cn(
-                "h-3.5 w-3.5 text-[var(--text-subtle)] transition-transform",
+                "h-3.5 w-3.5 text-[#94a3b8] transition-transform",
                 !proceduresCollapsed && "rotate-180",
               )}
             />
@@ -762,10 +762,10 @@ function PatientInfo({
                   return (
                     <div
                       key={proc["id"] as string}
-                      className="space-y-1.5 rounded-2xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-3"
+                      className="space-y-1.5 rounded-2xl border border-[#e8e3d9] bg-white p-3"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="flex-1 text-body font-medium leading-tight text-[var(--text)]">
+                        <p className="flex-1 text-sm font-medium leading-tight text-[#0f172a]">
                           {name}
                         </p>
                         <span
@@ -777,7 +777,7 @@ function PatientInfo({
                           {PROC_STATUS_LABELS[status] ?? status}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-caption text-[var(--text-secondary)]">
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[#64748b]">
                         {scheduledAt && (
                           <span>
                             {new Date(scheduledAt).toLocaleDateString("ru", {
@@ -790,7 +790,7 @@ function PatientInfo({
                         {doctorId && <span>👨‍⚕️ {docName}</span>}
                         {paymentMethod && <span>💳 {payLabel}</span>}
                         {price != null && price > 0 && (
-                          <span className="font-semibold text-[var(--text)]">
+                          <span className="font-semibold text-[#0f172a]">
                             {price.toLocaleString("ru-RU")} ₸
                           </span>
                         )}

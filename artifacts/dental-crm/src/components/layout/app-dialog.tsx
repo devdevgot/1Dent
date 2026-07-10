@@ -60,7 +60,7 @@ export function AppDialog({
       <DialogContent
         hideClose
         className={cn(
-          "gap-0 overflow-hidden border-[var(--ds-border)] bg-[var(--ds-surface)] p-0 font-manrope",
+          "gap-0 overflow-hidden border-[#e8e3d9] bg-white p-0 font-manrope",
           !isTablet && [
             "max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0",
             "max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-h-[92vh]",
@@ -69,14 +69,14 @@ export function AppDialog({
           className,
         )}
       >
-        <DialogHeader className="border-b border-[var(--ds-border)] px-5 py-4 text-left space-y-1">
+        <DialogHeader className="border-b border-[#e8e3d9] px-5 py-4 text-left space-y-1">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
-              <DialogTitle className="text-lg font-semibold text-[var(--text)] leading-tight">
+              <DialogTitle className="text-lg font-semibold text-[#0f172a] leading-tight">
                 {title}
               </DialogTitle>
               {description ? (
-                <DialogDescription className="text-caption text-[var(--text-secondary)] mt-1">
+                <DialogDescription className="text-xs text-[#64748b] mt-1">
                   {description}
                 </DialogDescription>
               ) : null}
@@ -86,7 +86,7 @@ export function AppDialog({
                 type="button"
                 onClick={() => onOpenChange(false)}
                 aria-label="Close"
-                className="shrink-0 rounded-xl p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-colors"
+                className="shrink-0 rounded-xl p-2 text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a] transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -97,7 +97,7 @@ export function AppDialog({
         <div className={cn("overflow-y-auto px-5 py-4", bodyClassName)}>{children}</div>
 
         {footer ? (
-          <DialogFooter className="border-t border-[var(--ds-border)] px-5 py-4 gap-2 sm:gap-2">
+          <DialogFooter className="border-t border-[#e8e3d9] px-5 py-4 gap-2 sm:gap-2">
             {footer}
           </DialogFooter>
         ) : null}

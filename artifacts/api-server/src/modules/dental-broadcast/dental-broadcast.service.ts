@@ -16,6 +16,7 @@ import { eq, and, isNotNull, ne, sql, inArray, asc, gte } from "drizzle-orm";
 import { sendToPatient } from "../../shared/messaging";
 import { logger } from "../../lib/logger";
 import { generateBroadcastMessageAi } from "./dental-broadcast-ai";
+import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 
 // Conditions that still require active treatment
 const PROBLEM_CONDITIONS = [
@@ -505,10 +506,12 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
                 "[DentalBroadcast] Failed to persist delivery record",
               ),
             );
-          await db
-            .update(patientsTable)
-            .set({ status: "repeat_sale", updatedAt: new Date() })
-            .where(eq(patientsTable.id, patient.id));
+          await transitionPatientStage({
+            patientId: patient.id,
+            clinicId,
+            toStatus: "repeat_sale",
+            trigger: PATIENT_STAGE_TRIGGERS.BROADCAST_SENT,
+          });
         } else {
           logger.warn(
             { patientId: patient.id },

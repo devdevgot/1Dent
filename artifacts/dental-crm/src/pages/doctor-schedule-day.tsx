@@ -18,6 +18,9 @@ import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { Bone } from "@/components/skeletons";
+import { seesClinicSchedule } from "@/lib/role-groups";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
+import { usePageBack } from "@/hooks/use-page-back";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -29,9 +32,9 @@ const STATUS_COLORS: Record<ProcedureStatus, {
   bar: string; bg: string; text: string; badge: string; icon: string;
 }> = {
   scheduled:   { bar: "bg-[#0284c7]", bg: "bg-[#e0f2fe]", text: "text-[#0284c7]", badge: "bg-[#e0f2fe] text-[#0284c7] border-[#bae6fd]", icon: "text-[#0284c7]" },
-  in_progress: { bar: "bg-[var(--warning)]", bg: "bg-[#fef3c7]", text: "text-[var(--warning)]", badge: "bg-[#fef3c7] text-[var(--warning)] border-[#fde68a]", icon: "text-[var(--warning)]" },
-  completed:   { bar: "bg-[var(--success)]", bg: "bg-[#f0fdf4]", text: "text-[var(--success)]", badge: "bg-[#f0fdf4] text-[var(--success)] border-[#bbf7d0]", icon: "text-[var(--success)]" },
-  cancelled:   { bar: "bg-[#94a3b8]", bg: "bg-[#f8fafc]", text: "text-[var(--text-secondary)]", badge: "bg-[#f1f5f9] text-[var(--text-subtle)] border-[#e2e8f0]", icon: "text-[var(--text-subtle)]" },
+  in_progress: { bar: "bg-[var(--warning)]", bg: "bg-[#fef3c7]", text: "text-[#d97706]", badge: "bg-[#fef3c7] text-[#d97706] border-[#fde68a]", icon: "text-[#d97706]" },
+  completed:   { bar: "bg-[var(--success)]", bg: "bg-[#f0fdf4]", text: "text-[#16a34a]", badge: "bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]", icon: "text-[#16a34a]" },
+  cancelled:   { bar: "bg-[#94a3b8]", bg: "bg-[#f8fafc]", text: "text-[#64748b]", badge: "bg-[#f1f5f9] text-[#94a3b8] border-[#e2e8f0]", icon: "text-[#94a3b8]" },
 };
 
 
@@ -88,18 +91,26 @@ function fmtTime(iso: string) {
 }
 
 /* ─── Component ─────────────────────────────────────────────────────────────── */
-export default function DoctorScheduleDayPage() {
+export default function DoctorScheduleDayPage({
+  overlayDate,
+}: {
+  overlayDate?: string;
+} = {}) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [, navigate] = useLocation();
+  const { isOverlay, popStack } = useOverlayNavigation();
   const params = useParams<{ date: string }>();
 
-  const dateStr  = params.date ?? toStr(new Date());
-  const selDate  = parseDateParam(dateStr);
+  const dateStr = overlayDate ?? params.date ?? toStr(new Date());
+  const selDate = parseDateParam(dateStr);
 
   useEffect(() => {
-    if (!selDate) navigate("/schedule", { replace: true });
-  }, [selDate, navigate]);
+    if (!selDate) {
+      if (isOverlay) popStack();
+      else navigate("/schedule", { replace: true });
+    }
+  }, [selDate, navigate, isOverlay, popStack]);
 
   if (!selDate) return null;
 
@@ -109,7 +120,10 @@ export default function DoctorScheduleDayPage() {
 function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDate: Date }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const clinicWideSchedule = seesClinicSchedule(user?.role);
   const [, navigate] = useLocation();
+  const { isOverlay, pushDate } = useOverlayNavigation();
+  const goBack = usePageBack();
 
   const weekDays = getWeek(selDate);
   const todayStr = toStr(new Date());
@@ -151,11 +165,11 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
 
   const dayProcs = useMemo(() => {
     const all = (pData?.data?.procedures ?? []) as Procedure[];
-    const mine = user?.id ? all.filter(p => p.doctorId === user.id) : all;
+    const mine = clinicWideSchedule || !user?.id ? all : all.filter(p => p.doctorId === user.id);
     return mine
       .filter(p => isCalendarProcedure(p) && toStr(new Date(p.scheduledAt!)) === dateStr)
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
-  }, [pData, user?.id, dateStr]);
+  }, [pData, user?.id, dateStr, clinicWideSchedule]);
 
   const visibleProcs = useMemo(
     () => dayProcs.filter((p) => p.scheduledAt && isVisibleOnTimeline(p.scheduledAt)),
@@ -188,15 +202,21 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const totalH = (END_H - START_H) * HOUR_H;
 
   /* Week nav */
+  const goToDate = (d: Date, replace = false) => {
+    const ds = toStr(d);
+    if (isOverlay) pushDate(ds, replace);
+    else navigate(`/schedule/${ds}`, { replace });
+  };
+
   const goWeekPrev = () => {
     const d = new Date(selDate);
     d.setDate(d.getDate() - 7);
-    navigate(`/schedule/${toStr(d)}`);
+    goToDate(d);
   };
   const goWeekNext = () => {
     const d = new Date(selDate);
     d.setDate(d.getDate() + 7);
-    navigate(`/schedule/${toStr(d)}`);
+    goToDate(d);
   };
 
   const appointmentSubtitle =
@@ -211,13 +231,13 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       <PageHeader
         title={`${DOW_FULL[selDate.getDay()]} — ${selDate.getDate()} ${MONTH_GEN[selDate.getMonth()]} ${selDate.getFullYear()} г.`}
         subtitle={appointmentSubtitle}
-        onBack={() => navigate("/schedule")}
+        onBack={goBack}
         backLabel={MONTH_FULL[selDate.getMonth()]}
         right={
           <button
             type="button"
             onClick={() => setEditingProcedure(null)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-caption font-semibold hover:bg-[var(--primary-hover)] hover:scale-105 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-xs font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             Новая запись
@@ -238,18 +258,18 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                   <button
                     key={i}
                     type="button"
-                    onClick={() => navigate(`/schedule/${ds}`)}
+                    onClick={() => goToDate(d, true)}
                     className="flex flex-col items-center gap-0.5 py-1 rounded-xl transition-colors"
                   >
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSel ? "text-[var(--ds-primary)]" : "text-[var(--text-secondary)]"}`}>
+                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${isSel ? "text-[#1f75fe]" : "text-[#64748b]"}`}>
                       {DOW_SHORT[(d.getDay())]}
                     </span>
                     <span className={`
-                      w-8 h-8 flex items-center justify-center rounded-full text-body font-bold transition-all
+                      w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold transition-all
                       ${isSel && isNow  ? "bg-[var(--ds-primary)] text-white shadow-lg"
-                      : isSel           ? "bg-[var(--primary-light)] text-[var(--ds-primary)]"
-                      : isNow           ? "text-[var(--ds-primary)]"
-                      :                   "text-[var(--text)]"}
+                      : isSel           ? "bg-[var(--primary-light)] text-[#1f75fe]"
+                      : isNow           ? "text-[#1f75fe]"
+                      :                   "text-[#0f172a]"}
                     `}>
                       {d.getDate()}
                     </span>
@@ -266,7 +286,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       />
 
       {/* ── Timeline ── */}
-      <div ref={tlRef} className="flex-1 overflow-y-auto bg-[var(--ds-surface)] border-t border-[var(--ds-border)]">
+      <div ref={tlRef} className="flex-1 overflow-y-auto bg-white border-t border-[#e8e3d9]">
         <div className="relative" style={{ height: totalH + HOUR_H }}>
 
           {/* Hour grid */}
@@ -276,10 +296,10 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
               className="absolute left-0 right-0 flex items-start pointer-events-none"
               style={{ top: (h - START_H) * HOUR_H }}
             >
-              <span className="w-14 shrink-0 text-right pr-3 text-[11px] text-[var(--text-secondary)] font-medium leading-none -translate-y-[6px] select-none">
+              <span className="w-14 shrink-0 text-right pr-3 text-[11px] text-[#64748b] font-medium leading-none -translate-y-[6px] select-none">
                 {h < END_H ? `${String(h).padStart(2,"0")}:00` : ""}
               </span>
-              <div className="flex-1 border-t border-[var(--ds-border)]" />
+              <div className="flex-1 border-t border-[#e8e3d9]" />
             </div>
           ))}
 
@@ -364,10 +384,10 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
           {/* Empty state */}
           {!proceduresLoading && dayProcs.length === 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
-              <div className="w-14 h-14 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center">
-                <Calendar className="w-7 h-7 text-[var(--text-subtle)]" />
+              <div className="w-14 h-14 rounded-2xl bg-[#f1ede4] flex items-center justify-center">
+                <Calendar className="w-7 h-7 text-[#94a3b8]" />
               </div>
-              <p className="text-body font-semibold text-[var(--text-secondary)]">Нет приёмов на этот день</p>
+              <p className="text-sm font-semibold text-[#64748b]">Нет приёмов на этот день</p>
             </div>
           )}
         </div>

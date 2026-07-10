@@ -8,8 +8,10 @@ import { ChannelsSettings } from "@/components/channels/channels-settings";
 import { WhatsAppConnectModal, WhatsAppIcon, type WaStatus } from "@/components/whatsapp/whatsapp-connect-modal";
 import { customFetch } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { usePageBack } from "@/hooks/use-page-back";
 
 export default function ChannelsPage() {
+  const goBack = usePageBack();
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const isOwner = user?.role === "owner";
@@ -46,7 +48,7 @@ export default function ChannelsPage() {
     <PageShell className="pb-8">
       <PageHeader
         title={t("channels.sectionTitle", { defaultValue: "Каналы привлечения" })}
-        onBack={() => window.history.back()}
+        onBack={goBack}
       />
 
       <div className="px-4 pt-4 relative">
@@ -62,11 +64,11 @@ export default function ChannelsPage() {
             </div>
 
             <div className="flex items-center gap-2 mb-2">
-              <Lock className="w-4 h-4 text-[var(--text-subtle)]" />
-              <h2 className="text-lg font-bold text-[var(--text)]">Страница заблокирована</h2>
+              <Lock className="w-4 h-4 text-[#94a3b8]" />
+              <h2 className="text-lg font-bold text-[#0f172a]">Страница заблокирована</h2>
             </div>
 
-            <p className="text-body text-[var(--text-secondary)] leading-relaxed mb-7 max-w-xs">
+            <p className="text-sm text-[#64748b] leading-relaxed mb-7 max-w-xs">
               Подключите WhatsApp клиники, чтобы разблокировать эту страницу и настроить
               каналы привлечения пациентов.
             </p>
@@ -74,14 +76,14 @@ export default function ChannelsPage() {
             {isOwner ? (
               <button
                 onClick={() => setModalOpen(true)}
-                className="flex items-center gap-2.5 h-12 px-6 rounded-xl text-body font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] shadow-md"
+                className="flex items-center gap-2.5 h-12 px-6 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] shadow-md"
                 style={{ backgroundColor: "#25d366" }}
               >
                 <WhatsAppIcon size={18} color="white" />
                 Подключить WhatsApp
               </button>
             ) : (
-              <div className="flex items-center gap-2 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl px-4 py-3 text-body text-[var(--warning)]">
+              <div className="flex items-center gap-2 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl px-4 py-3 text-sm text-[#d97706]">
                 <Lock className="w-4 h-4 shrink-0" />
                 <span>Обратитесь к владельцу клиники для подключения WhatsApp</span>
               </div>
@@ -92,7 +94,7 @@ export default function ChannelsPage() {
         )}
 
         {waStatusError && (
-          <div className="mt-4 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl px-4 py-3 text-body text-[var(--warning)]">
+          <div className="mt-4 bg-[#fef3c7] border border-[#d97706]/30 rounded-xl px-4 py-3 text-sm text-[#d97706]">
             Не удалось проверить статус WhatsApp. Настройки каналов доступны, но подключение может быть недоступно.
           </div>
         )}

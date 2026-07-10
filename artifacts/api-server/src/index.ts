@@ -207,6 +207,13 @@ async function bootstrapDatabase(): Promise<void> {
   } catch (err) {
     logger.warn({ err }, "[Startup] phone_normalized backfill failed");
   }
+
+  try {
+    const { recoverPendingKnowledgeSources } = await import("./modules/knowledge/knowledge.service");
+    await recoverPendingKnowledgeSources();
+  } catch (err) {
+    logger.warn({ err }, "[Knowledge] Pending source recovery failed");
+  }
 }
 
 function onServerReady(): void {

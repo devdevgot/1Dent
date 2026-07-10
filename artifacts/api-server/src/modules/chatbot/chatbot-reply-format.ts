@@ -10,36 +10,50 @@ export interface ReplyPolishOptions {
   recentAssistantTexts?: string[];
 }
 
-export const HUMAN_MESSAGING_PROMPT = `
-СТИЛЬ ОБЩЕНИЯ В WHATSAPP (как живой менеджер клиники, не робот):
-- Короткие сообщения-пузыри, как в мессенджере — не одна длинная простыня
-- Обычно 1–2 сообщения подряд. 3 сообщения — только если нужно отдельно показать список слотов/цен
-- Между мыслями — логичные паузы (как будто печатаете)
-
-ФОРМАТ ОТВЕТА — строго JSON (без markdown, без пояснений):
-{
-  "parts": ["текст первого сообщения", "текст второго сообщения"],
-  "pausesMs": [0, 1200]
-}
-
-Правила поля parts:
-- Каждый элемент — одно WhatsApp-сообщение (1–2 предложения, до ~250 символов)
-- Не повторяй одну и ту же мысль в разных parts
-- Приветствие и представление ассистента лучше объединять в одну короткую part
-- Уточняющий вопрос — отдельная part только если ответ иначе получается длинным
-- Список слотов, цен или вариантов — отдельная part
-- Подтверждение / итог — отдельная part
-- Если весь ответ умещается в 1–2 коротких предложения — одна part
-
-Правила поля pausesMs:
-- Длина = длине parts; pausesMs[i] — пауза ПЕРЕД отправкой parts[i] (мс)
-- Для первой part всегда 0
-- Для следующих: 800–2500 мс — чем длиннее предыдущая part, тем больше пауза (имитация набора текста)
+/** Plain-text style note appended to chat system prompts (no JSON output format). */
+export const CHAT_STYLE_PROMPT = `
+Стиль WhatsApp (живой менеджер клиники, не робот):
+- Кратко: обычно одно сообщение, максимум два коротких
+- Один вопрос за раз, без длинных списков и лишних пояснений
+- Не повторяй вопросы из недавних сообщений
+- Отвечай обычным текстом, без JSON и markdown
 `.trim();
+
+/** @deprecated Use CHAT_STYLE_PROMPT — kept for existing imports. */
+export const HUMAN_MESSAGING_PROMPT = CHAT_STYLE_PROMPT;
 
 export function replyFromText(text: string): ChatbotReply {
   const trimmed = text.trim();
   return trimmed ? { parts: [trimmed], pausesMs: [0] } : { parts: [], pausesMs: [0] };
+}
+
+/** Split plain-text LLM output into up to maxParts WhatsApp bubbles at sentence boundaries. */
+export function splitTextToReply(text: string, maxParts = 2): ChatbotReply {
+  const trimmed = text.trim();
+  if (!trimmed) return replyFromText("");
+
+  const cap = Math.max(1, maxParts);
+  if (cap === 1) return replyFromText(trimmed);
+
+  const sentences = trimmed
+    .split(/(?<=[.!?…])\s+/u)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (sentences.length <= 1 || trimmed.length <= 180) {
+    return replyFromText(trimmed);
+  }
+
+  const mid = Math.ceil(sentences.length / cap);
+  const parts: string[] = [];
+  for (let i = 0; i < sentences.length && parts.length < cap; i += mid) {
+    const chunk = sentences.slice(i, i + mid).join(" ").trim();
+    if (chunk) parts.push(chunk);
+  }
+
+  if (parts.length <= 1) return replyFromText(trimmed);
+
+  return normalizeReply({ parts, pausesMs: defaultPauses(parts) });
 }
 
 export function joinChatbotReply(reply: ChatbotReply): string {
@@ -89,7 +103,7 @@ export function normalizeReply(raw: ChatbotReply): ChatbotReply {
 export function polishReply(raw: ChatbotReply, opts?: ReplyPolishOptions): ChatbotReply {
   const normalized = normalizeReply(raw);
   const clinicName = opts?.clinicName?.trim();
-  const maxParts = opts?.maxParts ?? 3;
+  const maxParts = opts?.maxParts ?? 2;
   const recent = (opts?.recentAssistantTexts ?? []).map(normalizeForSimilarity).filter(Boolean);
   const cleaned: string[] = [];
 
@@ -154,7 +168,7 @@ function areSimilar(a: string, b: string): boolean {
     if (bWords.has(word)) overlap++;
   }
   const similarity = overlap / Math.min(aWords.size, bWords.size);
-  return similarity >= 0.82;
+  return similarity >= 0.95;
 }
 
 function normalizeForSimilarity(text: string): string {

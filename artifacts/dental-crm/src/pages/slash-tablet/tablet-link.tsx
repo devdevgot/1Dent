@@ -45,8 +45,8 @@ export default function TabletLinkPage() {
 
   if (isLoading || !isAuthenticated) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-[var(--bg)]">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--ds-primary)]" />
+      <div className="flex h-[100dvh] items-center justify-center bg-[#faf8f4]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1f75fe]" />
       </div>
     );
   }
@@ -57,26 +57,26 @@ export default function TabletLinkPage() {
   const showError = status === "error" && !pairingCodeOpen && !submitting;
 
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[var(--bg)] px-6 font-manrope">
-      <div className="w-full max-w-md rounded-3xl border border-[var(--ds-border)] bg-[var(--ds-surface)] p-8 text-center shadow-sm">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#faf8f4] px-6 font-manrope">
+      <div className="w-full max-w-md rounded-3xl border border-[#e8e3d9] bg-white p-8 text-center shadow-sm">
         {showProcessing && (
           <>
-            <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-[var(--ds-primary)]" />
-            <p className="text-base font-bold text-[var(--text)]">Подключаем планшет…</p>
+            <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-[#1f75fe]" />
+            <p className="text-base font-bold text-[#0f172a]">Подключаем планшет…</p>
           </>
         )}
 
         {showPairingPending && (
           <>
-            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[var(--ds-primary)]" />
-            <p className="text-base font-bold text-[var(--text)]">Запрос отправлен</p>
-            <p className="mt-2 text-body text-[var(--text-secondary)]">
+            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[#1f75fe]" />
+            <p className="text-base font-bold text-[#0f172a]">Запрос отправлен</p>
+            <p className="mt-2 text-sm text-[#64748b]">
               Владелец клиники получит код для подтверждения подключения планшета
             </p>
             <button
               type="button"
               onClick={() => navigate(dashboardPath)}
-              className="mt-6 rounded-xl bg-[#1f75fe] px-5 py-3 text-body font-semibold text-white"
+              className="mt-6 rounded-xl bg-[#1f75fe] px-5 py-3 text-sm font-semibold text-white"
             >
               На главную
             </button>
@@ -85,13 +85,13 @@ export default function TabletLinkPage() {
 
         {showSuccess && (
           <>
-            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[var(--success)]" />
-            <p className="text-base font-bold text-[var(--text)]">Планшет разблокирован</p>
-            <p className="mt-2 text-body text-[var(--text-secondary)]">Можно вернуться к работе в CRM</p>
+            <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-[#16a34a]" />
+            <p className="text-base font-bold text-[#0f172a]">Планшет разблокирован</p>
+            <p className="mt-2 text-sm text-[#64748b]">Можно вернуться к работе в CRM</p>
             <button
               type="button"
               onClick={() => navigate(dashboardPath)}
-              className="mt-6 rounded-xl bg-[#1f75fe] px-5 py-3 text-body font-semibold text-white"
+              className="mt-6 rounded-xl bg-[#1f75fe] px-5 py-3 text-sm font-semibold text-white"
             >
               На главную
             </button>
@@ -100,13 +100,13 @@ export default function TabletLinkPage() {
 
         {showError && (
           <>
-            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-[var(--danger)]" />
-            <p className="text-base font-bold text-[var(--text)]">Не удалось подключиться</p>
-            <p className="mt-2 text-body text-[var(--text-secondary)]">{errorMessage ?? "Попробуйте отсканировать QR снова"}</p>
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-[#dc2626]" />
+            <p className="text-base font-bold text-[#0f172a]">Не удалось подключиться</p>
+            <p className="mt-2 text-sm text-[#64748b]">{errorMessage ?? "Попробуйте отсканировать QR снова"}</p>
             <button
               type="button"
               onClick={() => token && void processToken(token)}
-              className="mt-6 rounded-xl bg-[#1f75fe] px-5 py-3 text-body font-semibold text-white"
+              className="mt-6 rounded-xl bg-[#1f75fe] px-5 py-3 text-sm font-semibold text-white"
             >
               Повторить
             </button>
@@ -115,9 +115,9 @@ export default function TabletLinkPage() {
 
         {!showProcessing && !showSuccess && !showPairingPending && !showError && !token && (
           <>
-            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-[var(--danger)]" />
-            <p className="text-base font-bold text-[var(--text)]">Ссылка недействительна</p>
-            <p className="mt-2 text-body text-[var(--text-secondary)]">Отсканируйте актуальный QR-код на планшете</p>
+            <AlertCircle className="mx-auto mb-4 h-12 w-12 text-[#dc2626]" />
+            <p className="text-base font-bold text-[#0f172a]">Ссылка недействительна</p>
+            <p className="mt-2 text-sm text-[#64748b]">Отсканируйте актуальный QR-код на планшете</p>
           </>
         )}
       </div>

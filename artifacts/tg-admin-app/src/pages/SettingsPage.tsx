@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { AlertTriangle, Bot, ChevronRight, Users } from "lucide-react";
 import { api } from "../lib/api";
 import { haptic, hapticNotify } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
 
 interface PlatformAdmin {
   id: string;
@@ -104,11 +106,11 @@ export default function SettingsPage() {
   const admins = settings?.admins ?? [];
 
   return (
-    <div className="px-4 pt-6 pb-4 space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Настройки платформы</h1>
-        <p className="text-sm text-muted-foreground">Администраторы, бот, интеграции</p>
-      </div>
+    <TmaPage
+      title="Настройки платформы"
+      subtitle="Администраторы, бот, интеграции"
+      onBack={() => navigate("/more")}
+    >
 
       {/* Platform stats */}
       {settings && (
@@ -122,24 +124,33 @@ export default function SettingsPage() {
       <button
         type="button"
         onClick={() => { haptic("light"); navigate("/errors"); }}
-        className={`w-full flex items-center justify-between gap-3 rounded-xl border p-4 text-left transition-colors ${
-          unresolvedErrors > 0 ? "border-red-200 bg-red-50" : "border-border bg-card"
+        className={`w-full flex items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-colors ${
+          unresolvedErrors > 0 ? "border-[#dc2626]/30 bg-[#fef2f2]" : "border-[#e8e3d9] bg-white"
         }`}
       >
-        <div>
-          <p className="text-sm font-semibold text-foreground">🚨 Ошибки системы</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {unresolvedErrors > 0 ? `${unresolvedErrors} нерешённых инцидентов` : "Активных ошибок нет"}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#fef2f2] flex items-center justify-center">
+            <AlertTriangle className="w-[18px] h-[18px] text-[#dc2626]" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#0f172a]">Ошибки системы</p>
+            <p className="text-xs text-[#64748b] mt-0.5">
+              {unresolvedErrors > 0 ? `${unresolvedErrors} нерешённых инцидентов` : "Активных ошибок нет"}
+            </p>
+          </div>
         </div>
-        {unresolvedErrors > 0 && (
-          <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-700">{unresolvedErrors}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {unresolvedErrors > 0 && (
+            <span className="text-xs font-bold px-2 py-1 rounded-full bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20">{unresolvedErrors}</span>
+          )}
+          <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
+        </div>
       </button>
 
-      {/* Bot info */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-foreground">🤖 Платформенный бот</h2>
+        <h2 className="text-xs font-semibold text-[#64748b] uppercase tracking-wide px-1 flex items-center gap-1.5">
+          <Bot className="w-3.5 h-3.5" /> Платформенный бот
+        </h2>
         {isLoading ? (
           <div className="h-20 bg-card rounded-lg border border-border animate-pulse" />
         ) : (
@@ -167,7 +178,9 @@ export default function SettingsPage() {
       {/* Admins */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">👥 Администраторы ({admins.length})</h2>
+          <h2 className="text-xs font-semibold text-[#64748b] uppercase tracking-wide px-1 flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" /> Администраторы ({admins.length})
+          </h2>
           <button
             onClick={() => { haptic("light"); setShowAddForm((v) => !v); }}
             className="text-xs text-primary px-3 py-1.5 bg-primary/10 rounded-lg font-medium"
@@ -221,6 +234,6 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
-    </div>
+    </TmaPage>
   );
 }

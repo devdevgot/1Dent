@@ -1229,6 +1229,24 @@ export const useTriggerDentalAiAnalysis = <TError = unknown>(options?: {
     ...options?.mutation,
   });
 
+export const startDiagnosis = (
+  patientId: string,
+): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(
+    `/api/patients/${patientId}/diagnosis/start`,
+    {
+      method: "POST",
+    },
+  );
+
+export const useStartDiagnosis = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<{ success: boolean }, TError, string>;
+}) =>
+  useMutation<{ success: boolean }, TError, string>({
+    mutationFn: (patientId) => startDiagnosis(patientId),
+    ...options?.mutation,
+  });
+
 // ─── Dental Broadcast ────────────────────────────────────────────────────────
 
 export interface DentalBroadcastRun {
@@ -1692,4 +1710,78 @@ export const useSendExtractionBundle = <TError = unknown>(options?: {
     mutationFn: ({ patientId, serviceNames }) =>
       sendExtractionBundle(patientId, serviceNames),
     ...options?.mutation,
+  });
+
+// ─── Clinic contract settings ───────────────────────────────────────────────
+
+export interface ClinicContractSettings {
+  contractLegalName: string | null;
+  contractCity: string | null;
+  contractAddress: string | null;
+  contractLicense: string | null;
+  contractDirector: string | null;
+}
+
+export const getClinicContractSettings = (): Promise<{
+  success: boolean;
+  data: ClinicContractSettings;
+}> => customFetch("/api/clinic/contract-settings");
+
+export const updateClinicContractSettings = (
+  data: Partial<ClinicContractSettings>,
+): Promise<{ success: boolean; data: ClinicContractSettings }> =>
+  customFetch("/api/clinic/contract-settings", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+
+export const useGetClinicContractSettings = <TError = unknown>(options?: {
+  query?: UseQueryOptions<
+    { success: boolean; data: ClinicContractSettings },
+    TError
+  >;
+}) =>
+  useQuery<{ success: boolean; data: ClinicContractSettings }, TError>({
+    queryKey: ["clinic-contract-settings"],
+    queryFn: getClinicContractSettings,
+    ...options?.query,
+  });
+
+export const useUpdateClinicContractSettings = <TError = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    { success: boolean; data: ClinicContractSettings },
+    TError,
+    Partial<ClinicContractSettings>
+  >;
+}) =>
+  useMutation<
+    { success: boolean; data: ClinicContractSettings },
+    TError,
+    Partial<ClinicContractSettings>
+  >({
+    mutationFn: updateClinicContractSettings,
+    ...options?.mutation,
+  });
+
+export const previewContractTemplate = (
+  id: string,
+): Promise<{ success: boolean; data: { html: string } }> =>
+  customFetch(`/api/contracts/templates/${id}/preview`);
+
+export const usePreviewContractTemplate = <TError = unknown>(
+  id: string | null,
+  options?: {
+    query?: UseQueryOptions<
+      { success: boolean; data: { html: string } },
+      TError
+    >;
+  },
+) =>
+  useQuery<{ success: boolean; data: { html: string } }, TError>({
+    queryKey: ["contract-template-preview", id],
+    queryFn: () => previewContractTemplate(id!),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    ...options?.query,
   });

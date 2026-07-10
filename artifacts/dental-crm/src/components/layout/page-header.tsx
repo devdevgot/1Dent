@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ChevronLeft, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 
 type PageHeaderProps = {
   title: string;
@@ -29,10 +30,44 @@ export function PageHeader({
   sticky = true,
   shadow = true,
 }: PageHeaderProps) {
+  const { isOverlay } = useOverlayNavigation();
+
+  if (isOverlay) {
+    const hasToolbar = !!(subtitle || badge || right || (!subtitle && !badge && title && right));
+    if (!hasToolbar && !bottom) return null;
+
+    return (
+      <header
+        className={cn(
+          "bg-white border-b border-[#e8e3d9] font-manrope shrink-0",
+          sticky && "sticky top-0 z-20",
+          className,
+        )}
+      >
+        {hasToolbar ? (
+          <div className="flex items-center gap-2 px-4 py-2.5 min-h-[48px]">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              {subtitle ? (
+                <p className="text-xs text-[#64748b] truncate">{subtitle}</p>
+              ) : !badge && title && right ? (
+                <p className="text-sm font-semibold text-[#0f172a] truncate">{title}</p>
+              ) : null}
+              {badge}
+            </div>
+            {right ? (
+              <div className="shrink-0 flex items-center gap-1.5">{right}</div>
+            ) : null}
+          </div>
+        ) : null}
+        {bottom ? <div className="px-4 pb-3">{bottom}</div> : null}
+      </header>
+    );
+  }
+
   return (
     <header
       className={cn(
-        "bg-[var(--ds-surface)] border-b border-[var(--ds-border)] safe-area-top font-manrope shrink-0",
+        "bg-white border-b border-[#e8e3d9] safe-area-top font-manrope shrink-0",
         sticky && "sticky top-0 z-20",
         shadow && "shadow-sm",
         className,
@@ -44,7 +79,7 @@ export function PageHeader({
             type="button"
             onClick={onBack}
             aria-label={backLabel}
-            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors active:scale-95"
+            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1ede4] transition-colors active:scale-95"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -52,15 +87,15 @@ export function PageHeader({
           <div className="w-9 shrink-0" />
         )}
 
-        {icon ? <div className="shrink-0 text-[var(--ds-primary)]">{icon}</div> : null}
+        {icon ? <div className="shrink-0 text-[#1f75fe]">{icon}</div> : null}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-nav-title font-semibold text-[var(--text)] truncate">{title}</h1>
+            <h1 className="text-nav-title font-semibold text-[#0f172a] truncate">{title}</h1>
             {badge}
           </div>
           {subtitle ? (
-            <p className="text-caption text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>
+            <p className="text-xs text-[#64748b] mt-0.5 truncate">{subtitle}</p>
           ) : null}
         </div>
 
@@ -95,8 +130,8 @@ export function PageHeaderIconButton({
       className={cn(
         "w-9 h-9 flex items-center justify-center rounded-full transition-colors",
         active
-          ? "text-[var(--ds-primary)] bg-[var(--primary-light)]"
-          : "text-[var(--text-subtle)] hover:text-[var(--ds-primary)] hover:bg-[var(--surface-2)]",
+          ? "text-[#1f75fe] bg-[var(--primary-light)]"
+          : "text-[#94a3b8] hover:text-[#1f75fe] hover:bg-[#f1ede4]",
         className,
       )}
     >
@@ -121,7 +156,7 @@ export function PageHeaderAddButton({ onClick, title, className }: PageHeaderAdd
       aria-label={title ?? "Add"}
       className={cn(
         "w-9 h-9 shrink-0 flex items-center justify-center rounded-full",
-        "bg-[var(--ds-primary)] text-white hover:bg-[var(--primary-hover)]",
+        "bg-[var(--ds-primary)] text-white hover:bg-[#1a65e8]",
         "transition-colors active:scale-95 shadow-sm",
         className,
       )}

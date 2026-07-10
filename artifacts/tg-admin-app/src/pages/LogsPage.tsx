@@ -1,7 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { RefreshCw, SlidersHorizontal } from "lucide-react";
 import { api, type LogEntry, type Clinic } from "../lib/api";
 import { haptic } from "../hooks/useTgBackButton";
+import { TmaPage } from "@/components/layout/tma-page";
+import { PageHeaderIconButton } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/empty-state";
 
 const ACTION_TYPES = ["CREATE", "UPDATE", "DELETE", "login", "assign", "approve", "cancel", "view"];
 
@@ -27,6 +32,7 @@ function LogRow({ log }: { log: LogEntry }) {
 }
 
 export default function LogsPage() {
+  const navigate = useNavigate();
   const [clinicId, setClinicId] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [action, setAction] = useState<string>("");
@@ -65,35 +71,36 @@ export default function LogsPage() {
   const clearFilters = () => { setSearch(""); setAction(""); setUserId(""); setDateFrom(""); setDateTo(""); setPage(1); };
 
   return (
-    <div className="px-4 pt-6 pb-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Логи</h1>
-          <p className="text-sm text-muted-foreground">
-            {total > 0 ? `${total} событий` : "Платформенные события"}
-            {clinicId && clinics.find((c) => c.id === clinicId) ? ` · ${clinics.find((c) => c.id === clinicId)!.name}` : ""}
-          </p>
-        </div>
-        <button onClick={() => { haptic("light"); void refetch(); }}
-          className="text-sm text-primary px-3 py-1.5 bg-primary/10 rounded-lg">↻ Обновить</button>
-      </div>
-
-      {/* Primary filters */}
+    <TmaPage
+      title="Логи"
+      subtitle={
+        total > 0
+          ? `${total} событий${clinicId && clinics.find((c) => c.id === clinicId) ? ` · ${clinics.find((c) => c.id === clinicId)!.name}` : ""}`
+          : "Платформенные события"
+      }
+      onBack={() => navigate("/more")}
+      right={
+        <PageHeaderIconButton title="Обновить" onClick={() => { haptic("light"); void refetch(); }}>
+          <RefreshCw className="w-4 h-4" />
+        </PageHeaderIconButton>
+      }
+    >
       <div className="space-y-2">
         <div className="flex gap-2">
           <select
             value={clinicId}
             onChange={(e) => { setClinicId(e.target.value); setPage(1); }}
-            className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
+            className="flex-1 bg-white border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#1f75fe]"
           >
-            <option value="">🏥 Все клиники</option>
+            <option value="">Все клиники</option>
             {clinics.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`px-3 py-2 rounded-lg border text-sm transition-colors ${hasActiveFilters ? "bg-primary/10 border-primary/30 text-primary" : "bg-card border-border text-muted-foreground"}`}
+            className={`px-3 py-2 rounded-xl border text-sm transition-colors flex items-center gap-1.5 ${hasActiveFilters ? "bg-[var(--primary-light)] border-[#1f75fe]/30 text-[#1f75fe]" : "bg-white border-[#e8e3d9] text-[#64748b]"}`}
           >
-            {hasActiveFilters ? `⚡ (${[search, action, userId, dateFrom, dateTo].filter(Boolean).length})` : "⚙️"}
+            <SlidersHorizontal className="w-4 h-4" />
+            {hasActiveFilters ? `(${[search, action, userId, dateFrom, dateTo].filter(Boolean).length})` : ""}
           </button>
         </div>
 
@@ -145,7 +152,7 @@ export default function LogsPage() {
         {isLoading
           ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-14 bg-card rounded-lg border border-border animate-pulse" />)
           : logs.length === 0
-            ? <p className="text-center text-muted-foreground text-sm py-8">Логов нет</p>
+            ? <EmptyState text="Логов нет" />
             : logs.map((log) => <LogRow key={log.id} log={log} />)
         }
       </div>
@@ -160,6 +167,6 @@ export default function LogsPage() {
             className="px-4 py-2 bg-card border border-border rounded-lg text-sm disabled:opacity-40">Вперёд →</button>
         </div>
       )}
-    </div>
+    </TmaPage>
   );
 }
