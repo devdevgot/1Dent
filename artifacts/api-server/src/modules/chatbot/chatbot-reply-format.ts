@@ -214,27 +214,33 @@ export function estimateTypingPause(previousPart: string): number {
 }
 
 const MARKETING_SENTENCE_RE =
-  /скидк|акци|до\s+\d+\s*%|бесплатн.*консультац|клиника открывается|напомню:\s*первичн/i;
+  /скидк|акци|до\s+\d+\s*%|\d+\s*%\s*\(|бесплатн.*консультац|клиника открывается|напомню:\s*первичн|действует\s+с\s+\d/i;
 const ADMIN_HANDOFF_RE = /передаю.*администратор|передал.*администратор|свяжется с вами/i;
+
+/** Whether text is promo/filler that should not be sent to the patient unsolicited. */
+export function isPromoOrFillerText(text: string): boolean {
+  return MARKETING_SENTENCE_RE.test(text) || ADMIN_HANDOFF_RE.test(text);
+}
+
+/** Remove promo sentences; returns empty string if nothing usable remains. */
+export function stripPromoFromText(text: string): string {
+  const sentences = text
+    .split(/(?<=[.!?…])\s+/u)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !isPromoOrFillerText(s));
+  return sentences.slice(0, 2).join(" ").trim();
+}
 
 /** Trim filler, marketing, and overlong bubbles for WhatsApp. */
 export function conciseReply(raw: ChatbotReply): ChatbotReply {
   const normalized = normalizeReply(raw);
   const parts = normalized.parts.map(trimPartConcise).filter(Boolean);
-  if (parts.length === 0 && normalized.parts[0]) {
-    parts.push(trimPartConcise(normalized.parts[0]));
-  }
   return normalizeReply({ parts, pausesMs: defaultPauses(parts) });
 }
 
 function trimPartConcise(text: string): string {
-  const sentences = text
-    .split(/(?<=[.!?…])\s+/u)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !MARKETING_SENTENCE_RE.test(s) && !ADMIN_HANDOFF_RE.test(s));
-
-  const kept = (sentences.length > 0 ? sentences : [text]).slice(0, 2).join(" ").trim();
-  if (!kept) return text.slice(0, 180).trim();
-  if (kept.length > 200) return `${kept.slice(0, 197).trim()}…`;
-  return kept;
+  const stripped = stripPromoFromText(text);
+  if (!stripped) return "";
+  if (stripped.length > 200) return `${stripped.slice(0, 197).trim()}…`;
+  return stripped;
 }
