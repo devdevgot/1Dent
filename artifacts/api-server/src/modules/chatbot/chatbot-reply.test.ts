@@ -6,6 +6,7 @@ import {
   replyFromText,
   joinChatbotReply,
   conciseReply,
+  estimateTypingPause,
 } from "./chatbot-reply-format.ts";
 import {
   enrichReplyWithFsmFollowUp,
@@ -13,6 +14,12 @@ import {
 } from "./chatbot-reply-enrich.ts";
 
 describe("chatbot-reply", () => {
+  it("estimateTypingPause stays within 300–800ms", () => {
+    assert.equal(estimateTypingPause(""), 300);
+    assert.equal(estimateTypingPause("x".repeat(50)), 700);
+    assert.equal(estimateTypingPause("x".repeat(200)), 800);
+  });
+
   it("parses valid multi-part JSON replies", () => {
     const parsed = parseChatbotReplyJson(
       JSON.stringify({

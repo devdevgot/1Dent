@@ -49,6 +49,7 @@ export function PlaygroundTab() {
       data.pausesMs,
       (part) => setMessages((prev) => [...prev, { role: "bot", text: part }]),
       () => setIsReceivingParts(false),
+      { immediateFirst: true },
     );
   }, []);
 

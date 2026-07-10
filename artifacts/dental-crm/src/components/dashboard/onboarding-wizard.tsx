@@ -278,6 +278,7 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
           res.data?.pausesMs,
           (part) => setPlaygroundMessages((prev) => [...prev, { role: "bot", text: part }]),
           () => {},
+          { immediateFirst: true },
         );
       },
       onError: (err) => {
