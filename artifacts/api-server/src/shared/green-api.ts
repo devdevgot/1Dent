@@ -130,11 +130,17 @@ export interface ParsedWebhook {
   messageId: string;
 }
 
+/** Green API chatId: digits-only local number + @c.us (same rules as sendMessage). */
+export function normalizeGreenApiChatId(phone: string): string {
+  if (phone.includes("@")) return phone;
+  const digitsOnly = phone.replace(/\D/g, "");
+  return `${digitsOnly}@c.us`;
+}
+
 /**
  * Show or hide the typing indicator in a WhatsApp chat.
  * Green API: POST /waInstance{id}/showTyping/{token}
  * `participate: true` = start typing, `false` = stop.
- * Fire-and-forget — failures are intentionally ignored so they never block replies.
  */
 export async function showGreenApiTyping(
   instanceId: string,
@@ -144,16 +150,23 @@ export async function showGreenApiTyping(
   apiBaseUrl?: string | null,
 ): Promise<void> {
   const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/showTyping/${token}`;
-  const chatId = phone.includes("@") ? phone : `${phone}@c.us`;
+  const chatId = normalizeGreenApiChatId(phone);
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       signal: greenApiSignal(5_000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId, participate }),
     });
-  } catch {
-    // Non-critical: typing indicator failure must never block message delivery
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      logger.warn(
+        { instanceId, chatId, participate, status: res.status, body: body.slice(0, 200) },
+        "[green-api] showTyping failed",
+      );
+    }
+  } catch (err) {
+    logger.warn({ err, instanceId, chatId, participate }, "[green-api] showTyping request error");
   }
 }
 
@@ -167,8 +180,7 @@ export async function sendGreenApiFile(
   apiBaseUrl?: string | null,
 ): Promise<GreenApiSendResult> {
   const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/sendFileByUpload/${token}`;
-  const digitsOnly = phone.replace(/\D/g, "");
-  const chatId = phone.includes("@") ? phone : `${digitsOnly}@c.us`;
+  const chatId = normalizeGreenApiChatId(phone);
 
   const form = new FormData();
   form.append("chatId", chatId);
@@ -203,9 +215,7 @@ export async function sendGreenApiMessage(
   apiBaseUrl?: string | null,
 ): Promise<GreenApiSendResult> {
   const url = `${resolveInstanceBaseUrl(apiBaseUrl)}/waInstance${instanceId}/sendMessage/${token}`;
-  // Green API requires digits-only phone (no +, spaces, parens, dashes)
-  const digitsOnly = phone.replace(/\D/g, "");
-  const chatId = phone.includes("@") ? phone : `${digitsOnly}@c.us`;
+  const chatId = normalizeGreenApiChatId(phone);
 
   logger.info({ instanceId, chatId, textLength: text.length }, "[green-api] sendMessage");
 
