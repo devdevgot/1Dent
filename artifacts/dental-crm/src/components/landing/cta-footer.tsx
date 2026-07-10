@@ -1,13 +1,41 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Rocket } from "lucide-react";
+import { ArrowRight, Rocket, CheckCircle, Loader2 } from "lucide-react";
 import { FaWhatsapp, FaTelegram } from "react-icons/fa";
 import { Link } from "wouter";
 import { fadeUp, staggerParentVariants, staggerChildVariants } from "@/lib/landing-animations";
 import { SITE } from "@/config/site";
+import { submitLandingLead } from "@/lib/submit-landing-lead";
 
 export function CtaFooter() {
   const [form, setForm] = useState({ name: "", phone: "", clinic: "" });
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name.trim() || !form.phone.trim() || !form.clinic.trim()) {
+      setStatus("error");
+      setErrorMsg("Заполните все поля");
+      return;
+    }
+
+    setStatus("loading");
+    setErrorMsg("");
+
+    try {
+      await submitLandingLead({
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        clinicName: form.clinic.trim(),
+      });
+      setStatus("success");
+      setForm({ name: "", phone: "", clinic: "" });
+    } catch (err) {
+      setStatus("error");
+      setErrorMsg(err instanceof Error ? err.message : "Не удалось отправить заявку");
+    }
+  }
 
   return (
     <>
@@ -31,7 +59,7 @@ export function CtaFooter() {
               </h2>
 
               <p className="font-manrope text-[var(--dark-secondary)] text-lg leading-relaxed mb-10">
-                14 дней бесплатно. Без карты. Личная онбординг-сессия с командой {SITE.name}.
+                3 дня бесплатно. Без карты. Начните работать с {SITE.name} уже сегодня.
               </p>
 
               <Link
@@ -86,49 +114,80 @@ export function CtaFooter() {
                   Оставить заявку
                 </h3>
                 <p className="font-manrope text-white/50 text-sm mb-6">
-                  Заполните форму или сразу создайте клинику
+                  Мы свяжемся с вами или сразу создайте клинику
                 </p>
 
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder="Ваше имя"
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="landing-input-dark font-manrope"
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Номер телефона"
-                    required
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="landing-input-dark font-manrope"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Название клиники"
-                    required
-                    value={form.clinic}
-                    onChange={(e) => setForm({ ...form, clinic: e.target.value })}
-                    className="landing-input-dark font-manrope"
-                  />
-                  <Link
-                    href="/register"
-                    className="landing-btn landing-btn-accent w-full font-manrope"
-                  >
-                    Получить демо
-                    <ArrowRight size={18} />
-                  </Link>
-                </div>
+                {status === "success" ? (
+                  <div className="flex flex-col items-center gap-3 py-8 text-center">
+                    <CheckCircle size={40} className="text-green-400" />
+                    <p className="font-manrope text-white font-semibold">Заявка отправлена!</p>
+                    <p className="font-manrope text-white/50 text-sm">Мы свяжемся с вами в ближайшее время</p>
+                    <button
+                      type="button"
+                      onClick={() => setStatus("idle")}
+                      className="text-sm text-[var(--accent-blue-light)] hover:underline font-manrope mt-2"
+                    >
+                      Отправить ещё одну
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="Ваше имя"
+                      required
+                      aria-label="Ваше имя"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className="landing-input-dark font-manrope"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Номер телефона"
+                      required
+                      aria-label="Номер телефона"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      className="landing-input-dark font-manrope"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Название клиники"
+                      required
+                      aria-label="Название клиники"
+                      value={form.clinic}
+                      onChange={(e) => setForm({ ...form, clinic: e.target.value })}
+                      className="landing-input-dark font-manrope"
+                    />
+                    {status === "error" && errorMsg && (
+                      <p className="text-red-400 text-sm font-manrope">{errorMsg}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={status === "loading"}
+                      className="landing-btn landing-btn-accent w-full font-manrope disabled:opacity-60"
+                    >
+                      {status === "loading" ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          Отправка...
+                        </>
+                      ) : (
+                        <>
+                          Получить демо
+                          <ArrowRight size={18} />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
               </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      <footer className="bg-[#faf8f4] border-t border-[#e8e3d9] px-6 py-12">
+      <footer className="bg-[#faf8f4] border-t border-[#e8e3d9] px-6 py-12 landing-footer-offset">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
           <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] rounded-lg">
             <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />

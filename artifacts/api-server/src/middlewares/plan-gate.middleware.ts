@@ -12,6 +12,7 @@ const EXEMPT_PREFIXES = [
   "/api/webhook/",
   "/api/storage/",
   "/api/plan-requests",
+  "/api/landing-leads",
   "/api/ai-credits",
 ];
 

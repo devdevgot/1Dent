@@ -7,16 +7,24 @@ import { SITE } from "@/config/site";
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handler);
+    const handler = () => {
+      setScrolled(window.scrollY > 20);
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0);
+    };
+    window.addEventListener("scroll", handler, { passive: true });
+    handler();
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
   const links = [
+    { label: "Как работает", href: "#how-it-works" },
     { label: "Возможности", href: "#features" },
     { label: "Тарифы", href: "#pricing" },
+    { label: "FAQ", href: "#faq" },
     { label: "Контакты", href: "#contact" },
   ];
 
@@ -29,12 +37,18 @@ export function Navbar() {
         scrolled ? "landing-nav-scrolled" : "bg-transparent"
       }`}
     >
+      <div
+        className="landing-scroll-progress"
+        style={{ width: `${scrollProgress}%` }}
+        aria-hidden
+      />
+
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] focus-visible:ring-offset-2 rounded-lg">
           <img src="/logo_clean.png" alt={SITE.name} className="h-9 w-auto" />
         </Link>
 
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-6">
           {links.map((link) => (
             <a
               key={link.href}

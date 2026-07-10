@@ -157,7 +157,7 @@ export function AiSection() {
               viewport={{ once: true, margin: "-30px" }}
               className="grid grid-cols-3 gap-4 mt-4"
             >
-              {[{ value: "24/7", label: "Работает" }, { value: "< 2с", label: "Ответ" }, { value: "95%", label: "Точность" }].map((s) => (
+              {[{ value: "24/7", label: "Работает" }, { value: "< 2с", label: "Ответ" }, { value: "Авто", label: "Запись" }].map((s) => (
                 <motion.div
                   key={s.label}
                   variants={statsVariants}

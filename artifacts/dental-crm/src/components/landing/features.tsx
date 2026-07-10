@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { DollarSign, FileText, BarChart3, Users, Stethoscope, Zap, CheckCircle } from "lucide-react";
+import { DollarSign, Users, Stethoscope, Zap } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { fadeUp, EASE } from "@/lib/landing-animations";
 import { FdiChart, type ToothCondition } from "./dental-chart/fdi-chart";
@@ -10,7 +10,8 @@ const features = [
     icon: Users,
     label: "Канбан пациентов",
     title: "Все пациенты — по этапам лечения",
-    desc: "7 этапов: от новой заявки до завершения. Видите где каждый пациент, что нужно сделать, кто ведёт.",
+    benefit: "Видите воронку от заявки до повторной продажи",
+    desc: "Полная воронка: от новой заявки до завершения и repeat sale. Каждый пациент на своём этапе — ничего не теряется.",
     color: "#e0e7ff",
     accent: "#4f46e5",
     mockup: "kanban",
@@ -19,6 +20,7 @@ const features = [
     icon: FaWhatsapp,
     label: "WhatsApp + ИИ",
     title: "Общение с пациентами прямо в системе",
+    benefit: "Ни одна заявка не останется без ответа",
     desc: "Всё в одном месте: входящие, исходящие, ИИ-чатбот отвечает сам. Администраторы не теряют заявки.",
     color: "#d1fae5",
     accent: "#059669",
@@ -28,6 +30,7 @@ const features = [
     icon: DollarSign,
     label: "Финансы",
     title: "Финансы клиники под контролем",
+    benefit: "Понимаете, сколько зарабатываете каждый день",
     desc: "Доходы, расходы, зарплаты, задолженности. Kaspi, наличные, терминал — всё учитывается автоматически.",
     color: "#fef3c7",
     accent: "#d97706",
@@ -37,28 +40,11 @@ const features = [
     icon: Stethoscope,
     label: "FDI зубная карта",
     title: "Цифровая карта зубов каждого пациента",
+    benefit: "Вся история лечения в одном месте",
     desc: "32-зубная FDI схема, история лечения, состояния: коронка, имплант, удаление. Всё в карточке пациента.",
     color: "#fce7f3",
     accent: "#db2777",
     mockup: "tooth",
-  },
-  {
-    icon: FileText,
-    label: "Электронные договоры",
-    title: "Договоры за секунды",
-    desc: "Шаблоны, автозаполнение данных пациента, подпись — без принтера и бумажной волокиты.",
-    color: "#e0f2fe",
-    accent: "#0284c7",
-    mockup: "contract",
-  },
-  {
-    icon: BarChart3,
-    label: "Аналитика",
-    title: "Данные, которые помогают расти",
-    desc: "Откуда приходят пациенты, кто из врачей работает лучше, сколько клиника зарабатывает — по дням, неделям, месяцам.",
-    color: "#f0fdf4",
-    accent: "#16a34a",
-    mockup: "analytics",
   },
 ];
 
@@ -166,77 +152,28 @@ function ToothPreview() {
   );
 }
 
-function ContractPreview() {
-  return (
-    <div className="landing-mockup bg-white p-4 w-full">
-      <div className="text-xs font-manrope font-bold text-[#0f172a] mb-3">Договор</div>
-      <div className="space-y-2">
-        {[
-          { label: "Пациент", value: "Асель Нурова" },
-          { label: "Процедура", value: "Имплантация" },
-          { label: "Сумма", value: "₸ 250,000" },
-          { label: "Статус", value: "Подписан", signed: true },
-        ].map((row) => (
-          <div key={row.label} className="flex justify-between items-center py-1 border-b border-[var(--surface-2)]">
-            <span className="text-[10px] font-manrope text-[#94a3b8]">{row.label}</span>
-            <span className={`text-[10px] font-manrope font-semibold flex items-center gap-1 ${"signed" in row && row.signed ? "text-green-600" : "text-[#0f172a]"}`}>
-              {"signed" in row && row.signed && <CheckCircle size={9} className="text-green-500" />}
-              {row.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsPreview() {
-  const channels = [
-    { label: "Instagram", pct: 38, color: "#e91e8c" },
-    { label: "2GIS", pct: 27, color: "#1f75fe" },
-    { label: "WhatsApp", pct: 22, color: "#22c55e" },
-    { label: "Другое", pct: 13, color: "#94a3b8" },
-  ];
-  return (
-    <div className="landing-mockup bg-white p-4 w-full">
-      <div className="text-xs font-manrope font-bold text-[#0f172a] mb-3">Источники пациентов</div>
-      <div className="space-y-2">
-        {channels.map((c) => (
-          <div key={c.label}>
-            <div className="flex justify-between mb-0.5">
-              <span className="text-[10px] font-manrope text-[#64748b]">{c.label}</span>
-              <span className="text-[10px] font-manrope font-bold text-[#0f172a]">{c.pct}%</span>
-            </div>
-            <div className="h-1.5 bg-[#f1ede4] rounded-full">
-              <div className="h-1.5 rounded-full" style={{ width: `${c.pct}%`, backgroundColor: c.color }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 const mockupComponents: Record<string, React.ComponentType> = {
-  kanban: KanbanPreview, whatsapp: WhatsAppPreview, finance: FinancePreview,
-  tooth: ToothPreview, contract: ContractPreview, analytics: AnalyticsPreview,
+  kanban: KanbanPreview,
+  whatsapp: WhatsAppPreview,
+  finance: FinancePreview,
+  tooth: ToothPreview,
 };
 
 export function Features() {
   return (
-    <section id="features" className="bg-[#faf8f4] landing-section-sm px-6">
+    <section id="features" className="bg-[#f1ede4] landing-section-sm px-6">
       <div className="max-w-7xl mx-auto">
         <motion.div {...fadeUp(0)} className="text-center mb-20">
           <div className="landing-badge landing-badge-primary font-manrope mb-6">
             <Zap size={14} />
-            <span>Всё что нужно — внутри</span>
+            <span>Основа системы</span>
           </div>
           <h2 className="landing-h2 font-manrope text-[#0f172a]">
             Что умеет {SITE.name}
           </h2>
         </motion.div>
 
-        <div className="space-y-24">
+        <div className="space-y-16 lg:space-y-20">
           {features.map((feature, i) => {
             const MockupComp = mockupComponents[feature.mockup];
             const isEven = i % 2 === 0;
@@ -258,9 +195,12 @@ export function Features() {
                     <feature.icon size={14} />
                     <span>{feature.label}</span>
                   </div>
-                  <h3 className="landing-h3 font-manrope text-[#0f172a] mb-4">
+                  <h3 className="landing-h3 font-manrope text-[#0f172a] mb-3">
                     {feature.title}
                   </h3>
+                  <p className="font-manrope font-semibold text-[#0f172a] text-sm mb-3">
+                    Результат: {feature.benefit}
+                  </p>
                   <p className="landing-lead font-manrope">{feature.desc}</p>
                 </div>
 

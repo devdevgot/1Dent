@@ -92,10 +92,10 @@ export function SocialProof() {
         <div className="landing-divider mb-16" />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-24">
-          <StatCard value={10} suffix="+" label="модулей системы" delay={0} />
-          <StatCard value={3} suffix="" label="тарифных плана" delay={0.1} />
-          <StatCard value={5} suffix="" label="ролей доступа" delay={0.2} />
-          <StatCard value={24} suffix="/7" label="ИИ-чатбот работает" delay={0.3} />
+          <StatCard value={1} suffix="" label="система для всей клиники" delay={0} />
+          <StatCard value={24} suffix="/7" label="ИИ-чатбот работает" delay={0.1} />
+          <StatCard value={3} suffix="" label="дня бесплатно" delay={0.2} />
+          <StatCard value={7} suffix="+" label="ролей доступа" delay={0.3} />
         </div>
 
         <motion.h2

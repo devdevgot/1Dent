@@ -19,3 +19,4 @@ export * from "./error-events";
 export * from "./tablet";
 export * from "./tablet-videos";
 export * from "./reviews";
+export * from "./landing-leads";
