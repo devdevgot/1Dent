@@ -62,7 +62,14 @@ export function parseChatbotAgentTurn(raw: string | null): ChatbotAgentTurn | nu
     }
 
     const reply = typeof parsed["reply"] === "string" ? parsed["reply"].trim() : "";
-    if (!reply) return parseAgentReplyOnly(raw);
+    const replyPartsRaw = parsed["replyParts"];
+    const replyParts = Array.isArray(replyPartsRaw)
+      ? replyPartsRaw
+          .filter((p): p is string => typeof p === "string")
+          .map((p) => p.trim())
+          .filter(Boolean)
+      : [];
+    if (!reply && replyParts.length === 0) return parseAgentReplyOnly(raw);
 
     const actionsRaw = parsed["actions"];
     const actions = Array.isArray(actionsRaw)
@@ -70,7 +77,8 @@ export function parseChatbotAgentTurn(raw: string | null): ChatbotAgentTurn | nu
       : [];
 
     return {
-      reply,
+      reply: reply || replyParts[0] || "",
+      replyParts: reply ? replyParts : replyParts.slice(1),
       mindMapNodeId:
         parsed["mindMapNodeId"] === null
           ? null

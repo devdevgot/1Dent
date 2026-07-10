@@ -33,6 +33,8 @@ export interface ChatbotAgentAction {
 /** Structured turn output from the LLM agent orchestrator. */
 export interface ChatbotAgentTurn {
   reply: string;
+  /** Optional 2nd/3rd WhatsApp bubbles after reply (funnel follow-ups). */
+  replyParts?: string[];
   /** Target mind map node — must be reachable from current node */
   mindMapNodeId?: string | null;
   /** Derived FSM hint for analytics and FACTS filtering */
