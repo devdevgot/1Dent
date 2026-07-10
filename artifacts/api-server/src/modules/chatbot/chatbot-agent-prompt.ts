@@ -33,7 +33,7 @@ const AGENT_JSON_SCHEMA = `{
 export function buildAgentOrchestratorPrompt(opts: BuildAgentPromptOpts): string {
   const channelNote =
     opts.channel === "playground"
-      ? "Тестовый режим (playground)."
+      ? "Режим playground: отвечай ИДЕНТИЧНО реальному WhatsApp-диалогу (та же модель и логика). Записи, пациенты и уведомления на сервере не создаются — только симуляция, но текст для пациента должен быть таким же."
       : "Реальный диалог WhatsApp.";
 
   const toolsList = CHATBOT_AGENT_ACTION_TYPES.map((t) => `- ${t}`).join("\n");
@@ -41,11 +41,11 @@ export function buildAgentOrchestratorPrompt(opts: BuildAgentPromptOpts): string
   const factsBlock = buildFactsBlock(opts.facts, opts.fsmState);
 
   const scriptSection =
-    opts.channel === "playground"
-      ? [opts.script.compactPath.trim(), opts.script.outgoingTransitions.trim()]
-          .filter(Boolean)
-          .join("\n") || "(скрипт не задан — следуй этапам FSM)"
-      : opts.script.fullScript.trim() || "(скрипт не задан — следуй этапам FSM)";
+    opts.script.fullScript.trim() ||
+    [opts.script.compactPath.trim(), opts.script.outgoingTransitions.trim()]
+      .filter(Boolean)
+      .join("\n") ||
+    "(скрипт не задан — следуй этапам FSM)";
 
   return [
     "=== ROLE ===",

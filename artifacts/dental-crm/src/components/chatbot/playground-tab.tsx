@@ -24,6 +24,7 @@ export function PlaygroundTab() {
     label: string;
     fsmState?: string;
   } | null>(null);
+  const [simulatedActions, setSimulatedActions] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cancelPartsRef = useRef<(() => void) | null>(null);
@@ -40,6 +41,7 @@ export function PlaygroundTab() {
     });
     setHumanTakeover(!!data.humanTakeover);
     setActiveMindMapNode(data.mindMapNode ?? null);
+    setSimulatedActions(data.simulatedActions ?? []);
     setIsReceivingParts(true);
     cancelPartsRef.current?.();
     cancelPartsRef.current = schedulePlaygroundBotParts(
@@ -113,6 +115,7 @@ export function PlaygroundTab() {
     setSession(null);
     setHumanTakeover(false);
     setActiveMindMapNode(null);
+    setSimulatedActions([]);
   }, []);
 
   const handleSend = () => {
@@ -181,7 +184,7 @@ export function PlaygroundTab() {
               </div>
               <p className="text-base font-medium text-[#0f172a]">Playground готов</p>
               <p className="text-sm text-[#64748b] mt-2 max-w-[280px] leading-relaxed">
-                Напишите как пациент — бот ответит по вашему mind map и agent mode
+                Напишите как пациент — тот же ИИ и логика, что в WhatsApp. Записи в CRM не создаются.
               </p>
             </div>
           )}
@@ -221,6 +224,22 @@ export function PlaygroundTab() {
               </div>
             </div>
           )}
+
+          {simulatedActions.length > 0 && !testMessage.isPending && !isReceivingParts && (
+            <div className="rounded-xl border border-dashed border-amber-300/80 bg-amber-50/90 px-3.5 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800 mb-1.5">
+                Симуляция — в CRM не создано
+              </p>
+              <ul className="space-y-1">
+                {simulatedActions.map((action, idx) => (
+                  <li key={idx} className="text-xs text-amber-950 leading-snug">
+                    • {action}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div ref={bottomRef} className="h-1 shrink-0" />
         </div>
 

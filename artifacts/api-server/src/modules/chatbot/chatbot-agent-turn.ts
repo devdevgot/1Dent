@@ -1,4 +1,4 @@
-import { createChatCompletion, CHAT_MODEL, FAST_MODEL } from "../../lib/openrouter-client";
+import { createChatCompletion, CHAT_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import type { ChatbotSettings } from "@workspace/db";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
@@ -156,8 +156,9 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     { role: "user", content: messageText },
   ];
 
-  const llmModel = dryRun ? FAST_MODEL : CHAT_MODEL;
-  const llmTimeoutMs = dryRun ? 20_000 : 35_000;
+  const llmModel = CHAT_MODEL;
+  const llmTimeoutMs = 35_000;
+  const llmMaxTokens = 1024;
 
   let agentTurn = null;
   let usedParseFallback = false;
@@ -168,7 +169,7 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
         messages,
         response_format: { type: "json_object" },
         temperature: 0.65,
-        max_tokens: dryRun ? 768 : 1024,
+        max_tokens: llmMaxTokens,
       },
       { timeoutMs: llmTimeoutMs, label: dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn" },
     );
@@ -354,7 +355,9 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
   }
 
   if (toolResult.toolNotes.length > 0 && dryRun) {
-    noteAction(`Tools: ${toolResult.toolNotes.join("; ")}`);
+    for (const note of toolResult.toolNotes) {
+      noteAction(note);
+    }
   }
 
   if (!data.activeMindMapNodeId && state) {

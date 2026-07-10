@@ -57,7 +57,6 @@ import {
 } from "./chatbot-ab-funnel";
 import {
   formatSlotAlternatives,
-  getClinicDoctorsLightweight,
   getClinicDoctorsWithSlots,
   getDoctorAvailableSlots,
   validateAppointmentSlot,
@@ -1460,13 +1459,14 @@ async function finalizeBookingAppointment(params: {
       const serviceLabel =
         data.serviceType && data.serviceType !== "unknown" ? data.serviceType : "consultation";
       if (data.isReschedule && data.existingProcedureId) {
-        noteAction(`Перенос записи на ${formatAlmatyDateTimeLong(preferredDate)}, филиал: ${branchToSave}`);
+        noteAction(`[Симуляция] Перенос записи на ${formatAlmatyDateTimeLong(preferredDate)}, филиал: ${branchToSave}`);
       } else {
         noteAction(
-          `Создание записи: ${data.patientName ?? "пациент"} → ${data.suggestedDoctorName ?? "врач"}, ${serviceLabel}, ${formatAlmatyDateTimeLong(preferredDate)}, филиал: ${branchToSave}`,
+          `[Симуляция] Создание записи: ${data.patientName ?? "пациент"} → ${data.suggestedDoctorName ?? "врач"}, ${serviceLabel}, ${formatAlmatyDateTimeLong(preferredDate)}, филиал: ${branchToSave}`,
         );
       }
       data.createdPatientId = data.existingPatientId ?? "sim-new-patient-id";
+      data.createdProcedureId = data.createdProcedureId ?? "sim-procedure-id";
     } else if (data.isReschedule && data.existingProcedureId) {
       await db
         .update(proceduresTable)
@@ -1644,7 +1644,7 @@ function formatSimulateMessageResult(
   };
 }
 
-const PLAYGROUND_TURN_TIMEOUT_MS = 28_000;
+const PLAYGROUND_TURN_TIMEOUT_MS = 42_000;
 
 function buildPlaygroundFallbackResult(
   opts: {
@@ -1806,9 +1806,9 @@ export class ChatbotService {
     let clinicName: string | undefined;
     let clinicBranchNames: string[] = [];
     try {
-      const doctorsPromise = dryRun
-        ? getClinicDoctorsLightweight(clinicId).catch(() => [] as DoctorWithSlots[])
-        : getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(() => [] as DoctorWithSlots[]);
+      const doctorsPromise = getClinicDoctorsWithSlots(clinicId, calendarConfig).catch(
+        () => [] as DoctorWithSlots[],
+      );
       [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName, clinicBranchNames] = await Promise.all([
         getManagerExamples(clinicId),
         loadKnowledgeContext(clinicId, messageText),
@@ -2149,6 +2149,8 @@ export class ChatbotService {
       session.humanTakeover = agentOutcome.humanTakeover;
       if (agentOutcome.humanTakeover && !dryRun) {
         await this.notifyHumanTakeover(clinicId, phone, agentOutcome.data.patientName, agentOutcome.data.handoffSummary);
+      } else if (agentOutcome.humanTakeover && dryRun) {
+        noteAction("[Симуляция] Передача диалога оператору (уведомление не отправлено)");
       }
       return finishTurn(session, agentOutcome.response);
     }
@@ -3397,7 +3399,7 @@ export class ChatbotService {
           let slotOk = true;
           let slotHint = "";
 
-          if (doctorId && !dryRun) {
+          if (doctorId) {
             const validation = await validateAppointmentSlot(
               clinicId,
               doctorId,
@@ -3416,9 +3418,12 @@ export class ChatbotService {
                   : validation.reason === "day_full"
                     ? `На этот день у врача уже полная запись.${alt}\n\nПредложите другой день.`
                     : `Это время вне рабочих часов клиники.${alt}\n\nУкажите время в рабочие часы.`;
+              if (dryRun) {
+                noteAction(`Слот недоступен (${validation.reason}): ${formatAlmatyDateTimeLong(extractedDate)}`);
+              }
+            } else if (dryRun) {
+              noteAction(`Слот доступен: ${formatAlmatyDateTimeLong(extractedDate)}`);
             }
-          } else if (doctorId && dryRun) {
-            noteAction(`Проверка слота в календаре: ${formatAlmatyDateTimeLong(extractedDate)}`);
           }
 
           if (!slotOk) {
