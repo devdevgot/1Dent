@@ -291,6 +291,28 @@ test("buildAgentOrchestratorPrompt: includes multi-message replyParts schema", a
   assert.match(prompt, /удобное время/i);
 });
 
+test("parseChatbotAgentTurn: parses parts alias as replyParts", async () => {
+  const { parseChatbotAgentTurn } = await import("./chatbot-agent-parser.ts");
+  const turn = parseChatbotAgentTurn(
+    JSON.stringify({
+      reply: "У нас несколько филиалов.",
+      parts: ["1️⃣ ул. A", "Какой удобнее?"],
+      actions: [],
+    }),
+  );
+  assert.equal(turn?.reply, "У нас несколько филиалов.");
+  assert.deepEqual(turn?.replyParts, ["1️⃣ ул. A", "Какой удобнее?"]);
+});
+
+test("parseChatbotAgentTurn: recovers from markdown-wrapped JSON", async () => {
+  const { parseChatbotAgentTurn } = await import("./chatbot-agent-parser.ts");
+  const turn = parseChatbotAgentTurn(
+    '```json\n{"reply":"Здравствуйте!","replyParts":["Чем помочь?"],"actions":[]}\n```',
+  );
+  assert.equal(turn?.reply, "Здравствуйте!");
+  assert.deepEqual(turn?.replyParts, ["Чем помочь?"]);
+});
+
 test("parseChatbotAgentTurn: recovers reply from truncated JSON", async () => {
   const { parseChatbotAgentTurn } = await import("./chatbot-agent-parser.ts");
   const turn = parseChatbotAgentTurn(

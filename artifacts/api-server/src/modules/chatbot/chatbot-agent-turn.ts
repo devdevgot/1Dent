@@ -1,9 +1,9 @@
-import { createChatCompletion, CHAT_MODEL } from "../../lib/openrouter-client";
+import { createChatCompletion, CHAT_MODEL, FAST_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import type { ChatbotSettings } from "@workspace/db";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
 import type { ChatMessage } from "./ai-classifier";
-import { mergeReply, appendToReply, replyFromText, joinChatbotReply, conciseReply } from "./ai-classifier";
+import { mergeReply, appendToReply, replyFromText, joinChatbotReply, conciseReply, generateChatbotResponse } from "./ai-classifier";
 import type { ChatbotReply } from "./chatbot-reply";
 import { replyFromAgentText, enrichReplyWithFsmFollowUp } from "./chatbot-reply-enrich";
 import { buildKnowledgeAgentPrompt } from "./chatbot-knowledge-agent-prompt";
@@ -16,6 +16,8 @@ import {
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 
 type OutboundResponse = ChatbotReply | null;
+
+type AgentLlmMessage = { role: "system" | "user" | "assistant"; content: string };
 
 function finalizeAgentReply(
   agentReply: ChatbotReply,
@@ -58,6 +60,47 @@ function buildKnowledgeFallbackReply(data: ChatbotSessionData): string {
     return `Отлично, филиал «${data.selectedBranch}». Подскажите, с чем обращаетесь?`;
   }
   return "Подскажите, чем могу помочь?";
+}
+
+async function fetchAgentLlmRaw(messages: AgentLlmMessage[], dryRun: boolean): Promise<string | null> {
+  const label = dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn";
+  const attempts: Array<{
+    model: string;
+    jsonMode: boolean;
+    disableReasoning?: boolean;
+    timeoutMs: number;
+    attemptLabel: string;
+  }> = [
+    { model: CHAT_MODEL, jsonMode: true, timeoutMs: 28_000, attemptLabel: label },
+    { model: CHAT_MODEL, jsonMode: false, timeoutMs: 28_000, attemptLabel: `${label}Plain` },
+    { model: FAST_MODEL, jsonMode: true, disableReasoning: true, timeoutMs: 20_000, attemptLabel: `${label}FastJson` },
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const completion = await createChatCompletion(
+        {
+          model: attempt.model,
+          messages,
+          ...(attempt.jsonMode ? { response_format: { type: "json_object" } } : {}),
+          temperature: attempt.jsonMode ? 0.35 : 0.4,
+          max_tokens: 720,
+        },
+        {
+          timeoutMs: attempt.timeoutMs,
+          label: attempt.attemptLabel,
+          disableReasoning: attempt.disableReasoning,
+        },
+      );
+      const raw = completion.choices[0]?.message?.content?.trim() ?? null;
+      if (raw) return raw;
+      logger.warn({ label: attempt.attemptLabel }, "[AgentTurn] Empty LLM content — next attempt");
+    } catch (err) {
+      logger.warn({ err, label: attempt.attemptLabel }, "[AgentTurn] LLM attempt failed");
+    }
+  }
+
+  return null;
 }
 
 export interface AgentTurnDeps {
@@ -117,38 +160,21 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     sessionData: data,
   });
 
-  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+  const messages: AgentLlmMessage[] = [
     { role: "system", content: systemPrompt },
     ...recentMessages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
     { role: "user", content: messageText },
   ];
 
-  let agentTurn = null;
-
-  try {
-    const completion = await createChatCompletion(
-      {
-        model: CHAT_MODEL,
-        messages,
-        response_format: { type: "json_object" },
-        temperature: 0.35,
-        max_tokens: 720,
-      },
-      {
-        timeoutMs: 28_000,
-        label: dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn",
-      },
-    );
-    const raw = completion.choices[0]?.message?.content ?? null;
-    agentTurn = parseChatbotAgentTurn(raw);
-    if (!agentTurn) {
-      logger.warn({ rawSnippet: raw?.slice(0, 300) }, "[AgentTurn] Invalid agent JSON");
-    }
-  } catch (err) {
-    logger.error({ err }, "[AgentTurn] LLM call failed");
-  }
+  const raw = await fetchAgentLlmRaw(messages, dryRun);
+  let agentTurn = raw ? parseChatbotAgentTurn(raw) : null;
 
   if (!agentTurn) {
+    logger.warn(
+      { dryRun, rawSnippet: raw?.slice(0, 200) ?? null },
+      "[AgentTurn] Structured JSON unavailable — using plain-text fallback",
+    );
+
     const toolResult = await executeChatbotAgentTools(data, [], undefined, {
       clinicId,
       phone,
@@ -161,11 +187,39 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     });
     data = toolResult.data;
     state = deriveFsmStateFromAgent(data, state);
-    const reply = finalizeAgentReply(replyFromText(buildKnowledgeFallbackReply(data)), toolResult, data.urgency);
+
+    const plainPrompt = [
+      composedSystemPrompt,
+      "",
+      "Отвечай как живой менеджер в WhatsApp.",
+      "Коротко, 1–3 сообщения. Разделяй смысл абзацами — каждый абзац отдельное сообщение.",
+      "Не используй JSON и не упоминай технические ошибки.",
+    ].join("\n");
+
+    const recoveredTurn = raw ? parseChatbotAgentTurn(raw) : null;
+    const aiReply = await generateChatbotResponse(plainPrompt, recentMessages, messageText);
+    const baseReply =
+      aiReply?.parts.length
+        ? aiReply
+        : recoveredTurn
+          ? replyFromAgentText(recoveredTurn.reply, recoveredTurn.replyParts)
+          : replyFromText(buildKnowledgeFallbackReply(data));
+
+    const reply = finalizeAgentReply(
+      enrichReplyWithFsmFollowUp(baseReply, {
+        fsmState: state,
+        sessionData: data,
+        clinicBranchNames,
+        messageText,
+      }),
+      toolResult,
+      data.urgency,
+    );
+
     if (dryRun) {
       for (const note of toolResult.toolNotes) noteAction(note);
-      noteAction("Fallback: JSON недоступен");
     }
+
     return { state, data, response: reply, humanTakeover: false };
   }
 

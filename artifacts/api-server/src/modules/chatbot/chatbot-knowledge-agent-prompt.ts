@@ -76,7 +76,8 @@ export function buildKnowledgeAgentPrompt(opts: BuildKnowledgeAgentPromptOpts): 
     'Запись: reply «Помогу с записью.» → replyParts: [«Что беспокоит?»]',
     "",
     "=== OUTPUT ===",
-    "Верни ТОЛЬКО валидный JSON без markdown.",
+    "Верни ТОЛЬКО валидный JSON. Ответ должен начинаться с { и заканчиваться }.",
+    "Без markdown, без комментариев, без текста до или после JSON.",
     AGENT_JSON_SCHEMA,
   ].join("\n");
 }

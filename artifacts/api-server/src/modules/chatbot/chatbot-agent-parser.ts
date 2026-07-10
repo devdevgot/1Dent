@@ -1,4 +1,4 @@
-import { parseLlmJson } from "../../lib/openrouter-client";
+import { parseLlmJson, sanitizeJsonResponse } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import type {
   ChatbotAgentTurn,
@@ -53,14 +53,7 @@ function normalizeIntent(raw: unknown): ChatbotAgentIntent | undefined {
 }
 
 function extractJsonCandidate(raw: string): string {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenced?.[1]?.trim()) return fenced[1].trim();
-  const firstBrace = raw.indexOf("{");
-  const lastBrace = raw.lastIndexOf("}");
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return raw.slice(firstBrace, lastBrace + 1);
-  }
-  return raw.trim();
+  return sanitizeJsonResponse(raw);
 }
 
 function repairTruncatedAgentJson(raw: string): string | null {
@@ -81,15 +74,30 @@ function repairTruncatedAgentJson(raw: string): string | null {
   return repaired;
 }
 
+function readReplyText(parsed: Record<string, unknown>): string {
+  for (const key of ["reply", "text", "message", "content"]) {
+    const value = parsed[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function readReplyParts(parsed: Record<string, unknown>): string[] {
+  for (const key of ["replyParts", "parts", "messages"]) {
+    const raw = parsed[key];
+    if (!Array.isArray(raw)) continue;
+    const parts = raw
+      .filter((p): p is string => typeof p === "string")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length > 0) return parts;
+  }
+  return [];
+}
+
 function buildTurnFromParsed(parsed: Record<string, unknown>): ChatbotAgentTurn | null {
-  const reply = typeof parsed["reply"] === "string" ? parsed["reply"].trim() : "";
-  const replyPartsRaw = parsed["replyParts"];
-  const replyParts = Array.isArray(replyPartsRaw)
-    ? replyPartsRaw
-        .filter((p): p is string => typeof p === "string")
-        .map((p) => p.trim())
-        .filter(Boolean)
-    : [];
+  const reply = readReplyText(parsed);
+  const replyParts = readReplyParts(parsed);
   if (!reply && replyParts.length === 0) return null;
 
   const actionsRaw = parsed["actions"];
@@ -113,69 +121,93 @@ function buildTurnFromParsed(parsed: Record<string, unknown>): ChatbotAgentTurn 
   };
 }
 
+function decodeJsonStringLiteral(raw: string): string | null {
+  try {
+    return (JSON.parse(`"${raw}"`) as string).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function extractReplyFieldsRegex(raw: string): ChatbotAgentTurn | null {
+  const replyMatch = raw.match(/"(?:reply|text|message)"\s*:\s*"((?:[^"\\]|\\.)*)"/s);
+  const reply = replyMatch?.[1] ? decodeJsonStringLiteral(replyMatch[1]) : null;
+
+  const parts: string[] = [];
+  const partsBlock = raw.match(/"(?:replyParts|parts)"\s*:\s*\[([\s\S]*?)\]/);
+  if (partsBlock?.[1]) {
+    const partMatches = partsBlock[1].matchAll(/"((?:[^"\\]|\\.)*)"/g);
+    for (const m of partMatches) {
+      const part = decodeJsonStringLiteral(m[1] ?? "");
+      if (part) parts.push(part);
+    }
+  }
+
+  if (!reply && parts.length === 0) return null;
+
+  return {
+    reply: reply || parts[0] || "",
+    replyParts: reply ? parts : parts.slice(1),
+    actions: [],
+  };
+}
+
+function looksLikeJsonPayload(raw: string): boolean {
+  const trimmed = raw.trim();
+  return trimmed.startsWith("{") || trimmed.startsWith("```") || trimmed.includes('"reply"');
+}
+
 /** Parse LLM JSON into ChatbotAgentTurn. */
 export function parseChatbotAgentTurn(raw: string | null): ChatbotAgentTurn | null {
   if (!raw?.trim()) return null;
 
-  const candidates = [extractJsonCandidate(raw), repairTruncatedAgentJson(raw)].filter(
-    (c): c is string => Boolean(c?.trim()),
-  );
+  const candidates = [
+    extractJsonCandidate(raw),
+    repairTruncatedAgentJson(raw),
+    raw.trim(),
+  ].filter((c): c is string => Boolean(c?.trim()));
 
-  for (const candidate of candidates) {
-    try {
-      const parsed = parseLlmJson<Record<string, unknown>>(candidate);
-      if (parsed && typeof parsed === "object") {
-        const turn = buildTurnFromParsed(parsed);
-        if (turn) return turn;
-      }
-    } catch {
-      /* try next candidate */
-    }
-  }
+  const uniqueCandidates = [...new Set(candidates)];
 
-  try {
-    const parsed = parseLlmJson<Record<string, unknown>>(raw);
+  for (const candidate of uniqueCandidates) {
+    const parsed = parseLlmJson<Record<string, unknown>>(candidate);
     if (parsed && typeof parsed === "object") {
       const turn = buildTurnFromParsed(parsed);
       if (turn) return turn;
     }
-  } catch (err) {
-    logger.warn({ err, rawSnippet: raw.slice(0, 200) }, "[AgentTurn] Failed to parse agent JSON");
   }
 
-  return parseAgentReplyOnly(raw);
+  const regexTurn = extractReplyFieldsRegex(raw);
+  if (regexTurn) return regexTurn;
+
+  const recovered = parseAgentReplyOnly(raw);
+  if (!recovered) {
+    logger.warn({ rawSnippet: raw.slice(0, 200) }, "[AgentTurn] Failed to parse agent JSON");
+  }
+  return recovered;
 }
 
 /** Recover at least the reply field when full JSON is malformed. */
 export function parseAgentReplyOnly(raw: string | null): ChatbotAgentTurn | null {
   if (!raw?.trim()) return null;
 
+  const regexTurn = extractReplyFieldsRegex(raw);
+  if (regexTurn) return regexTurn;
+
   for (const candidate of [extractJsonCandidate(raw), repairTruncatedAgentJson(raw), raw].filter(
     (c): c is string => Boolean(c?.trim()),
   )) {
     const parsed = parseLlmJson<Record<string, unknown>>(candidate);
-    if (parsed && typeof parsed["reply"] === "string" && parsed["reply"].trim()) {
-      return { reply: parsed["reply"].trim(), actions: [] };
-    }
-  }
-
-  const match = raw.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-  if (match?.[1]) {
-    try {
-      const reply = JSON.parse(`"${match[1]}"`) as string;
-      if (reply.trim()) return { reply: reply.trim(), actions: [] };
-    } catch {
-      /* ignore */
+    if (parsed) {
+      const turn = buildTurnFromParsed(parsed);
+      if (turn) return turn;
+      const reply = readReplyText(parsed);
+      if (reply) return { reply, actions: [] };
     }
   }
 
   const plain = raw.trim();
-  if (
-    plain.length >= 2 &&
-    plain.length <= 500 &&
-    !plain.startsWith("{") &&
-    !plain.includes('"mindMapNodeId"')
-  ) {
+  if (plain.length >= 2 && plain.length <= 2000 && !looksLikeJsonPayload(plain)) {
     return { reply: plain, actions: [] };
   }
 
