@@ -5,7 +5,11 @@ export const LAYOUT_NODE_W = 264;
 export const LAYOUT_NODE_H = 120;
 export const LAYOUT_H_GAP = 32;
 export const LAYOUT_V_GAP = 80;
+export const LAYOUT_SPINE_V_GAP = 112;
 export const LAYOUT_MAX_COLS = 3;
+
+/** Meta nodes hidden in focus view for a cleaner spine. */
+export const FOCUS_SKIP_NODE_IDS = new Set(["booking-root"]);
 
 /** Default booking spine — used for focus mode when ids match. */
 export const DEFAULT_MAIN_PATH_IDS = [
@@ -19,6 +23,11 @@ export const DEFAULT_MAIN_PATH_IDS = [
   "step4-booking",
   "step4-confirm",
 ];
+
+/** Visible steps in simplified focus mode (happy path only). */
+export const DEFAULT_FOCUS_SPINE_IDS = DEFAULT_MAIN_PATH_IDS.filter(
+  (id) => !FOCUS_SKIP_NODE_IDS.has(id),
+);
 
 export function hasSavedMindMapPositions(
   nodes: Array<{ position?: { x: number; y: number } }>,
@@ -122,6 +131,46 @@ export function layoutMindMapPipeline(nodes: Node[], edges: Edge[]): Node[] {
   return nodes.map((n) => ({ ...n, position: pos[n.id] ?? n.position }));
 }
 
+/** IDs shown in simplified focus mode — main happy path without meta/branch clutter. */
+export function getFocusSpineIds(
+  mainPathIds: string[],
+  nodes: Array<{ id: string }>,
+): string[] {
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const known = DEFAULT_FOCUS_SPINE_IDS.filter((id) => nodeIds.has(id));
+  if (known.length >= 4) return known;
+
+  const trimmed = mainPathIds.filter((id) => !FOCUS_SKIP_NODE_IDS.has(id) && nodeIds.has(id));
+  return trimmed.length >= 3 ? trimmed : mainPathIds.filter((id) => nodeIds.has(id));
+}
+
+/** Vertical single-column layout for focus mode — easy to read top-to-bottom. */
+export function layoutFocusSpine(nodes: Node[], spineIds: string[]): Node[] {
+  if (!spineIds.length) return nodes;
+  const spineSet = new Set(spineIds);
+
+  return nodes.map((n) => {
+    if (!spineSet.has(n.id)) return n;
+    const idx = spineIds.indexOf(n.id);
+    return {
+      ...n,
+      position: {
+        x: -LAYOUT_NODE_W / 2,
+        y: idx * LAYOUT_SPINE_V_GAP,
+      },
+    };
+  });
+}
+
+/** Count nodes hidden when showing focus spine only. */
+export function countHiddenOffSpineNodes(
+  allNodeIds: string[],
+  spineIds: string[],
+): number {
+  const spine = new Set(spineIds);
+  return allNodeIds.filter((id) => !spine.has(id)).length;
+}
+
 /** Service-type branches (e.g. 7 услуг под intro) — hide in focus mode. */
 export function getServiceBranchIds(
   nodes: Array<{ id: string; fsmState?: string; label?: string }>,
@@ -217,18 +266,23 @@ function pathExistsViaHidden(
 export function filterFocusGraph(
   nodes: Node[],
   edges: Edge[],
-  mainPathIds: string[],
+  spineIds: string[],
   hideBranchIds: Set<string>,
 ): { nodes: Node[]; edges: Edge[] } {
-  const keep = new Set(mainPathIds.filter((id) => !hideBranchIds.has(id)));
+  const keep = new Set(spineIds.filter((id) => !hideBranchIds.has(id)));
   const visibleNodes = nodes.filter((n) => keep.has(n.id));
   const edgePairs = edges.map((e) => ({ source: e.source, target: e.target }));
 
-  const visibleEdges: Edge[] = edges.filter((e) => keep.has(e.source) && keep.has(e.target));
+  const visibleEdges: Edge[] = edges
+    .filter((e) => keep.has(e.source) && keep.has(e.target))
+    .map((e) => ({
+      ...e,
+      label: undefined,
+    }));
 
-  for (let i = 0; i < mainPathIds.length - 1; i++) {
-    const from = mainPathIds[i]!;
-    const to = mainPathIds[i + 1]!;
+  for (let i = 0; i < spineIds.length - 1; i++) {
+    const from = spineIds[i]!;
+    const to = spineIds[i + 1]!;
     if (!keep.has(from) || !keep.has(to)) continue;
     const hasDirect = visibleEdges.some((e) => e.source === from && e.target === to);
     if (hasDirect) continue;
@@ -244,5 +298,8 @@ export function filterFocusGraph(
     }
   }
 
-  return { nodes: visibleNodes, edges: visibleEdges };
+  return {
+    nodes: layoutFocusSpine(visibleNodes, spineIds.filter((id) => keep.has(id))),
+    edges: visibleEdges,
+  };
 }

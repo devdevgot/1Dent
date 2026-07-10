@@ -149,6 +149,14 @@ export function validateMindMapScript(raw: unknown): MindMapValidationResult {
   }
 
   for (const cycle of detectMindMapCycles(map)) {
+    // Objection / re-offer loops are intentional in booking scripts
+    if (
+      /handle_objections|await_decision|step3-think|step6-reoffer|step5-objections|step7-goodbye|re_offer|objections/i.test(
+        cycle,
+      )
+    ) {
+      continue;
+    }
     warnings.push(`Cycle in graph: ${cycle}`);
   }
 

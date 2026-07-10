@@ -33,9 +33,12 @@ import {
 import { cn } from "@/lib/utils";
 import { CHATBOT_FSM_STATES } from "@/lib/chatbot-fsm-states";
 import {
+  countHiddenOffSpineNodes,
   filterFocusGraph,
+  getFocusSpineIds,
   getServiceBranchIds,
   hasSavedMindMapPositions,
+  layoutFocusSpine,
   layoutMindMapPipeline,
   LAYOUT_NODE_W,
   LAYOUT_V_GAP,
@@ -69,6 +72,11 @@ export interface ScriptMindMapData {
 }
 
 export type ScriptMindMapMode = "inline" | "fullscreen";
+
+export type MindMapSaveMeta = {
+  /** auto = debounced autosave while editing; manual = explicit Save button */
+  source?: "auto" | "manual";
+};
 
 // ─── Custom node — borderless, branch nodes stay light ────────────────────────
 
@@ -332,7 +340,7 @@ function genId() {
 
 interface ScriptMindMapProps {
   initialData?: ScriptMindMapData | null;
-  onSave: (data: ScriptMindMapData) => void;
+  onSave: (data: ScriptMindMapData, meta?: MindMapSaveMeta) => void;
   saveStatus?: "idle" | "saving" | "saved";
   mode?: ScriptMindMapMode;
 }
@@ -344,7 +352,7 @@ export function ScriptMindMap({
   mode = "fullscreen",
 }: ScriptMindMapProps) {
   const seed = initialData?.nodes?.length ? initialData : { nodes: DEFAULT_NODES, edges: DEFAULT_EDGES };
-  const [showAllBranches, setShowAllBranches] = useState(mode === "fullscreen");
+  const [showAllBranches, setShowAllBranches] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const flowRef = useRef<ReactFlowInstance | null>(null);
   const skipAutoSaveRef = useRef(true);
@@ -394,10 +402,26 @@ export function ScriptMindMap({
     [allEdges, mainPathIds],
   );
 
+  const focusSpineIds = useMemo(
+    () =>
+      getFocusSpineIds(
+        mainPathIds,
+        allNodes.map((n) => ({ id: n.id })),
+      ),
+    [mainPathIds, allNodes],
+  );
+
+  const hiddenNodeCount = useMemo(
+    () => countHiddenOffSpineNodes(allNodes.map((n) => n.id), focusSpineIds),
+    [allNodes, focusSpineIds],
+  );
+
+  const pathIdsForDisplay = showAllBranches ? mainPathIds : focusSpineIds;
+
   const enrichedNodes = useMemo(
     () =>
       allNodes.map((n) => {
-        const pathIndex = mainPathIds.indexOf(n.id);
+        const pathIndex = pathIdsForDisplay.indexOf(n.id);
         const isMainPath = pathIndex >= 0;
         const d = n.data as ScriptMindMapNodeData;
         return {
@@ -410,30 +434,30 @@ export function ScriptMindMap({
           },
         };
       }),
-    [allNodes, mainPathIds],
+    [allNodes, pathIdsForDisplay],
   );
 
   const { nodes: displayNodes, edges: displayEdges } = useMemo(() => {
     if (showAllBranches) return { nodes: enrichedNodes, edges: styledAllEdges };
-    return filterFocusGraph(enrichedNodes, styledAllEdges, mainPathIds, branchHiddenIds);
-  }, [showAllBranches, enrichedNodes, styledAllEdges, mainPathIds, branchHiddenIds]);
+    return filterFocusGraph(enrichedNodes, styledAllEdges, focusSpineIds, branchHiddenIds);
+  }, [showAllBranches, enrichedNodes, styledAllEdges, focusSpineIds, branchHiddenIds]);
 
-  const branchCount = branchHiddenIds.size;
+  const branchCount = hiddenNodeCount;
 
   const fitCanvas = useCallback(() => {
     const rf = flowRef.current;
     if (!rf) return;
-    const focusIds = showAllBranches ? undefined : mainPathIds;
+    const focusIds = showAllBranches ? undefined : focusSpineIds;
     requestAnimationFrame(() => {
       rf.fitView({
-        padding: showAllBranches ? 0.2 : 0.35,
-        minZoom: 0.5,
-        maxZoom: showAllBranches ? 0.9 : 1.05,
+        padding: showAllBranches ? 0.18 : 0.28,
+        minZoom: 0.45,
+        maxZoom: showAllBranches ? 0.85 : 1.15,
         duration: 280,
         nodes: focusIds?.map((id) => ({ id })),
       });
     });
-  }, [showAllBranches, mainPathIds]);
+  }, [showAllBranches, focusSpineIds]);
 
   useEffect(() => {
     fitCanvas();
@@ -467,9 +491,13 @@ export function ScriptMindMap({
 
   const relayoutAll = useCallback(() => {
     markDirty();
-    setAllNodes((prev) => layoutMindMapPipeline(prev, allEdges));
+    if (showAllBranches) {
+      setAllNodes((prev) => layoutMindMapPipeline(prev, allEdges));
+    } else {
+      setAllNodes((prev) => layoutFocusSpine(prev, focusSpineIds));
+    }
     setTimeout(fitCanvas, 80);
-  }, [allEdges, setAllNodes, markDirty, fitCanvas]);
+  }, [allEdges, setAllNodes, markDirty, fitCanvas, showAllBranches, focusSpineIds]);
 
   const addChild = useCallback(
     (parentId: string) => {
@@ -568,12 +596,12 @@ export function ScriptMindMap({
 
   const handleSave = useCallback(() => {
     markDirty();
-    onSaveRef.current(serializeData());
+    onSaveRef.current(serializeData(), { source: "manual" });
   }, [serializeData, markDirty]);
 
   useEffect(() => {
     if (skipAutoSaveRef.current) return;
-    const timer = setTimeout(() => onSaveRef.current(serializeData()), 1200);
+    const timer = setTimeout(() => onSaveRef.current(serializeData(), { source: "auto" }), 1200);
     return () => clearTimeout(timer);
   }, [allNodes, allEdges, serializeData]);
 
@@ -642,33 +670,38 @@ export function ScriptMindMap({
           <Panel position="top-left" className="m-3">
             <div className="rounded-xl bg-white/75 backdrop-blur-sm shadow-[0_2px_12px_rgba(15,23,42,0.05)] px-3 py-2">
               <p className="text-[11px] font-medium text-[#475569]">
-                {showAllBranches ? "Все ветки" : "Главный путь"}
-                <span className="text-[#94a3b8]"> · {displayNodes.length}</span>
+                {showAllBranches ? "Все ветки" : "Основной сценарий"}
+                <span className="text-[#94a3b8]"> · {displayNodes.length} шагов</span>
               </p>
+              {!showAllBranches && branchCount > 0 && (
+                <p className="text-[10px] text-[#94a3b8] mt-0.5">
+                  +{branchCount} веток скрыто
+                </p>
+              )}
             </div>
           </Panel>
           <Panel position="top-right" className="m-3 flex flex-col items-end gap-2">
             <div className="flex flex-wrap items-center justify-end gap-1.5 rounded-xl bg-white/75 backdrop-blur-sm shadow-[0_2px_12px_rgba(15,23,42,0.05)] p-1.5">
-              {branchCount > 0 && (
+              {hiddenNodeCount > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowAllBranches((v) => !v)}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
                     showAllBranches
-                      ? "text-[#64748b] hover:bg-[#f1f5f9]"
-                      : "text-[#1f75fe] bg-[#1f75fe]/8 hover:bg-[#1f75fe]/12",
+                      ? "text-[#1f75fe] bg-[#1f75fe]/8 hover:bg-[#1f75fe]/12"
+                      : "text-[#64748b] hover:bg-[#f1f5f9]",
                   )}
                 >
                   {showAllBranches ? (
                     <>
                       <Minimize2 className="h-3.5 w-3.5" />
-                      Главный путь
+                      Основной сценарий
                     </>
                   ) : (
                     <>
                       <Maximize2 className="h-3.5 w-3.5" />
-                      Все ветки (+{branchCount})
+                      Все ветки (+{hiddenNodeCount})
                     </>
                   )}
                 </button>
@@ -704,11 +737,6 @@ export function ScriptMindMap({
                 {saveStatus === "saving" ? "…" : saveStatus === "saved" ? "OK" : "Сохранить"}
               </button>
             </div>
-            {!showAllBranches && branchCount > 0 && (
-              <p className="text-[10px] text-[#94a3b8] px-2 py-1">
-                +{branchCount} веток услуг скрыто
-              </p>
-            )}
           </Panel>
           {mode === "inline" && (
             <Panel position="bottom-left" className="m-3">
@@ -751,7 +779,7 @@ interface ScriptMindMapModalProps {
   open: boolean;
   onClose: () => void;
   initialData?: ScriptMindMapData | null;
-  onSave: (data: ScriptMindMapData) => void;
+  onSave: (data: ScriptMindMapData, meta?: MindMapSaveMeta) => void;
   saveStatus?: "idle" | "saving" | "saved";
 }
 
@@ -773,7 +801,7 @@ export function ScriptMindMapModal({
         <div className="flex-1 min-w-0">
           <p className="text-base font-semibold text-[#0f172a]">Скрипт диалога</p>
           <p className="text-xs text-[#64748b] leading-tight mt-0.5">
-            Главный путь подсвечен синим · цвет узла = этап FSM · клик — редактирование
+            По умолчанию — основной сценарий сверху вниз · «Все ветки» для полной карты
           </p>
         </div>
         <button

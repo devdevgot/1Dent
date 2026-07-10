@@ -42,7 +42,7 @@ import { PlaygroundTab } from "@/components/chatbot/playground-tab";
 import { ChatbotCalendarAbSettings } from "@/components/chatbot/calendar-ab-settings";
 import { ChatbotAnalyticsTab } from "@/components/chatbot/analytics-tab";
 import { ManagerExamplesTab } from "@/components/chatbot/manager-examples-tab";
-import type { ScriptMindMapData } from "@/components/chatbot/script-mindmap";
+import type { ScriptMindMapData, MindMapSaveMeta } from "@/components/chatbot/script-mindmap";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
@@ -737,7 +737,8 @@ export default function ChatbotPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localSettings]);
 
-  const handleSaveMindMap = useCallback((data: ScriptMindMapData) => {
+  const handleSaveMindMap = useCallback((data: ScriptMindMapData, meta?: MindMapSaveMeta) => {
+    const isAuto = meta?.source === "auto";
     setMindMapSaveStatus("saving");
     updateSettings.mutate(
       { data: { scriptMindMap: data } as ChatbotSettingsUpdate },
@@ -749,11 +750,7 @@ export default function ChatbotPage() {
           const validation = response?.data?.mindMapValidation;
           if (validation?.errors?.length) {
             toast.error(`Mind map: ${validation.errors[0]}`);
-          } else if (validation?.warnings?.length) {
-            toast.warning(
-              `Mind map сохранён с ${validation.warnings.length} предупреждением(ями): ${validation.warnings.slice(0, 2).join("; ")}${validation.warnings.length > 2 ? "…" : ""}`,
-            );
-          } else {
+          } else if (!isAuto) {
             toast.success("Mind map сохранён");
           }
         },

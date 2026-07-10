@@ -4,7 +4,7 @@ import {
   AlertCircle, Clock, X, Upload, AlignLeft, ChevronDown, ChevronUp,
   BookOpen, GitBranch, Maximize2, RefreshCw,
 } from "lucide-react";
-import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData } from "./script-mindmap";
+import { ScriptMindMap, ScriptMindMapModal, type ScriptMindMapData, type MindMapSaveMeta } from "./script-mindmap";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { cn } from "@/lib/utils";
 import { guessFsmStateFromLabel } from "@/lib/chatbot-fsm-states";
@@ -582,7 +582,7 @@ interface KnowledgeAndScriptModalProps {
   open: boolean;
   onClose: () => void;
   initialMindMapData?: ScriptMindMapData | null;
-  onSaveMindMap: (data: ScriptMindMapData) => void;
+  onSaveMindMap: (data: ScriptMindMapData, meta?: MindMapSaveMeta) => void;
   mindMapSaveStatus?: "idle" | "saving" | "saved";
 }
 
@@ -606,9 +606,9 @@ export function KnowledgeAndScriptModal({
     onSaveMindMap(data);
   }, [onSaveMindMap]);
 
-  const handleSaveMindMap = useCallback((data: ScriptMindMapData) => {
+  const handleSaveMindMap = useCallback((data: ScriptMindMapData, meta?: MindMapSaveMeta) => {
     setLiveMindMapData(data);
-    onSaveMindMap(data);
+    onSaveMindMap(data, meta);
   }, [onSaveMindMap]);
 
   if (!open) return null;
@@ -656,7 +656,7 @@ export function KnowledgeAndScriptModal({
                 <p className="text-sm font-semibold text-[#0f172a]">Скрипт диалога</p>
                 <p className="text-xs text-[#64748b] mt-0.5 truncate">
                   {liveMindMapData?.nodes?.length
-                    ? "Цветные карточки по этапам · нажмите узел для редактирования"
+                    ? "Основной сценарий сверху вниз · «Все ветки» для деталей"
                     : "Сгенерируйте скрипты выше — они появятся здесь"}
                 </p>
               </div>
