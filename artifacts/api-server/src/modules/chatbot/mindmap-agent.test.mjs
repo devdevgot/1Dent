@@ -302,6 +302,20 @@ test("buildAgentOrchestratorPrompt: includes multi-message replyParts schema", a
   assert.match(prompt, /удобное время/i);
 });
 
+test("parseChatbotAgentTurn: recovers reply from truncated JSON", async () => {
+  const { parseChatbotAgentTurn } = await import("./chatbot-agent-parser.ts");
+  const turn = parseChatbotAgentTurn(
+    '{"reply":"Какой филиал удобнее?","replyParts":["Напишите номер"],"mindMapNodeId":"step2-branch","actions":[',
+  );
+  assert.equal(turn?.reply, "Какой филиал удобнее?");
+});
+
+test("parseChatbotAgentTurn: accepts plain-text reply when JSON missing", async () => {
+  const { parseChatbotAgentTurn } = await import("./chatbot-agent-parser.ts");
+  const turn = parseChatbotAgentTurn("Подскажите удобный филиал для записи.");
+  assert.equal(turn?.reply, "Подскажите удобный филиал для записи.");
+});
+
 test("parseChatbotAgentTurn: parses replyParts array", async () => {
   const { parseChatbotAgentTurn } = await import("./chatbot-agent-parser.ts");
   const turn = parseChatbotAgentTurn(

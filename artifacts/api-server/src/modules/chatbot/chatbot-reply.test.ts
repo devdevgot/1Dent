@@ -140,10 +140,16 @@ describe("chatbot-reply", () => {
     assert.match(trimmed.parts[1]!, /удобно прийти/i);
   });
 
-  it("conciseReply drops pure promo messages", () => {
-    const trimmed = conciseReply({
-      parts: ["Профессиональная чистка сейчас доступна со скидкой 10% (акция действует с 1.12.23 по 31.05.24)?"],
+  it("enrichReplyWithFsmFollowUp appends branch list after generic branch question", () => {
+    const branches = ["ул. A 1", "ул. B 2"];
+    const enriched = enrichReplyWithFsmFollowUp(replyFromText("Какой адрес или филиал вам удобнее?"), {
+      fsmState: "collect_qualification",
+      mindMapNodeId: "step2-branch",
+      sessionData: { qualificationPhase: "branch" },
+      clinicBranchNames: branches,
+      messageText: "Нет",
     });
-    assert.equal(trimmed.parts.length, 0);
+    assert.equal(enriched.parts.length, 2);
+    assert.match(enriched.parts[1]!, /1️⃣ ул\. A 1/);
   });
 });

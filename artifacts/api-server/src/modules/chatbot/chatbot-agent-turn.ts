@@ -1,4 +1,4 @@
-import { createChatCompletion, CHAT_MODEL } from "../../lib/openrouter-client";
+import { createChatCompletion, CHAT_MODEL, FAST_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import type { ChatbotSettings } from "@workspace/db";
 import type { ChatbotState, ChatbotSessionData } from "./chatbot.types";
@@ -216,25 +216,40 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
 
   let agentTurn = null;
   let usedParseFallback = false;
-  try {
-    const completion = await createChatCompletion(
-      {
-        model: llmModel,
-        messages,
-        response_format: { type: "json_object" },
-        temperature: 0.4,
-        max_tokens: llmMaxTokens,
-      },
-      { timeoutMs: llmTimeoutMs, label: dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn" },
-    );
-    const raw = completion.choices[0]?.message?.content ?? null;
-    agentTurn = parseChatbotAgentTurn(raw);
-    if (!agentTurn) {
-      logger.warn({ rawSnippet: raw?.slice(0, 300) }, "[AgentTurn] Invalid agent JSON — using node fallback");
-      usedParseFallback = true;
+  const llmAttempts: Array<{ model: string; maxTokens: number; temperature: number }> = [
+    { model: llmModel, maxTokens: llmMaxTokens, temperature: 0.35 },
+    { model: FAST_MODEL, maxTokens: 420, temperature: 0.15 },
+  ];
+
+  for (let attempt = 0; attempt < llmAttempts.length; attempt++) {
+    const cfg = llmAttempts[attempt]!;
+    try {
+      const completion = await createChatCompletion(
+        {
+          model: cfg.model,
+          messages,
+          response_format: { type: "json_object" },
+          temperature: cfg.temperature,
+          max_tokens: cfg.maxTokens,
+        },
+        {
+          timeoutMs: llmTimeoutMs,
+          label: dryRun ? `chatbotAgentTurnPlayground${attempt}` : `chatbotAgentTurn${attempt}`,
+        },
+      );
+      const raw = completion.choices[0]?.message?.content ?? null;
+      agentTurn = parseChatbotAgentTurn(raw);
+      if (agentTurn) break;
+      if (attempt === 0) {
+        logger.warn({ rawSnippet: raw?.slice(0, 300) }, "[AgentTurn] Invalid agent JSON — retrying");
+      }
+    } catch (err) {
+      logger.error({ err, attempt }, "[AgentTurn] LLM call failed");
+      if (attempt === llmAttempts.length - 1) usedParseFallback = true;
     }
-  } catch (err) {
-    logger.error({ err }, "[AgentTurn] LLM call failed");
+  }
+
+  if (!agentTurn) {
     usedParseFallback = true;
   }
 
@@ -298,7 +313,12 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
       data.urgency,
     );
     if (dryRun) {
-      noteAction(usedParseFallback ? "Agent JSON fallback — node-aware reply" : "Agent orchestrator fallback");
+      for (const note of toolResult.toolNotes) {
+        noteAction(note);
+      }
+      if (usedParseFallback) {
+        logger.info({ fromNodeId, toNodeId }, "[AgentTurn] Deterministic fallback reply (JSON unavailable)");
+      }
     }
 
     return { state, data, response: reply, humanTakeover: false };

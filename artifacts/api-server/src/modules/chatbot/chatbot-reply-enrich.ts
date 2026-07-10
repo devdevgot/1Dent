@@ -49,6 +49,22 @@ export function enrichReplyWithFsmFollowUp(reply: ChatbotReply, ctx: EnrichReply
 
   const first = normalized.parts[0]!;
   const branches = ctx.clinicBranchNames;
+  const nodeId = ctx.mindMapNodeId ?? ctx.sessionData.activeMindMapNodeId ?? "";
+  const onBranchStep =
+    branches.length > 1 &&
+    (isBranchSelectionNode(nodeId, ctx.fsmState) ||
+      nodeId === "step2-branch" ||
+      ctx.sessionData.qualificationPhase === "branch");
+
+  if (onBranchStep && !hasFullBranchList(first, branches)) {
+    const listMsg = buildBranchListMessage(branches);
+    if (!textsOverlap(first, listMsg)) {
+      return capReplyParts(
+        normalizeReply({ parts: [first, listMsg], pausesMs: defaultPauses([first, listMsg]) }),
+        3,
+      );
+    }
+  }
 
   if (branches.length > 1 && mentionsBranchTeaser(first, branches.length) && !hasFullBranchList(first, branches)) {
     const listMsg = buildBranchListMessage(branches);

@@ -188,7 +188,7 @@ export function buildAgentFallbackReply(opts: {
   const effectiveNodeId = targetNodeId ?? scriptCtx.currentNodeId;
   const trimmedMessage = messageText?.trim() ?? "";
   const qualificationDone =
-    trimmedMessage.length >= 3 &&
+    trimmedMessage.length >= 2 &&
     !isPatientInquiry(trimmedMessage) &&
     (effectiveNodeId === "step2-branch" ||
       effectiveFsm === "suggest_doctor" ||
