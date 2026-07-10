@@ -141,7 +141,9 @@ export function MenuServiceOverlay() {
       subtitle={subtitle}
       onStackBack={stackDepth > 0 ? popStack : undefined}
     >
-      <div key={contentKey}>{renderBody()}</div>
+      <div key={contentKey} className="flex flex-col flex-1 min-h-0">
+        {renderBody()}
+      </div>
     </MenuServiceSheet>
   );
 }
