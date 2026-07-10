@@ -19,7 +19,7 @@ import { invalidateComposedPromptCache } from "../chatbot/chatbot-prompt-compose
 import {
   composeChatbotPromptWithOpus,
   refineComposedChatbotPrompt,
-  getComposedPromptCacheStatus,
+  getComposedPromptStatus,
 } from "../chatbot/chatbot-prompt-composer";
 import { loadChatbotPromptComposeInputs } from "../chatbot/chatbot.service";
 
@@ -206,7 +206,7 @@ router.patch("/knowledge/scripts", ownerAdmin, async (req: Request, res: Respons
 router.get("/knowledge/prompt-status", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const clinicId = req.user!.clinicId;
-    const status = getComposedPromptCacheStatus(clinicId);
+    const status = await getComposedPromptStatus(clinicId);
     res.json({ success: true, data: status });
   } catch (err) {
     next(err);
@@ -235,6 +235,7 @@ router.post("/knowledge/compose-prompt", ownerAdmin, async (req: Request, res: R
     res.json({
       success: true,
       data: {
+        prompt,
         promptLength: prompt.length,
         refined: false,
         model: "opus",
@@ -276,6 +277,7 @@ router.post("/knowledge/refine-prompt", ownerAdmin, async (req: Request, res: Re
     res.json({
       success: true,
       data: {
+        prompt,
         promptLength: prompt.length,
         refined: true,
         model: "sonnet",

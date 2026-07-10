@@ -1,4 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { db, knowledgeScriptsTable } from "@workspace/db";
 import { createChatCompletion, PROMPT_COMPOSER_MODEL, PROMPT_REFINER_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import { getCachedChatbotPromptComposerConfig } from "../platform-config/platform-config.service";
@@ -83,6 +85,9 @@ function buildFallbackComposedPrompt(inputs: ChatbotPromptComposeInputs): string
 
 export function invalidateComposedPromptCache(clinicId: string): void {
   composedPromptCache.delete(clinicId);
+  void clearPersistedComposedPrompt(clinicId).catch((err) =>
+    logger.warn({ err, clinicId }, "[PromptComposer] failed to clear persisted prompt"),
+  );
 }
 
 export function invalidateAllComposedPromptCaches(): void {
@@ -99,6 +104,92 @@ export function getComposedPromptCacheStatus(clinicId: string): {
     return { exists: false, refined: false, length: 0 };
   }
   return { exists: true, refined: cached.refined, length: cached.prompt.length };
+}
+
+export async function getComposedPromptStatus(clinicId: string): Promise<{
+  exists: boolean;
+  refined: boolean;
+  length: number;
+  prompt: string | null;
+}> {
+  const cached = composedPromptCache.get(clinicId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return {
+      exists: true,
+      refined: cached.refined,
+      length: cached.prompt.length,
+      prompt: cached.prompt,
+    };
+  }
+
+  const persisted = await loadPersistedComposedPrompt(clinicId);
+  if (persisted) {
+    return {
+      exists: true,
+      refined: persisted.refined,
+      length: persisted.prompt.length,
+      prompt: persisted.prompt,
+    };
+  }
+
+  return { exists: false, refined: false, length: 0, prompt: null };
+}
+
+async function loadPersistedComposedPrompt(
+  clinicId: string,
+): Promise<{ prompt: string; refined: boolean } | null> {
+  const rows = await db
+    .select({
+      composedPrompt: knowledgeScriptsTable.composedPrompt,
+      composedPromptRefined: knowledgeScriptsTable.composedPromptRefined,
+    })
+    .from(knowledgeScriptsTable)
+    .where(eq(knowledgeScriptsTable.clinicId, clinicId))
+    .limit(1);
+
+  const prompt = rows[0]?.composedPrompt?.trim();
+  if (!prompt) return null;
+
+  return {
+    prompt,
+    refined: rows[0]?.composedPromptRefined ?? false,
+  };
+}
+
+async function persistComposedPrompt(
+  clinicId: string,
+  prompt: string,
+  refined: boolean,
+): Promise<void> {
+  const now = new Date();
+  await db
+    .insert(knowledgeScriptsTable)
+    .values({
+      id: randomUUID(),
+      clinicId,
+      composedPrompt: prompt,
+      composedPromptRefined: refined,
+      composedPromptAt: now,
+    })
+    .onConflictDoUpdate({
+      target: knowledgeScriptsTable.clinicId,
+      set: {
+        composedPrompt: prompt,
+        composedPromptRefined: refined,
+        composedPromptAt: now,
+      },
+    });
+}
+
+async function clearPersistedComposedPrompt(clinicId: string): Promise<void> {
+  await db
+    .update(knowledgeScriptsTable)
+    .set({
+      composedPrompt: null,
+      composedPromptRefined: false,
+      composedPromptAt: null,
+    })
+    .where(eq(knowledgeScriptsTable.clinicId, clinicId));
 }
 
 function buildUserPayload(inputs: ChatbotPromptComposeInputs): string {
@@ -147,6 +238,9 @@ function cacheComposedPrompt(
     refined,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });
+  void persistComposedPrompt(clinicId, prompt, refined).catch((err) =>
+    logger.warn({ err, clinicId }, "[PromptComposer] failed to persist prompt"),
+  );
 }
 
 /** Force Opus to compose a fresh base prompt (not refined). */
@@ -230,6 +324,12 @@ export async function getComposedChatbotPrompt(inputs: ChatbotPromptComposeInput
   const cached = composedPromptCache.get(inputs.clinicId);
   if (cached && cached.hash === hash && cached.expiresAt > Date.now()) {
     return cached.prompt;
+  }
+
+  const persisted = await loadPersistedComposedPrompt(inputs.clinicId);
+  if (persisted) {
+    cacheComposedPrompt(inputs.clinicId, hash, persisted.prompt, persisted.refined);
+    return persisted.prompt;
   }
 
   return composeChatbotPromptWithOpus(inputs);
