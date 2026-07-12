@@ -3,6 +3,15 @@ import type { ChatbotAgentAction } from "./chatbot-agent.types";
 import { tryParseAppointmentDatetimeLocal } from "./almaty-time";
 import { resolveOfficialBranchFromMessage } from "./clinic-knowledge";
 import { isReadyToBook, isShortYes } from "./booking-script";
+import { hasPatientIdentity } from "./chatbot-patient-identity";
+
+function messageLikelyIsName(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length < 2 || trimmed.length > 60) return false;
+  if (isShortYes(trimmed) || isReadyToBook(trimmed)) return false;
+  if (/\d{5,}/.test(trimmed)) return false;
+  return /^[\p{L}\s'.-]+$/u.test(trimmed);
+}
 
 function messageLikelyContainsDatetime(text: string): boolean {
   if (tryParseAppointmentDatetimeLocal(text)) return true;
@@ -51,11 +60,20 @@ export function inferKnowledgeAgentActions(
   }
 
   if (
+    !hasPatientIdentity(sessionData) &&
+    messageLikelyIsName(messageText) &&
+    !has("set_patient_name")
+  ) {
+    actions.push({ type: "set_patient_name", name: messageText.trim() });
+  }
+
+  if (
     sessionData.suggestedDoctorId &&
     sessionData.preferredDatetime &&
     sessionData.selectedBranch &&
     (isShortYes(messageText) || isReadyToBook(messageText)) &&
-    !has("book_appointment")
+    !has("book_appointment") &&
+    hasPatientIdentity(sessionData)
   ) {
     actions.push({ type: "book_appointment" });
   }

@@ -281,6 +281,19 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     };
   }
 
+  if (toolResult.needsPatientName) {
+    state = "collect_name";
+    return {
+      state,
+      data,
+      response: mergeReply(
+        replyFromText("Отлично! Перед записью подскажите, пожалуйста, как к вам обращаться?"),
+        replyFromAgentText(agentTurn.reply, agentTurn.replyParts),
+      ),
+      humanTakeover: false,
+    };
+  }
+
   if (toolResult.bookingReady && finalizeBooking && data.selectedBranch) {
     try {
       const finalized = await finalizeBooking({

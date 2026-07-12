@@ -60,6 +60,7 @@ export function buildKnowledgeAgentPrompt(opts: BuildKnowledgeAgentPromptOpts): 
     "=== ИНСТРУМЕНТЫ (actions) ===",
     "Вызывай actions когда нужно выполнить операцию на сервере.",
     "Не обещай запись текстом без book_appointment когда все данные собраны.",
+    "Перед book_appointment ОБЯЗАТЕЛЬНО должно быть имя пациента — если имени нет, спроси «Как к вам обращаться?» и вызови set_patient_name после ответа.",
     toolsList,
     "",
     "=== ПОВЕДЕНИЕ ===",

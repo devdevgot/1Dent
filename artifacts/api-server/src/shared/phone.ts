@@ -4,7 +4,7 @@ export function normalizePhoneDigits(phone: string): string {
 }
 
 /** Canonical form for KZ/RU numbers: 11-digit 8XXXXXXXXXX → 7XXXXXXXXXX. */
-function canonicalPhoneDigits(digits: string): string {
+export function canonicalPhoneDigits(digits: string): string {
   if (digits.length === 11 && digits.startsWith("8")) {
     return `7${digits.slice(1)}`;
   }

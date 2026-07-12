@@ -1,5 +1,6 @@
 import type { ChatbotSessionData, ChatbotState } from "./chatbot.types";
 import type { ChatbotAgentAction, ChatbotAgentIntent } from "./chatbot-agent.types";
+import { hasPatientIdentity } from "./chatbot-patient-identity";
 import { assignRankedDoctor, buildDoctorPresentationFallback } from "./booking-fsm";
 import { extractDatetimeFromText, extractBranchFromText } from "./ai-classifier";
 import {
@@ -17,6 +18,7 @@ import {
 import { resolveBranchFromMessage } from "./clinic-knowledge";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 import type { ClinicCalendarConfig } from "@workspace/db";
+import { updatePatientNameByPhone } from "../../shared/patient-phone-resolver";
 
 export { inferKnowledgeAgentActions } from "./chatbot-agent-action-inference";
 
@@ -37,6 +39,7 @@ export interface AgentToolResult {
   suggestedDoctor?: DoctorCandidate | null;
   slotsAppendix?: string;
   bookingReady?: boolean;
+  needsPatientName?: boolean;
   handoff?: boolean;
 }
 
@@ -125,6 +128,7 @@ export async function executeChatbotAgentTools(
   let suggestedDoctor: DoctorCandidate | null = null;
   let slotsAppendix = "";
   let bookingReady = false;
+  let needsPatientName = false;
   let handoff = false;
 
   for (const action of actions) {
@@ -147,6 +151,9 @@ export async function executeChatbotAgentTools(
         if (name) {
           sessionData.patientName = name.slice(0, 120);
           toolNotes.push(`Имя: ${sessionData.patientName}`);
+          if (!ctx.dryRun) {
+            await updatePatientNameByPhone(ctx.clinicId, ctx.phone, sessionData.patientName).catch(() => {});
+          }
         }
         break;
       }
@@ -219,8 +226,13 @@ export async function executeChatbotAgentTools(
       }
       case "book_appointment": {
         if (sessionData.suggestedDoctorId && sessionData.preferredDatetime && sessionData.selectedBranch) {
-          bookingReady = true;
-          toolNotes.push("Готово к финализации записи");
+          if (!hasPatientIdentity(sessionData)) {
+            needsPatientName = true;
+            toolNotes.push("book_appointment: нужно имя пациента");
+          } else {
+            bookingReady = true;
+            toolNotes.push("Готово к финализации записи");
+          }
         } else {
           toolNotes.push("book_appointment: не хватает врача, времени или филиала");
         }
@@ -239,7 +251,16 @@ export async function executeChatbotAgentTools(
     }
   }
 
-  return { data: sessionData, toolNotes, suggestedDoctor, slotsAppendix, bookingReady, handoff };
+  if (
+    sessionData.patientName &&
+    intent?.patientName &&
+    !actions.some((a) => a.type === "set_patient_name") &&
+    !ctx.dryRun
+  ) {
+    await updatePatientNameByPhone(ctx.clinicId, ctx.phone, sessionData.patientName).catch(() => {});
+  }
+
+  return { data: sessionData, toolNotes, suggestedDoctor, slotsAppendix, bookingReady, needsPatientName, handoff };
 }
 
 export function deriveFsmStateFromAgent(
@@ -250,6 +271,7 @@ export function deriveFsmStateFromAgent(
   const hint = (fsmHint ?? undefined) as ChatbotState | undefined;
   const valid: ChatbotState[] = [
     "greeting",
+    "collect_name",
     "collect_problem",
     "collect_qualification",
     "suggest_doctor",
@@ -267,6 +289,14 @@ export function deriveFsmStateFromAgent(
   ];
   if (hint && valid.includes(hint as ChatbotState)) return hint as ChatbotState;
   if (sessionData.createdProcedureId) return "done";
+  if (
+    sessionData.suggestedDoctorId &&
+    sessionData.preferredDatetime &&
+    sessionData.selectedBranch &&
+    !hasPatientIdentity(sessionData)
+  ) {
+    return "collect_name";
+  }
   if (sessionData.preferredDatetime && sessionData.suggestedDoctorId) return "collect_datetime";
   if (sessionData.suggestedDoctorId) return "suggest_doctor";
   if (sessionData.serviceType) return "collect_qualification";
