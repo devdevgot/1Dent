@@ -388,7 +388,7 @@ export default function PatientsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const urlSearch = useSearch();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const goBack = usePageBack();
   const { isOverlay } = useOverlayNavigation();
   const queryClient = useQueryClient();
@@ -416,7 +416,17 @@ export default function PatientsPage() {
   const viewParam = new URLSearchParams(urlSearch).get("view") as PatientView | null;
   const view: PatientView = viewParam === "kanban" ? "kanban" : "list";
 
-  const setView = (v: PatientView) => navigate(`/patients?view=${v}`, { replace: true });
+  const setView = (v: PatientView) => {
+    const path = location.split("?")[0];
+    const params = new URLSearchParams(urlSearch.startsWith("?") ? urlSearch.slice(1) : urlSearch);
+    if (v === "list") {
+      params.delete("view");
+    } else {
+      params.set("view", v);
+    }
+    const qs = params.toString();
+    navigate(qs ? `${path}?${qs}` : path, { replace: true });
+  };
 
   const tabs: { key: PatientView; icon: React.ElementType; label: string }[] = [
     { key: "list",   icon: Users,        label: t("patients.tabList") },
