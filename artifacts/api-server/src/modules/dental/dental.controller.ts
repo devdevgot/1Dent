@@ -256,8 +256,17 @@ router.post("/trigger-ai-analysis", writeRoles, async (req: Request, res: Respon
   res.status(202).json({ success: true });
 });
 
-// POST /patients/:id/diagnosis/start
+// POST /patients/:id/diagnosis/start — legacy no-op (kanban stage moves on /diagnosis/complete)
 diagnosisRouter.post("/diagnosis/start", writeRoles, async (req: Request, res: Response, next: NextFunction) => {
+  const patientId = String(req.params["id"]);
+  const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+  if (!ok) return;
+
+  res.status(200).json({ success: true });
+});
+
+// POST /patients/:id/diagnosis/complete — move patient to «Диагностика» after doctor finishes diagnosis
+diagnosisRouter.post("/diagnosis/complete", writeRoles, async (req: Request, res: Response, next: NextFunction) => {
   const patientId = String(req.params["id"]);
   const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
   if (!ok) return;
@@ -266,7 +275,7 @@ diagnosisRouter.post("/diagnosis/start", writeRoles, async (req: Request, res: R
     patientId,
     clinicId: req.user!.clinicId,
     toStatus: "diagnostics",
-    trigger: PATIENT_STAGE_TRIGGERS.DIAGNOSIS_STARTED,
+    trigger: PATIENT_STAGE_TRIGGERS.DIAGNOSIS_COMPLETED,
     actorId: req.user!.userId,
   }).catch((err) => {
     logger.warn({ err, patientId }, "Failed to transition patient to diagnostics");

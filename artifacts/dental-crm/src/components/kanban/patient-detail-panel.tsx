@@ -21,7 +21,7 @@ import {
   useCompleteTreatmentPlanItem,
   useListProcedureTemplates,
   useTriggerDentalAiAnalysis,
-  useStartDiagnosis,
+  useCompleteDiagnosis,
   getListPatientsQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
@@ -865,7 +865,6 @@ export function PatientDetailPanel() {
   const [matchedCatsState, setMatchedCatsState] = useState<string[]>([]);
 
   const [isDiagnosisMode, setIsDiagnosisMode] = useState(false);
-  const initialDiagnosisStartRef = useRef(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [voiceDraftExists, setVoiceDraftExists] = useState(false);
   const [voiceDraftTime, setVoiceDraftTime] = useState<number | null>(null);
@@ -1086,7 +1085,6 @@ export function PatientDetailPanel() {
     setExpandedPlanId(null);
     setPlanViewToothFdi(null);
     setIsDiagnosisMode(false);
-    initialDiagnosisStartRef.current = false;
     setShowVoiceModal(false);
     setRestoreVoiceDraft(false);
     setShowSummaryModal(false);
@@ -1306,7 +1304,7 @@ export function PatientDetailPanel() {
 
   const triggerAnalysisMutation = useTriggerDentalAiAnalysis();
 
-  const startDiagnosisMutation = useStartDiagnosis({
+  const completeDiagnosisMutation = useCompleteDiagnosis({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
@@ -1315,21 +1313,8 @@ export function PatientDetailPanel() {
   });
 
   const handleEnterDiagnosisMode = useCallback(() => {
-    if (selectedPatientId) {
-      void startDiagnosisMutation.mutateAsync(selectedPatientId);
-    }
     setIsDiagnosisMode(true);
-  }, [selectedPatientId, startDiagnosisMutation]);
-
-  useEffect(() => {
-    if (!selectedPatientId || isAdmin || !chartReady || hasDiagnosis || activeTab !== "treatment" || treatmentStep !== 1) {
-      return;
-    }
-    if (!initialDiagnosisStartRef.current) {
-      initialDiagnosisStartRef.current = true;
-      void startDiagnosisMutation.mutateAsync(selectedPatientId);
-    }
-  }, [selectedPatientId, isAdmin, chartReady, hasDiagnosis, activeTab, treatmentStep, startDiagnosisMutation]);
+  }, []);
 
   const statusMutation = useUpdatePatientStatus({
     mutation: {
@@ -1530,6 +1515,8 @@ export function PatientDetailPanel() {
     //    Fire-and-forget — we don't need to wait for the AI result here.
     void triggerAnalysisMutation.mutateAsync(selectedPatientId);
 
+    void completeDiagnosisMutation.mutateAsync(selectedPatientId);
+
     const refetchResult = await refetchTeeth();
     const diagnosisComplete = (refetchResult.data?.data?.teeth ?? []).length > 0;
     setDiagnosisMap(new Map());
@@ -1558,7 +1545,7 @@ export function PatientDetailPanel() {
       setActiveTab("treatment");
       setTreatmentStep(2);
     }
-  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, activePlan, updateToothMutation, triggerAnalysisMutation, createPlanMutation, addPlanItemMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle, setMatchedCatsState]);
+  }, [selectedPatientId, diagnosisMap, diagnosisNotesMap, diagnosisServicesMap, teethMap, activePlan, updateToothMutation, triggerAnalysisMutation, completeDiagnosisMutation, createPlanMutation, addPlanItemMutation, refetchTeeth, toast, t, queryClient, setActiveTab, handlePrepareBundle, setMatchedCatsState]);
 
   const hydrateVoiceDiagnosisSession = useCallback((result: VoiceDiagnosisApplyResult) => {
     const dm = new Map<number, ToothCondition>();
@@ -1617,6 +1604,7 @@ export function PatientDetailPanel() {
     }
 
     void triggerAnalysisMutation.mutateAsync(selectedPatientId);
+    void completeDiagnosisMutation.mutateAsync(selectedPatientId);
     const refetchResult = await refetchTeeth();
     const diagnosisComplete = (refetchResult.data?.data?.teeth ?? []).length > 0;
     await queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId) });
@@ -1651,6 +1639,7 @@ export function PatientDetailPanel() {
     teethMap,
     createPlanMutation,
     triggerAnalysisMutation,
+    completeDiagnosisMutation,
     refetchTeeth,
     queryClient,
     hydrateVoiceDiagnosisSession,
