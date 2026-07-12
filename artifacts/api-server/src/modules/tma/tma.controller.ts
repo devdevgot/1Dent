@@ -41,6 +41,7 @@ import type { ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
 import { createTabletVideosTmaRouter } from "../tablet-videos/tablet-videos.routes";
 import { createPlatformConfigTmaRouter } from "../platform-config/platform-config.routes";
 import { getPlatformWebhookUrl, getTmaUrl } from "../../shared/platform-bot";
+import { getPlatformAdminTelegramIds, sendPlatformAdminTelegramMessage } from "../../shared/platform-admin-notify";
 import { processKnowledgeSource, scrapeUrl } from "../knowledge/knowledge.service";
 
 const router = Router();
@@ -376,6 +377,7 @@ router.get("/settings", async (_req: Request, res: Response, next: NextFunction)
     ]);
     const botConfigured = !!process.env["PLATFORM_TG_BOT_TOKEN"];
     const superadminConfigured = !!process.env["PLATFORM_SUPERADMIN_TG_ID"];
+    const notificationRecipients = await getPlatformAdminTelegramIds();
     res.json({
       success: true,
       data: {
@@ -384,9 +386,53 @@ router.get("/settings", async (_req: Request, res: Response, next: NextFunction)
         bot: {
           configured: botConfigured,
           superadminConfigured,
+          notificationRecipients: notificationRecipients.length,
           webhookUrl: getPlatformWebhookUrl(),
           tmaUrl: getTmaUrl(),
         },
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+router.post("/notifications/test", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = process.env["PLATFORM_TG_BOT_TOKEN"];
+    if (!token) {
+      return next(new ValidationError("PLATFORM_TG_BOT_TOKEN не настроен"));
+    }
+
+    const recipients = await getPlatformAdminTelegramIds();
+    if (recipients.length === 0) {
+      return next(new ValidationError("Нет получателей: добавьте администратора или PLATFORM_SUPERADMIN_TG_ID"));
+    }
+
+    const text = [
+      "✅ <b>Тестовое уведомление 1Dent</b>",
+      "",
+      "Если вы видите это сообщение, платформенный бот может доставлять уведомления об ошибках.",
+      "",
+      `<b>Админ:</b> ${req.tmaUser?.name ?? "unknown"}`,
+      `<b>Время:</b> ${new Date().toLocaleString("ru-RU", { timeZone: "Asia/Almaty" })}`,
+    ].join("\n");
+
+    const result = await sendPlatformAdminTelegramMessage(token, text);
+
+    if (result.sent === 0) {
+      return res.status(502).json({
+        success: false,
+        error: "Не удалось доставить сообщение ни одному администратору. Напишите боту /start и повторите тест.",
+        data: { recipients: result.recipients.length, failed: result.failed, errors: result.errors },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        sent: result.sent,
+        failed: result.failed,
+        recipients: result.recipients.length,
+        errors: result.errors,
       },
     });
   } catch (err) { next(err); }
