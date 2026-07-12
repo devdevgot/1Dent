@@ -518,7 +518,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
   return (
     <div className={cn(
-      "fixed inset-0 z-[90] flex justify-center bg-black/20 overflow-hidden",
+      "fixed inset-0 z-[100] flex justify-center bg-black/20 overflow-hidden",
       isTablet ? "items-center p-6" : "items-end sm:items-center sm:p-4",
     )}>
       <div

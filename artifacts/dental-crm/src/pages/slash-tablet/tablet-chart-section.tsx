@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, Suspense, startTransition } from "react";
+import { useMemo, useState, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Stethoscope, Check, X, RotateCcw, Loader2,
@@ -66,7 +66,7 @@ export function TabletChartSection({
   const [saving, setSaving] = useState(false);
 
   const openVoiceModal = useCallback(() => {
-    startTransition(() => setShowVoiceModal(true));
+    setShowVoiceModal(true);
   }, []);
 
   const hasDiagnosis = useMemo(
@@ -315,9 +315,9 @@ function ActionCircle({
         disabled={disabled}
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-lg transition-colors active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
-          variant === "muted" && "text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a]",
-          variant === "voice" && "text-primary hover:bg-[#f1ede4]",
-          variant === "primary" && "bg-primary text-white hover:bg-primary/90",
+          variant === "muted" && "bg-[#f1ede4] text-[#64748b] hover:bg-[#e8e3d9] hover:text-[#0f172a]",
+          variant === "voice" && "bg-[#e8f2ff] text-[#1f75fe] hover:bg-[#d6e8ff]",
+          variant === "primary" && "bg-[#1f75fe] text-white hover:bg-[#1a65e8]",
         )}
       >
         {children}
