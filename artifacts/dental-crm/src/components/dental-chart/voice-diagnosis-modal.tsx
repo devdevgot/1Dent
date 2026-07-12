@@ -27,6 +27,9 @@ import { matchVoiceServices } from "@/lib/voice-service-matching";
 import { VoiceRecordingIndicator } from "./voice-recording-indicator";
 
 const AUTH_TOKEN_KEY = "auth_token";
+const MIN_RECORDING_MS = 1_500;
+const MIN_AUDIO_BYTES = 2_000;
+const UPLOAD_TIMEOUT_MS = 90_000;
 
 const CONDITION_VALUES: ToothCondition[] = [
   "healthy", "cavity", "treated", "crown",
@@ -148,6 +151,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
   const [recordingAudioCtx, setRecordingAudioCtx] = useState<AudioContext | null>(null);
+  const [processingStep, setProcessingStep] = useState<"transcribing" | "parsing">("transcribing");
 
   // Per-tooth: one selected service from relevant transcript matches
   const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, string>>({});
@@ -159,6 +163,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const recordingStartedAtRef = useRef<number | null>(null);
 
   // Fetch all procedure templates for the service picker
   const { data: allTemplatesData } = useListProcedureTemplates(undefined, {
@@ -235,9 +240,21 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   // ── Recording ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (phase !== "recording") { setRecordingSeconds(0); return; }
+    if (phase !== "recording") {
+      setRecordingSeconds(0);
+      recordingStartedAtRef.current = null;
+      return;
+    }
+    recordingStartedAtRef.current = Date.now();
     const id = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== "processing") return;
+    setProcessingStep("transcribing");
+    const id = setTimeout(() => setProcessingStep("parsing"), 5_000);
+    return () => clearTimeout(id);
   }, [phase]);
 
   const clearRecordingAudio = useCallback(() => {
@@ -251,7 +268,14 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const startRecording = useCallback(async () => {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
       const audioCtx = new AudioContext();
       if (audioCtx.state === "suspended") await audioCtx.resume();
 
@@ -286,9 +310,20 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   }, [toast, clearRecordingAudio]);
 
   const stopRecording = useCallback(() => {
+    const elapsed = recordingStartedAtRef.current
+      ? Date.now() - recordingStartedAtRef.current
+      : 0;
+    if (elapsed < MIN_RECORDING_MS) {
+      toast({
+        title: "Слишком короткая запись",
+        description: "Говорите дольше — минимум 2 секунды",
+        variant: "destructive",
+      });
+      return;
+    }
     setPhase("processing");
     mediaRecorderRef.current?.stop();
-  }, []);
+  }, [toast]);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -307,16 +342,27 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   };
 
   const sendAudio = async (blob: Blob, mimeType: string) => {
+    if (blob.size < MIN_AUDIO_BYTES) {
+      setError("Запись слишком короткая. Поднесите микрофон ближе и говорите дольше.");
+      setPhase("idle");
+      return;
+    }
+
     const ext = getAudioExt(mimeType);
+    const file = new File([blob], `recording.${ext}`, { type: mimeType });
     const formData = new FormData();
-    formData.append("audio", blob, `recording.${ext}`);
+    formData.append("audio", file);
     const token = localStorage.getItem(AUTH_TOKEN_KEY) ?? "";
     const baseUrl = getBaseUrl();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+
     try {
       const res = await fetch(`${baseUrl}/api/patients/${patientId}/teeth/voice-diagnose`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
+        signal: controller.signal,
       });
       if (!res.ok) {
         const json = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -336,8 +382,15 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       setSelectedServiceIds(autoSelected);
       setPhase("review");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка при обработке голоса");
+      const msg = err instanceof Error && err.name === "AbortError"
+        ? "Превышено время ожидания. Попробуйте более короткую запись."
+        : err instanceof Error
+          ? err.message
+          : "Ошибка при обработке голоса";
+      setError(msg);
       setPhase("idle");
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
@@ -547,7 +600,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#e8e3d9] shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-[#0f172a]">Голосовая диагностика</h2>
-            <p className="text-[11px] text-[#94a3b8] mt-0.5">Русский, казахский или английский</p>
+            <p className="text-[11px] text-[#94a3b8] mt-0.5">Русский, казахский, узбекский, кыргызский, английский</p>
           </div>
           <div className="flex items-center gap-2">
             {phase === "review" && (
@@ -600,10 +653,10 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               {phase === "idle" && (
                 <div className="text-center max-w-xs space-y-3">
                   <p className="text-sm text-[#64748b] leading-relaxed">
-                    Нажмите кнопку и продиктуйте состояние зубов
+                    Нажмите кнопку и продиктуйте состояние зубов на любом языке
                   </p>
                   <p className="text-xs text-[#94a3b8] italic leading-relaxed">
-                    «Шестнадцатый — кариес, пломба. Двадцать первый — коронка циркониевая»
+                    «16-шы — кариес, пломба» · «O'n oltinchi — karies» · «Sixteen — cavity, crown»
                   </p>
                 </div>
               )}
@@ -667,11 +720,17 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
           {/* Processing */}
           {phase === "processing" && (
-            <div className="flex flex-col items-center justify-center gap-3 py-16">
+            <div className="flex flex-col items-center justify-center gap-4 py-16">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-[#0f172a]">ИИ обрабатывает запись</p>
-                <p className="text-xs text-[#94a3b8] mt-1">Транскрибирование и анализ</p>
+              <div className="text-center space-y-2">
+                <p className="text-sm font-medium text-[#0f172a]">
+                  {processingStep === "transcribing" ? "Расшифровка речи…" : "Анализ диагнозов…"}
+                </p>
+                <p className="text-xs text-[#94a3b8]">
+                  {processingStep === "transcribing"
+                    ? "Многоязычное распознавание (RU · KK · UZ · KY · EN)"
+                    : "Определение зубов FDI и услуг"}
+                </p>
               </div>
             </div>
           )}

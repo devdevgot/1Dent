@@ -19,6 +19,13 @@ import { triggerDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAna
 import { logger } from "../../lib/logger";
 import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
 import { matchVoiceServices } from "./voice-service-matching";
+import {
+  parseVoiceDiagnoses,
+  transcribeVoiceAudio,
+  VoiceTranscriptionError,
+} from "./voice-diagnose.service";
+import { aiCreditsService } from "../../shared/ai-credits";
+import { InsufficientAiCreditsError } from "../../shared/errors";
 
 const router: IRouter = Router({ mergeParams: true });
 export const diagnosisRouter: IRouter = Router({ mergeParams: true });
@@ -285,7 +292,7 @@ diagnosisRouter.post("/diagnosis/complete", writeRoles, async (req: Request, res
 });
 
 // POST /patients/:id/teeth/voice-diagnose
-// Accepts multipart audio, transcribes via Whisper, parses into tooth diagnoses
+// Multilingual STT (GPT-4o Mini Transcribe) → FDI parse (Gemini Pro)
 router.post(
   "/voice-diagnose",
   writeRoles,
@@ -304,148 +311,60 @@ router.post(
       return next(new ValidationError("OpenRouter API key is not configured"));
     }
 
-    // ── Step 1: Transcribe audio via Gemini chat completions (OpenRouter doesn't support /audio/transcriptions) ──
-    let transcript = "";
+    const started = Date.now();
+
     try {
-      const audioMime = req.file.mimetype || "audio/webm";
-      const base64Audio = req.file.buffer.toString("base64");
-
-      const audioFormat = audioMime.includes("mp4") ? "mp4" : audioMime.includes("ogg") ? "ogg" : (audioMime.includes("wav") ? "wav" : "webm");
-
-      const sttRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Transcribe the following audio recording verbatim. The speaker is a dentist describing teeth conditions in Russian (may include Kazakh or English words). Return ONLY the transcribed text, with no preamble, comments, or formatting.",
-                },
-                {
-                  type: "input_audio",
-                  input_audio: {
-                    data: base64Audio,
-                    format: audioFormat,
-                  },
-                },
-              ],
-            },
-          ],
-        }),
+      await aiCreditsService.consumeCredits({
+        clinicId: req.user!.clinicId,
+        userId: req.user!.id,
+        feature: "voice_transcribe",
+        description: "Голосовая диагностика зубов",
       });
-
-      const rawText = await sttRes.text();
-      if (!sttRes.ok) {
-        logger.error({ status: sttRes.status, body: rawText }, "[VoiceDiagnose] STT API error");
-        return next(new Error(`STT error ${sttRes.status}: ${rawText.slice(0, 300)}`));
-      }
-
-      let sttJson: { choices?: Array<{ message?: { content?: string } }> };
-      try {
-        sttJson = JSON.parse(rawText);
-      } catch {
-        logger.error({ rawText }, "[VoiceDiagnose] STT response is not JSON");
-        return next(new Error("STT returned unexpected response"));
-      }
-
-      transcript = sttJson.choices?.[0]?.message?.content?.trim() ?? "";
     } catch (err) {
-      logger.error({ err }, "[VoiceDiagnose] STT fetch error");
+      if (err instanceof InsufficientAiCreditsError) return next(err);
+      return next(err);
+    }
+
+    let transcript = "";
+    let sttModel = "";
+    let sttMs = 0;
+    let parseMs = 0;
+
+    try {
+      const stt = await transcribeVoiceAudio(
+        apiKey,
+        req.file.buffer,
+        req.file.mimetype || "audio/webm",
+        req.file.originalname || "recording.webm",
+      );
+      transcript = stt.transcript;
+      sttModel = stt.model;
+      sttMs = stt.ms;
+    } catch (err) {
+      if (err instanceof VoiceTranscriptionError) {
+        return next(new ValidationError(err.message));
+      }
+      logger.error({ err }, "[VoiceDiagnose] STT failed");
       return next(err);
     }
 
     if (!transcript) {
-      return res.json({ success: true, data: { transcript: "", diagnoses: [] } });
+      return next(new ValidationError(
+        "Не удалось распознать речь. Говорите чётко на русском, казахском, узбекском, кыргызском или английском.",
+      ));
     }
 
-    // ── Step 2: Parse transcript into structured diagnoses ──
-    const systemPrompt = `Ты — стоматологический ассистент. Твоя задача — разобрать устный осмотр зубов на русском/казахском/английском языке и вернуть структурированный список диагнозов по зубам.
-
-Номера зубов в формате FDI: 11–18 (верхний правый), 21–28 (верхний левый), 31–38 (нижний левый), 41–48 (нижний правый).
-Допустимые условия (condition):
-- healthy — здоровый
-- cavity — кариес
-- treated — вылечен / пломба
-- crown — коронка
-- root_canal — корневой канал / пульпит / эндодонтия
-- implant — имплант
-- missing — отсутствует / удалён
-- extraction_needed — требует удаления / под удаление
-
-Правила:
-1. Если зуб упоминается по номеру — используй точный FDI номер.
-2. Если зуб упоминается как "верхний правый шестой" и т.п. — переведи в FDI (верхний правый 6й = 16).
-3. "Четвёрка" = 4-й зуб; уточни квадрант из контекста, если возможно.
-4. Игнорируй зубы с состоянием "healthy" — их не нужно включать в список (это норма).
-5. В поле diagnosisText укажи ТОЧНОЕ медицинское название диагноза как сказал врач (например: "хронический пульпит", "глубокий кариес дистальной поверхности", "периодонтит", "киста").
-6. В поле spokenProcedure укажи ТОЧНЫЕ слова врача о планируемой услуге, материале или методе лечения для этого зуба (например: "пломба композитная световая Filtek", "коронка циркониевая", "удаление"). Если врач услугу не назвал — оставь пустую строку "".
-7. Верни ТОЛЬКО JSON массив, без пояснений.
-
-Формат ответа:
-[{"fdi": 16, "condition": "cavity", "diagnosisText": "глубокий кариес дистальной поверхности", "spokenProcedure": "пломба композитная световая", "notes": "глубокий кариес дистальной поверхности"}, ...]
-
-Если ничего не удалось разобрать — верни пустой массив [].`;
-
-    let diagnoses: Array<{
-      fdi: number;
-      condition: string;
-      notes: string;
-      diagnosisText: string;
-      spokenProcedure: string;
-    }> = [];
+    let diagnoses: Awaited<ReturnType<typeof parseVoiceDiagnoses>>["diagnoses"] = [];
     try {
-      const chatRes = await openrouter.chat.completions.create({
-        model: DEEPSEEK_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Осмотр: "${transcript}"` },
-        ],
-        temperature: 0.1,
-        max_tokens: 1000,
-      });
-
-      const raw = chatRes.choices[0]?.message?.content?.trim() ?? "[]";
-      const jsonMatch = raw.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]) as unknown[];
-        const validConditions = new Set([
-          "healthy", "cavity", "treated", "crown", "root_canal",
-          "implant", "missing", "extraction_needed",
-        ]);
-        diagnoses = (parsed as Array<Record<string, unknown>>)
-          .filter(
-            (d) =>
-              typeof d === "object" &&
-              d !== null &&
-              typeof d["fdi"] === "number" &&
-              (d["fdi"] as number) >= 11 &&
-              (d["fdi"] as number) <= 48 &&
-              typeof d["condition"] === "string" &&
-              validConditions.has(d["condition"] as string),
-          )
-          .map((d) => ({
-            fdi: d["fdi"] as number,
-            condition: d["condition"] as string,
-            notes: typeof d["notes"] === "string" ? (d["notes"] as string) : "",
-            diagnosisText: typeof d["diagnosisText"] === "string"
-              ? (d["diagnosisText"] as string)
-              : (typeof d["notes"] === "string" ? (d["notes"] as string) : ""),
-            spokenProcedure: typeof d["spokenProcedure"] === "string" ? (d["spokenProcedure"] as string) : "",
-          }));
-      }
+      const parsed = await parseVoiceDiagnoses(transcript);
+      diagnoses = parsed.diagnoses;
+      parseMs = parsed.ms;
     } catch (err) {
       logger.error({ err }, "[VoiceDiagnose] LLM parse error");
       return next(err);
     }
 
-    // ── Step 3: Enrich with clinic prices + transcript-relevant procedure templates ──
+    // ── Enrich with clinic prices + transcript-relevant procedure templates ──
     const [prices, allTemplates] = await Promise.all([
       pricesRepo.getConditionPrices(req.user!.clinicId),
       procRepo.listTemplates(req.user!.clinicId),
@@ -491,7 +410,17 @@ router.post(
     });
 
     logger.info(
-      { patientId, clinicId: req.user!.clinicId, transcript: transcript.slice(0, 200), count: enriched.length },
+      {
+        patientId,
+        clinicId: req.user!.clinicId,
+        transcript: transcript.slice(0, 200),
+        count: enriched.length,
+        sttModel,
+        sttMs,
+        parseMs,
+        totalMs: Date.now() - started,
+        audioBytes: req.file.buffer.length,
+      },
       "[VoiceDiagnose] Completed",
     );
 
