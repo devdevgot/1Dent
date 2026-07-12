@@ -165,7 +165,7 @@ export default function Login() {
                 onClick={() => setMode("whatsapp-recovery")}
                 className="text-xs font-medium text-[#1f75fe] hover:underline transition-all duration-200"
               >
-                {t("auth.forgotPasswordWhatsapp")}
+                {t("auth.forgotPassword")}
               </button>
             </div>
 
