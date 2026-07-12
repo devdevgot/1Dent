@@ -17,7 +17,13 @@ interface PlatformAdmin {
 interface PlatformSettings {
   admins: PlatformAdmin[];
   stats: { clinics: number; users: number; patients: number };
-  bot: { configured: boolean; webhookUrl: string | null; tmaUrl: string | null };
+  bot: {
+    configured: boolean;
+    superadminConfigured?: boolean;
+    notificationRecipients?: number;
+    webhookUrl: string | null;
+    tmaUrl: string | null;
+  };
 }
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
@@ -103,6 +109,22 @@ export default function SettingsPage() {
     },
   });
 
+  const testNotification = useMutation({
+    mutationFn: () => api.post<{
+      success: boolean;
+      data?: { sent: number; failed: number; recipients: number; errors?: string[] };
+      error?: string;
+    }>("/notifications/test"),
+    onSuccess: (res) => {
+      if (res.success) {
+        hapticNotify("success");
+      } else {
+        hapticNotify("error");
+      }
+    },
+    onError: () => hapticNotify("error"),
+  });
+
   const admins = settings?.admins ?? [];
 
   return (
@@ -159,6 +181,34 @@ export default function SettingsPage() {
               <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${settings?.bot.configured ? "bg-green-400" : "bg-red-400"}`} />
               <span className="text-sm text-foreground">{settings?.bot.configured ? "Токен настроен" : "Токен не настроен"}</span>
             </div>
+            {settings?.bot.configured && (
+              <p className="text-xs text-muted-foreground">
+                Получателей уведомлений: {settings.bot.notificationRecipients ?? 0}
+                {settings.bot.superadminConfigured ? " (включая superadmin)" : ""}.
+                Каждый администратор должен написать боту <span className="font-mono">/start</span>, иначе Telegram не доставит сообщения.
+              </p>
+            )}
+            {settings?.bot.configured && (
+              <button
+                type="button"
+                onClick={() => { haptic("light"); testNotification.mutate(); }}
+                disabled={testNotification.isPending}
+                className="w-full py-2 rounded-lg text-sm font-medium bg-primary/10 text-primary border border-primary/20 disabled:opacity-50"
+              >
+                {testNotification.isPending ? "Отправка…" : "Проверить уведомления в Telegram"}
+              </button>
+            )}
+            {testNotification.isError && (
+              <p className="text-xs text-destructive">{(testNotification.error as Error).message}</p>
+            )}
+            {testNotification.data && !testNotification.data.success && (
+              <p className="text-xs text-destructive">{testNotification.data.error ?? "Не удалось отправить тест"}</p>
+            )}
+            {testNotification.data?.success && testNotification.data.data && (
+              <p className="text-xs text-green-600">
+                Доставлено: {testNotification.data.data.sent} из {testNotification.data.data.recipients}
+              </p>
+            )}
             {settings?.bot.webhookUrl && (
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Webhook URL</p>

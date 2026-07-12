@@ -1,7 +1,8 @@
-import { db, errorEventsTable, platformAdminsTable } from "@workspace/db";
+import { db, errorEventsTable } from "@workspace/db";
 import type { ErrorEvent } from "@workspace/db";
 import { and, count, eq, gte } from "drizzle-orm";
 import { logger } from "../../lib/logger";
+import { sendPlatformAdminTelegramMessage } from "../../shared/platform-admin-notify";
 import type { CaptureErrorInput } from "./error-events.service";
 import {
   canSendWithinHourlyCap,
@@ -11,24 +12,6 @@ import {
   recordTelegramSend,
   shouldNotifyTelegram,
 } from "./error-events.policy";
-
-async function sendTelegramMessage(token: string, chatId: string, text: string): Promise<void> {
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Telegram sendMessage failed: ${res.status} ${body}`);
-  }
-}
 
 async function isFirstFingerprintInWindow(
   fingerprint: string | null,
@@ -75,28 +58,27 @@ export async function notifyAdmins(
     return;
   }
 
-  const admins = await db
-    .select({ telegramUserId: platformAdminsTable.telegramUserId })
-    .from(platformAdminsTable);
+  const text = formatAlert(event);
+  const result = await sendPlatformAdminTelegramMessage(token, text);
 
-  if (admins.length === 0) {
-    logger.debug("[error-events] no platform admins — skip Telegram alert");
+  if (result.recipients.length === 0) {
+    logger.debug("[error-events] no platform admin recipients — skip Telegram alert");
     return;
   }
 
-  const text = formatAlert(event);
-  const results = await Promise.allSettled(
-    admins.map((admin) => sendTelegramMessage(token, admin.telegramUserId, text)),
-  );
-
-  const failed = results.filter((r) => r.status === "rejected").length;
-  if (failed > 0) {
-    logger.warn({ failed, total: admins.length }, "[error-events] some admin Telegram alerts failed");
+  if (result.sent === 0) {
+    logger.warn(
+      { failed: result.failed, errors: result.errors, eventId: event.id },
+      "[error-events] Telegram alert not delivered to any admin",
+    );
     return;
   }
 
   recordTelegramSend();
-  logger.info({ admins: admins.length, eventId: event.id }, "[error-events] Telegram alert sent");
+  logger.info(
+    { sent: result.sent, failed: result.failed, eventId: event.id },
+    "[error-events] Telegram alert sent",
+  );
 }
 
 /** @deprecated Use notifyAdmins */

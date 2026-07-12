@@ -8,7 +8,7 @@ import { sendToPatient } from "../shared/messaging";
 import { MessagesService } from "../modules/messages/messages.service";
 import { BranchesRepository } from "../modules/branches/branches.repository";
 import { logger } from "../lib/logger";
-import { sendTmaOpenButton } from "../shared/platform-bot";
+import { sendPlatformBotMessage, sendTmaOpenButton } from "../shared/platform-bot";
 
 const router = Router();
 const service = new MessagesService();
@@ -185,6 +185,11 @@ router.post("/api/webhook/telegram/platform", async (req: Request, res: Response
 
     if (text === "/start" || text === "/admin" || text.startsWith("/start ")) {
       await sendTmaOpenButton(token, chatId);
+      await sendPlatformBotMessage(
+        token,
+        chatId,
+        "🔔 Уведомления об ошибках платформы будут приходить в этот чат после настройки администратора в TMA.",
+      );
     }
   } catch (err) {
     logger.error({ err }, "[PlatformBot] webhook error");
