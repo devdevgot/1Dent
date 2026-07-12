@@ -234,21 +234,23 @@ const SONNET_REFINE_META_PROMPT = `Ты улучшаешь system prompt для 
 
 Верни ТОЛЬКО улучшенный текст system prompt, без markdown-обёрток и комментариев.`;
 
-function cacheComposedPrompt(
+async function cacheComposedPrompt(
   clinicId: string,
   hash: string,
   prompt: string,
   refined: boolean,
-): void {
+): Promise<void> {
   composedPromptCache.set(clinicId, {
     hash,
     prompt,
     refined,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });
-  void persistComposedPrompt(clinicId, prompt, refined).catch((err) =>
-    logger.warn({ err, clinicId }, "[PromptComposer] failed to persist prompt"),
-  );
+  try {
+    await persistComposedPrompt(clinicId, prompt, refined);
+  } catch (err) {
+    logger.warn({ err, clinicId }, "[PromptComposer] failed to persist prompt");
+  }
 }
 
 /** Force Opus to compose a fresh base prompt (not refined). */
@@ -274,7 +276,7 @@ export async function composeChatbotPromptWithOpus(
     );
     const composed = completion.choices[0]?.message?.content?.trim();
     if (composed && composed.length > 200) {
-      cacheComposedPrompt(inputs.clinicId, hash, composed, false);
+      await cacheComposedPrompt(inputs.clinicId, hash, composed, false);
       return composed;
     }
     logger.warn("[PromptComposer] Opus returned empty/short prompt — using fallback");
@@ -283,8 +285,27 @@ export async function composeChatbotPromptWithOpus(
   }
 
   const fallback = buildFallbackComposedPrompt(inputs);
-  cacheComposedPrompt(inputs.clinicId, hash, fallback, false);
+  await cacheComposedPrompt(inputs.clinicId, hash, fallback, false);
   return fallback;
+}
+
+/** Load draft prompt for Sonnet refine — memory cache first, then DB persistence. */
+async function resolveComposedPromptDraft(
+  clinicId: string,
+  hash: string,
+): Promise<string> {
+  const cached = composedPromptCache.get(clinicId);
+  if (cached) {
+    if (cached.refined) throw new Error("ALREADY_REFINED");
+    return cached.prompt;
+  }
+
+  const persisted = await loadPersistedComposedPrompt(clinicId);
+  if (!persisted) throw new Error("NO_COMPOSED_PROMPT");
+  if (persisted.refined) throw new Error("ALREADY_REFINED");
+
+  await cacheComposedPrompt(clinicId, hash, persisted.prompt, false);
+  return persisted.prompt;
 }
 
 /** Refine the cached Opus prompt with Claude Sonnet 5. */
@@ -292,14 +313,11 @@ export async function refineComposedChatbotPrompt(
   inputs: ChatbotPromptComposeInputs,
 ): Promise<string> {
   const hash = hashComposeInputs(inputs);
-  const cached = composedPromptCache.get(inputs.clinicId);
-  if (!cached || cached.expiresAt <= Date.now()) {
-    throw new Error("NO_COMPOSED_PROMPT");
-  }
+  const draftPrompt = await resolveComposedPromptDraft(inputs.clinicId, hash);
 
   const userPayload = [
     "=== ЧЕРНОВИК PROMPT (от Opus) ===",
-    cached.prompt,
+    draftPrompt,
     "",
     "=== ИСХОДНЫЕ ДАННЫЕ КЛИНИКИ (проверь факты) ===",
     buildUserPayload(inputs),
@@ -323,7 +341,7 @@ export async function refineComposedChatbotPrompt(
     throw new Error("REFINE_FAILED");
   }
 
-  cacheComposedPrompt(inputs.clinicId, hash, refined, true);
+  await cacheComposedPrompt(inputs.clinicId, hash, refined, true);
   return refined;
 }
 
@@ -336,7 +354,7 @@ export async function getComposedChatbotPrompt(inputs: ChatbotPromptComposeInput
 
   const persisted = await loadPersistedComposedPrompt(inputs.clinicId);
   if (persisted) {
-    cacheComposedPrompt(inputs.clinicId, hash, persisted.prompt, persisted.refined);
+    await cacheComposedPrompt(inputs.clinicId, hash, persisted.prompt, persisted.refined);
     return persisted.prompt;
   }
 
