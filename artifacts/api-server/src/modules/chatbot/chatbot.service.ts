@@ -255,8 +255,13 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
       try {
         const raw = await redis.get(`${REDIS_KEY_PREFIX}${clinicId}:${key}`);
         if (raw) {
-          const session = JSON.parse(raw) as SessionRecord;
-          return { ...session, phone: canonicalChatbotPhone(session.phone) };
+          try {
+            const session = JSON.parse(raw) as SessionRecord;
+            return { ...session, phone: canonicalChatbotPhone(session.phone) };
+          } catch (err) {
+            logger.warn({ err, clinicId, key }, "[ChatbotSession] corrupt Redis session JSON — deleting key");
+            await redis.del(`${REDIS_KEY_PREFIX}${clinicId}:${key}`).catch(() => {});
+          }
         }
       } catch (err) {
         logger.warn({ err }, "[ChatbotSession] Redis get failed, falling back to DB");
@@ -274,10 +279,18 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
     const age = Date.now() - new Date(row.updatedAt).getTime();
     if (age > SESSION_TTL_SECONDS * 1000) continue;
 
+    const canonicalPhone = canonicalChatbotPhone(row.phone);
+    if (row.phone !== canonicalPhone) {
+      db.update(chatbotSessionsTable)
+        .set({ phone: canonicalPhone, updatedAt: new Date() })
+        .where(eq(chatbotSessionsTable.id, row.id))
+        .catch((err) => logger.warn({ err, sessionId: row.id }, "[ChatbotSession] failed to migrate phone format"));
+    }
+
     const session: SessionRecord = {
       id: row.id,
       clinicId: row.clinicId,
-      phone: canonicalChatbotPhone(row.phone),
+      phone: canonicalPhone,
       state: row.state as ChatbotState,
       data: (row.data ?? {}) as ChatbotSessionData,
       humanTakeover: row.humanTakeover,
@@ -298,31 +311,56 @@ async function loadSession(clinicId: string, phone: string): Promise<SessionReco
 async function saveSession(session: SessionRecord): Promise<void> {
   const canonicalPhone = canonicalChatbotPhone(session.phone);
   const normalizedSession = { ...session, phone: canonicalPhone };
-  await db
-    .insert(chatbotSessionsTable)
-    .values({
-      id: normalizedSession.id,
-      clinicId: normalizedSession.clinicId,
-      phone: normalizedSession.phone,
+
+  const updated = await db
+    .update(chatbotSessionsTable)
+    .set({
+      phone: canonicalPhone,
       state: normalizedSession.state,
       data: normalizedSession.data as Record<string, unknown>,
       humanTakeover: normalizedSession.humanTakeover,
       updatedAt: new Date(),
     })
-    .onConflictDoUpdate({
-      target: [chatbotSessionsTable.clinicId, chatbotSessionsTable.phone],
-      set: {
+    .where(
+      and(
+        eq(chatbotSessionsTable.id, normalizedSession.id),
+        eq(chatbotSessionsTable.clinicId, normalizedSession.clinicId),
+      ),
+    )
+    .returning({ id: chatbotSessionsTable.id });
+
+  if (updated.length === 0) {
+    await db
+      .insert(chatbotSessionsTable)
+      .values({
+        id: normalizedSession.id,
+        clinicId: normalizedSession.clinicId,
+        phone: canonicalPhone,
         state: normalizedSession.state,
         data: normalizedSession.data as Record<string, unknown>,
         humanTakeover: normalizedSession.humanTakeover,
         updatedAt: new Date(),
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [chatbotSessionsTable.clinicId, chatbotSessionsTable.phone],
+        set: {
+          state: normalizedSession.state,
+          data: normalizedSession.data as Record<string, unknown>,
+          humanTakeover: normalizedSession.humanTakeover,
+          updatedAt: new Date(),
+        },
+      });
+  }
 
   if (redis) {
+    for (const key of chatbotPhoneLookupKeys(session.phone)) {
+      if (key !== canonicalPhone) {
+        redis.del(`${REDIS_KEY_PREFIX}${normalizedSession.clinicId}:${key}`).catch(() => {});
+      }
+    }
     redis
       .setex(
-        `${REDIS_KEY_PREFIX}${normalizedSession.clinicId}:${normalizedSession.phone}`,
+        `${REDIS_KEY_PREFIX}${normalizedSession.clinicId}:${canonicalPhone}`,
         SESSION_TTL_SECONDS,
         JSON.stringify(normalizedSession),
       )
@@ -1863,8 +1901,9 @@ export class ChatbotService {
     try {
       return await this.executeTurn(clinicId, phone, text, options);
     } catch (err) {
+      const errMessage = err instanceof Error ? err.message : String(err);
       logger.error(
-        { err, clinicId, phone, dryRun },
+        { err, clinicId, phone, dryRun, errMessage },
         "[ChatbotService] executeTurn threw — returning safe fallback turn",
       );
       const session = await resolveSessionForErrorTurn(clinicId, phone, options?.sessionInput);
@@ -2106,7 +2145,15 @@ export class ChatbotService {
             { clinicName: resolvedClinicNameForReply, maxParts: 2 },
           );
         }
-        throw err;
+        logger.error({ err, clinicId, phone }, "[ChatbotService] plan/credits check failed — safe fallback");
+        turnDiag.earlyExitReason = "credits_exhausted";
+        logChatbotTurnDiagnostics(turnDiag);
+        return buildSafeErrorTurnResult(
+          session,
+          PATIENT_SAFE_FALLBACK_TEXT,
+          [],
+          { clinicName: resolvedClinicNameForReply, recentMessages: historyForKnowledge },
+        );
       }
     }
 
@@ -4236,6 +4283,7 @@ export class ChatbotService {
   ): Promise<ChatMessage[]> {
     try {
       const phoneKeys = chatbotPhoneLookupKeys(phone);
+      if (phoneKeys.length === 0) return [];
       const messages = await db
         .select({
           direction: chatbotMessagesTable.direction,

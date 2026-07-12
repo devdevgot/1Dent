@@ -45,12 +45,10 @@ export function clearTakeoverAt(data: ChatbotSessionData): ChatbotSessionData {
   return next;
 }
 
-export function markSessionHumanTakeover<T extends { humanTakeover: boolean; data: ChatbotSessionData }>(
-  session: T,
-): T {
-  return {
-    ...session,
-    humanTakeover: true,
-    data: stampTakeoverAt(session.data),
-  };
+export function markSessionHumanTakeover(session: {
+  humanTakeover: boolean;
+  data: ChatbotSessionData;
+}): void {
+  session.humanTakeover = true;
+  session.data = stampTakeoverAt(session.data);
 }
