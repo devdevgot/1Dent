@@ -36,7 +36,7 @@ export function debounceMessage(
   const entry = pending.get(key)!;
   entry.timer = setTimeout(() => {
     pending.delete(key);
-    const combined = entry.buffer.join("\n");
+    const combined = entry.buffer.join(" ");
     logger.debug({ key, parts: entry.buffer.length }, "[MessageDebounce] firing with combined message");
     callback(combined);
   }, DEBOUNCE_MS);

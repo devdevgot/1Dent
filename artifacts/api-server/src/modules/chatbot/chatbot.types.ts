@@ -74,4 +74,6 @@ export interface ChatbotSessionData {
   fromRepeatSaleBroadcast?: boolean;
   pendingReviewProcedureId?: string;
   pendingReviewDoctorId?: string;
+  /** ISO timestamp when humanTakeover was activated (for auto-resume). */
+  takeoverAt?: string;
 }

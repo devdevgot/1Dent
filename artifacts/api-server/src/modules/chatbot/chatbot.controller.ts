@@ -105,6 +105,8 @@ const testMessageSchema = z.object({
     data: z.record(z.unknown()).optional(),
     humanTakeover: z.boolean().optional(),
   }).optional(),
+  useRealSession: z.boolean().optional(),
+  realPatientPhone: z.string().max(30).optional(),
 });
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -302,6 +304,43 @@ router.post(
   },
 );
 
+const compareTurnSchema = z.object({
+  phone: z.string().min(5).max(30),
+  userMessage: z.string().min(1).max(500),
+});
+
+router.get(
+  "/sessions/:phone",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const phone = String(req.params["phone"]);
+    const session = await service.getSessionByPhone(req.user!.clinicId, phone).catch(next);
+    if (session === undefined) return;
+    res.json({ success: true, data: { session } });
+  },
+);
+
+router.post(
+  "/compare-turn",
+  roleGuard("owner", "admin"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = compareTurnSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+      }
+      const result = await service.compareTurn(
+        req.user!.clinicId,
+        parsed.data.phone,
+        parsed.data.userMessage,
+      );
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // ─── Test message ─────────────────────────────────────────────────────────────
 
 router.post(
@@ -329,6 +368,8 @@ router.post(
             : undefined,
           scenario: parsed.data.scenario,
           initGreeting: parsed.data.initGreeting,
+          useRealSession: parsed.data.useRealSession,
+          realPatientPhone: parsed.data.realPatientPhone,
         },
       );
       res.json({ success: true, data: result });

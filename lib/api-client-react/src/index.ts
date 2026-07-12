@@ -413,6 +413,8 @@ export const testChatbotMessage = (data: {
   initGreeting?: boolean;
   scenario?: PlaygroundScenario;
   session?: PlaygroundSessionPayload;
+  useRealSession?: boolean;
+  realPatientPhone?: string;
 }): Promise<TestMessageResponse> =>
   customFetch<TestMessageResponse>("/api/chatbot/test-message", {
     method: "POST",
@@ -431,6 +433,8 @@ export const useTestChatbotMessage = <TError = unknown>(options?: {
       initGreeting?: boolean;
       scenario?: PlaygroundScenario;
       session?: PlaygroundSessionPayload;
+      useRealSession?: boolean;
+      realPatientPhone?: string;
     }
   >;
 }) =>
@@ -444,10 +448,49 @@ export const useTestChatbotMessage = <TError = unknown>(options?: {
       initGreeting?: boolean;
       scenario?: PlaygroundScenario;
       session?: PlaygroundSessionPayload;
+      useRealSession?: boolean;
+      realPatientPhone?: string;
     }
   >({
     mutationFn: (data) => testChatbotMessage(data),
     ...options?.mutation,
+  });
+
+export interface ChatbotSessionStatus {
+  id: string;
+  clinicId: string;
+  phone: string;
+  state: string;
+  data?: Record<string, unknown>;
+  humanTakeover: boolean;
+}
+
+export interface GetChatbotSessionResponse {
+  success: boolean;
+  data: { session: ChatbotSessionStatus | null };
+}
+
+export const getChatbotSession = (
+  phone: string,
+  options?: RequestInit,
+): Promise<GetChatbotSessionResponse> =>
+  customFetch<GetChatbotSessionResponse>(
+    `/api/chatbot/sessions/${encodeURIComponent(phone)}`,
+    { method: "GET", ...options },
+  );
+
+export const useGetChatbotSession = <TError = unknown>(
+  phone: string,
+  options?: {
+    query?: UseQueryOptions<GetChatbotSessionResponse, TError>;
+  },
+) =>
+  useQuery<GetChatbotSessionResponse, TError>({
+    queryKey: ["/api/chatbot/sessions", phone, "status"],
+    queryFn: ({ signal }) => getChatbotSession(phone, { signal }),
+    enabled: !!phone,
+    refetchInterval: 10_000,
+    ...options?.query,
   });
 
 // ─── Custom: payroll ──────────────────────────────────────────────────────────
