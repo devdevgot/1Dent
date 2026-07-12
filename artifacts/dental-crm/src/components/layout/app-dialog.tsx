@@ -60,16 +60,30 @@ export function AppDialog({
       <DialogContent
         hideClose
         className={cn(
-          "gap-0 overflow-hidden border-[#e8e3d9] bg-white p-0 font-manrope",
+          "flex flex-col gap-0 overflow-hidden border-[#e8e3d9] bg-white p-0 font-manrope shadow-xl",
           !isTablet && [
-            "max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0",
-            "max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-h-[92vh]",
+            "max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto",
+            "max-sm:left-0 max-sm:right-0 max-sm:w-full max-sm:max-w-none",
+            "max-sm:translate-x-0 max-sm:translate-y-0",
+            "max-sm:rounded-t-3xl max-sm:rounded-b-none",
+            "max-sm:max-h-[min(92dvh,92svh)]",
+            "max-sm:shadow-[0_-12px_40px_rgba(15,23,42,0.18)]",
+            "max-sm:data-[state=open]:slide-in-from-bottom max-sm:data-[state=closed]:slide-out-to-bottom",
+            "max-sm:data-[state=open]:slide-in-from-left-0 max-sm:data-[state=open]:slide-in-from-top-0",
+            "max-sm:data-[state=closed]:slide-out-to-left-0 max-sm:data-[state=closed]:slide-out-to-top-0",
+            "max-sm:data-[state=open]:zoom-in-100 max-sm:data-[state=closed]:zoom-out-100",
           ],
           widths[size],
           className,
         )}
       >
-        <DialogHeader className="border-b border-[#e8e3d9] px-5 py-4 text-left space-y-1">
+        {!isTablet ? (
+          <div className="sm:hidden flex justify-center pt-2.5 pb-1 shrink-0" aria-hidden>
+            <div className="w-10 h-1 rounded-full bg-[#d4cfc6]" />
+          </div>
+        ) : null}
+
+        <DialogHeader className="border-b border-[#e8e3d9] px-5 py-4 text-left space-y-1 shrink-0">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-lg font-semibold text-[#0f172a] leading-tight">
@@ -94,10 +108,12 @@ export function AppDialog({
           </div>
         </DialogHeader>
 
-        <div className={cn("overflow-y-auto px-5 py-4", bodyClassName)}>{children}</div>
+        <div className={cn("flex-1 min-h-0 overflow-y-auto px-5 py-4 custom-scrollbar", bodyClassName)}>
+          {children}
+        </div>
 
         {footer ? (
-          <DialogFooter className="border-t border-[#e8e3d9] px-5 py-4 gap-2 sm:gap-2">
+          <DialogFooter className="border-t border-[#e8e3d9] px-5 pt-4 pb-safe gap-3 shrink-0 flex flex-row items-stretch sm:flex-row sm:justify-stretch w-full [&_button]:min-h-11">
             {footer}
           </DialogFooter>
         ) : null}
