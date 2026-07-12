@@ -15,6 +15,8 @@ const STOP_WORDS = new Set([
   "этот", "эта", "это", "тот", "та", "там", "тут", "есть", "будет",
   "нужно", "надо", "требует", "стоит", "поставить", "делать",
   "сделать", "лечение", "лечить", "пациент", "врач",
+  "будем", "использовать", "такую", "такой", "такое", "такие",
+  "будет", "нужна", "нужен", "нужны",
 ]);
 
 const CONDITION_IRRELEVANT_STEMS: Record<string, string[]> = {
@@ -27,14 +29,37 @@ const CONDITION_IRRELEVANT_STEMS: Record<string, string[]> = {
   missing: ["пломб", "кариес", "штифт", "анкерн", "пульп"],
 };
 
-const MIN_SCORE = 3;
-const MAX_SUGGESTIONS = 5;
+const DENTAL_SYNONYMS: Record<string, string[]> = {
+  пломб: ["plomba", "plomb", "filling", "composite", "композит", "restoration", "to'ldirish", "толтыру", "toltyru"],
+  композит: ["пломб", "composite", "filling", "restoration", "plomba"],
+  кариес: ["karies", "caries", "cavity", "шүкір", "churk"],
+  коронк: ["crown", "kappa", "таж", "protez", "протез"],
+  имплант: ["implant", "osstem", "straumann", "dentium"],
+  удален: ["extraction", "удаление", "olish", "алып", "extract"],
+  пульп: ["endodont", "эндодонт", "root", "kanal", "канал"],
+  чистк: ["scaling", "hygiene", "гигиен", "tozalash"],
+  отбел: ["bleach", "whitening", "aqart"],
+};
+
+const CONDITION_HINT_STEMS: Record<string, string[]> = {
+  cavity: ["пломб", "композит", "реставрац", "кариес", "karies", "caries", "filling"],
+  treated: ["пломб", "композит", "реставрац", "filling"],
+  root_canal: ["пульп", "эндодонт", "канал", "root", "endodont"],
+  crown: ["коронк", "crown", "керам", "циркон", "protez"],
+  implant: ["имплант", "implant", "абатмент", "коронк"],
+  extraction_needed: ["удален", "extraction", "хирург"],
+  missing: ["имплант", "мост", "протез", "съемн", "bridge"],
+};
+
+const MIN_SCORE = 2;
+const MAX_SUGGESTIONS = 6;
 
 function normalizeText(text: string): string {
   return text
     .toLowerCase()
     .replace(/ё/g, "е")
-    .replace(/[^а-яa-z0-9\s]/gi, " ")
+    .replace(/[''`]/g, "'")
+    .replace(/[^а-яa-z0-9\s'-]/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -43,6 +68,21 @@ function tokenizeVoiceText(text: string): string[] {
   return normalizeText(text)
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+}
+
+function expandQueryWords(words: string[]): string[] {
+  const expanded = new Set(words);
+  for (const word of words) {
+    for (const [stem, synonyms] of Object.entries(DENTAL_SYNONYMS)) {
+      if (word.includes(stem) || stem.includes(word)) {
+        for (const syn of synonyms) expanded.add(syn);
+      }
+      for (const syn of synonyms) {
+        if (word.includes(syn) || syn.includes(word)) expanded.add(stem);
+      }
+    }
+  }
+  return [...expanded];
 }
 
 function templateTokens(template: ProcedureTemplate): string[] {
@@ -65,6 +105,33 @@ function isIrrelevantForCondition(
   return stems.some((stem) => haystack.includes(stem) && !stemMatches(searchText, stem));
 }
 
+function extractTranscriptExcerpt(transcript: string, fdi?: number): string {
+  if (!transcript.trim() || !fdi) return "";
+  const fdiStr = String(fdi);
+  const idx = transcript.search(new RegExp(`\\b${fdiStr}\\b`));
+  if (idx < 0) return "";
+  const start = Math.max(0, idx - 20);
+  const end = Math.min(transcript.length, idx + 140);
+  return transcript.slice(start, end).trim();
+}
+
+function buildSearchText(params: {
+  transcript?: string;
+  diagnosisText?: string;
+  notes?: string;
+  spokenProcedure?: string;
+  fdi?: number;
+}): string {
+  const parts = [
+    params.spokenProcedure,
+    params.diagnosisText,
+    params.notes,
+    extractTranscriptExcerpt(params.transcript ?? "", params.fdi),
+  ].filter((p) => Boolean(p?.trim()));
+
+  return parts.join(" ");
+}
+
 function scoreVoiceServiceMatch(
   searchText: string,
   template: ProcedureTemplate,
@@ -73,10 +140,11 @@ function scoreVoiceServiceMatch(
   if (!searchText.trim()) return 0;
   if (isIrrelevantForCondition(template, condition, searchText)) return 0;
 
-  const queryWords = tokenizeVoiceText(searchText);
+  const queryWords = expandQueryWords(tokenizeVoiceText(searchText));
   if (queryWords.length === 0) return 0;
 
   const nameWords = templateTokens(template);
+  const haystack = `${template.name} ${template.description ?? ""}`.toLowerCase();
   let score = 0;
   let matchedQueryWords = 0;
 
@@ -84,17 +152,26 @@ function scoreVoiceServiceMatch(
     let wordMatched = false;
     for (const nw of nameWords) {
       if (nw === qw) {
-        score += 5;
+        score += 6;
         wordMatched = true;
       } else if (nw.startsWith(qw) || qw.startsWith(nw)) {
-        score += 3;
+        score += 4;
         wordMatched = true;
       } else if (nw.includes(qw) || qw.includes(nw)) {
-        score += 2;
+        score += 3;
         wordMatched = true;
       }
     }
+    if (!wordMatched && haystack.includes(qw)) {
+      score += 2;
+      wordMatched = true;
+    }
     if (wordMatched) matchedQueryWords++;
+  }
+
+  const hints = CONDITION_HINT_STEMS[condition] ?? [];
+  for (const stem of hints) {
+    if (haystack.includes(stem) && stemMatches(searchText, stem)) score += 2;
   }
 
   if (matchedQueryWords === 0) return 0;
@@ -102,32 +179,39 @@ function scoreVoiceServiceMatch(
   return score;
 }
 
+function scorePool(
+  pool: ProcedureTemplate[],
+  searchText: string,
+  condition: string,
+): Array<{ t: ProcedureTemplate; score: number }> {
+  return pool
+    .map((t) => ({ t, score: scoreVoiceServiceMatch(searchText, t, condition) }))
+    .filter((s) => s.score >= MIN_SCORE)
+    .sort((a, b) => b.score - a.score);
+}
+
 export function matchVoiceServices(params: {
-  transcript: string;
+  transcript?: string;
   condition: string;
   diagnosisText?: string;
   notes?: string;
   spokenProcedure?: string;
+  fdi?: number;
   templates: ProcedureTemplate[];
   category?: string;
 }): { suggestions: VoiceServiceMatch[]; bestMatchId?: string } {
-  const searchText = [
-    params.transcript,
-    params.spokenProcedure,
-    params.diagnosisText,
-    params.notes,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const searchText = buildSearchText(params);
+  const priced = params.templates.filter((t) => t.defaultPrice > 0);
 
-  const pool = params.category
-    ? params.templates.filter((t) => t.category === params.category && t.defaultPrice > 0)
-    : params.templates.filter((t) => t.defaultPrice > 0);
+  const categoryPool = params.category
+    ? priced.filter((t) => t.category === params.category)
+    : priced;
 
-  const scored = pool
-    .map((t) => ({ t, score: scoreVoiceServiceMatch(searchText, t, params.condition) }))
-    .filter((s) => s.score >= MIN_SCORE)
-    .sort((a, b) => b.score - a.score);
+  let scored = scorePool(categoryPool, searchText, params.condition);
+
+  if (scored.length === 0 && params.category) {
+    scored = scorePool(priced, searchText, params.condition);
+  }
 
   const top = scored.slice(0, MAX_SUGGESTIONS);
   const best = top[0];

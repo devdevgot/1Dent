@@ -123,6 +123,7 @@ function rematchEntryServices(
     diagnosisText: entry.diagnosisText,
     notes: entry.notes,
     spokenProcedure: entry.spokenProcedure,
+    fdi: entry.fdi,
     templates,
     category,
   });
@@ -588,12 +589,15 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     )}>
       <div
         className={cn(
-          "bg-white border border-[#e8e3d9] shadow-lg w-full min-w-0 flex flex-col overflow-hidden",
+          "bg-white border border-[#e8e3d9] shadow-lg w-full min-w-0 flex flex-col overflow-hidden min-h-0",
           isTablet
             ? "max-w-4xl rounded-2xl"
             : "rounded-t-2xl sm:rounded-2xl max-w-[100vw] sm:max-w-3xl",
         )}
-        style={{ maxHeight: "min(92dvh, 100dvh - env(safe-area-inset-bottom, 0px))" }}
+        style={{
+          height: "min(92dvh, calc(100dvh - env(safe-area-inset-bottom, 0px)))",
+          maxHeight: "min(92dvh, calc(100dvh - env(safe-area-inset-bottom, 0px)))",
+        }}
       >
 
         {/* Header */}
@@ -645,7 +649,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         )}
 
         {/* Body */}
-        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar overscroll-contain">
 
           {/* Idle / Recording */}
           {(phase === "idle" || phase === "recording") && (
@@ -745,7 +749,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     onClick={() => setTranscriptOpen((v) => !v)}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[#faf8f4] border border-[#e8e3d9]/40 rounded-xl text-left hover:bg-[#f1ede4] transition-colors"
                   >
-                    <span className="text-xs font-medium text-[#64748b]">Расшифровка речи</span>
+                    <span className="text-xs font-medium text-[#64748b]">Расшифровка (как сказано)</span>
                     {transcriptOpen
                       ? <ChevronDown className="w-3.5 h-3.5 text-[#64748b]" />
                       : <ChevronRight className="w-3.5 h-3.5 text-[#64748b]" />}
@@ -769,19 +773,26 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               ) : (
                 <>
                   <p className="text-xs text-[#64748b] px-1">
-                    Проверьте диагнозы. В списке услуг — только позиции, совпадающие со словами из расшифровки.
+                    Проверьте диагнозы. Услуги подбираются по словам врача о процедуре и диагнозе.
                   </p>
 
-                  <div className="border border-[#e8e3d9]/50 rounded-xl overflow-hidden w-full min-w-0 isolate">
-                    <div className="table-h-scroll w-full min-w-0 touch-pan-x">
-                      <table className="text-xs w-full table-fixed min-w-0">
+                  <div className="border border-[#e8e3d9]/50 rounded-xl overflow-hidden w-full max-w-full isolate">
+                    <div className="table-h-scroll w-full max-w-full touch-pan-x overscroll-x-contain">
+                      <table className="text-xs w-full table-fixed min-w-[680px]">
+                        <colgroup>
+                          <col style={{ width: "72px" }} />
+                          <col style={{ width: "200px" }} />
+                          <col style={{ width: "280px" }} />
+                          <col style={{ width: "88px" }} />
+                          <col style={{ width: "52px" }} />
+                        </colgroup>
                         <thead>
                           <tr className="bg-[#faf8f4] border-b border-[#e8e3d9]/50 text-[10px] uppercase tracking-wide text-[#64748b]">
-                            <th className="text-left font-semibold px-3 py-2 w-[11%]">Зуб</th>
-                            <th className="text-left font-semibold px-3 py-2 w-[27%]">Диагноз</th>
-                            <th className="text-left font-semibold px-3 py-2 w-[37%]">Услуга</th>
-                            <th className="text-right font-semibold px-3 py-2 w-[15%]">Цена</th>
-                            <th className="text-center font-semibold px-2 py-2 w-[10%]">Удалить</th>
+                            <th className="text-left font-semibold px-3 py-2">Зуб</th>
+                            <th className="text-left font-semibold px-3 py-2">Диагноз</th>
+                            <th className="text-left font-semibold px-3 py-2">Услуга</th>
+                            <th className="text-right font-semibold px-3 py-2">Цена</th>
+                            <th className="text-center font-semibold px-2 py-2">Удалить</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--ds-border)]/40">
@@ -807,11 +818,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     <span className="font-bold">{entry.fdi}</span>
                                   </div>
                                 </td>
-                                <td className="px-3 py-2.5 align-top space-y-1.5 max-w-0 min-w-0">
+                                <td className="px-3 py-2.5 align-top space-y-1.5">
                                   <select
                                     value={entry.condition}
                                     onChange={(e) => handleConditionChange(idx, entry, e.target.value)}
-                                    className="w-full min-w-0 max-w-full text-xs border border-[#e8e3d9] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                    className="w-full text-xs border border-[#e8e3d9] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                                   >
                                     {CONDITION_VALUES.map((c) => (
                                       <option key={c} value={c}>{CONDITION_CONFIG[c]?.label ?? c}</option>
@@ -826,12 +837,12 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     </p>
                                   )}
                                 </td>
-                                <td className="px-3 py-2.5 align-top max-w-0 min-w-0">
+                                <td className="px-3 py-2.5 align-top">
                                   {suggestions.length > 0 ? (
                                     <select
                                       value={selectedId}
                                       onChange={(e) => setServiceForTooth(entry.fdi, e.target.value)}
-                                      className="w-full min-w-0 max-w-full text-xs border border-[#e8e3d9] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 truncate"
+                                      className="w-full text-xs border border-[#e8e3d9] rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                                     >
                                       <option value="">— не выбрано —</option>
                                       {suggestions.map((tpl) => (
@@ -847,16 +858,16 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                                     </p>
                                   )}
                                 </td>
-                                <td className="px-3 py-2.5 align-top text-right font-semibold text-primary tabular-nums whitespace-nowrap max-w-0 min-w-0">
+                                <td className="px-3 py-2.5 align-top text-right font-semibold text-primary tabular-nums whitespace-nowrap">
                                   {rowPrice > 0 ? `${rowPrice.toLocaleString("ru-KZ")} ₸` : "—"}
                                 </td>
-                                <td className="px-2 py-2.5 align-top text-center">
+                                <td className="px-2 py-2.5 align-top text-center w-[52px]">
                                   <button
                                     type="button"
                                     onClick={() => removeEntry(idx)}
                                     title="Удалить"
                                     aria-label="Удалить"
-                                    className="p-1.5 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-50 transition-colors"
+                                    className="inline-flex items-center justify-center p-1.5 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-50 transition-colors"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>

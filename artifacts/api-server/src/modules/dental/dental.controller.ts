@@ -379,6 +379,7 @@ router.post(
         diagnosisText: d.diagnosisText,
         notes: d.notes,
         spokenProcedure: d.spokenProcedure,
+        fdi: d.fdi,
         category: cat,
         templates: allTemplates.map((t) => ({
           id: t.id,
