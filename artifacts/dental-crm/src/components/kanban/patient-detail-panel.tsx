@@ -898,10 +898,8 @@ export function PatientDetailPanel() {
   }, [selectedPatientId, showVoiceModal, checkVoiceDraft]);
 
   const openVoiceModal = useCallback((opts?: { restoreDraft?: boolean }) => {
-    startTransition(() => {
-      setRestoreVoiceDraft(!!opts?.restoreDraft);
-      setShowVoiceModal(true);
-    });
+    setRestoreVoiceDraft(!!opts?.restoreDraft);
+    setShowVoiceModal(true);
   }, []);
 
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
@@ -2478,7 +2476,7 @@ export function PatientDetailPanel() {
                           setDiagnosisServicesMap(new Map());
                           setPickerCategory(null);
                         }}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg text-[#64748b] transition-colors hover:bg-[#f1ede4] hover:text-[#0f172a] active:scale-95"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f1ede4] text-[#64748b] transition-colors hover:bg-[#e8e3d9] hover:text-[#0f172a] active:scale-95"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -2490,7 +2488,7 @@ export function PatientDetailPanel() {
                       <button
                         type="button"
                         onClick={() => openVoiceModal()}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg text-primary transition-colors hover:bg-[#f1ede4] active:scale-95"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e8f2ff] text-[#1f75fe] transition-colors hover:bg-[#d6e8ff] active:scale-95"
                       >
                         <Mic className="w-5 h-5" />
                       </button>
@@ -2503,7 +2501,7 @@ export function PatientDetailPanel() {
                         type="button"
                         disabled={updateToothMutation.isPending || (diagnosisMap.size === 0 && diagnosisNotesMap.size === 0)}
                         onClick={handleFinishDiagnosis}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1f75fe] text-white transition-colors hover:bg-[#1a65e8] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Check className="w-5 h-5" strokeWidth={2.5} />
                       </button>
