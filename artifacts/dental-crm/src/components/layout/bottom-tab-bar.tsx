@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -7,7 +8,7 @@ import {
   TabHomeIcon,
   TabInventoryIcon,
   TabWhatsAppIcon,
-  TabMoreIcon,
+  TabProfileIcon,
   TabPatientsIcon,
   TabServicesIcon,
   TAB_ACTIVE,
@@ -123,7 +124,7 @@ function buildTabs(
     id: "more",
     labelKey: "nav.more",
     href: "/account-settings",
-    icon: TabMoreIcon,
+    icon: TabProfileIcon,
     geoRestricted: false,
     isActive: ACCOUNT_SETTINGS_PREFIXES.some((p) => matchesPath(location, p)),
     overlaySlug: null,
@@ -148,6 +149,14 @@ export function BottomTabBar({
   const openWorkOverlay = (slug: string) => {
     navigate(`${roleDashboardHref}?service=${slug}`);
   };
+
+  const navigateToTab = (href: string) => {
+    navigate(href, { replace: activeService !== null });
+  };
+
+  useEffect(() => {
+    void import("@/pages/account-settings");
+  }, []);
 
   return (
     <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 safe-area-bottom">
@@ -192,6 +201,19 @@ export function BottomTabBar({
                 key={tab.id}
                 type="button"
                 onClick={() => openWorkOverlay(tab.overlaySlug!)}
+                className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none transition-colors"
+              >
+                {content}
+              </button>
+            );
+          }
+
+          if (activeService !== null) {
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => navigateToTab(tab.href)}
                 className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none transition-colors"
               >
                 {content}

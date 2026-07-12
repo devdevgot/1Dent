@@ -173,19 +173,19 @@ export function TabWhatsAppIcon(props: TabIconProps) {
 /** @deprecated Use TabWhatsAppIcon */
 export const TabMessagesIcon = TabWhatsAppIcon;
 
-export function TabMoreIcon(props: TabIconProps) {
-  const color = props.active ? TAB_ACTIVE : TAB_INACTIVE;
+export function TabProfileIcon(props: TabIconProps) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn("w-6 h-6", props.className)}
-      aria-hidden
-    >
-      <circle cx="6" cy="12" r="2.25" fill={color} />
-      <circle cx="12" cy="12" r="2.25" fill={color} />
-      <circle cx="18" cy="12" r="2.25" fill={color} />
-    </svg>
+    <TabIconShell {...props} highlightId="tab-profile">
+      {(gradId) => (
+        <>
+          <circle cx="12" cy="8.75" r="3.25" />
+          <path d="M6.25 18.75c0-3.18 2.58-4.75 5.75-4.75s5.75 1.57 5.75 4.75v.75H6.25v-.75Z" />
+          <circle cx="12" cy="8.75" r="3.25" fill={`url(#${gradId})`} />
+        </>
+      )}
+    </TabIconShell>
   );
 }
+
+/** @deprecated Use TabProfileIcon */
+export const TabMoreIcon = TabProfileIcon;
