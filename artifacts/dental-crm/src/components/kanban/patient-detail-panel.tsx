@@ -42,12 +42,15 @@ const ContractsTab = lazyWithChunkRecovery(() =>
 const PatientBroadcastHistory = lazyWithChunkRecovery(() =>
   import("./patient-broadcast-history").then((m) => ({ default: m.PatientBroadcastHistory })),
 );
-import { VoiceDiagnosisModal, type VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
+import type { VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
+const VoiceDiagnosisModal = lazyWithChunkRecovery(() =>
+  import("@/components/dental-chart/voice-diagnosis-modal").then((m) => ({ default: m.VoiceDiagnosisModal })),
+);
 import { matchServiceToSubcategory, matchSubcategoriesFromTitles } from "@/lib/contract-service-matching";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
-  X, ChevronDown, ChevronRight, CheckCircle2, Clock, ArrowUpRight,
+  X, ChevronDown, ChevronRight, Check, CheckCircle2, Clock, ArrowUpRight,
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
   Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic, Trash2,
@@ -893,6 +896,13 @@ export function PatientDetailPanel() {
   useEffect(() => {
     checkVoiceDraft();
   }, [selectedPatientId, showVoiceModal, checkVoiceDraft]);
+
+  const openVoiceModal = useCallback((opts?: { restoreDraft?: boolean }) => {
+    startTransition(() => {
+      setRestoreVoiceDraft(!!opts?.restoreDraft);
+      setShowVoiceModal(true);
+    });
+  }, []);
 
   const [diagnosisMap, setDiagnosisMap] = useState<DiagnosisMap>(new Map());
   const [diagnosisNotesMap, setDiagnosisNotesMap] = useState<DiagnosisNotesMap>(new Map());
@@ -2178,10 +2188,7 @@ export function PatientDetailPanel() {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <button
-                                onClick={() => {
-                                  setRestoreVoiceDraft(true);
-                                  setShowVoiceModal(true);
-                                }}
+                                onClick={() => openVoiceModal({ restoreDraft: true })}
                                 className="text-[11px] font-medium text-[#0f172a] bg-[var(--ds-border)] hover:bg-[var(--border-strong)] px-3 py-1.5 rounded-lg transition-colors"
                               >
                                 Восстановить
@@ -2425,10 +2432,7 @@ export function PatientDetailPanel() {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <button
-                                onClick={() => {
-                                  setRestoreVoiceDraft(true);
-                                  setShowVoiceModal(true);
-                                }}
+                                onClick={() => openVoiceModal({ restoreDraft: true })}
                                 className="text-[11px] font-medium text-[#0f172a] bg-[var(--ds-border)] hover:bg-[var(--border-strong)] px-3 py-1.5 rounded-lg transition-colors"
                               >
                                 Восстановить
@@ -2459,12 +2463,13 @@ export function PatientDetailPanel() {
 
               {/* ── Pinned bottom bar: diagnosis action buttons ── */}
               {(isDiagnosisMode || (chartReady && !hasDiagnosis)) && (
-                <div className="shrink-0 border-t border-[#e8e3d9]/30 bg-white/95 backdrop-blur-sm safe-area-bottom">
-                  <div className="flex items-center justify-center gap-8 py-3 px-6">
+                <div className="shrink-0 border-t border-[#e8e3d9] bg-white safe-area-bottom">
+                  <div className="flex items-center justify-center gap-10 py-3 px-6">
 
                     {/* Отмена */}
                     <div className="flex flex-col items-center gap-1.5">
                       <button
+                        type="button"
                         onClick={() => {
                           setIsDiagnosisMode(false);
                           setDiagnosisMap(new Map());
@@ -2473,9 +2478,9 @@ export function PatientDetailPanel() {
                           setDiagnosisServicesMap(new Map());
                           setPickerCategory(null);
                         }}
-                        className="w-14 h-14 rounded-full border-2 border-[#e8e3d9] flex items-center justify-center text-[#64748b] hover:bg-[#f1ede4] hover:border-[var(--border-strong)] transition-colors"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-[#64748b] transition-colors hover:bg-[#f1ede4] hover:text-[#0f172a] active:scale-95"
                       >
-                        <X className="w-6 h-6" />
+                        <X className="w-5 h-5" />
                       </button>
                       <span className="text-[11px] text-[#64748b]">{t("tooth.cancel")}</span>
                     </div>
@@ -2483,10 +2488,11 @@ export function PatientDetailPanel() {
                     {/* Голосовая диагностика */}
                     <div className="flex flex-col items-center gap-1.5">
                       <button
-                        onClick={() => setShowVoiceModal(true)}
-                        className="w-14 h-14 rounded-full border-2 border-primary/40 bg-primary/5 flex items-center justify-center text-primary hover:bg-primary/15 hover:border-primary/60 transition-colors"
+                        type="button"
+                        onClick={() => openVoiceModal()}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-primary transition-colors hover:bg-[#f1ede4] active:scale-95"
                       >
-                        <Mic className="w-6 h-6" />
+                        <Mic className="w-5 h-5" />
                       </button>
                       <span className="text-[11px] text-[#64748b]">Голос</span>
                     </div>
@@ -2494,11 +2500,12 @@ export function PatientDetailPanel() {
                     {/* Завершить диагностику */}
                     <div className="flex flex-col items-center gap-1.5">
                       <button
+                        type="button"
                         disabled={updateToothMutation.isPending || (diagnosisMap.size === 0 && diagnosisNotesMap.size === 0)}
                         onClick={handleFinishDiagnosis}
-                        className="w-14 h-14 rounded-full border-2 border-primary bg-primary flex items-center justify-center text-white hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        <CheckCircle2 className="w-6 h-6" />
+                        <Check className="w-5 h-5" strokeWidth={2.5} />
                       </button>
                       <span className="text-[11px] text-[#64748b]">Завершить</span>
                     </div>
@@ -2905,22 +2912,24 @@ export function PatientDetailPanel() {
 
       {/* Voice diagnosis modal */}
       {showVoiceModal && selectedPatientId && (
-        <VoiceDiagnosisModal
-          patientId={selectedPatientId}
-          activePlanId={activePlan?.id}
-          initialRestoreDraft={restoreVoiceDraft}
-          onClose={() => {
-            setShowVoiceModal(false);
-            setRestoreVoiceDraft(false);
-          }}
-          onApplied={(result) => {
-            setShowVoiceModal(false);
-            setRestoreVoiceDraft(false);
-            setVoiceDraftExists(false);
-            setVoiceDraftTime(null);
-            void handleVoiceDiagnosisApplied(result);
-          }}
-        />
+        <Suspense fallback={null}>
+          <VoiceDiagnosisModal
+            patientId={selectedPatientId}
+            activePlanId={activePlan?.id}
+            initialRestoreDraft={restoreVoiceDraft}
+            onClose={() => {
+              setShowVoiceModal(false);
+              setRestoreVoiceDraft(false);
+            }}
+            onApplied={(result) => {
+              setShowVoiceModal(false);
+              setRestoreVoiceDraft(false);
+              setVoiceDraftExists(false);
+              setVoiceDraftTime(null);
+              void handleVoiceDiagnosisApplied(result);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Diagnosis summary modal */}
