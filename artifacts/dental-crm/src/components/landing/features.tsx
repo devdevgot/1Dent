@@ -83,6 +83,11 @@ const features: FeatureItem[] = [
 
 const SLIDE_OFFSET = 48;
 
+function getViewportHeight() {
+  if (typeof window === "undefined") return 800;
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
 function slideOffset(direction: SlideDirection, sign: 1 | -1) {
   switch (direction) {
     case "up":
@@ -134,14 +139,19 @@ function StickyFeaturesShowcase() {
   const sectionRef = useRef<HTMLElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [scrollDirection, setScrollDirection] = useState<1 | -1>(1);
+  const [viewportHeight, setViewportHeight] = useState(getViewportHeight);
   const lastIndexRef = useRef(0);
+
+  const updateViewportHeight = useCallback(() => {
+    setViewportHeight(getViewportHeight());
+  }, []);
 
   const updateActiveIndex = useCallback(() => {
     const section = sectionRef.current;
     if (!section) return;
 
+    const viewport = getViewportHeight();
     const rect = section.getBoundingClientRect();
-    const viewport = window.innerHeight;
     const scrollable = section.offsetHeight - viewport;
 
     if (scrollable <= 0) return;
@@ -150,11 +160,14 @@ function StickyFeaturesShowcase() {
 
     if (rect.top > 0) {
       nextIndex = 0;
-    } else if (rect.bottom <= viewport) {
+    } else if (rect.bottom <= viewport + 1) {
       nextIndex = features.length - 1;
     } else {
       const progress = Math.min(1, Math.max(0, -rect.top / scrollable));
-      nextIndex = Math.min(features.length - 1, Math.floor(progress * features.length));
+      nextIndex = Math.min(
+        features.length - 1,
+        Math.max(0, Math.floor(progress * features.length)),
+      );
     }
 
     if (nextIndex !== lastIndexRef.current) {
@@ -166,17 +179,41 @@ function StickyFeaturesShowcase() {
   }, []);
 
   useEffect(() => {
+    updateViewportHeight();
     updateActiveIndex();
-    window.addEventListener("scroll", updateActiveIndex, { passive: true });
-    window.addEventListener("resize", updateActiveIndex);
-    return () => {
-      window.removeEventListener("scroll", updateActiveIndex);
-      window.removeEventListener("resize", updateActiveIndex);
+
+    const onScroll = () => updateActiveIndex();
+    const onResize = () => {
+      updateViewportHeight();
+      updateActiveIndex();
     };
-  }, [updateActiveIndex]);
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("scroll", onResize);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
+    };
+  }, [updateActiveIndex, updateViewportHeight]);
 
   const activeFeature = features[activeIndex]!;
   const progress = ((activeIndex + 1) / features.length) * 100;
+  const scrollHeight = viewportHeight * features.length;
+
+  const scrollToFeature = (index: number) => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const viewport = getViewportHeight();
+    const scrollable = section.offsetHeight - viewport;
+    const target = section.offsetTop + (scrollable * index) / features.length;
+    window.scrollTo({ top: target, behavior: "smooth" });
+  };
 
   return (
     <section
@@ -184,7 +221,7 @@ function StickyFeaturesShowcase() {
       className="landing-features-scroll"
       style={
         {
-          height: `${features.length * 100}vh`,
+          height: scrollHeight,
           "--feature-progress": `${progress}%`,
         } as CSSProperties
       }
@@ -195,10 +232,7 @@ function StickyFeaturesShowcase() {
           <div className="landing-features-layout-v2">
             <div className="landing-features-sidebar-v2">
               <div className="landing-features-progress-track" aria-hidden>
-                <div
-                  className="landing-features-progress-fill"
-                  style={{ height: `${progress}%` }}
-                />
+                <div className="landing-features-progress-fill" />
               </div>
 
               <div className="landing-features-steps" aria-hidden>
@@ -207,13 +241,7 @@ function StickyFeaturesShowcase() {
                     key={feature.label}
                     type="button"
                     className={`landing-features-step ${index === activeIndex ? "is-active" : ""} ${index < activeIndex ? "is-done" : ""}`}
-                    onClick={() => {
-                      const section = sectionRef.current;
-                      if (!section) return;
-                      const scrollable = section.offsetHeight - window.innerHeight;
-                      const target = section.offsetTop + (scrollable * index) / features.length;
-                      window.scrollTo({ top: target, behavior: "smooth" });
-                    }}
+                    onClick={() => scrollToFeature(index)}
                   >
                     <span className="landing-features-step-dot" />
                     <span className="landing-features-step-label font-manrope">{feature.label}</span>
@@ -244,7 +272,7 @@ function StickyFeaturesShowcase() {
 
 function ReducedMotionFeaturesList() {
   return (
-    <div className="landing-features-fallback space-y-8 min-w-0">
+    <div className="landing-features-fallback max-w-6xl mx-auto px-4 sm:px-6 space-y-8 min-w-0">
       {features.map((feature, index) => {
         const Illustration = feature.illustration;
         return (
@@ -266,17 +294,17 @@ function ReducedMotionFeaturesList() {
 
 export function Features() {
   return (
-    <section id="features" className="bg-[#faf8f4] landing-section-sm px-4 sm:px-6 overflow-hidden">
-      <div className="max-w-6xl mx-auto min-w-0">
-        <motion.div {...fadeUp(0)} className="text-center mb-12 lg:mb-16">
+    <div id="features" className="bg-[#faf8f4] landing-features-section">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 min-w-0">
+        <motion.div {...fadeUp(0)} className="text-center landing-features-heading">
           <h2 className="landing-h2 font-manrope text-[#0f172a]">
             Что умеет {SITE.name}
           </h2>
         </motion.div>
-
-        <ReducedMotionFeaturesList />
-        <StickyFeaturesShowcase />
       </div>
-    </section>
+
+      <ReducedMotionFeaturesList />
+      <StickyFeaturesShowcase />
+    </div>
   );
 }
