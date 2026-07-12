@@ -1,19 +1,19 @@
 import { z } from "zod";
 import i18n from "@/lib/i18n";
+import { phoneToApi } from "@/lib/whatsapp-auth";
 
 export const createLoginSchema = () =>
   z.object({
-    email: z
+    phone: z
       .string()
       .trim()
-      .min(1, i18n.t("validation.emailInvalid"))
-      .email(i18n.t("validation.emailInvalid"))
-      .transform((value) => value.toLowerCase()),
+      .min(1, i18n.t("validation.phoneRequired"))
+      .refine((value) => phoneToApi(value).length >= 11, i18n.t("validation.phoneInvalid")),
     password: z.string().min(1, i18n.t("validation.passwordRequired")),
   });
 
 export type LoginFormValues = {
-  email: string;
+  phone: string;
   password: string;
 };
 

@@ -1,10 +1,15 @@
 {
   "auth": {
     "welcome": "Welcome back",
-    "subtitle": "Enter your email and password to sign in.",
+    "subtitle": "Enter your WhatsApp number and password to sign in.",
     "email": "Email",
+    "whatsappPhone": "WhatsApp number",
     "password": "Password",
     "forgotPassword": "Forgot password?",
+    "forgotPasswordWhatsapp": "Forgot password? Sign in with WhatsApp code",
+    "backToPasswordLogin": "Sign in with password",
+    "recoveryTitle": "Sign in with WhatsApp code",
+    "recoverySubtitle": "We'll send a one-time code to your WhatsApp number",
     "signIn": "Sign in",
     "signingIn": "Signing in...",
     "newClinic": "New clinic?",
@@ -447,6 +452,8 @@
   },
   "validation": {
     "emailInvalid": "Please enter a valid email address",
+    "phoneRequired": "Enter your WhatsApp number",
+    "phoneInvalid": "Enter the full WhatsApp number",
     "passwordRequired": "Password is required",
     "clinicNameMin": "Clinic name must be at least 2 characters",
     "nameMin": "Your name must be at least 2 characters",

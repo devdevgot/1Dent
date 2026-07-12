@@ -1,10 +1,15 @@
 {
   "auth": {
     "welcome": "Қош келдіңіз",
-    "subtitle": "Кіру үшін email және құпиясөзді енгізіңіз.",
+    "subtitle": "Кіру үшін WhatsApp нөмірі мен құпиясөзді енгізіңіз.",
     "email": "Email",
+    "whatsappPhone": "WhatsApp нөмірі",
     "password": "Құпиясөз",
     "forgotPassword": "Құпиясөзді ұмыттыңыз ба?",
+    "forgotPasswordWhatsapp": "Құпиясөзді ұмыттыңыз ба? WhatsApp кодымен кіру",
+    "backToPasswordLogin": "Құпиясөзбен кіру",
+    "recoveryTitle": "WhatsApp кодымен кіру",
+    "recoverySubtitle": "WhatsApp нөміріңізге бір реттік код жібереміз",
     "signIn": "Кіру",
     "signingIn": "Кіру...",
     "newClinic": "Жаңа клиника?",
@@ -447,6 +452,8 @@
   },
   "validation": {
     "emailInvalid": "Жарамды email енгізіңіз",
+    "phoneRequired": "WhatsApp нөмірін енгізіңіз",
+    "phoneInvalid": "WhatsApp нөмірін толығымен енгізіңіз",
     "passwordRequired": "Құпиясөз міндетті",
     "clinicNameMin": "Клиника атауы — кемінде 2 таңба",
     "nameMin": "Аты — кемінде 2 таңба",

@@ -126,15 +126,31 @@ export class AuthService {
     return { user: safeUser, clinic, token };
   }
 
-  async login(data: { email: string; password: string }): Promise<AuthResult> {
-    const user = await this.repo.findUserByEmail(data.email.toLowerCase());
+  async login(data: { email?: string; phone?: string; password: string }): Promise<AuthResult> {
+    let user: User | undefined;
+
+    if (data.phone) {
+      const matches = await this.repo.findUsersByPhone(data.phone);
+      if (matches.length === 0) {
+        throw new UnauthorizedError("Неверный номер или пароль");
+      }
+      if (matches.length > 1) {
+        throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
+      }
+      user = matches[0];
+    } else if (data.email) {
+      user = await this.repo.findUserByEmail(data.email.toLowerCase());
+    } else {
+      throw new ValidationError("Укажите номер WhatsApp");
+    }
+
     if (!user) {
-      throw new UnauthorizedError("Invalid email or password");
+      throw new UnauthorizedError("Неверный номер или пароль");
     }
 
     const valid = await bcrypt.compare(data.password, user.passwordHash);
     if (!valid) {
-      throw new UnauthorizedError("Invalid email or password");
+      throw new UnauthorizedError("Неверный номер или пароль");
     }
 
     if (user.isActive === false) {

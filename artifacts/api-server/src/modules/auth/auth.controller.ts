@@ -37,10 +37,21 @@ const registerSchema = z
     }
   });
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+const loginSchema = z
+  .object({
+    email: z.string().email().optional(),
+    phone: z.string().min(10).optional(),
+    password: z.string().min(1),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.email && !data.phone) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Укажите номер WhatsApp",
+        path: ["phone"],
+      });
+    }
+  });
 
 router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
   const parsed = registerSchema.safeParse(req.body);
