@@ -1,6 +1,6 @@
 import { customFetch } from "@workspace/api-client-react";
 
-export type WhatsappOtpPurpose = "login" | "register";
+export type WhatsappOtpPurpose = "login" | "register" | "reset_password";
 
 export async function requestWhatsappOtp(phone: string, purpose: WhatsappOtpPurpose) {
   return customFetch<{ success: boolean; data: { phone: string }; devCode?: string }>(
@@ -36,6 +36,29 @@ export async function verifyWhatsappOtpRegister(phone: string, code: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone, code, purpose: "register" as const }),
+  });
+}
+
+export async function verifyWhatsappOtpReset(phone: string, code: string) {
+  return customFetch<{
+    success: boolean;
+    data: { phone: string; verificationToken: string };
+  }>("/api/auth/whatsapp/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, code, purpose: "reset_password" as const }),
+  });
+}
+
+export async function resetPasswordViaWhatsapp(data: {
+  phone: string;
+  verificationToken: string;
+  newPassword: string;
+}) {
+  return customFetch<{ success: boolean; message?: string }>("/api/auth/whatsapp/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
 }
 

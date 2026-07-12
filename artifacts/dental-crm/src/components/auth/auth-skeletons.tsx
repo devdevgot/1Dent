@@ -171,7 +171,7 @@ export function LoginPageSkeleton() {
 
 export function RegisterDisclaimerPageSkeleton() {
   return (
-    <AuthLayoutSkeleton>
+    <AuthLayoutSkeleton hideMobileBranding>
       <RegisterDisclaimerCardSkeleton />
     </AuthLayoutSkeleton>
   );

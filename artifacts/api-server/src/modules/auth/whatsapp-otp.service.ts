@@ -4,7 +4,7 @@ import { sendPlatformWhatsApp } from "../../shared/platform-whatsapp";
 import { ValidationError, UnauthorizedError, NotFoundError, TooManyRequestsError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
 
-export type WhatsappOtpPurpose = "login" | "register" | "staff_invite";
+export type WhatsappOtpPurpose = "login" | "register" | "staff_invite" | "reset_password";
 
 interface OtpEntry {
   code: string;
@@ -51,7 +51,9 @@ function otpMessage(code: string, purpose: WhatsappOtpPurpose): string {
       ? "🔐 Код для входа в 1Dent"
       : purpose === "register"
         ? "🔐 Код для регистрации в 1Dent"
-        : "🔐 Код подтверждения 1Dent";
+        : purpose === "reset_password"
+          ? "🔐 Код для сброса пароля в 1Dent"
+          : "🔐 Код подтверждения 1Dent";
 
   return `${prefix}:\n\n*${code}*\n\nКод действителен 5 минут. Не передавайте его третьим лицам.`;
 }

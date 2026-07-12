@@ -10,6 +10,7 @@
     "backToPasswordLogin": "Sign in with password",
     "recoveryTitle": "Sign in with WhatsApp code",
     "recoverySubtitle": "We'll send a one-time code to your WhatsApp number",
+    "forgotWhatsappSubtitle": "Enter your WhatsApp number — we'll send a code to reset your password",
     "signIn": "Sign in",
     "signingIn": "Signing in...",
     "newClinic": "New clinic?",
