@@ -1,4 +1,4 @@
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
   useListUsersAll,
@@ -34,13 +34,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { EmployeeFormData } from "./employee-dialog";
+import EmployeeDialog from "./employee-dialog";
+import InviteStaffDialog from "./invite-staff-dialog";
 import { cn } from "@/lib/utils";
 import { TableSkeleton } from "@/components/skeletons";
 import { StaffSectionNav } from "@/components/staff/staff-section-nav";
-import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
-
-const EmployeeDialog = lazyWithChunkRecovery(() => import("./employee-dialog"));
-const InviteStaffDialog = lazyWithChunkRecovery(() => import("./invite-staff-dialog"));
 
 const ROLES = ["admin", "doctor", "accountant", "warehouse", "assistant", "nurse"] as const;
 
@@ -605,27 +603,18 @@ export default function StaffPage() {
           )}
         </div>
 
-      {/* ── Dialogs (lazy — only load chunk when opened) ─────── */}
-      {inviteOpen && (
-        <Suspense fallback={null}>
-          <InviteStaffDialog
-            open={inviteOpen}
-            onClose={() => setInviteOpen(false)}
-          />
-        </Suspense>
-      )}
+      <InviteStaffDialog
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+      />
 
-      {editDialogOpen && (
-        <Suspense fallback={null}>
-          <EmployeeDialog
-            open={editDialogOpen}
-            onClose={() => { setEditDialogOpen(false); setEditingUser(null); }}
-            onSave={handleEditSave}
-            isSaving={isSaving}
-            editUser={editingUser}
-          />
-        </Suspense>
-      )}
+      <EmployeeDialog
+        open={editDialogOpen}
+        onClose={() => { setEditDialogOpen(false); setEditingUser(null); }}
+        onSave={handleEditSave}
+        isSaving={isSaving}
+        editUser={editingUser}
+      />
 
       <ConfirmDeleteDialog
         open={!!deleteConfirmId}
