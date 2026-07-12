@@ -261,6 +261,9 @@ router.post("/knowledge/refine-prompt", ownerAdmin, async (req: Request, res: Re
       if (msg === "NO_COMPOSED_PROMPT") {
         return next(new ValidationError("Сначала создайте промпт кнопкой «Создать промпт» (Opus)."));
       }
+      if (msg === "ALREADY_REFINED") {
+        return next(new ValidationError("Промпт уже доработан Sonnet. Создайте новый черновик через «Создать промпт»."));
+      }
       if (msg === "REFINE_FAILED") {
         return next(new OpenRouterAiFailedError("Sonnet не смог доработать промпт. Попробуйте ещё раз."));
       }
