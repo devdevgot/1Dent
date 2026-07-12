@@ -3,7 +3,7 @@ import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Sea
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { getBaseUrl } from "@/lib/base-url";
 import { ListRowsSkeleton } from "@/components/skeletons";
 
@@ -387,9 +387,12 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
   useEffect(() => {
     if (!isModalOpen) return;
     let destroyed = false;
+    let frameId = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    // Small delay to let the dialog DOM render
-    const timer = setTimeout(() => {
+    // Defer map init so the dialog paints above the menu overlay first.
+    frameId = requestAnimationFrame(() => {
+      timer = setTimeout(() => {
       if (!mapRef.current) return;
 
       loadYandexMaps(yandexApiKey)
@@ -482,11 +485,13 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
         .catch(() => {
           if (!destroyed) setModalMapError("Не удалось загрузить Яндекс Карты.");
         });
-    }, 150);
+      }, 200);
+    });
 
     return () => {
       destroyed = true;
-      clearTimeout(timer);
+      cancelAnimationFrame(frameId);
+      if (timer) clearTimeout(timer);
       if (ymapRef.current) {
         try { ymapRef.current.destroy(); } catch { /* ignore */ }
         ymapRef.current = null;
@@ -514,6 +519,21 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
       } catch { setMapGeoResults([]); }
       finally { setMapSearching(false); setSearchDone(true); }
     }, 400);
+  }, []);
+
+  const openNewBranchModal = useCallback(() => {
+    setEditingBranch(null);
+    setPendingCoords(null);
+    setNewName("");
+    setNewRadius(200);
+    setCustomRadius("");
+    setUseCustomRadius(false);
+    setMyLocation(null);
+    setMapQuery("");
+    setMapGeoResults([]);
+    setSearchDone(false);
+    setConfirmingDelete(false);
+    setIsModalOpen(true);
   }, []);
 
   // ── Open edit modal ──────────────────────────────────────────────────────
@@ -668,7 +688,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
           </div>
           <Button
             className="gap-1.5 h-8 text-xs px-2.5 sm:px-3"
-            onClick={() => setIsModalOpen(true)}
+            onClick={openNewBranchModal}
           >
             <Plus className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline">Новый филиал</span>
@@ -763,16 +783,19 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
       </div>
 
       {/* ── Add branch modal ───────────────────────────────────────────── */}
-      <Dialog open={isModalOpen} onOpenChange={(open) => { if (!open) closeModal(); }}>
-        <DialogContent className="max-w-lg w-full p-0 gap-0 overflow-hidden rounded-2xl">
-          <DialogHeader className="px-5 py-4 border-b border-[#e8e3d9] flex-row items-center gap-3 space-y-0">
+      <AppDialog
+        open={isModalOpen}
+        onOpenChange={(open) => { if (!open) closeModal(); }}
+        title={
+          <span className="inline-flex items-center gap-2">
             <MapPin className="w-5 h-5 text-[#1f75fe] shrink-0" />
-            <DialogTitle className="flex-1 text-base font-semibold">
-              {editingBranch ? "Редактировать филиал" : "Новый филиал"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-col max-h-[80vh] overflow-y-auto">
+            {editingBranch ? "Редактировать филиал" : "Новый филиал"}
+          </span>
+        }
+        size="lg"
+        bodyClassName="!p-0 max-h-[80vh] overflow-y-auto"
+      >
+          <div className="flex flex-col">
             {/* Address search */}
             <div className="px-4 pt-4 pb-2 relative">
               <div className="relative">
@@ -1052,18 +1075,22 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
 
       {/* ── Branch journal modal ──────────────────────────────────────── */}
-      <Dialog open={!!journalBranch} onOpenChange={(open) => { if (!open) { setJournalBranch(null); setJournalEvents([]); setJournalEmployee("all"); setJournalFiltersOpen(false); } }}>
-        <DialogContent className="max-w-2xl w-full p-0 gap-0 overflow-hidden rounded-2xl flex flex-col max-h-[90vh]">
-          <DialogHeader className="px-5 py-4 border-b border-[#e8e3d9] flex-row items-center gap-3 space-y-0 shrink-0">
+      <AppDialog
+        open={!!journalBranch}
+        onOpenChange={(open) => { if (!open) { setJournalBranch(null); setJournalEvents([]); setJournalEmployee("all"); setJournalFiltersOpen(false); } }}
+        title={
+          <span className="inline-flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-[#1f75fe] shrink-0" />
-            <DialogTitle className="flex-1 text-base font-semibold">
-              Журнал трекинга — {journalBranch?.name}
-            </DialogTitle>
-            <div className="flex items-center gap-1.5">
+            Журнал трекинга — {journalBranch?.name}
+          </span>
+        }
+        size="xl"
+        bodyClassName="!p-0 flex flex-col max-h-[75vh]"
+      >
+          <div className="flex items-center justify-end gap-1.5 px-5 py-2 border-b border-[#e8e3d9] shrink-0">
               <button
                 onClick={() => setJournalFiltersOpen(v => !v)}
                 className={cn(
@@ -1100,7 +1127,6 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
                 </>
               )}
             </div>
-          </DialogHeader>
 
           {/* Filters — collapsible */}
           {journalFiltersOpen && <div className="px-5 py-3 border-b border-[#e8e3d9] space-y-2.5 shrink-0">
@@ -1234,8 +1260,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
               </>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+      </AppDialog>
 
       {/* ── Telegram notifications ─────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden">

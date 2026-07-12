@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense, startTransition, type ComponentType } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import {
   useGetPatient,
@@ -444,7 +445,7 @@ function ToothActionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={handleAbort}>
+    <div className="fixed inset-0 z-[92] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={handleAbort}>
       <div
         className="bg-white rounded-2xl border border-[#e8e3d9] shadow-xl w-80 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -1792,13 +1793,13 @@ export function PatientDetailPanel() {
 
   if (!selectedPatientId) return null;
 
-  return (
+  const panel = (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+        className="fixed inset-0 z-[90] bg-black/30 backdrop-blur-sm"
         onClick={() => { setSelectedPatientId(null); setActiveTab("info"); setTreatmentStep(1); }}
       />
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col overflow-hidden">
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-[91] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e8e3d9]/50">
           <h2 className="font-bold text-lg">{t("patient.card")}</h2>
@@ -3049,4 +3050,7 @@ export function PatientDetailPanel() {
       />
     </>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(panel, document.body);
 }
