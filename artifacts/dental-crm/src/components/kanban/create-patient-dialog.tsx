@@ -152,26 +152,30 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
       onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}
       title={t("createPatient.title")}
       size="md"
-      bodyClassName="!py-0 custom-scrollbar"
+      bodyClassName="!py-0"
       footer={
         !foundPatient ? (
-          <>
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+          <div className="flex gap-3 w-full">
+            <button
+              type="button"
+              className="dash-btn dash-btn-secondary flex-1 min-h-11"
+              onClick={onClose}
+            >
               {t("createPatient.cancel")}
-            </Button>
-            <Button
+            </button>
+            <button
               form="create-patient-form"
               type="submit"
-              className="flex-1"
+              className="dash-btn dash-btn-primary flex-1 min-h-11"
               disabled={mutation.isPending || (iin.length > 0 && !!iinError)}
             >
               {mutation.isPending ? t("createPatient.submitting") : t("createPatient.submit")}
-            </Button>
-          </>
+            </button>
+          </div>
         ) : undefined
       }
     >
-      <form id="create-patient-form" onSubmit={handleSubmit} className="space-y-4 py-5">
+      <form id="create-patient-form" onSubmit={handleSubmit} className="space-y-4 py-4 sm:py-5">
 
         {/* ИИН */}
         <div>
@@ -182,7 +186,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
             onChange={(e) => handleIINChange(e.target.value)}
             maxLength={12}
             inputMode="numeric"
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
+            className={`w-full border rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono ${
               iinError ? "border-red-400 bg-red-50" : foundPatient ? "border-green-400 bg-green-50" : "border-[#e8e3d9]"
             }`}
             placeholder={t("createPatient.iinPlaceholder")}
@@ -211,10 +215,10 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
               )}
             </div>
             <p className="text-xs text-green-700">{t("createPatient.foundPatientHint")}</p>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 type="button"
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm"
+                className="flex-1 min-h-11 bg-green-600 hover:bg-green-700 text-white text-sm"
                 onClick={() => { onClose(); onExistingPatient?.(foundPatient.id); }}
               >
                 {t("createPatient.foundPatientOpen")}
@@ -222,7 +226,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 text-sm"
+                className="flex-1 min-h-11 text-sm"
                 onClick={() => { setIin(""); setIinError(null); setDateOfBirth(""); setGender(""); }}
               >
                 {t("createPatient.foundPatientCreate")}
@@ -242,7 +246,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
                 onChange={(e) => setName(e.target.value)}
                 required
                 minLength={2}
-                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder={t("createPatient.fullNamePlaceholder")}
               />
             </div>
@@ -255,15 +259,15 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
                 onChange={(e) => setPhone(e.target.value)}
                 required
                 minLength={5}
-                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder={t("createPatient.phonePlaceholder")}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.dateOfBirth")}</label>
-                <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
+                <div className={`w-full border rounded-xl px-3 py-2.5 text-base sm:text-sm min-h-[44px] flex items-center ${
                   dateOfBirth ? "border-primary/30 bg-primary/5 text-[#0f172a]" : "border-[#e8e3d9] bg-[#faf8f4] text-[#94a3b8]"
                 }`}>
                   {dateOfBirth
@@ -273,7 +277,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
               </div>
               <div>
                 <label className="text-sm font-medium text-[#0f172a] mb-1 block">{t("createPatient.gender")}</label>
-                <div className={`w-full border rounded-lg px-3 py-2 text-sm min-h-[38px] flex items-center ${
+                <div className={`w-full border rounded-xl px-3 py-2.5 text-base sm:text-sm min-h-[44px] flex items-center ${
                   gender ? "border-primary/30 bg-primary/5 text-[#0f172a]" : "border-[#e8e3d9] bg-[#faf8f4] text-[#94a3b8]"
                 }`}>
                   {gender ? genderLabel(gender) : <span className="text-[#94a3b8]">из ИИН</span>}
@@ -286,7 +290,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
               <select
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-h-[44px]"
               >
                 {SOURCE_KEYS.map((s) => (
                   <option key={s} value={s}>{t(`source.${s}`)}</option>
@@ -307,7 +311,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
                 <select
                   value={doctorId}
                   onChange={(e) => setDoctorId(e.target.value)}
-                  className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                  className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-h-[44px]"
                 >
                   <option value="">{t("createPatient.noDoctor")}</option>
                   {doctors.map((d) => (
@@ -323,7 +327,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                className="w-full border border-[#e8e3d9] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                className="w-full border border-[#e8e3d9] rounded-xl px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[88px]"
                 placeholder={t("createPatient.notesPlaceholder")}
               />
             </div>
