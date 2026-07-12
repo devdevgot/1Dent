@@ -13,6 +13,7 @@ import {
   PLANS,
   PLAN_DISPLAY_NAMES,
   COMMON_FEATURES_SUMMARY,
+  TRIAL_NOTE,
   formatPlanPrice,
   IMPLEMENTATION_FEE,
   type PlanId,
@@ -204,6 +205,10 @@ export default function PricingPage() {
       <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
         <CurrentSubscriptionBanner clinic={clinic} />
         <ImplementationFeeNote />
+
+        <p className="text-center text-sm font-medium text-[#475569] px-1">
+          {TRIAL_NOTE}
+        </p>
 
         <div className="space-y-3">
           {orderedPlans.map((plan) => (

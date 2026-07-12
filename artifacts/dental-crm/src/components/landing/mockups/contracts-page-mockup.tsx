@@ -4,7 +4,7 @@ import { PagePreviewFrame } from "./page-preview-frame";
 export function ContractsPageMockup() {
   return (
     <PagePreviewFrame title="Договоры">
-      <div className="landing-mockup-scroll p-3 bg-white min-h-[200px]">
+      <div className="landing-mockup-scroll p-5 bg-white min-h-[240px]">
         <table className="w-full min-w-[240px] text-[10px]">
           <thead>
             <tr className="text-[#94a3b8] border-b border-[#e8e3d9]">

@@ -13,8 +13,8 @@ const DEMO_TEETH = new Map<number, ToothCondition>([
 
 export function DentalChartPageMockup() {
   return (
-    <PagePreviewFrame title="Зубная карта FDI">
-      <div className="landing-mockup-scroll p-2 bg-white min-h-[200px] flex items-center justify-center">
+    <PagePreviewFrame title="Зубная карта">
+      <div className="p-4 bg-white min-h-[240px] flex items-center justify-center">
         <div className="min-w-[260px] sm:min-w-0 scale-[0.9] sm:scale-100 origin-top">
           <FdiChart teethData={DEMO_TEETH} selectedFdi={null} className="border-0 shadow-none p-1" />
         </div>

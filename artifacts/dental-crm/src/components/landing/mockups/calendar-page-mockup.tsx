@@ -9,7 +9,7 @@ const SLOTS = [
 export function CalendarPageMockup() {
   return (
     <PagePreviewFrame title="Календарь">
-      <div className="p-3 bg-white min-h-[220px]">
+      <div className="p-5 bg-white min-h-[240px]">
         <div className="flex gap-1 mb-3">
           {["Пн 7", "Вт 8", "Ср 9", "Чт 10", "Пт 11"].map((d, i) => (
             <div

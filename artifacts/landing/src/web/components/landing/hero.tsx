@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Star, Bot, MessageSquare, Users } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 24 },
@@ -33,18 +33,6 @@ export function Hero() {
       />
 
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col items-center text-center">
-        {/* Announce badge */}
-        <motion.a
-          {...fadeUp(0.05)}
-          href="#features"
-          className="inline-flex items-center gap-2 bg-white border border-[#e8e3d9] rounded-full px-4 py-2 text-sm font-manrope text-[#0f172a] mb-8 hover:border-[#1f75fe]/40 transition-colors shadow-sm"
-        >
-          <Star size={13} className="text-[#1f75fe]" fill="currentColor" />
-          <span className="font-semibold">Новое:</span>
-          <span className="text-[#64748b]">WhatsApp ИИ-ассистент для клиник</span>
-          <ArrowRight size={13} className="text-[#64748b]" />
-        </motion.a>
-
         {/* Headline */}
         <motion.h1
           {...fadeUp(0.15)}
@@ -89,23 +77,6 @@ export function Hero() {
           >
             Смотреть демо
           </a>
-        </motion.div>
-
-        {/* Social proof */}
-        <motion.div
-          {...fadeUp(0.4)}
-          className="flex items-center justify-center gap-8 flex-wrap"
-        >
-          {[
-            { icon: Bot, text: "AI-powered" },
-            { icon: MessageSquare, text: "WhatsApp интеграция" },
-            { icon: Users, text: "Для клиник Казахстана" },
-          ].map((b) => (
-            <div key={b.text} className="flex items-center gap-1.5 text-sm font-manrope text-[#94a3b8]">
-              <b.icon size={14} className="text-[#1f75fe]" />
-              <span>{b.text}</span>
-            </div>
-          ))}
         </motion.div>
       </div>
     </section>

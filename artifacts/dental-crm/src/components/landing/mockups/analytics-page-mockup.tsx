@@ -10,17 +10,20 @@ const channels = [
 export function AnalyticsPageMockup() {
   return (
     <PagePreviewFrame title="Аналитика">
-      <div className="p-3 bg-[#faf8f4] min-h-[220px]">
-        <p className="text-[9px] font-semibold text-[#64748b] uppercase mb-2">Источники пациентов</p>
-        <div className="space-y-2">
+      <div className="p-5 bg-white min-h-[240px]">
+        <p className="text-xs font-semibold text-[#0f172a] mb-4">Источники пациентов</p>
+        <div className="space-y-3">
           {channels.map((c) => (
             <div key={c.label}>
-              <div className="flex justify-between mb-0.5">
-                <span className="text-[10px] text-[#64748b]">{c.label}</span>
-                <span className="text-[10px] font-bold text-[#0f172a]">{c.pct}%</span>
+              <div className="flex justify-between mb-1">
+                <span className="text-xs text-[#64748b]">{c.label}</span>
+                <span className="text-xs font-semibold text-[#0f172a]">{c.pct}%</span>
               </div>
-              <div className="h-1.5 bg-white rounded-full border border-[#e8e3d9]">
-                <div className="h-1.5 rounded-full" style={{ width: `${c.pct}%`, backgroundColor: c.color }} />
+              <div className="h-2 bg-[#faf8f4] rounded-full">
+                <div
+                  className="h-2 rounded-full transition-all"
+                  style={{ width: `${c.pct}%`, backgroundColor: c.color }}
+                />
               </div>
             </div>
           ))}

@@ -368,7 +368,75 @@ html {
   background: linear-gradient(to right, transparent, var(--ds-border), transparent);
 }
 
-/* ── Page preview mockups (real CRM screens) ───────────────────────────────── */
+/* ── Page preview mockups (layered app screens) ─────────────────────────────── */
+.landing-app-preview {
+  position: relative;
+  padding: 0 10px 10px 0;
+}
+
+.landing-app-preview-back {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 0;
+  bottom: 0;
+  border-radius: 16px;
+  border: 1px solid #e8e3d9;
+  background: #f8f6f1;
+}
+
+.landing-app-preview-front {
+  position: relative;
+  border-radius: 16px;
+  border: 1px solid #e8e3d9;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 32px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.landing-app-preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1ede4;
+  background: #fff;
+}
+
+.landing-app-preview-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.landing-app-preview-brand {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.landing-app-preview-screen {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.landing-app-preview-content {
+  overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
+  background: #fff;
+}
+
+/* Legacy aliases kept for other landing sections */
 .landing-page-preview {
   background: var(--ds-surface);
   border: 1px solid var(--ds-border);
