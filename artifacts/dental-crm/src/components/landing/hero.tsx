@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Star, Bot, MessageSquare, Users } from "lucide-react";
+import { ArrowRight, Bot, MessageSquare, Users } from "lucide-react";
 import { Link } from "wouter";
 import { SITE } from "@/config/site";
 import { KanbanPageMockup } from "./mockups/kanban-page-mockup";
@@ -19,17 +19,6 @@ export function Hero() {
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 min-w-0">
         <div className="grid lg:grid-cols-2 gap-10 items-center min-w-0">
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-            <motion.a
-              {...fadeUp(0.05)}
-              href="#features"
-              className="landing-badge landing-badge-light font-manrope mb-6"
-            >
-              <Star size={13} className="text-[#1f75fe]" fill="currentColor" />
-              <span className="font-semibold">Новое:</span>
-              <span className="text-[#64748b]">{SITE.hero.announcement}</span>
-              <ArrowRight size={13} className="text-[#94a3b8]" />
-            </motion.a>
-
             <motion.h1
               {...fadeUp(0.15)}
               className="landing-display font-manrope text-[#0f172a] mb-5"
