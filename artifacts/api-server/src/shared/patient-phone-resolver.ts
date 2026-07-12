@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { db, patientsTable } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { normalizePhoneDigits, phonesMatch } from "./phone";
+import { canonicalPhoneDigits, normalizePhoneDigits, phonesMatch } from "./phone";
 import { logger } from "../lib/logger";
 
 export type ResolvedPatient = {
@@ -19,7 +19,7 @@ export async function resolvePatientByPhone(
   clinicId: string,
   rawPhone: string,
 ): Promise<(ResolvedPatient & { updatedAt?: Date }) | null> {
-  const digits = normalizePhoneDigits(rawPhone);
+  const digits = canonicalPhoneDigits(normalizePhoneDigits(rawPhone));
   if (digits.length < 7) return null;
 
   const indexed = await db
@@ -70,7 +70,72 @@ export async function resolvePatientByPhone(
 }
 
 export function normalizedPhoneForStorage(phone: string): string {
-  return normalizePhoneDigits(phone);
+  return canonicalPhoneDigits(normalizePhoneDigits(phone));
+}
+
+function formatWhatsAppPhoneDisplay(phone: string): string {
+  const digits = normalizedPhoneForStorage(phone);
+  if (digits.length === 11 && digits.startsWith("7")) return `+${digits}`;
+  if (digits.length >= 10) return `+${digits}`;
+  return phone.trim() || digits;
+}
+
+/** Create or return a CRM patient row for an inbound WhatsApp number so staff chat can show the thread. */
+export async function ensureWhatsAppContactPatient(
+  clinicId: string,
+  rawPhone: string,
+): Promise<ResolvedPatient> {
+  const existing = await resolvePatientByPhone(clinicId, rawPhone);
+  if (existing) return existing;
+
+  const id = randomUUID();
+  const displayPhone = formatWhatsAppPhoneDisplay(rawPhone);
+  const [patient] = await db
+    .insert(patientsTable)
+    .values({
+      id,
+      clinicId,
+      name: displayPhone,
+      phone: displayPhone,
+      phoneNormalized: normalizedPhoneForStorage(rawPhone),
+      source: "whatsapp",
+      status: "new_request",
+    })
+    .returning({
+      id: patientsTable.id,
+      name: patientsTable.name,
+      phone: patientsTable.phone,
+      status: patientsTable.status,
+      doctorId: patientsTable.doctorId,
+      marketingOptOut: patientsTable.marketingOptOut,
+    });
+
+  logger.info({ clinicId, patientId: id, phone: displayPhone }, "Created WhatsApp contact patient for chat sync");
+  return patient!;
+}
+
+/** Update lead patient name once the chatbot collects it. */
+export async function updatePatientNameByPhone(
+  clinicId: string,
+  rawPhone: string,
+  name: string,
+): Promise<void> {
+  const trimmed = name.trim().slice(0, 120);
+  if (!trimmed) return;
+
+  const patient = await resolvePatientByPhone(clinicId, rawPhone);
+  if (!patient) return;
+
+  const currentName = patient.name.trim();
+  const looksLikePhoneOnly =
+    /^\+?\d[\d\s()-]{6,}$/.test(currentName) || currentName === formatWhatsAppPhoneDisplay(rawPhone);
+
+  if (!looksLikePhoneOnly && currentName.length > 2 && currentName !== trimmed) return;
+
+  await db
+    .update(patientsTable)
+    .set({ name: trimmed, updatedAt: new Date() })
+    .where(and(eq(patientsTable.id, patient.id), eq(patientsTable.clinicId, clinicId)));
 }
 
 /** Persist normalized phone when creating/updating patients. */

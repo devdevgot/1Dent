@@ -412,13 +412,26 @@ test("inferKnowledgeAgentActions: datetime message adds parse_datetime when doct
   assert.equal(withExisting.filter((a) => a.type === "parse_datetime").length, 1);
 });
 
-test("inferKnowledgeAgentActions: short yes with datetime triggers book_appointment", async () => {
+test("inferKnowledgeAgentActions: short yes with datetime does not book without patient name", async () => {
   const { inferKnowledgeAgentActions } = await import("./chatbot-agent-action-inference.ts");
   const data = {
     suggestedDoctorId: "doc-1",
     suggestedDoctorName: "Dr. Smith",
     selectedBranch: "ул. A",
     preferredDatetime: "2026-07-11T14:00:00+05:00",
+  };
+  const actions = inferKnowledgeAgentActions(data, "да", ["ул. A"], []);
+  assert.equal(actions.some((a) => a.type === "book_appointment"), false);
+});
+
+test("inferKnowledgeAgentActions: short yes with datetime triggers book_appointment when name known", async () => {
+  const { inferKnowledgeAgentActions } = await import("./chatbot-agent-action-inference.ts");
+  const data = {
+    suggestedDoctorId: "doc-1",
+    suggestedDoctorName: "Dr. Smith",
+    selectedBranch: "ул. A",
+    preferredDatetime: "2026-07-11T14:00:00+05:00",
+    patientName: "Айгуль",
   };
   const actions = inferKnowledgeAgentActions(data, "да", ["ул. A"], []);
   assert.ok(actions.some((a) => a.type === "book_appointment"));

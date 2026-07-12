@@ -197,6 +197,9 @@ function resolveFsmFollowUp(ctx: EnrichReplyContext): string | null {
       }
       return "Записать на приём?";
 
+    case "collect_name":
+      return "Подскажите, как к вам обращаться?";
+
     case "collect_datetime":
       return "Укажите дату и время визита.";
 

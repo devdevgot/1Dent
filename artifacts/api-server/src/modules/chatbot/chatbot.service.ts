@@ -24,7 +24,8 @@ import {
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
 import { phonesMatch } from "../../shared/phone";
-import { resolvePatientByPhone, setMarketingOptOut } from "../../shared/patient-phone-resolver";
+import { resolvePatientByPhone, setMarketingOptOut, ensureWhatsAppContactPatient, updatePatientNameByPhone, normalizedPhoneForStorage } from "../../shared/patient-phone-resolver";
+import { mirrorChatbotMessageToPatient, syncChatbotMessagesToPatient } from "../../shared/whatsapp-message-sync";
 import { withSessionLock } from "../../shared/session-lock";
 import { parseReviewScoreFromText, savePatientReview } from "../../shared/patient-reviews";
 import { isRedAlert } from "../../shared/whatsapp";
@@ -101,6 +102,7 @@ import {
 import { validateMindMapScript, mergeMindMapWithDefault } from "./mindmap-validator";
 import { shouldUseAgentTurn } from "./chatbot-agent.types";
 import { runChatbotAgentTurn } from "./chatbot-agent-turn";
+import { looksLikeRealPatientName } from "./chatbot-patient-identity";
 import {
   DEFAULT_BOOKING_MIND_MAP,
   usesBookingFlow,
@@ -343,26 +345,13 @@ async function saveChatbotMessage(
     .values({ id: randomUUID(), clinicId, phone, direction, content })
     .catch((err) => logger.error({ err }, "[ChatbotService] Failed to save chatbot message"));
 
-  // For outbound replies, also save to the main messages table so they
-  // appear in the internal chat panel alongside inbound patient messages.
-  if (direction === "outbound") {
-    const patient = await findPatientByPhoneNormalized(clinicId, phone);
+  if (direction !== "outbound") return;
 
-    if (patient) {
-      await db
-        .insert(messagesTable)
-        .values({
-          id: randomUUID(),
-          clinicId,
-          patientId: patient.id,
-          direction: "outbound",
-          senderId: null,
-          content,
-          whatsappMessageId: null,
-          isRedAlert: false,
-        })
-        .catch((err) => logger.error({ err }, "[ChatbotService] Failed to mirror outbound message to messages table"));
-    }
+  try {
+    const patient = await ensureWhatsAppContactPatient(clinicId, phone);
+    await mirrorChatbotMessageToPatient(clinicId, patient.id, "outbound", content);
+  } catch (err) {
+    logger.error({ err }, "[ChatbotService] Failed to mirror outbound chatbot message to CRM WhatsApp chat");
   }
 }
 
@@ -700,11 +689,45 @@ async function createPatient(
   iin?: string,
   status: "new_request" | "initial_consultation" = "new_request",
 ) {
+  const existing = await findPatientByPhoneNormalized(clinicId, phone);
+  if (existing) {
+    await db
+      .update(patientsTable)
+      .set({
+        name,
+        doctorId,
+        iin: iin ?? undefined,
+        status,
+        phoneNormalized: normalizedPhoneForStorage(phone),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(patientsTable.id, existing.id), eq(patientsTable.clinicId, clinicId)));
+    const [updated] = await db
+      .select()
+      .from(patientsTable)
+      .where(and(eq(patientsTable.id, existing.id), eq(patientsTable.clinicId, clinicId)))
+      .limit(1);
+    return updated!;
+  }
+
   const id = randomUUID();
   const [patient] = await db
     .insert(patientsTable)
-    .values({ id, clinicId, name, phone, iin: iin ?? null, source: source ?? "whatsapp", status, doctorId })
+    .values({
+      id,
+      clinicId,
+      name,
+      phone,
+      phoneNormalized: normalizedPhoneForStorage(phone),
+      iin: iin ?? null,
+      source: source ?? "whatsapp",
+      status,
+      doctorId,
+    })
     .returning();
+  await syncChatbotMessagesToPatient(clinicId, phone, id).catch((err) =>
+    logger.warn({ err, patientId: id }, "ChatbotService: chat history backfill failed after createPatient"),
+  );
   return patient!;
 }
 
@@ -1444,6 +1467,15 @@ async function finalizeBookingAppointment(params: {
   data.confusedCount = 0;
   data.selectedBranch = branchToSave;
 
+  if (!dryRun && !data.isReschedule && !looksLikeRealPatientName(data.patientName)) {
+    return {
+      data,
+      response: replyFromText(
+        "Подскажите, как к вам обращаться? Это нужно для оформления записи на консультацию.",
+      ),
+    };
+  }
+
   const preferredDate = data.preferredDatetime ? new Date(data.preferredDatetime) : new Date();
 
   try {
@@ -1581,6 +1613,29 @@ async function finalizeBookingAppointment(params: {
     }
   } catch (err) {
     logger.error({ err }, "ChatbotService: failed to save procedure in finalizeBooking");
+  }
+
+  const bookingSaved =
+    dryRun ||
+    Boolean(data.createdProcedureId) ||
+    (Boolean(data.isReschedule) && Boolean(data.existingProcedureId));
+
+  if (!bookingSaved && !dryRun) {
+    if (!looksLikeRealPatientName(data.patientName)) {
+      return {
+        data,
+        response: replyFromText(
+          "Подскажите, как к вам обращаться? Это нужно для оформления записи на консультацию.",
+        ),
+      };
+    }
+    logger.warn({ clinicId, phone }, "ChatbotService: booking confirmation skipped — no procedure created");
+    return {
+      data,
+      response: replyFromText(
+        "Не удалось оформить запись в системе. Напишите, пожалуйста, как к вам обращаться — и мы завершим запись.",
+      ),
+    };
   }
 
   const formattedDate = formatAlmatyDateTimeLong(preferredDate);
@@ -2165,6 +2220,14 @@ export class ChatbotService {
     recentMessagesForReply = recentMessages;
 
     let response: OutboundResponse = null;
+
+    if (!dryRun && !data.existingPatientId) {
+      const knownPatient = await findPatientByPhoneNormalized(clinicId, phone);
+      if (knownPatient) {
+        data.existingPatientId = knownPatient.id;
+        if (!data.patientName) data.patientName = knownPatient.name;
+      }
+    }
 
     if (
       shouldUseAgentTurn(promptChannel) &&
