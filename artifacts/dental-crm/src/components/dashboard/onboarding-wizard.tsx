@@ -130,11 +130,11 @@ export function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
       setTimeout(() => {
         setCurrentStep("chatbot");
       }, 1000);
-    } catch (err: any) {
-      const status = err?.status;
-      const msg = status === 409
-        ? "Сотрудник с таким email уже существует"
-        : "Не удалось добавить сотрудника. Попробуйте еще раз.";
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(
+        err as { data?: unknown; message?: string },
+        "Не удалось добавить сотрудника. Попробуйте еще раз.",
+      );
       toast.error("Ошибка добавления", { description: msg });
     } finally {
       setLoading(false);

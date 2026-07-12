@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { customFetch, getListUsersAllQueryKey } from "@workspace/api-client-react";
+import { getApiErrorMessage } from "@/lib/api-error-message";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { cn } from "@/lib/utils";
 import { formatPhoneInput, phoneToApi } from "@/lib/whatsapp-auth";
@@ -374,11 +375,13 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
     },
     onError: (err: unknown) => {
       const status = (err as { status?: number })?.status;
-      const msg = status === 409
-        ? "Сотрудник с таким email уже существует"
-        : status === 429
+      const fallback = status === 429
         ? "Приглашение уже было отправлено. Подождите 60 секунд"
         : "Не удалось добавить сотрудника. Попробуйте ещё раз";
+      const msg = getApiErrorMessage(
+        err as { data?: unknown; message?: string },
+        fallback,
+      );
       toast.error("Ошибка", { description: msg });
     },
   });

@@ -29,13 +29,37 @@ function extractPgCode(err: unknown): string | null {
   return null;
 }
 
+function extractPgConstraint(err: unknown): string | null {
+  let current: unknown = err;
+  for (let depth = 0; depth < 6 && current; depth++) {
+    if (current && typeof current === "object" && "constraint" in current) {
+      const constraint = (current as { constraint: unknown }).constraint;
+      if (typeof constraint === "string" && constraint.length > 0) {
+        return constraint;
+      }
+    }
+    current =
+      current && typeof current === "object" && "cause" in current
+        ? (current as { cause: unknown }).cause
+        : null;
+  }
+  return null;
+}
+
 function mapDatabaseError(err: unknown): AppError | null {
   const code = extractPgCode(err);
   if (!code) return null;
 
   switch (code) {
-    case "23505":
-      return new ConflictError("Этот email уже зарегистрирован");
+    case "23505": {
+      const constraint = extractPgConstraint(err);
+      if (constraint?.includes("email")) {
+        return new ConflictError(
+          "Сотрудник с таким email уже существует. Если сотрудник был деактивирован, включите «Показать неактивных» в списке.",
+        );
+      }
+      return new ConflictError("Эта запись уже существует");
+    }
     case "42P01":
       return new AppError(
         "База данных ещё не готова. Подождите несколько секунд и попробуйте снова.",
