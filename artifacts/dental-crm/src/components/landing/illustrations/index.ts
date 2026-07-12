@@ -1,0 +1,9 @@
+export { KanbanIllustration } from "./kanban-illustration";
+export { WhatsappIllustration } from "./whatsapp-illustration";
+export { FinanceIllustration } from "./finance-illustration";
+export { DentalChartIllustration } from "./dental-chart-illustration";
+export { CalendarIllustration } from "./calendar-illustration";
+export { StaffTrackingIllustration } from "./staff-tracking-illustration";
+export { BroadcastIllustration } from "./broadcast-illustration";
+export { ContractsIllustration } from "./contracts-illustration";
+export { AnalyticsIllustration } from "./analytics-illustration";
