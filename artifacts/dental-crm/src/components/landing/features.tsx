@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { fadeUp } from "@/lib/landing-animations";
 import { SITE } from "@/config/site";
@@ -181,12 +181,17 @@ function StickyFeaturesShowcase() {
   return (
     <section
       ref={sectionRef}
-      className="landing-features-scroll hidden lg:block"
-      style={{ height: `${features.length * 100}vh` }}
+      className="landing-features-scroll"
+      style={
+        {
+          height: `${features.length * 100}vh`,
+          "--feature-progress": `${progress}%`,
+        } as CSSProperties
+      }
       aria-label={`Возможности ${SITE.name}`}
     >
       <div className="landing-features-sticky">
-        <div className="landing-features-sticky-inner max-w-6xl mx-auto px-6 min-w-0 w-full">
+        <div className="landing-features-sticky-inner max-w-6xl mx-auto px-4 sm:px-6 min-w-0 w-full">
           <div className="landing-features-layout-v2">
             <div className="landing-features-sidebar-v2">
               <div className="landing-features-progress-track" aria-hidden>
@@ -237,9 +242,9 @@ function StickyFeaturesShowcase() {
   );
 }
 
-function MobileFeaturesList() {
+function ReducedMotionFeaturesList() {
   return (
-    <div className="landing-features-fallback lg:hidden space-y-8 min-w-0">
+    <div className="landing-features-fallback space-y-8 min-w-0">
       {features.map((feature, index) => {
         const Illustration = feature.illustration;
         return (
@@ -269,7 +274,7 @@ export function Features() {
           </h2>
         </motion.div>
 
-        <MobileFeaturesList />
+        <ReducedMotionFeaturesList />
         <StickyFeaturesShowcase />
       </div>
     </section>
