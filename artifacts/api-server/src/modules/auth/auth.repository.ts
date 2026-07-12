@@ -19,11 +19,22 @@ export class AuthRepository {
     return user as any;
   }
 
-  async findUsersByPhone(phone: string): Promise<User[]> {
-    const rows = await db
+  async findUserByEmailAnyStatus(email: string): Promise<User | undefined> {
+    const [user] = await db
       .select()
       .from(usersTable)
-      .where(and(eq(usersTable.isActive, true)));
+      .where(eq(usersTable.email, email.toLowerCase()))
+      .limit(1);
+    return user as any;
+  }
+
+  async findUsersByPhone(phone: string, includeInactive = false): Promise<User[]> {
+    const rows = includeInactive
+      ? await db.select().from(usersTable)
+      : await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.isActive, true));
     return rows.filter((u) => u.phone && phonesMatch(u.phone, phone)) as User[];
   }
 

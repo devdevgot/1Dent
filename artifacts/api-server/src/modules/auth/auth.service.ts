@@ -327,8 +327,15 @@ export class AuthService {
       throw new ForbiddenError("Only owners can create other owners");
     }
 
-    const existing = await this.repo.findUserByEmail(data.email.toLowerCase());
-    if (existing) throw new ConflictError("Email already in use");
+    const existing = await this.repo.findUserByEmailAnyStatus(data.email.toLowerCase());
+    if (existing?.isActive) {
+      throw new ConflictError("Сотрудник с таким email уже существует");
+    }
+    if (existing && !existing.isActive) {
+      throw new ConflictError(
+        "Этот email принадлежит деактивированному аккаунту. Включите «Показать неактивных» в списке сотрудников или используйте другой email.",
+      );
+    }
 
     await planLimitsService.assertCanAddStaff(data.clinicId);
 
@@ -436,13 +443,69 @@ export class AuthService {
     }
 
     const normalizedPhone = whatsappOtpService.normalizePhone(data.phone);
-    const phoneUsers = await this.repo.findUsersByPhone(normalizedPhone);
-    if (phoneUsers.length > 0) {
+    const emailLower = data.email.toLowerCase();
+    const existingByEmail = await this.repo.findUserByEmailAnyStatus(emailLower);
+    const phoneUsers = await this.repo.findUsersByPhone(normalizedPhone, true);
+
+    if (
+      existingByEmail &&
+      existingByEmail.clinicId === data.clinicId &&
+      existingByEmail.isActive === false
+    ) {
+      const phoneConflict = phoneUsers.find(
+        (u) => u.isActive && u.id !== existingByEmail.id,
+      );
+      if (phoneConflict) {
+        throw new ConflictError("Сотрудник с этим номером WhatsApp уже существует");
+      }
+
+      await planLimitsService.assertCanAddStaff(data.clinicId);
+
+      const tempPassword = randomBytes(5).toString("hex").slice(0, 8).toUpperCase();
+      const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+
+      const updated = await this.repo.updateUser(existingByEmail.id, data.clinicId, {
+        name: data.name,
+        role: data.role,
+        phone: normalizedPhone,
+        position: data.position ?? null,
+        specialty: data.specialty ?? null,
+        hireDate: data.hireDate ?? null,
+        isActive: true,
+        passwordHash,
+      });
+      if (!updated) throw new NotFoundError("User not found");
+
+      const clinic = await this.repo.findClinicById(data.clinicId);
+      const clinicName = clinic?.name ?? "1Dent";
+      const loginUrl = process.env["FRONTEND_URL"] ?? "https://app.1dent.kz";
+
+      const waMessage = buildStaffInviteWhatsAppMessage(data.name, clinicName, tempPassword, loginUrl);
+      sendPlatformWhatsApp(normalizedPhone, waMessage).catch((err) => {
+        logger.error({ err, phone: normalizedPhone.slice(0, 5) + "***" }, "Failed to send staff invite via WhatsApp");
+      });
+
+      sendStaffInvitationEmail(data.email, data.name, tempPassword, clinicName).catch((err) => {
+        logger.error({ err, email: data.email }, "Failed to send staff invitation email (fallback)");
+      });
+
+      return { userId: updated.id, tempPassword, clinicName };
+    }
+
+    const activePhoneUsers = phoneUsers.filter((u) => u.isActive);
+    if (activePhoneUsers.length > 0) {
       throw new ConflictError("Сотрудник с этим номером WhatsApp уже существует");
     }
 
-    const existing = await this.repo.findUserByEmail(data.email.toLowerCase());
-    if (existing) throw new ConflictError("Email already in use");
+    if (existingByEmail?.isActive) {
+      throw new ConflictError("Сотрудник с таким email уже существует");
+    }
+
+    if (existingByEmail && !existingByEmail.isActive) {
+      throw new ConflictError(
+        "Этот email принадлежит деактивированному аккаунту в другой клинике. Используйте другой email.",
+      );
+    }
 
     await planLimitsService.assertCanAddStaff(data.clinicId);
 
@@ -453,7 +516,7 @@ export class AuthService {
       id: randomUUID(),
       clinicId: data.clinicId,
       name: data.name,
-      email: data.email.toLowerCase(),
+      email: emailLower,
       passwordHash,
       role: data.role,
       phone: normalizedPhone,
