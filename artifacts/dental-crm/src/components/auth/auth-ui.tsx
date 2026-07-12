@@ -1,24 +1,85 @@
 import { Link } from "wouter";
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
-export function AuthPageShell({ children }: { children: ReactNode }) {
+type AuthHeroVariant = "auth" | "register";
+
+const REGISTER_FEATURES = ["feature1", "feature2", "feature3", "feature4"] as const;
+
+export function AuthPageShell({
+  children,
+  wide = false,
+  hero = "auth",
+}: {
+  children: ReactNode;
+  wide?: boolean;
+  hero?: AuthHeroVariant;
+}) {
+  const { t } = useTranslation();
+
   return (
-    <div className="h-[100dvh] w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-center px-6 overflow-hidden">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm bg-white rounded-2xl border border-[#e8e3d9] shadow-md hover:shadow-lg transition-shadow duration-300 p-6"
-      >
-        <div className="flex flex-col items-center mb-6">
-          <img src="/logo.png" alt="1Dent" className="w-16 h-16 mb-2.5" />
-          <h1 className="text-lg font-bold text-[#0f172a]">1Dent</h1>
-          <p className="text-xs text-[#94a3b8] mt-0.5">Управление клиникой</p>
+    <div className="min-h-[100dvh] w-full bg-[#faf8f4] font-manrope flex">
+      <aside className="hidden lg:flex lg:w-[46%] xl:w-1/2 relative overflow-hidden bg-[#0f172a] text-white">
+        <img
+          src="/images/auth-bg.png"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-50"
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a]/80 via-[#0f172a]/40 to-[#1f75fe]/30" />
+        <div className="relative z-10 flex flex-col justify-between p-10 xl:p-14 w-full">
+          <div>
+            <div className="flex items-center gap-3 mb-10">
+              <img src="/logo.png" alt="1Dent" className="w-11 h-11 rounded-xl" />
+              <div>
+                <p className="text-lg font-bold leading-tight">1Dent</p>
+                <p className="text-xs text-white/60">Управление клиникой</p>
+              </div>
+            </div>
+            <h1 className="text-3xl xl:text-4xl font-extrabold leading-tight mb-4">
+              {t(`${hero}.heroTitle`)}
+            </h1>
+            {hero === "auth" && (
+              <p className="text-sm text-white/70 leading-relaxed max-w-md">
+                {t("auth.heroSubtitle")}
+              </p>
+            )}
+            {hero === "register" && (
+              <ul className="space-y-3 mt-6">
+                {REGISTER_FEATURES.map((key) => (
+                  <li key={key} className="flex items-start gap-2.5 text-sm text-white/80">
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#1f75fe] shrink-0" />
+                    {t(`register.${key}`)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <p className="text-xs text-white/40">© {new Date().getFullYear()} 1Dent</p>
         </div>
-        {children}
-      </motion.div>
+      </aside>
+
+      <main className="flex-1 flex flex-col items-center justify-center px-5 sm:px-8 py-8 overflow-y-auto">
+        <div className="lg:hidden flex flex-col items-center mb-6">
+          <img src="/logo.png" alt="1Dent" className="w-14 h-14 mb-2" />
+          <p className="text-base font-bold text-[#0f172a]">1Dent</p>
+          <p className="text-xs text-[#94a3b8]">Управление клиникой</p>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className={cn(
+            "w-full bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6 sm:p-7",
+            wide ? "max-w-lg" : "max-w-md",
+          )}
+        >
+          {children}
+        </motion.div>
+      </main>
     </div>
   );
 }
@@ -45,7 +106,7 @@ export function AuthField({
             : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/15 focus-within:hover:border-[#1f75fe]",
         )}
       >
-        <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-0.5">{label}</p>
+        <p className="text-xs font-medium text-[#64748b] mb-0.5">{label}</p>
         {children}
       </div>
       {error && <p className="text-xs text-[#dc2626] font-medium mt-1 px-1">{error}</p>}
@@ -58,11 +119,13 @@ export function AuthPrimaryButton({
   disabled,
   type = "button",
   onClick,
+  variant = "primary",
 }: {
   children: ReactNode;
   disabled?: boolean;
   type?: "button" | "submit";
   onClick?: () => void;
+  variant?: "primary" | "whatsapp";
 }) {
   return (
     <button
@@ -71,10 +134,11 @@ export function AuthPrimaryButton({
       onClick={onClick}
       className={cn(
         "w-full py-3 rounded-full text-sm font-semibold transition-all duration-200",
-        "bg-[#1f75fe] text-white",
-        "hover:bg-[#1868eb] hover:shadow-md hover:shadow-[#1f75fe]/25",
         "active:translate-y-px",
-        "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:bg-[#1f75fe]",
+        "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-none",
+        variant === "whatsapp"
+          ? "bg-[#128C7E] text-white hover:bg-[#0f7a6e] hover:shadow-md hover:shadow-[#128C7E]/20 disabled:hover:bg-[#128C7E]"
+          : "bg-[#1f75fe] text-white hover:bg-[#1868eb] hover:shadow-md hover:shadow-[#1f75fe]/25 disabled:hover:bg-[#1f75fe]",
       )}
     >
       {children}
@@ -121,6 +185,16 @@ export function AuthLink({
     >
       {children}
     </Link>
+  );
+}
+
+export function AuthDivider({ label }: { label?: string }) {
+  return (
+    <div className="flex items-center gap-3 my-4">
+      <div className="flex-1 h-px bg-[#f1ede4]" />
+      {label && <span className="text-xs text-[#94a3b8]">{label}</span>}
+      <div className="flex-1 h-px bg-[#f1ede4]" />
+    </div>
   );
 }
 

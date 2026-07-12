@@ -10,7 +10,7 @@ import {
   ForbiddenError,
   ValidationError,
 } from "../../shared/errors";
-import type { UserRole, User } from "@workspace/db";
+import type { UserRole, User, RegistrationUseCaseId } from "@workspace/db";
 import type { SafeClinic } from "./auth.repository";
 import { sendPasswordResetEmail, sendStaffInvitationEmail, sendEmailChangeCode } from "../../lib/email";
 import { logger } from "../../lib/logger";
@@ -52,17 +52,12 @@ export class AuthService {
   async register(data: {
     clinicName: string;
     name: string;
-    email: string;
+    email?: string;
     password: string;
     phone?: string;
     phoneVerificationToken?: string;
+    useCases?: string[];
   }): Promise<AuthResult> {
-    const normalizedEmail = data.email.toLowerCase();
-    const existing = await this.repo.findUserByEmail(normalizedEmail);
-    if (existing) {
-      throw new ConflictError("Этот email уже зарегистрирован");
-    }
-
     let verifiedPhone: string | null = null;
     if (data.phone && data.phoneVerificationToken) {
       verifiedPhone = whatsappOtpService.assertVerificationToken(
@@ -76,9 +71,25 @@ export class AuthService {
       }
     }
 
+    const normalizedEmail = data.email
+      ? data.email.toLowerCase()
+      : verifiedPhone
+        ? `${verifiedPhone.replace(/\D/g, "")}@wa.1dent.internal`
+        : null;
+
+    if (!normalizedEmail) {
+      throw new ValidationError("Подтвердите WhatsApp для регистрации");
+    }
+
+    const existing = await this.repo.findUserByEmail(normalizedEmail);
+    if (existing) {
+      throw new ConflictError("Этот email уже зарегистрирован");
+    }
+
     const clinic = await this.repo.createClinic({
       id: randomUUID(),
       name: data.clinicName,
+      registrationUseCases: (data.useCases ?? []) as RegistrationUseCaseId[],
     });
 
     seedContractTemplatesForClinic(clinic.id).catch((err) => {

@@ -16,6 +16,7 @@ import { getApiErrorMessage } from "@/lib/api-error-message";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useTranslation } from "react-i18next";
 import {
+  AuthDivider,
   AuthField,
   AuthLink,
   AuthPageShell,
@@ -107,34 +108,36 @@ export default function Login() {
   };
 
   return (
-    <AuthPageShell>
+    <AuthPageShell hero="auth">
       {mode === "whatsapp" ? (
         <>
           <WhatsappOtpFlow
             purpose="login"
             title={t("auth.welcome")}
-            subtitle="Мы отправим одноразовый код в WhatsApp с номера 1Dent"
+            subtitle={t("auth.whatsappSubtitle")}
             onLoginSuccess={handleWhatsappLogin}
           />
 
-          <div className="mt-5 pt-4 border-t border-[#f1ede4] space-y-2 text-center">
+          <AuthDivider label={t("auth.or")} />
+
+          <div className="space-y-3 text-center">
             <button
               type="button"
               onClick={() => setMode("email")}
-              className="text-sm font-medium text-[#64748b] hover:text-[#1f75fe] transition-colors duration-200"
+              className="w-full py-2.5 rounded-full text-sm font-medium text-[#64748b] border border-[#e8e3d9] hover:bg-[#faf8f4] hover:text-[#0f172a] transition-colors duration-200"
             >
-              Войти по email и паролю
+              {t("auth.loginWithEmail")}
             </button>
-            <div>
-              <AuthLink href="/register">
-                Нет аккаунта? <span className="font-semibold text-[#1f75fe] hover:underline">Создать</span>
-              </AuthLink>
-            </div>
+            <AuthLink href="/register">
+              {t("auth.noAccount")}{" "}
+              <span className="font-semibold text-[#1f75fe] hover:underline">{t("auth.createAccount")}</span>
+            </AuthLink>
           </div>
         </>
       ) : (
         <>
-          <h2 className="text-xl font-bold text-[#0f172a] text-center mb-5">{t("auth.welcome")}</h2>
+          <h2 className="text-xl font-bold text-[#0f172a] text-center mb-1">{t("auth.welcome")}</h2>
+          <p className="text-sm text-[#64748b] text-center mb-5">{t("auth.subtitle")}</p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-2.5">
             <AuthField label={t("auth.email")} error={errors.email?.message}>
@@ -180,19 +183,20 @@ export default function Login() {
             </AuthPrimaryButton>
           </form>
 
-          <div className="mt-5 pt-4 border-t border-[#f1ede4] space-y-2 text-center">
+          <AuthDivider label={t("auth.or")} />
+
+          <div className="space-y-3 text-center">
             <button
               type="button"
               onClick={() => setMode("whatsapp")}
-              className="text-sm font-medium text-[#64748b] hover:text-[#128C7E] transition-colors duration-200"
+              className="w-full py-2.5 rounded-full text-sm font-medium text-[#128C7E] border border-[#25D366]/30 hover:bg-[#25D366]/5 transition-colors duration-200"
             >
-              Войти через WhatsApp
+              {t("auth.loginWithWhatsapp")}
             </button>
-            <div>
-              <AuthLink href="/register">
-                Нет аккаунта? <span className="font-semibold text-[#1f75fe] hover:underline">Создать</span>
-              </AuthLink>
-            </div>
+            <AuthLink href="/register">
+              {t("auth.noAccount")}{" "}
+              <span className="font-semibold text-[#1f75fe] hover:underline">{t("auth.createAccount")}</span>
+            </AuthLink>
           </div>
         </>
       )}

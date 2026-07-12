@@ -2,14 +2,21 @@ import { useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mail } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { useForgotPassword } from "@workspace/api-client-react";
 import { createForgotPasswordSchema } from "@/lib/schemas";
 import { getApiErrorMessage } from "@/lib/api-error-message";
+import {
+  AuthField,
+  AuthPageShell,
+  AuthPrimaryButton,
+} from "@/components/auth/auth-ui";
 
 type Step = "form" | "sent";
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState("");
@@ -25,7 +32,7 @@ export default function ForgotPassword() {
         setStep("sent");
       },
       onError: (err) => {
-        setError(getApiErrorMessage(err, "Произошла ошибка. Проверьте подключение."));
+        setError(getApiErrorMessage(err, t("auth.forgotError")));
       },
     },
   });
@@ -36,7 +43,7 @@ export default function ForgotPassword() {
 
     const parsed = forgotPasswordSchema.safeParse({ email });
     if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message ?? "Введите корректный email");
+      setError(parsed.error.errors[0]?.message ?? t("validation.emailInvalid"));
       return;
     }
 
@@ -44,124 +51,101 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#faf8f4] font-manrope flex flex-col items-center justify-start px-6 py-12">
-      {/* Back button */}
-      <div className="w-full max-w-sm mb-6">
-        <Link href="/login">
-          <button type="button" className="flex items-center gap-1.5 text-[#64748b] hover:text-[#0f172a] transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        </Link>
-      </div>
+    <AuthPageShell hero="auth">
+      <Link href="/login">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-[#64748b] hover:text-[#0f172a] transition-colors mb-4 -ml-1 p-1 rounded-lg hover:bg-[#faf8f4]"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm">{t("register.backToLogin")}</span>
+        </button>
+      </Link>
 
-      <div className="w-full max-w-sm bg-white rounded-2xl border border-[#e8e3d9] shadow-md p-6">
-        <AnimatePresence mode="wait">
-          {step === "form" ? (
-            <motion.div
-              key="form"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <h2 className="text-2xl font-bold text-[#0f172a] text-center mb-3">
-                Восстановить пароль
-              </h2>
-              <p className="text-sm text-[#64748b] text-center mb-8 leading-relaxed">
-                Введите email, который вы использовали при регистрации, чтобы установить новый пароль.
-              </p>
+      <AnimatePresence mode="wait">
+        {step === "form" ? (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <h2 className="text-xl font-bold text-[#0f172a] text-center mb-2">
+              {t("auth.forgotTitle")}
+            </h2>
+            <p className="text-sm text-[#64748b] text-center mb-6 leading-relaxed">
+              {t("auth.forgotSubtitle")}
+            </p>
 
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className={`
-                  w-full px-4 py-3.5 rounded-xl border bg-white transition-all
-                  ${error ? "border-[#dc2626] bg-[#fef2f2]" : "border-[#e8e3d9] focus-within:border-[#1f75fe] focus-within:ring-2 focus-within:ring-[#1f75fe]/20"}
-                `}>
-                  <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-0.5">
-                    Email
-                  </p>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (error) setError("");
-                    }}
-                    placeholder="doctor@clinic.com"
-                    autoComplete="email"
-                    disabled={forgotMutation.isPending}
-                    className="w-full bg-transparent text-base text-[#0f172a] placeholder:text-[#94a3b8] outline-none disabled:opacity-60"
-                  />
-                </div>
-                {error && (
-                  <p className="text-xs text-[#dc2626] font-medium px-1">{error}</p>
-                )}
-
-                <button
-                  type="submit"
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <AuthField label={t("auth.email")} error={error}>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError("");
+                  }}
+                  placeholder="doctor@clinic.com"
+                  autoComplete="email"
                   disabled={forgotMutation.isPending}
-                  className="w-full py-4 rounded-full text-base font-semibold transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mt-2 bg-[#1f75fe] hover:bg-[#1a65e8] text-white"
-                >
-                  {forgotMutation.isPending ? "Отправляем..." : "Восстановить"}
-                </button>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="sent"
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="text-center"
-            >
-              <div className="flex items-center justify-center mb-6">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center bg-[#1f75fe]/10">
-                  <Mail className="w-9 h-9 text-[#1f75fe]" />
-                </div>
+                  className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none disabled:opacity-60"
+                />
+              </AuthField>
+
+              <AuthPrimaryButton type="submit" disabled={forgotMutation.isPending}>
+                {forgotMutation.isPending ? t("auth.forgotSending") : t("auth.forgotSubmit")}
+              </AuthPrimaryButton>
+            </form>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="sent"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center"
+          >
+            <div className="flex items-center justify-center mb-5">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-[#1f75fe]/10">
+                <Mail className="w-7 h-7 text-[#1f75fe]" />
               </div>
+            </div>
 
-              <h2 className="text-2xl font-bold text-[#0f172a] mb-3">
-                Ссылка отправлена
-              </h2>
-              <p className="text-sm text-[#64748b] leading-relaxed mb-8">
-                Если аккаунт с адресом{" "}
-                <span className="font-semibold text-[#0f172a]">{email.trim()}</span>{" "}
-                зарегистрирован, мы отправили ссылку для сброса пароля.
-                Проверьте ящик входящих и папку «Спам».
-              </p>
+            <h2 className="text-xl font-bold text-[#0f172a] mb-2">
+              {t("auth.forgotSentTitle")}
+            </h2>
+            <p className="text-sm text-[#64748b] leading-relaxed mb-6">
+              {t("auth.forgotSentBody", { email: email.trim() })}
+            </p>
 
-              {/* Dev mode: show direct link */}
-              {devToken && (
-                <div className="mb-6 p-4 rounded-2xl border border-dashed border-[#e8e3d9] bg-[#faf8f4] text-left">
-                  <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-2">
-                    Режим разработки
-                  </p>
-                  <p className="text-xs text-[#64748b] mb-3">
-                    Email не настроен — используйте ссылку напрямую:
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setLocation(`/reset-password?token=${encodeURIComponent(devToken)}`)
-                    }
-                    className="w-full py-2.5 rounded-full text-sm font-semibold text-white transition-all hover:scale-105 active:scale-95 bg-[#1f75fe] hover:bg-[#1a65e8]"
-                  >
-                    Перейти к сбросу пароля →
-                  </button>
-                </div>
-              )}
+            {devToken && (
+              <div className="mb-5 p-4 rounded-xl border border-dashed border-[#e8e3d9] bg-[#faf8f4] text-left">
+                <p className="text-xs font-medium text-[#64748b] mb-2">{t("auth.devMode")}</p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLocation(`/reset-password?token=${encodeURIComponent(devToken)}`)
+                  }
+                  className="w-full py-2.5 rounded-full text-sm font-semibold text-white bg-[#1f75fe] hover:bg-[#1868eb] transition-colors"
+                >
+                  {t("auth.devResetLink")}
+                </button>
+              </div>
+            )}
 
-              <button
-                type="button"
-                onClick={() => setLocation("/login")}
-                className="w-full py-4 rounded-full text-base font-semibold text-[#64748b] border border-[#e8e3d9] hover:bg-[#f1ede4] transition-all duration-200 active:scale-95"
-              >
-                Вернуться ко входу
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
+            <button
+              type="button"
+              onClick={() => setLocation("/login")}
+              className="w-full py-3 rounded-full text-sm font-medium text-[#64748b] border border-[#e8e3d9] hover:bg-[#faf8f4] transition-colors"
+            >
+              {t("auth.backToLogin")}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AuthPageShell>
   );
 }

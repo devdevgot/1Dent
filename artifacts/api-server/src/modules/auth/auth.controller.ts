@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
+import { registrationUseCaseIds } from "@workspace/db";
 import { AuthService } from "./auth.service";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
@@ -15,14 +16,26 @@ const COOKIE_OPTIONS = {
   maxAge: 30 * 24 * 60 * 60 * 1000,
 };
 
-const registerSchema = z.object({
-  clinicName: z.string().min(2),
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  phone: z.string().min(10).optional(),
-  phoneVerificationToken: z.string().min(16).optional(),
-});
+const registerSchema = z
+  .object({
+    clinicName: z.string().min(2),
+    name: z.string().min(2),
+    email: z.string().email().optional(),
+    password: z.string().min(6),
+    phone: z.string().min(10).optional(),
+    phoneVerificationToken: z.string().min(16).optional(),
+    useCases: z.array(z.enum(registrationUseCaseIds)).optional().default([]),
+  })
+  .superRefine((data, ctx) => {
+    const hasWhatsapp = Boolean(data.phone && data.phoneVerificationToken);
+    if (!data.email && !hasWhatsapp) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Подтвердите WhatsApp или укажите email",
+        path: ["phone"],
+      });
+    }
+  });
 
 const loginSchema = z.object({
   email: z.string().email(),

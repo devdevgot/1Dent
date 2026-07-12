@@ -1,9 +1,19 @@
-import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const clinicPlans = ["free", "starter", "professional", "enterprise"] as const;
 export type ClinicPlan = (typeof clinicPlans)[number];
+
+export const registrationUseCaseIds = [
+  "crm",
+  "schedule",
+  "whatsapp",
+  "finance",
+  "analytics",
+  "marketing",
+] as const;
+export type RegistrationUseCaseId = (typeof registrationUseCaseIds)[number];
 
 export const clinicsTable = pgTable("clinics", {
   id: text("id").primaryKey(),
@@ -29,6 +39,10 @@ export const clinicsTable = pgTable("clinics", {
   contractAddress: text("contract_address"),
   contractLicense: text("contract_license"),
   contractDirector: text("contract_director"),
+  registrationUseCases: jsonb("registration_use_cases")
+    .$type<RegistrationUseCaseId[]>()
+    .notNull()
+    .default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

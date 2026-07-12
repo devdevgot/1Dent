@@ -159,6 +159,7 @@ export interface Clinic {
   createdAt: string;
   usersCount?: number;
   patientsCount?: number;
+  registrationUseCases?: string[];
 }
 
 export interface DashboardData {

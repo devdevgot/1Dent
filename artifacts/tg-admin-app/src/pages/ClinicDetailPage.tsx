@@ -40,6 +40,15 @@ const planColors: Record<string, string> = {
   enterprise: "bg-amber-500/20 text-amber-400",
 };
 
+const REGISTRATION_USE_CASE_LABELS: Record<string, string> = {
+  crm: "CRM",
+  schedule: "Расписание",
+  whatsapp: "WhatsApp",
+  finance: "Финансы",
+  analytics: "Аналитика",
+  marketing: "Маркетинг",
+};
+
 
 function LoadingSkeleton({ rows = 4 }: { rows?: number }) {
   return (
@@ -133,6 +142,22 @@ function InfoTab({ clinicId }: { clinicId: string }) {
           <p className="text-xs text-muted-foreground mb-1">Создана</p>
           <p className="text-sm text-foreground">{new Date(String(c["createdAt"] ?? "")).toLocaleDateString("ru", { dateStyle: "long" })}</p>
         </div>
+
+        {Array.isArray(c["registrationUseCases"]) && (c["registrationUseCases"] as string[]).length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Цели при регистрации</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(c["registrationUseCases"] as string[]).map((id) => (
+                <span
+                  key={id}
+                  className="text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary font-medium"
+                >
+                  {REGISTRATION_USE_CASE_LABELS[id] ?? id}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-1">

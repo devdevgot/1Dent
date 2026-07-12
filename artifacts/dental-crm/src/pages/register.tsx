@@ -1,9 +1,13 @@
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { createRegisterSchema, type RegisterFormValues } from "@/lib/schemas";
+import {
+  createRegisterSchema,
+  REGISTRATION_USE_CASES,
+  type RegisterFormValues,
+} from "@/lib/schemas";
 import { getGetMeQueryKey, customFetch } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { persistAuthSession } from "@/lib/auth-session";
@@ -22,6 +26,7 @@ import {
   UserRound,
   Wallet,
   Megaphone,
+  Users,
 } from "lucide-react";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
@@ -34,18 +39,19 @@ import {
 } from "@/components/auth/auth-ui";
 import { WhatsappOtpFlow } from "@/components/auth/whatsapp-otp-flow";
 import { formatPhoneInput } from "@/lib/whatsapp-auth";
+import { cn } from "@/lib/utils";
 
 const STEPS = [0, 1, 2, 3] as const;
 type Step = (typeof STEPS)[number];
 
-const USE_CASES = [
-  { id: "crm", label: "CRM", sub: "Управление пациентами", icon: UserRound },
-  { id: "schedule", label: "Расписание", sub: "Онлайн-запись", icon: CalendarDays },
-  { id: "whatsapp", label: "WhatsApp", sub: "Чат с пациентами", icon: MessageCircle },
-  { id: "finance", label: "Финансы", sub: "Учёт платежей", icon: Wallet },
-  { id: "analytics", label: "Аналитика", sub: "Отчёты и метрики", icon: BarChart2 },
-  { id: "marketing", label: "Маркетинг", sub: "Привлечение пациентов", icon: Megaphone },
-] as const;
+const USE_CASE_ICONS = {
+  crm: UserRound,
+  schedule: CalendarDays,
+  whatsapp: MessageCircle,
+  finance: Wallet,
+  analytics: BarChart2,
+  marketing: Megaphone,
+} as const;
 
 function StepDots({ step }: { step: Step }) {
   return (
@@ -110,7 +116,7 @@ export default function Register() {
   };
 
   const handleStep2Next = async () => {
-    const valid = await trigger(["name", "email", "password"]);
+    const valid = await trigger(["name", "password"]);
     if (valid) goForward(3);
   };
 
@@ -131,6 +137,7 @@ export default function Register() {
           ...data,
           phone: verifiedPhone,
           phoneVerificationToken,
+          useCases: selectedUseCases,
         }),
       });
 
@@ -167,15 +174,22 @@ export default function Register() {
   };
 
   return (
-    <AuthPageShell>
-      <div className="h-8 mb-2 flex items-center">
-        {step > 0 && (
+    <AuthPageShell wide={step === 3} hero="register">
+      <div className="h-8 mb-2 flex items-center justify-between">
+        {step > 0 ? (
           <button
             onClick={() => goBack((step - 1) as Step)}
             className="flex items-center gap-1.5 text-[#94a3b8] hover:text-[#0f172a] transition-colors duration-200 p-1 -ml-1 rounded-lg hover:bg-[#faf8f4]"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
+        ) : (
+          <span />
+        )}
+        {step > 0 && (
+          <AuthLink href="/login">
+            <span className="text-xs">{t("register.backToLogin")}</span>
+          </AuthLink>
         )}
       </div>
 
@@ -191,26 +205,42 @@ export default function Register() {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-sm bg-[#1f75fe]/10">
-                <ShieldCheck className="w-7 h-7 text-[#1f75fe]" />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-sm bg-[#1f75fe]/10">
+                <ShieldCheck className="w-8 h-8 text-[#1f75fe]" />
               </div>
-              <h2 className="text-xl font-bold text-[#0f172a] mb-3">Прежде чем начать</h2>
+              <h2 className="text-xl font-bold text-[#0f172a] mb-2">{t("register.disclaimerTitle")}</h2>
               <p className="text-sm text-[#64748b] leading-relaxed">
-                Регистрация в <span className="font-semibold text-[#0f172a]">1Dent</span> предназначена
-                исключительно для <span className="font-semibold text-[#0f172a]">владельцев клиник</span>.
-              </p>
-              <p className="text-sm text-[#64748b] leading-relaxed mt-2">
-                Если вы сотрудник — войдите по номеру WhatsApp, который указал руководитель.
+                {t("register.disclaimerBody")}
               </p>
             </div>
 
+            <div className="rounded-xl border border-[#e8e3d9] bg-[#faf8f4] p-4 mb-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4 text-[#1f75fe]" />
+                </div>
+                <p className="text-sm text-[#0f172a] text-left leading-relaxed">
+                  {t("register.disclaimerOwner")}
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-[#128C7E]" />
+                </div>
+                <p className="text-sm text-[#64748b] text-left leading-relaxed">
+                  {t("register.disclaimerStaff")}
+                </p>
+              </div>
+            </div>
+
             <AuthPrimaryButton onClick={() => goForward(1)}>
-              Я владелец клиники — продолжить
+              {t("register.disclaimerCta")}
             </AuthPrimaryButton>
 
-            <div className="text-center mt-3">
+            <div className="text-center mt-4">
               <AuthLink href="/login">
-                Уже есть аккаунт? <span className="font-semibold text-[#1f75fe] hover:underline">Войти</span>
+                {t("register.hasAccount")}{" "}
+                <span className="font-semibold text-[#1f75fe] hover:underline">{t("register.signIn")}</span>
               </AuthLink>
             </div>
           </motion.div>
@@ -229,8 +259,8 @@ export default function Register() {
             <StepDots step={1} />
             <WhatsappOtpFlow
               purpose="register"
-              title="Подтвердите WhatsApp"
-              subtitle="Код придёт с официального номера 1Dent — не от клиники"
+              title={t("register.whatsappTitle")}
+              subtitle={t("register.whatsappSubtitle")}
               onRegisterVerified={({ phone, verificationToken }) => {
                 setVerifiedPhone(phone);
                 setPhoneVerificationToken(verificationToken);
@@ -257,9 +287,9 @@ export default function Register() {
                 <UserRound className="w-4 h-4 text-[#1f75fe]" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-[#0f172a] leading-tight">Личные данные</h2>
+                <h2 className="text-sm font-bold text-[#0f172a] leading-tight">{t("register.profileTitle")}</h2>
                 <p className="text-xs text-[#94a3b8]">
-                  WhatsApp: {formatPhoneInput(verifiedPhone)} · Шаг 2 из 3
+                  {t("register.profileSubtitle", { phone: formatPhoneInput(verifiedPhone) })}
                 </p>
               </div>
             </div>
@@ -271,16 +301,6 @@ export default function Register() {
                   type="text"
                   placeholder={t("register.ownerNamePlaceholder")}
                   autoComplete="name"
-                  className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
-                />
-              </AuthField>
-
-              <AuthField label={t("register.adminEmail")} error={errors.email?.message}>
-                <input
-                  {...register("email")}
-                  type="email"
-                  placeholder={t("register.emailPlaceholder")}
-                  autoComplete="email"
                   className="w-full bg-transparent text-sm text-[#0f172a] placeholder:text-[#94a3b8] outline-none"
                 />
               </AuthField>
@@ -304,8 +324,10 @@ export default function Register() {
                 </div>
               </AuthField>
 
+              <p className="text-xs text-[#94a3b8] px-1">{t("register.passwordHint")}</p>
+
               <AuthPrimaryButton type="button" onClick={handleStep2Next}>
-                Далее
+                {t("register.next")}
               </AuthPrimaryButton>
             </form>
           </motion.div>
@@ -328,8 +350,8 @@ export default function Register() {
                 <Building2 className="w-4 h-4 text-[#1f75fe]" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-[#0f172a] leading-tight">Данные клиники</h2>
-                <p className="text-xs text-[#94a3b8]">Шаг 3 из 3</p>
+                <h2 className="text-sm font-bold text-[#0f172a] leading-tight">{t("register.clinicStepTitle")}</h2>
+                <p className="text-xs text-[#94a3b8]">{t("register.clinicStepSubtitle")}</p>
               </div>
             </div>
 
@@ -348,24 +370,25 @@ export default function Register() {
                 <div className="flex items-center gap-1.5 mb-2.5">
                   <Sparkles className="w-3.5 h-3.5 text-[#1f75fe]" />
                   <p className="text-xs font-semibold text-[#64748b]">
-                    Для чего планируете использовать?
+                    {t("register.useCaseTitle")}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {USE_CASES.map(({ id, label, sub, icon: Icon }) => {
+                <p className="text-xs text-[#94a3b8] mb-3">{t("register.useCaseHint")}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {REGISTRATION_USE_CASES.map(({ id, labelKey, subKey }) => {
                     const selected = selectedUseCases.includes(id);
+                    const Icon = USE_CASE_ICONS[id];
                     return (
                       <button
                         key={id}
                         type="button"
                         onClick={() => toggleUseCase(id)}
-                        className={`
-                          flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left
-                          transition-all duration-200 active:translate-y-px
-                          ${selected
+                        className={cn(
+                          "flex flex-col items-start gap-2 px-3 py-3 rounded-xl border text-left transition-all duration-200 active:translate-y-px min-h-[88px]",
+                          selected
                             ? "border-[#1f75fe] bg-[#1f75fe]/5 shadow-sm"
-                            : "border-[#e8e3d9] bg-white hover:border-[#cfc9bd] hover:bg-[#faf8f4]"}
-                        `}
+                            : "border-[#e8e3d9] bg-white hover:border-[#cfc9bd] hover:bg-[#faf8f4]",
+                        )}
                       >
                         <div
                           className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
@@ -380,13 +403,13 @@ export default function Register() {
                         </div>
                         <div className="min-w-0">
                           <p
-                            className={`text-xs font-semibold leading-tight truncate ${
+                            className={`text-xs font-semibold leading-tight ${
                               selected ? "text-[#0f172a]" : "text-[#64748b]"
                             }`}
                           >
-                            {label}
+                            {t(labelKey)}
                           </p>
-                          <p className="text-xs text-[#94a3b8] leading-tight truncate">{sub}</p>
+                          <p className="text-[11px] text-[#94a3b8] leading-tight mt-0.5">{t(subKey)}</p>
                         </div>
                       </button>
                     );
@@ -395,7 +418,7 @@ export default function Register() {
               </div>
 
               <AuthPrimaryButton type="submit" disabled={submitting}>
-                {submitting ? t("register.submitting") : "Создать клинику"}
+                {submitting ? t("register.submitting") : t("register.submit")}
               </AuthPrimaryButton>
             </form>
           </motion.div>
