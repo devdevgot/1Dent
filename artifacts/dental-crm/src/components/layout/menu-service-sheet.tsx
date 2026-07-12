@@ -32,9 +32,6 @@ export function MenuServiceSheet({
   useEffect(() => {
     if (!open) return;
 
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (onStackBack) {
@@ -47,7 +44,6 @@ export function MenuServiceSheet({
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open, handleClose, onStackBack]);
@@ -110,7 +106,7 @@ export function MenuServiceSheet({
             </div>
           </header>
 
-          <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-hidden bg-[#faf8f4]">
+          <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain bg-[#faf8f4]">
             {children}
           </div>
         </motion.div>

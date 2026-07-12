@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 /** Centered overlay shell — tablet uses full centering, phone keeps bottom sheet until sm. */
 export function overlayShellClass(isTablet: boolean, extra?: string) {
   return cn(
-    "fixed inset-0 z-50 flex justify-center animate-in-fade",
+    "fixed inset-0 z-[90] flex justify-center animate-in-fade",
     isTablet ? "items-center p-6" : "items-end sm:items-center sm:p-4",
     extra,
   );
