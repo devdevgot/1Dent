@@ -1,102 +1,103 @@
 import { motion } from "framer-motion";
-import type { ComponentType } from "react";
-import { fadeUp } from "@/lib/landing-animations";
+import { fadeUp, staggerParentVariants, staggerChildVariants } from "@/lib/landing-animations";
 import { SITE } from "@/config/site";
-import { FeatureIllustrationCard } from "./feature-illustration-card";
-import {
-  AnalyticsIllustration,
-  BroadcastIllustration,
-  CalendarIllustration,
-  ContractsIllustration,
-  DentalChartIllustration,
-  FinanceIllustration,
-  KanbanIllustration,
-  StaffTrackingIllustration,
-  WhatsappIllustration,
-} from "./illustrations";
+import { KanbanPageMockup } from "./mockups/kanban-page-mockup";
+import { ChatPageMockup } from "./mockups/chat-page-mockup";
+import { FinancialsPageMockup } from "./mockups/financials-page-mockup";
+import { DentalChartPageMockup } from "./mockups/dental-chart-page-mockup";
+import { CalendarPageMockup } from "./mockups/calendar-page-mockup";
+import { TabletPageMockup } from "./mockups/tablet-page-mockup";
+import { BroadcastPageMockup } from "./mockups/broadcast-page-mockup";
+import { ContractsPageMockup } from "./mockups/contracts-page-mockup";
+import { AnalyticsPageMockup } from "./mockups/analytics-page-mockup";
 
-interface FeatureItem {
-  label: string;
-  desc: string;
-  illustration: ComponentType;
-}
-
-const features: FeatureItem[] = [
+const features = [
   {
     label: "Канбан пациентов",
     desc: "Воронка от заявки до repeat sale — каждый пациент на своём этапе.",
-    illustration: KanbanIllustration,
+    mockup: KanbanPageMockup,
   },
   {
     label: "WhatsApp-чат",
     desc: "Переписка с пациентами внутри CRM — как в реальном мессенджере.",
-    illustration: WhatsappIllustration,
+    mockup: ChatPageMockup,
   },
   {
     label: "Финансы",
     desc: "Доходы, расходы, Kaspi, наличные — всё в одном отчёте.",
-    illustration: FinanceIllustration,
+    mockup: FinancialsPageMockup,
   },
   {
     label: "FDI зубная карта",
     desc: "32-зубная схема с историей лечения в карточке пациента.",
-    illustration: DentalChartIllustration,
+    mockup: DentalChartPageMockup,
   },
   {
     label: "Календарь",
     desc: "Расписание врачей и автоматические WhatsApp-напоминания.",
-    illustration: CalendarIllustration,
+    mockup: CalendarPageMockup,
   },
   {
-    label: "Трекинг сотрудников",
-    desc: "Геолокация филиала, приход и уход — журнал событий и уведомления в Telegram.",
-    illustration: StaffTrackingIllustration,
+    label: "Slash Tablet",
+    desc: "Планшет в кабинете — покажите план лечения пациенту на экране.",
+    mockup: TabletPageMockup,
   },
   {
     label: "ИИ Рассылка",
     desc: "Автовозврат пациентов после лечения и профилактика.",
-    illustration: BroadcastIllustration,
+    mockup: BroadcastPageMockup,
   },
   {
     label: "Договоры",
     desc: "Шаблоны, автозаполнение и электронная подпись.",
-    illustration: ContractsIllustration,
+    mockup: ContractsPageMockup,
   },
   {
     label: "Аналитика",
     desc: "Источники пациентов, выручка и эффективность врачей.",
-    illustration: AnalyticsIllustration,
+    mockup: AnalyticsPageMockup,
   },
 ];
 
 export function Features() {
   return (
-    <div id="features" className="bg-[#faf8f4] landing-features-section">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 min-w-0">
-        <motion.div {...fadeUp(0)} className="text-center landing-features-heading">
+    <section id="features" className="bg-white landing-section-sm px-4 sm:px-6 overflow-hidden">
+      <div className="max-w-6xl mx-auto min-w-0">
+        <motion.div {...fadeUp(0)} className="text-center mb-12">
           <h2 className="landing-h2 font-manrope text-[#0f172a]">
             Что умеет {SITE.name}
           </h2>
         </motion.div>
-      </div>
 
-      <div className="landing-features-list max-w-6xl mx-auto px-4 sm:px-6 space-y-8 min-w-0">
-        {features.map((feature, index) => {
-          const Illustration = feature.illustration;
-          return (
-            <motion.div key={feature.label} {...fadeUp(index * 0.04)} className="min-w-0">
-              <FeatureIllustrationCard
-                title={feature.label}
-                description={feature.desc}
-                index={index}
-                total={features.length}
+        <motion.div
+          variants={staggerParentVariants(0.06)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-30px" }}
+          className="grid sm:grid-cols-2 gap-8 lg:gap-10 min-w-0"
+        >
+          {features.map((f) => {
+            const Mockup = f.mockup;
+            return (
+              <motion.div
+                key={f.label}
+                variants={staggerChildVariants}
+                className="flex flex-col gap-4 min-w-0"
               >
-                <Illustration />
-              </FeatureIllustrationCard>
-            </motion.div>
-          );
-        })}
+                <div>
+                  <h3 className="font-manrope font-semibold text-[#0f172a] text-lg mb-1.5">
+                    {f.label}
+                  </h3>
+                  <p className="text-sm font-manrope text-[#64748b] leading-relaxed max-w-md">
+                    {f.desc}
+                  </p>
+                </div>
+                <Mockup />
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </div>
-    </div>
+    </section>
   );
 }
