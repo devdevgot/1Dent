@@ -167,6 +167,42 @@ export class AuthService {
     return { user: safeUser, clinic, token };
   }
 
+  async assertPhoneAccountForPasswordReset(phone: string): Promise<void> {
+    const normalized = whatsappOtpService.normalizePhone(phone);
+    const matches = await this.repo.findUsersByPhone(normalized);
+
+    if (matches.length === 0) {
+      throw new NotFoundError("Аккаунт с этим номером не найден");
+    }
+    if (matches.length > 1) {
+      throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
+    }
+  }
+
+  async resetPasswordViaWhatsapp(data: {
+    phone: string;
+    verificationToken: string;
+    newPassword: string;
+  }): Promise<void> {
+    const normalized = whatsappOtpService.assertVerificationToken(
+      data.phone,
+      data.verificationToken,
+      "reset_password",
+    );
+    const matches = await this.repo.findUsersByPhone(normalized);
+
+    if (matches.length === 0) {
+      throw new NotFoundError("Аккаунт с этим номером не найден");
+    }
+    if (matches.length > 1) {
+      throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
+    }
+
+    const user = matches[0]!;
+    const passwordHash = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
+    await this.repo.updateUserPassword(user.id, passwordHash);
+  }
+
   async loginViaWhatsapp(data: { phone: string; code: string }): Promise<AuthResult> {
     const normalized = whatsappOtpService.consumeVerificationForLogin(data.phone, data.code);
     const matches = await this.repo.findUsersByPhone(normalized);

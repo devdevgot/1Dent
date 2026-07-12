@@ -12,6 +12,7 @@ import {
   requestWhatsappOtp,
   verifyWhatsappOtpLogin,
   verifyWhatsappOtpRegister,
+  verifyWhatsappOtpReset,
   type WhatsappOtpPurpose,
 } from "@/lib/whatsapp-auth";
 import { getApiErrorMessage } from "@/lib/api-error-message";
@@ -29,6 +30,7 @@ interface WhatsappOtpFlowProps {
     token: string;
   }) => void;
   onRegisterVerified?: (data: { phone: string; verificationToken: string }) => void;
+  onResetVerified?: (data: { phone: string; verificationToken: string }) => void;
 }
 
 export function WhatsappOtpFlow({
@@ -37,6 +39,7 @@ export function WhatsappOtpFlow({
   subtitle,
   onLoginSuccess,
   onRegisterVerified,
+  onResetVerified,
 }: WhatsappOtpFlowProps) {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -90,6 +93,18 @@ export function WhatsappOtpFlow({
           user: res.data.user,
           clinic: res.data.clinic,
           token: res.data.token,
+        });
+        return;
+      }
+
+      if (purpose === "reset_password") {
+        const res = await verifyWhatsappOtpReset(normalizedPhone, otpCode);
+        if (!res.data?.verificationToken) {
+          throw new Error("Invalid response");
+        }
+        onResetVerified?.({
+          phone: res.data.phone,
+          verificationToken: res.data.verificationToken,
         });
         return;
       }

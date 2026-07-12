@@ -10,6 +10,7 @@
     "backToPasswordLogin": "Войти по паролю",
     "recoveryTitle": "Вход по коду в WhatsApp",
     "recoverySubtitle": "Мы отправим одноразовый код на ваш номер WhatsApp",
+    "forgotWhatsappSubtitle": "Введите номер WhatsApp — мы отправим код для сброса пароля",
     "signIn": "Войти",
     "signingIn": "Вход...",
     "newClinic": "Новая клиника?",

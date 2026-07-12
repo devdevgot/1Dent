@@ -87,7 +87,7 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
 
 const whatsappRequestOtpSchema = z.object({
   phone: z.string().min(10),
-  purpose: z.enum(["login", "register"]),
+  purpose: z.enum(["login", "register", "reset_password"]),
 });
 
 router.post("/whatsapp/request-otp", async (req: Request, res: Response, next: NextFunction) => {
@@ -97,6 +97,10 @@ router.post("/whatsapp/request-otp", async (req: Request, res: Response, next: N
   }
 
   try {
+    if (parsed.data.purpose === "reset_password") {
+      await authService.assertPhoneAccountForPasswordReset(parsed.data.phone);
+    }
+
     const result = await whatsappOtpService.requestOtp(parsed.data.phone, parsed.data.purpose);
     const response: Record<string, unknown> = {
       success: true,
@@ -112,7 +116,7 @@ router.post("/whatsapp/request-otp", async (req: Request, res: Response, next: N
 const whatsappVerifyOtpSchema = z.object({
   phone: z.string().min(10),
   code: z.string().min(4).max(6),
-  purpose: z.enum(["login", "register"]),
+  purpose: z.enum(["login", "register", "reset_password"]),
 });
 
 router.post("/whatsapp/verify-otp", async (req: Request, res: Response, next: NextFunction) => {
@@ -146,6 +150,26 @@ router.post("/whatsapp/verify-otp", async (req: Request, res: Response, next: Ne
         verificationToken: verified.verificationToken,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const whatsappResetPasswordSchema = z.object({
+  phone: z.string().min(10),
+  verificationToken: z.string().min(16),
+  newPassword: z.string().min(6),
+});
+
+router.post("/whatsapp/reset-password", async (req: Request, res: Response, next: NextFunction) => {
+  const parsed = whatsappResetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+  }
+
+  try {
+    await authService.resetPasswordViaWhatsapp(parsed.data);
+    res.json({ success: true, message: "Password has been reset successfully." });
   } catch (err) {
     next(err);
   }
