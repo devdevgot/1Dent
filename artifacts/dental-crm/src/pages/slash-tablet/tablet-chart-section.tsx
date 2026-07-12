@@ -6,7 +6,7 @@ import {
 import {
   useUpdateTooth,
   useTriggerDentalAiAnalysis,
-  useStartDiagnosis,
+  useCompleteDiagnosis,
   getListTeethQueryKey,
   getListPatientsQueryKey,
 } from "@workspace/api-client-react";
@@ -52,7 +52,7 @@ export function TabletChartSection({
   const qc = useQueryClient();
   const updateToothMutation = useUpdateTooth();
   const triggerAnalysisMutation = useTriggerDentalAiAnalysis();
-  const startDiagnosisMutation = useStartDiagnosis({
+  const completeDiagnosisMutation = useCompleteDiagnosis({
     mutation: {
       onSuccess: () => {
         void qc.invalidateQueries({ queryKey: getListPatientsQueryKey() });
@@ -81,12 +81,11 @@ export function TabletChartSection({
   }, [teeth, diagnosisMap]);
 
   const startDiagnosis = useCallback(() => {
-    void startDiagnosisMutation.mutateAsync(patientId);
     setIsDiagnosisMode(true);
     setDiagnosisMap(new Map());
     setDiagnosisToothFdi(null);
     onSelectFdi(null);
-  }, [onSelectFdi, patientId, startDiagnosisMutation]);
+  }, [onSelectFdi]);
 
   const cancelDiagnosis = useCallback(() => {
     setIsDiagnosisMode(false);
@@ -110,6 +109,7 @@ export function TabletChartSection({
 
       await qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
       void triggerAnalysisMutation.mutateAsync(patientId);
+      void completeDiagnosisMutation.mutateAsync(patientId);
 
       const next = { ...teeth };
       diagnosisMap.forEach((cond, fdi) => { next[fdi] = cond; });
@@ -138,6 +138,7 @@ export function TabletChartSection({
     updateToothMutation,
     qc,
     triggerAnalysisMutation,
+    completeDiagnosisMutation,
     toast,
   ]);
 
