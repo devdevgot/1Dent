@@ -5,9 +5,11 @@ type AuthSkeletonVariant = "login" | "register-disclaimer" | "register-form" | "
 
 function AuthLayoutSkeleton({
   wide = false,
+  hideMobileBranding = false,
   children,
 }: {
   wide?: boolean;
+  hideMobileBranding?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -40,11 +42,13 @@ function AuthLayoutSkeleton({
       </aside>
 
       <main className="flex-1 flex flex-col items-center justify-center px-5 sm:px-8 py-8 overflow-y-auto">
-        <div className="lg:hidden flex flex-col items-center mb-6">
-          <Bone className="w-14 h-14 rounded-2xl mb-2" />
-          <Bone className="h-4 w-14 rounded mb-1" />
-          <Bone className="h-2.5 w-28 rounded" />
-        </div>
+        {!hideMobileBranding && (
+          <div className="lg:hidden flex flex-col items-center mb-6">
+            <Bone className="w-14 h-14 rounded-2xl mb-2" />
+            <Bone className="h-4 w-14 rounded mb-1" />
+            <Bone className="h-2.5 w-28 rounded" />
+          </div>
+        )}
 
         <div
           className={cn(
@@ -88,24 +92,27 @@ function LoginCardSkeleton() {
 function RegisterDisclaimerCardSkeleton() {
   return (
     <>
-      <div className="flex justify-center mb-6">
-        <Bone className="w-28 h-28 rounded-2xl" />
+      <div className="flex justify-center gap-4 mb-6 px-2">
+        <Bone className="w-14 h-14 rounded-2xl shrink-0" />
+        <Bone className="w-[72px] h-[72px] rounded-2xl shrink-0" />
+        <Bone className="w-14 h-14 rounded-2xl shrink-0" />
       </div>
       <Bone className="h-6 w-44 rounded-lg mx-auto mb-2" />
       <Bone className="h-3.5 w-full max-w-xs rounded mx-auto mb-6" />
-      <div className="space-y-3 mb-5">
-        <div className="rounded-2xl border border-[#e8e3d9] p-4 flex items-start gap-3">
+      <div className="rounded-2xl border border-[#e8e3d9] p-4 mb-5 space-y-4">
+        <div className="flex items-start gap-3 pb-4 border-b border-[#f1ede4]">
           <Bone className="w-11 h-11 rounded-xl shrink-0" />
           <div className="flex-1 space-y-2 pt-1">
+            <Bone className="h-3 w-16 rounded" />
             <Bone className="h-3.5 w-full rounded" />
             <Bone className="h-3.5 w-4/5 rounded" />
           </div>
         </div>
-        <div className="rounded-2xl border border-[#e8e3d9] p-4 flex items-start gap-3">
-          <Bone className="w-11 h-11 rounded-xl shrink-0" />
-          <div className="flex-1 space-y-2 pt-1">
+        <div className="flex items-start gap-3">
+          <Bone className="w-9 h-9 rounded-lg shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Bone className="h-3.5 w-48 rounded" />
             <Bone className="h-3.5 w-full rounded" />
-            <Bone className="h-3.5 w-3/5 rounded" />
           </div>
         </div>
       </div>

@@ -12,10 +12,12 @@ export function AuthPageShell({
   children,
   wide = false,
   hero = "auth",
+  hideMobileBranding = false,
 }: {
   children: ReactNode;
   wide?: boolean;
   hero?: AuthHeroVariant;
+  hideMobileBranding?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -62,11 +64,13 @@ export function AuthPageShell({
       </aside>
 
       <main className="flex-1 flex flex-col items-center justify-center px-5 sm:px-8 py-8 overflow-y-auto">
-        <div className="lg:hidden flex flex-col items-center mb-6">
-          <img src="/logo.png" alt="1Dent" className="w-14 h-14 mb-2" />
-          <p className="text-base font-bold text-[#0f172a]">1Dent</p>
-          <p className="text-xs text-[#94a3b8]">Управление клиникой</p>
-        </div>
+        {!hideMobileBranding && (
+          <div className="lg:hidden flex flex-col items-center mb-6">
+            <img src="/logo.png" alt="1Dent" className="w-14 h-14 mb-2" />
+            <p className="text-base font-bold text-[#0f172a]">1Dent</p>
+            <p className="text-xs text-[#94a3b8]">Управление клиникой</p>
+          </div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

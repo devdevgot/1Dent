@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Building2, MessageCircle, ShieldCheck, Users } from "lucide-react";
+import { AlertCircle, Building2, MessageCircle, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AuthLink, AuthPrimaryButton } from "@/components/auth/auth-ui";
 
@@ -7,54 +7,50 @@ type RegisterDisclaimerStepProps = {
   onContinue: () => void;
 };
 
+const floatTransition = (delay = 0) => ({
+  duration: 3.2,
+  repeat: Infinity,
+  ease: "easeInOut" as const,
+  delay,
+});
+
 export function RegisterDisclaimerStep({ onContinue }: RegisterDisclaimerStepProps) {
   const { t } = useTranslation();
 
   return (
     <div className="relative">
-      <div
-        className="pointer-events-none absolute -inset-x-4 -top-6 h-40 overflow-hidden"
-        aria-hidden
-      >
-        <div className="absolute left-1/2 top-6 h-28 w-28 -translate-x-1/2 rounded-full bg-[#1f75fe]/10 blur-2xl" />
-        <div className="absolute right-4 top-10 h-20 w-20 rounded-full bg-[#25D366]/10 blur-xl" />
-      </div>
-
       <div className="relative flex flex-col items-center text-center mb-6">
-        <div className="relative mb-6 [perspective:900px]">
-          <motion.div
-            className="relative mx-auto h-28 w-28"
-            style={{ transformStyle: "preserve-3d" }}
-            animate={{ rotateY: [0, 10, 0, -10, 0], rotateX: [0, 4, 0, -2, 0] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <div
-              className="absolute inset-2 rounded-2xl bg-gradient-to-br from-[#1f75fe] to-[#1555cc] opacity-25 blur-[1px]"
-              style={{ transform: "translateZ(-18px) scale(0.92)" }}
-            />
-            <div
-              className="absolute inset-0 flex items-center justify-center rounded-2xl border border-[#e8e3d9] bg-white shadow-[0_22px_44px_-14px_rgba(31,117,254,0.45)]"
-              style={{ transform: "translateZ(20px)" }}
-            >
-              <ShieldCheck className="h-10 w-10 text-[#1f75fe]" strokeWidth={2.2} />
-            </div>
+        <div className="relative w-full max-w-[280px] mb-6 px-2">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-1/2 h-16 -translate-y-1/2 rounded-full bg-[#1f75fe]/8 blur-2xl"
+            aria-hidden
+          />
+
+          <div className="relative flex items-end justify-between gap-4">
             <motion.div
-              className="absolute -right-2 -top-2 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#25D366] to-[#128C7E] text-white shadow-[0_12px_24px_-8px_rgba(37,211,102,0.55)]"
-              style={{ transform: "translateZ(36px)" }}
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              animate={{ y: [0, -5, 0] }}
+              transition={floatTransition(0)}
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#e8e3d9] bg-white shadow-[0_8px_20px_-10px_rgba(37,211,102,0.45)]"
             >
-              <MessageCircle className="h-4 w-4" />
+              <MessageCircle className="h-6 w-6 text-[#128C7E]" />
             </motion.div>
+
             <motion.div
-              className="absolute -bottom-2 -left-2 flex h-9 w-9 items-center justify-center rounded-lg bg-[#faf8f4] border border-[#e8e3d9] shadow-md"
-              style={{ transform: "translateZ(28px)" }}
-              animate={{ y: [0, 3, 0] }}
-              transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+              animate={{ y: [0, -7, 0] }}
+              transition={floatTransition(0.5)}
+              className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl border border-[#1f75fe]/20 bg-gradient-to-b from-white to-[#f0f6ff] shadow-[0_14px_32px_-12px_rgba(31,117,254,0.35)]"
             >
-              <Building2 className="h-4 w-4 text-[#1f75fe]" />
+              <Building2 className="h-8 w-8 text-[#1f75fe]" strokeWidth={2} />
             </motion.div>
-          </motion.div>
+
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={floatTransition(1)}
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#e8e3d9] bg-white shadow-[0_8px_20px_-10px_rgba(15,23,42,0.12)]"
+            >
+              <Users className="h-6 w-6 text-[#64748b]" />
+            </motion.div>
+          </div>
         </div>
 
         <h2 className="text-xl font-bold text-[#0f172a] mb-2">{t("register.disclaimerTitle")}</h2>
@@ -63,54 +59,34 @@ export function RegisterDisclaimerStep({ onContinue }: RegisterDisclaimerStepPro
         </p>
       </div>
 
-      <div className="space-y-3 mb-5">
-        <motion.div
-          whileHover={{ rotateX: 2, rotateY: -2, scale: 1.01 }}
-          transition={{ type: "spring", stiffness: 300, damping: 22 }}
-          className="rounded-2xl border border-[#e8e3d9] bg-gradient-to-br from-white to-[#faf8f4] p-4 shadow-[0_10px_30px_-16px_rgba(15,23,42,0.25)]"
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <div className="flex items-start gap-3.5">
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1f75fe]/15 to-[#1f75fe]/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
-              style={{ transform: "translateZ(8px)" }}
-            >
-              <Building2 className="h-5 w-5 text-[#1f75fe]" />
-            </div>
-            <div className="text-left">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#1f75fe] mb-1">
-                {t("register.disclaimerOwnerLabel")}
-              </p>
-              <p className="text-sm text-[#0f172a] leading-relaxed">
-                {t("register.disclaimerOwner")}
-              </p>
-            </div>
+      <div className="rounded-2xl border border-[#e8e3d9] bg-gradient-to-br from-white to-[#faf8f4] p-4 mb-5 shadow-[0_10px_30px_-16px_rgba(15,23,42,0.2)]">
+        <div className="flex items-start gap-3.5 pb-4 border-b border-[#f1ede4]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1f75fe]/10">
+            <Building2 className="h-5 w-5 text-[#1f75fe]" />
           </div>
-        </motion.div>
+          <div className="text-left min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#1f75fe] mb-1">
+              {t("register.disclaimerOwnerLabel")}
+            </p>
+            <p className="text-sm text-[#0f172a] leading-relaxed">
+              {t("register.disclaimerOwner")}
+            </p>
+          </div>
+        </div>
 
-        <motion.div
-          whileHover={{ rotateX: 2, rotateY: 2, scale: 1.01 }}
-          transition={{ type: "spring", stiffness: 300, damping: 22 }}
-          className="rounded-2xl border border-[#e8e3d9] bg-white p-4 shadow-[0_8px_24px_-14px_rgba(15,23,42,0.18)]"
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <div className="flex items-start gap-3.5">
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#25D366]/15 to-[#25D366]/5"
-              style={{ transform: "translateZ(8px)" }}
-            >
-              <Users className="h-5 w-5 text-[#128C7E]" />
-            </div>
-            <div className="text-left">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#128C7E] mb-1">
-                {t("register.disclaimerStaffLabel")}
-              </p>
-              <p className="text-sm text-[#64748b] leading-relaxed">
-                {t("register.disclaimerStaff")}
-              </p>
-            </div>
+        <div className="flex items-start gap-3 pt-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fef2f2]">
+            <AlertCircle className="h-5 w-5 text-[#dc2626]" />
           </div>
-        </motion.div>
+          <div className="text-left min-w-0">
+            <p className="text-sm font-semibold text-[#dc2626] leading-snug mb-1">
+              {t("register.disclaimerStaffForbidden")}
+            </p>
+            <p className="text-sm text-[#64748b] leading-relaxed">
+              {t("register.disclaimerStaff")}
+            </p>
+          </div>
+        </div>
       </div>
 
       <AuthPrimaryButton onClick={onContinue}>{t("register.disclaimerCta")}</AuthPrimaryButton>

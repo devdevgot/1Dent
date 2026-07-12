@@ -173,7 +173,7 @@ export default function Register() {
   };
 
   return (
-    <AuthPageShell wide={step === 3} hero="register">
+    <AuthPageShell wide={step === 3} hero="register" hideMobileBranding={step === 0}>
       <div className="h-8 mb-2 flex items-center justify-between">
         {step > 0 ? (
           <button
