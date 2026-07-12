@@ -18,7 +18,7 @@ import { generateKnowledgeScripts } from "./knowledge-generate.service";
 import { invalidateComposedPromptCache } from "../chatbot/chatbot-prompt-composer";
 import {
   composeChatbotPromptWithOpus,
-  refineComposedChatbotPrompt,
+  appendAmendmentToComposedPrompt,
   getComposedPromptStatus,
 } from "../chatbot/chatbot-prompt-composer";
 import { loadChatbotPromptComposeInputs } from "../chatbot/chatbot.service";
@@ -246,23 +246,30 @@ router.post("/knowledge/compose-prompt", ownerAdmin, async (req: Request, res: R
   }
 });
 
-// ── POST /api/knowledge/refine-prompt — Sonnet 5 improves composed prompt ────
+// ── POST /api/knowledge/refine-prompt — append owner rule to existing prompt ───
 router.post("/knowledge/refine-prompt", ownerAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     assertOpenRouterConfigured();
+    const parsed = z.object({
+      instructions: z.string().min(5).max(2000),
+    }).safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError("Опишите доработку — минимум 5 символов."));
+    }
+
     const clinicId = req.user!.clinicId;
     const inputs = await loadChatbotPromptComposeInputs(clinicId);
 
-    let prompt: string;
+    let result: { prompt: string; amendment: string; amendmentsCount: number };
     try {
-      prompt = await refineComposedChatbotPrompt(inputs);
+      result = await appendAmendmentToComposedPrompt(inputs, parsed.data.instructions);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
       if (msg === "NO_COMPOSED_PROMPT") {
         return next(new ValidationError("Сначала создайте промпт кнопкой «Создать промпт» (Opus)."));
       }
-      if (msg === "REFINE_FAILED") {
-        return next(new OpenRouterAiFailedError("Sonnet не смог доработать промпт. Попробуйте ещё раз."));
+      if (msg === "EMPTY_INSTRUCTIONS") {
+        return next(new ValidationError("Опишите, что нужно доработать."));
       }
       throw e;
     }
@@ -271,16 +278,18 @@ router.post("/knowledge/refine-prompt", ownerAdmin, async (req: Request, res: Re
       clinicId,
       userId: req.user!.id,
       feature: "knowledge_parse",
-      description: "Доработка промпта чатбота (Sonnet)",
+      description: "Доработка промпта чатбота (добавление условия)",
     });
 
     res.json({
       success: true,
       data: {
-        prompt,
-        promptLength: prompt.length,
+        prompt: result.prompt,
+        promptLength: result.prompt.length,
         refined: true,
-        model: "sonnet",
+        amendment: result.amendment,
+        amendmentsCount: result.amendmentsCount,
+        model: "sonnet-amendment",
       },
     });
   } catch (err) {

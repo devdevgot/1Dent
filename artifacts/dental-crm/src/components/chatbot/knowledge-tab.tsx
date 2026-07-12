@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Globe, FileText, Trash2, Loader2, Plus, Sparkles, CheckCircle2,
   AlertCircle, Clock, X, Upload, AlignLeft, ChevronDown, ChevronUp,
-  BookOpen, RefreshCw, Wand2,
+  BookOpen, RefreshCw, Wand2, ListChecks, Info,
 } from "lucide-react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +46,36 @@ async function apiFetch(path: string, opts?: RequestInit) {
   return res.json();
 }
 
+const PROMPT_AMENDMENTS_MARKER = "=== ДОПОЛНИТЕЛЬНЫЕ УСЛОВИЯ (доработки клиники) ===";
+
+function splitComposedPrompt(prompt: string): { base: string; amendments: string[] } {
+  const trimmed = prompt.trim();
+  const idx = trimmed.indexOf(PROMPT_AMENDMENTS_MARKER);
+  if (idx === -1) return { base: trimmed, amendments: [] };
+
+  const base = trimmed.slice(0, idx).trim();
+  const block = trimmed.slice(idx + PROMPT_AMENDMENTS_MARKER.length).trim();
+  if (!block) return { base, amendments: [] };
+
+  const amendments = block
+    .split(/\n+/)
+    .map((line) => line.replace(/^\d+[\).\]]\s*/, "").trim())
+    .filter(Boolean);
+
+  return { base, amendments };
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
+interface PromptStatus {
+  exists: boolean;
+  refined: boolean;
+  length: number;
+  prompt: string | null;
+  amendmentsCount: number;
+  amendments: string[];
+  baseLength: number;
+}
+
 interface KnowledgeSource {
   id: string;
   type: "url" | "file";
@@ -66,16 +95,16 @@ export function KnowledgeTab() {
   const [addingUrl, setAddingUrl] = useState(false);
   const [composing, setComposing] = useState(false);
   const [refining, setRefining] = useState(false);
-  const [promptStatus, setPromptStatus] = useState<{
-    exists: boolean;
-    refined: boolean;
-    length: number;
-    prompt: string | null;
-  }>({
+  const [refineModalOpen, setRefineModalOpen] = useState(false);
+  const [refineInstructions, setRefineInstructions] = useState("");
+  const [promptStatus, setPromptStatus] = useState<PromptStatus>({
     exists: false,
     refined: false,
     length: 0,
     prompt: null,
+    amendmentsCount: 0,
+    amendments: [],
+    baseLength: 0,
   });
   const [promptExpanded, setPromptExpanded] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -92,16 +121,15 @@ export function KnowledgeTab() {
   const loadPromptStatus = useCallback(async () => {
     try {
       const res = await apiFetch("/api/knowledge/prompt-status");
-      setPromptStatus((res.data as {
-        exists: boolean;
-        refined: boolean;
-        length: number;
-        prompt: string | null;
-      }) ?? {
-        exists: false,
-        refined: false,
-        length: 0,
-        prompt: null,
+      const data = res.data as Partial<PromptStatus> | undefined;
+      setPromptStatus({
+        exists: data?.exists ?? false,
+        refined: data?.refined ?? false,
+        length: data?.length ?? 0,
+        prompt: data?.prompt ?? null,
+        amendmentsCount: data?.amendmentsCount ?? data?.amendments?.length ?? 0,
+        amendments: data?.amendments ?? [],
+        baseLength: data?.baseLength ?? 0,
       });
     } catch {
       // silent
@@ -233,14 +261,24 @@ export function KnowledgeTab() {
     prompt?: string;
     promptLength?: number;
     refined?: boolean;
+    amendmentsCount?: number;
+    amendments?: string[];
+    amendment?: string;
+    baseLength?: number;
   }) => {
     const prompt = data.prompt ?? null;
     const length = data.promptLength ?? prompt?.length ?? 0;
+    const split = prompt ? splitComposedPrompt(prompt) : { base: "", amendments: [] as string[] };
+    const amendments = data.amendments ?? split.amendments;
+    const amendmentsCount = data.amendmentsCount ?? amendments.length;
     setPromptStatus({
       exists: Boolean(prompt),
-      refined: data.refined ?? false,
+      refined: data.refined ?? amendmentsCount > 0,
       length,
       prompt,
+      amendmentsCount,
+      amendments,
+      baseLength: data.baseLength ?? split.base.length,
     });
     if (prompt) setPromptExpanded(true);
   };
@@ -248,6 +286,7 @@ export function KnowledgeTab() {
   const postPromptAction = async (
     path: "/api/knowledge/compose-prompt" | "/api/knowledge/refine-prompt",
     timeoutMs: number,
+    body?: Record<string, unknown>,
   ) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -259,6 +298,7 @@ export function KnowledgeTab() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
       if (!res.ok) {
@@ -279,7 +319,7 @@ export function KnowledgeTab() {
       await postPromptAction("/api/knowledge/compose-prompt", 100_000);
       toast({
         title: "Промпт создан",
-        description: "Claude Opus 4.8 собрал базовый system prompt. При желании нажмите «Доработать».",
+        description: "Claude Opus 4.8 собрал базовый system prompt. При желании нажмите «Доработать» и опишите дополнительные условия.",
       });
     } catch (err) {
       const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
@@ -296,17 +336,32 @@ export function KnowledgeTab() {
   };
 
   const handleRefinePrompt = async () => {
+    const instructions = refineInstructions.trim();
+    if (instructions.length < 5) {
+      toast({
+        title: "Опишите доработку",
+        description: "Напишите хотя бы несколько слов — что именно нужно изменить в поведении бота.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setRefining(true);
     try {
-      await postPromptAction("/api/knowledge/refine-prompt", 70_000);
+      const json = await postPromptAction("/api/knowledge/refine-prompt", 70_000, { instructions });
+      const amendment = (json.data as { amendment?: string } | undefined)?.amendment;
+      setRefineInstructions("");
+      setRefineModalOpen(false);
       toast({
-        title: "Промпт доработан",
-        description: "Claude Sonnet 5 улучшил структуру и ясность промпта.",
+        title: "Условие добавлено",
+        description: amendment
+          ? `Новое правило добавлено к промпту. Базовый промпт не изменён.`
+          : "Доработка сохранена. Базовый промпт не изменён.",
       });
     } catch (err) {
       const isAbort = err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"));
       toast({
-        title: "Не удалось доработать промпт",
+        title: "Не удалось добавить условие",
         description: isAbort
           ? "Доработка заняла слишком много времени. Попробуйте ещё раз."
           : err instanceof Error ? err.message : "Попробуйте ещё раз.",
@@ -316,6 +371,8 @@ export function KnowledgeTab() {
       setRefining(false);
     }
   };
+
+  const promptPreview = promptStatus.prompt ? splitComposedPrompt(promptStatus.prompt) : null;
 
   const readySources = sources.filter((s) => s.status === "ready");
   const pendingSources = sources.filter((s) => s.status === "pending");
@@ -560,33 +617,104 @@ export function KnowledgeTab() {
         </button>
 
         <button
-          onClick={() => void handleRefinePrompt()}
-          disabled={composing || refining || !promptStatus.exists || promptStatus.refined}
+          onClick={() => setRefineModalOpen(true)}
+          disabled={composing || refining || !promptStatus.exists}
           className={cn(
             "w-full flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-medium transition-all border",
-            promptStatus.exists && !promptStatus.refined && !composing && !refining
+            promptStatus.exists && !composing && !refining
               ? "border-[#1f75fe] text-[#1f75fe] bg-white hover:bg-[#f0f7ff]"
               : "border-[#e8e3d9] text-[#64748b] bg-white cursor-not-allowed",
           )}
         >
           {refining
-            ? <><Loader2 className="h-4 w-4 animate-spin" /> Доработка (Sonnet)…</>
-            : promptStatus.refined
-              ? <><CheckCircle2 className="h-4 w-4" /> Промпт доработан</>
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Добавление условия…</>
+            : promptStatus.amendmentsCount > 0
+              ? <><Wand2 className="h-4 w-4" /> Доработать ({promptStatus.amendmentsCount})</>
               : <><Wand2 className="h-4 w-4" /> Доработать</>
           }
         </button>
 
         {promptStatus.exists && (
           <p className="text-xs text-center text-[#64748b]">
-            {promptStatus.refined
-              ? `Готовый промпт: ${promptStatus.length.toLocaleString("ru-RU")} символов (Opus + Sonnet)`
-              : `Черновик: ${promptStatus.length.toLocaleString("ru-RU")} символов — можно доработать Sonnet`}
+            {promptStatus.amendmentsCount > 0
+              ? `Базовый промпт: ${(promptStatus.baseLength || promptPreview?.base.length || 0).toLocaleString("ru-RU")} симв. · ${promptStatus.amendmentsCount} доработ${promptStatus.amendmentsCount === 1 ? "ка" : promptStatus.amendmentsCount < 5 ? "ки" : "ок"}`
+              : `Черновик: ${promptStatus.length.toLocaleString("ru-RU")} символов — можно добавить условия`}
           </p>
         )}
       </div>
 
-      {promptStatus.prompt && (
+      {/* Refine modal */}
+      <AppDialog
+        open={refineModalOpen}
+        onOpenChange={(open) => { if (!refining) setRefineModalOpen(open); }}
+        title="Доработать промпт"
+        description="Опишите, что нужно изменить в поведении бота. Базовый промпт останется без изменений — добавится только новое условие."
+        size="lg"
+        footer={
+          <div className="flex flex-col gap-2 w-full">
+            <button
+              onClick={() => void handleRefinePrompt()}
+              disabled={refining || refineInstructions.trim().length < 5}
+              className="dash-btn dash-btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {refining
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Добавление…</>
+                : <><Wand2 className="h-4 w-4" /> Добавить условие</>
+              }
+            </button>
+            <p className="text-[11px] text-center text-[#64748b]">
+              Можно добавлять несколько условий — каждое дополняет предыдущие
+            </p>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex gap-3 rounded-xl border border-[#dbeafe] bg-[#f0f7ff] px-3.5 py-3">
+            <Info className="h-4 w-4 text-[#1f75fe] shrink-0 mt-0.5" />
+            <p className="text-xs text-[#334155] leading-relaxed">
+              Мы <span className="font-medium">не переписываем</span> существующий промпт Opus.
+              Ваше описание превратится в одно короткое правило и добавится в конец — так чатбот продолжит работать стабильно.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="refine-instructions" className="text-xs font-medium text-[#0f172a]">
+              Что доработать?
+            </label>
+            <textarea
+              id="refine-instructions"
+              placeholder={"Опишите своими словами, что должен делать бот по-другому.\n\nНапример:\n• Не предлагать скидки, пока пациент сам не спросит\n• Всегда уточнять филиал перед записью\n• Отвечать на казахском, если пациент пишет на казахском"}
+              value={refineInstructions}
+              onChange={(e) => setRefineInstructions(e.target.value)}
+              rows={7}
+              maxLength={2000}
+              className="w-full rounded-xl border border-[#e8e3d9] bg-white px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[var(--ds-primary)]/20 resize-none"
+            />
+            <p className="text-[11px] text-[#94a3b8] text-right">
+              {refineInstructions.length}/2000
+            </p>
+          </div>
+
+          {promptStatus.amendments.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-[#64748b] flex items-center gap-1.5">
+                <ListChecks className="h-3.5 w-3.5" />
+                Уже добавленные условия ({promptStatus.amendments.length})
+              </p>
+              <ol className="space-y-1.5 rounded-xl border border-[#e8e3d9] bg-[#faf8f4] p-3">
+                {promptStatus.amendments.map((rule, i) => (
+                  <li key={`${i}-${rule.slice(0, 24)}`} className="flex gap-2 text-xs text-[#334155] leading-relaxed">
+                    <span className="shrink-0 font-semibold text-[#1f75fe]">{i + 1}.</span>
+                    <span>{rule}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+      </AppDialog>
+
+      {promptStatus.prompt && promptPreview && (
         <div className="rounded-xl border border-[#e8e3d9] bg-white overflow-hidden">
           <button
             type="button"
@@ -599,7 +727,9 @@ export function KnowledgeTab() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-[#64748b]">
-                {promptStatus.refined ? "Opus + Sonnet" : "Черновик Opus"}
+                {promptStatus.amendmentsCount > 0
+                  ? `Opus + ${promptStatus.amendmentsCount} доработ${promptStatus.amendmentsCount === 1 ? "ка" : promptStatus.amendmentsCount < 5 ? "ки" : "ок"}`
+                  : "Черновик Opus"}
               </span>
               {promptExpanded
                 ? <ChevronUp className="h-4 w-4 text-[#64748b]" />
@@ -608,9 +738,31 @@ export function KnowledgeTab() {
             </div>
           </button>
           {promptExpanded && (
-            <pre className="p-4 text-xs text-[#334155] whitespace-pre-wrap font-mono leading-relaxed max-h-[min(50vh,480px)] overflow-y-auto bg-white">
-              {promptStatus.prompt}
-            </pre>
+            <div className="max-h-[min(50vh,480px)] overflow-y-auto">
+              <div className="p-4 border-b border-[#e8e3d9]">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#64748b] mb-2">
+                  Базовый промпт (не изменяется)
+                </p>
+                <pre className="text-xs text-[#334155] whitespace-pre-wrap font-mono leading-relaxed">
+                  {promptPreview.base}
+                </pre>
+              </div>
+              {promptPreview.amendments.length > 0 && (
+                <div className="p-4 bg-[#f0f7ff]/40">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-[#1f75fe] mb-2">
+                    Дополнительные условия
+                  </p>
+                  <ol className="space-y-2">
+                    {promptPreview.amendments.map((rule, i) => (
+                      <li key={`preview-${i}-${rule.slice(0, 16)}`} className="flex gap-2 text-xs text-[#334155] leading-relaxed">
+                        <span className="shrink-0 font-semibold text-[#1f75fe]">{i + 1}.</span>
+                        <span className="font-mono">{rule}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

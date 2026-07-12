@@ -1,10 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, knowledgeScriptsTable } from "@workspace/db";
-import { createChatCompletion, PROMPT_COMPOSER_MODEL, PROMPT_REFINER_MODEL } from "../../lib/openrouter-client";
+import { createChatCompletion, PROMPT_COMPOSER_MODEL } from "../../lib/openrouter-client";
 import { logger } from "../../lib/logger";
 import { getCachedChatbotPromptComposerConfig } from "../platform-config/platform-config.service";
 import type { ManagerExample } from "./ai-classifier";
+import {
+  buildPromptWithAmendments,
+  formatAmendmentFromInstructions,
+  splitComposedPrompt,
+} from "./chatbot-prompt-amendments";
 
 export const KNOWLEDGE_CONTEXT_MAX_CHARS = 20_000;
 
@@ -118,28 +123,47 @@ export async function getComposedPromptStatus(clinicId: string): Promise<{
   refined: boolean;
   length: number;
   prompt: string | null;
+  amendmentsCount: number;
+  amendments: string[];
+  baseLength: number;
 }> {
   const cached = composedPromptCache.get(clinicId);
   if (cached && cached.expiresAt > Date.now()) {
+    const { base, amendments } = splitComposedPrompt(cached.prompt);
     return {
       exists: true,
-      refined: cached.refined,
+      refined: cached.refined || amendments.length > 0,
       length: cached.prompt.length,
       prompt: cached.prompt,
+      amendmentsCount: amendments.length,
+      amendments,
+      baseLength: base.length,
     };
   }
 
   const persisted = await loadPersistedComposedPrompt(clinicId);
   if (persisted) {
+    const { base, amendments } = splitComposedPrompt(persisted.prompt);
     return {
       exists: true,
-      refined: persisted.refined,
+      refined: persisted.refined || amendments.length > 0,
       length: persisted.prompt.length,
       prompt: persisted.prompt,
+      amendmentsCount: amendments.length,
+      amendments,
+      baseLength: base.length,
     };
   }
 
-  return { exists: false, refined: false, length: 0, prompt: null };
+  return {
+    exists: false,
+    refined: false,
+    length: 0,
+    prompt: null,
+    amendmentsCount: 0,
+    amendments: [],
+    baseLength: 0,
+  };
 }
 
 async function loadPersistedComposedPrompt(
@@ -220,19 +244,41 @@ function buildUserPayload(inputs: ChatbotPromptComposeInputs): string {
   ].join("\n");
 }
 
-const SONNET_REFINE_META_PROMPT = `Ты улучшаешь system prompt для WhatsApp-ассистента стоматологической клиники.
+/**
+ * Append a new owner-defined rule to the existing prompt without modifying the base.
+ */
+export async function appendAmendmentToComposedPrompt(
+  inputs: ChatbotPromptComposeInputs,
+  ownerInstructions: string,
+): Promise<{ prompt: string; amendment: string; amendmentsCount: number }> {
+  const hash = hashComposeInputs(inputs);
 
-На входе — черновик промпта (создан Claude Opus) и исходные данные клиники для проверки фактов.
+  let currentPrompt: string | null = null;
+  const cached = composedPromptCache.get(inputs.clinicId);
+  if (cached && cached.expiresAt > Date.now()) {
+    currentPrompt = cached.prompt;
+  } else {
+    const persisted = await loadPersistedComposedPrompt(inputs.clinicId);
+    if (persisted) currentPrompt = persisted.prompt;
+  }
 
-Задачи:
-- Улучши структуру, ясность и компактность без потери фактов
-- Убери дубли и противоречия
-- Сохрани ВСЕ факты из исходных данных (цены, адреса, врачи, услуги, часы)
-- ОБЯЗАТЕЛЬНО сохрани секцию ФОРМАТ ОТВЕТОВ: 2–3 пузыря (reply + replyParts), примеры паттернов
-- Не добавляй факты, которых нет во входных данных
-- Сохрани правила: короткие ответы, естественный диалог, без жёстких этапов воронки
+  if (!currentPrompt?.trim()) {
+    throw new Error("NO_COMPOSED_PROMPT");
+  }
 
-Верни ТОЛЬКО улучшенный текст system prompt, без markdown-обёрток и комментариев.`;
+  const { base, amendments } = splitComposedPrompt(currentPrompt);
+  const newRule = await formatAmendmentFromInstructions(ownerInstructions, inputs.clinicName);
+  const nextAmendments = [...amendments, newRule];
+  const prompt = buildPromptWithAmendments(base, nextAmendments);
+
+  cacheComposedPrompt(inputs.clinicId, hash, prompt, true);
+
+  return {
+    prompt,
+    amendment: newRule,
+    amendmentsCount: nextAmendments.length,
+  };
+}
 
 function cacheComposedPrompt(
   clinicId: string,
@@ -285,46 +331,6 @@ export async function composeChatbotPromptWithOpus(
   const fallback = buildFallbackComposedPrompt(inputs);
   cacheComposedPrompt(inputs.clinicId, hash, fallback, false);
   return fallback;
-}
-
-/** Refine the cached Opus prompt with Claude Sonnet 5. */
-export async function refineComposedChatbotPrompt(
-  inputs: ChatbotPromptComposeInputs,
-): Promise<string> {
-  const hash = hashComposeInputs(inputs);
-  const cached = composedPromptCache.get(inputs.clinicId);
-  if (!cached || cached.expiresAt <= Date.now()) {
-    throw new Error("NO_COMPOSED_PROMPT");
-  }
-
-  const userPayload = [
-    "=== ЧЕРНОВИК PROMPT (от Opus) ===",
-    cached.prompt,
-    "",
-    "=== ИСХОДНЫЕ ДАННЫЕ КЛИНИКИ (проверь факты) ===",
-    buildUserPayload(inputs),
-  ].join("\n");
-
-  const completion = await createChatCompletion(
-    {
-      model: PROMPT_REFINER_MODEL,
-      messages: [
-        { role: "system", content: SONNET_REFINE_META_PROMPT },
-        { role: "user", content: userPayload },
-      ],
-      temperature: 0.25,
-      max_tokens: 4096,
-    },
-    { timeoutMs: 60_000, label: "chatbotPromptRefinerSonnet" },
-  );
-
-  const refined = completion.choices[0]?.message?.content?.trim();
-  if (!refined || refined.length < 200) {
-    throw new Error("REFINE_FAILED");
-  }
-
-  cacheComposedPrompt(inputs.clinicId, hash, refined, true);
-  return refined;
 }
 
 export async function getComposedChatbotPrompt(inputs: ChatbotPromptComposeInputs): Promise<string> {
