@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   Mic, X, Loader2, Check, Trash2, ChevronDown, ChevronRight,
-  RotateCcw, Clock,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { CONDITION_CONFIG } from "./fdi-chart";
 import type { ToothCondition } from "@workspace/api-client-react";
 import { matchVoiceServices } from "@/lib/voice-service-matching";
+import { VoiceRecordingIndicator } from "./voice-recording-indicator";
 
 const AUTH_TOKEN_KEY = "auth_token";
 
@@ -145,6 +146,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const [entries, setEntries] = useState<VoiceDiagnosisEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
 
   // Per-tooth: one selected service from relevant transcript matches
   const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, string>>({});
@@ -237,11 +239,16 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     return () => clearInterval(id);
   }, [phase]);
 
+  const clearRecordingStream = useCallback(() => {
+    setRecordingStream(null);
+  }, []);
+
   const startRecording = useCallback(async () => {
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      setRecordingStream(stream);
       const pickMimeType = () => {
         const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus", "audio/ogg"];
         for (const t of candidates) if (MediaRecorder.isTypeSupported(t)) return t;
@@ -256,6 +263,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
+        clearRecordingStream();
         const blob = new Blob(chunksRef.current, { type: actualMime });
         await sendAudio(blob, actualMime);
       };
@@ -266,11 +274,18 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       setError(msg);
       toast({ title: "Нет доступа к микрофону", description: msg, variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, clearRecordingStream]);
 
   const stopRecording = useCallback(() => {
     setPhase("processing");
+    clearRecordingStream();
     mediaRecorderRef.current?.stop();
+  }, [clearRecordingStream]);
+
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setRecordingStream(null);
   }, []);
 
   const getAudioExt = (mime: string) => {
@@ -503,12 +518,12 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
   return (
     <div className={cn(
-      "fixed inset-0 z-[90] flex justify-center bg-black/30 backdrop-blur-sm overflow-hidden",
+      "fixed inset-0 z-[90] flex justify-center bg-black/20 overflow-hidden",
       isTablet ? "items-center p-6" : "items-end sm:items-center sm:p-4",
     )}>
       <div
         className={cn(
-          "bg-white border border-[#e8e3d9] shadow-xl w-full min-w-0 flex flex-col overflow-hidden",
+          "bg-white border border-[#e8e3d9] shadow-lg w-full min-w-0 flex flex-col overflow-hidden",
           isTablet
             ? "max-w-4xl rounded-2xl"
             : "rounded-t-2xl sm:rounded-2xl max-w-[100vw] sm:max-w-3xl",
@@ -517,27 +532,20 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       >
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e3d9]/50 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Mic className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-bold text-sm text-[#0f172a]">Голосовая диагностика</h2>
-              <p className="text-[11px] text-[#64748b]">Диктуйте на русском, казахском или английском</p>
-            </div>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#e8e3d9] shrink-0">
+          <div>
+            <h2 className="text-sm font-semibold text-[#0f172a]">Голосовая диагностика</h2>
+            <p className="text-[11px] text-[#94a3b8] mt-0.5">Русский, казахский или английский</p>
           </div>
           <div className="flex items-center gap-2">
             {phase === "review" && (
-              <div className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Черновик сохранён
-              </div>
+              <span className="text-[10px] text-emerald-600">Черновик сохранён</span>
             )}
             <button
+              type="button"
               onClick={onClose}
               disabled={phase === "recording" || phase === "applying"}
-              className="p-1.5 rounded-lg hover:bg-[#f1ede4] text-[#64748b] transition-colors disabled:opacity-40"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[#64748b] transition-colors hover:bg-[#f1ede4] hover:text-[#0f172a] disabled:opacity-40"
             >
               <X className="w-4 h-4" />
             </button>
@@ -546,23 +554,27 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
         {/* Draft restore banner */}
         {draftInfo && phase === "idle" && (
-          <div className="mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-center gap-3">
-            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+          <div className="mx-4 mt-3 rounded-xl border border-[#e8e3d9] bg-[#faf8f4] px-3 py-2.5 flex items-center gap-3">
+            <Clock className="w-3.5 h-3.5 text-[#64748b] shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-amber-800">Есть несохранённый черновик</p>
-              <p className="text-[11px] text-amber-600">Сохранён в {formatTime(draftInfo.ts)}</p>
+              <p className="text-xs font-medium text-[#0f172a]">Есть несохранённый черновик</p>
+              <p className="text-[11px] text-[#94a3b8]">Сохранён в {formatTime(draftInfo.ts)}</p>
             </div>
-            <div className="flex gap-1.5 shrink-0">
+            <div className="flex gap-2 shrink-0">
               <button
+                type="button"
                 onClick={discardDraft}
-                className="text-[11px] text-amber-600 hover:text-amber-800 transition-colors"
+                className="text-[11px] text-[#64748b] hover:text-[#0f172a] transition-colors"
               >
                 Удалить
               </button>
-              <Button size="sm" onClick={restoreDraft} className="h-6 text-[11px] px-2.5 gap-1">
-                <RotateCcw className="w-3 h-3" />
+              <button
+                type="button"
+                onClick={restoreDraft}
+                className="text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
+              >
                 Восстановить
-              </Button>
+              </button>
             </div>
           </div>
         )}
@@ -572,61 +584,66 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
           {/* Idle / Recording */}
           {(phase === "idle" || phase === "recording") && (
-            <div className="flex flex-col items-center justify-center gap-6 py-10 px-6">
+            <div className="flex flex-col items-center justify-center gap-8 py-12 px-6">
               {phase === "idle" && (
-                <p className="text-sm text-[#64748b] text-center max-w-xs leading-relaxed">
-                  Нажмите кнопку и продиктуйте состояние зубов. Например:
-                  <span className="block mt-2 italic text-xs bg-[#faf8f4] border border-[#e8e3d9]/40 rounded-lg px-3 py-2 text-[#0f172a]/70 leading-relaxed">
-                    «Шестнадцатый — кариес, пломба композитная. Двадцать первый — коронка циркониевая»
-                  </span>
-                </p>
+                <div className="text-center max-w-xs space-y-3">
+                  <p className="text-sm text-[#64748b] leading-relaxed">
+                    Нажмите кнопку и продиктуйте состояние зубов
+                  </p>
+                  <p className="text-xs text-[#94a3b8] italic leading-relaxed">
+                    «Шестнадцатый — кариес, пломба. Двадцать первый — коронка циркониевая»
+                  </p>
+                </div>
               )}
 
               {phase === "recording" && (
-                <div className="flex flex-col items-center gap-5 w-full">
-                  <div className="relative flex items-center justify-center">
-                    <span className="absolute w-24 h-24 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: "1.4s" }} />
-                    <span className="absolute w-20 h-20 rounded-full bg-primary/15 animate-ping" style={{ animationDuration: "1.8s" }} />
-                    <div className="relative w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-lg">
-                      <Mic className="w-7 h-7 text-white" />
-                    </div>
+                <div className="flex flex-col items-center gap-6 w-full max-w-sm">
+                  <div className="flex items-center gap-2 text-[#64748b]">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-primary/40 animate-ping" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                    </span>
+                    <span className="text-xs font-medium tabular-nums">
+                      {String(Math.floor(recordingSeconds / 60)).padStart(2, "0")}
+                      :
+                      {String(recordingSeconds % 60).padStart(2, "0")}
+                    </span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <p className="text-lg font-mono font-bold tabular-nums text-[#0f172a]">
-                      {String(Math.floor(recordingSeconds / 60)).padStart(2, "0")}:{String(recordingSeconds % 60).padStart(2, "0")}
-                    </p>
-                    <p className="text-xs text-[#64748b]">Говорите чётко, затем нажмите «Готово»</p>
-                  </div>
-                  <div className="flex items-end gap-[3px] h-7">
-                    {[0.4, 0.7, 1, 0.6, 0.9, 0.5, 0.8, 1, 0.6, 0.4, 0.75, 0.9].map((h, i) => (
-                      <span
-                        key={i}
-                        className="w-1 rounded-full bg-primary"
-                        style={{ height: `${h * 100}%`, animation: `soundbar 0.9s ease-in-out ${(i * 0.07).toFixed(2)}s infinite alternate` }}
-                      />
-                    ))}
-                  </div>
+
+                  <VoiceRecordingIndicator stream={recordingStream} active={phase === "recording"} />
+
+                  <p className="text-xs text-[#94a3b8] text-center">
+                    Говорите чётко, затем нажмите «Готово»
+                  </p>
                 </div>
               )}
 
               {error && (
-                <div className="w-full bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                <div className="w-full max-w-sm rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
                 </div>
               )}
 
               <div className="flex gap-3">
                 {phase === "idle" && (
-                  <Button onClick={startRecording} className="gap-2 px-6">
+                  <button
+                    type="button"
+                    onClick={() => void startRecording()}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
+                  >
                     <Mic className="w-4 h-4" />
                     Начать запись
-                  </Button>
+                  </button>
                 )}
                 {phase === "recording" && (
-                  <Button onClick={stopRecording} className="gap-2 px-8 py-5 text-base font-semibold shadow-md">
-                    <Check className="w-5 h-5" />
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 active:scale-[0.98]"
+                  >
+                    <Check className="w-4 h-4" strokeWidth={2.5} />
                     Готово
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
@@ -634,11 +651,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
           {/* Processing */}
           {phase === "processing" && (
-            <div className="flex flex-col items-center justify-center gap-4 py-14">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="flex flex-col items-center justify-center gap-3 py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <div className="text-center">
-                <p className="text-sm font-medium">ИИ обрабатывает запись...</p>
-                <p className="text-xs text-[#64748b] mt-1">Транскрибирование и анализ диагнозов</p>
+                <p className="text-sm font-medium text-[#0f172a]">ИИ обрабатывает запись</p>
+                <p className="text-xs text-[#94a3b8] mt-1">Транскрибирование и анализ</p>
               </div>
             </div>
           )}
@@ -799,7 +816,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
         {/* Footer */}
         {phase === "review" && entries.length > 0 && (
-          <div className="shrink-0 border-t border-[#e8e3d9]/50 bg-[#faf8f4]/50 px-5 py-4 space-y-2">
+          <div className="shrink-0 border-t border-[#e8e3d9] bg-white px-5 py-4 space-y-2">
             {/* Cost summary */}
             {totalSelectedServices > 0 && (
               <div className="flex items-center justify-between text-xs">
