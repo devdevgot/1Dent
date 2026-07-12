@@ -37,6 +37,7 @@ import tabletRouter from "../modules/tablet/tablet.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
+import { clinicalReadRoles } from "../lib/clinical-roles";
 import { planGateMiddleware } from "../middlewares/plan-gate.middleware";
 import { ProceduresRepository } from "../modules/procedures/procedures.repository";
 import { DentalRepository } from "../modules/dental/dental.repository";
@@ -69,7 +70,7 @@ router.use("/clinic/condition-prices", clinicPricesRouter);
 router.use("/", clinicContractSettingsRouter);
 router.use("/", treatmentPlansRouter);
 
-const dentalReadRoles = roleGuard("owner", "admin", "doctor");
+const dentalReadRoles = clinicalReadRoles;
 
 // GET /patients/:id/treatments - list all treatment tasks for a patient
 router.get(

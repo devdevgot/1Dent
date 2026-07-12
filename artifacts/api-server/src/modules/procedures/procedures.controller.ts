@@ -12,6 +12,7 @@ import { InventoryRepository } from "../inventory/inventory.repository";
 import { ChatbotService } from "../chatbot/chatbot.service";
 import { analyticsRepo } from "../analytics/analytics.controller";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
+import { clinicalWriteRoles } from "../../lib/clinical-roles";
 import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import type { ProcedureStatus, PaymentMethod } from "@workspace/db";
 import { scheduleFollowups } from "../followups/followup.queue";
@@ -120,7 +121,7 @@ const updateTemplateSchema = z.object({
 router.use(authMiddleware);
 
 const allRoles = roleGuard("owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse");
-const writeRoles = roleGuard("owner", "admin", "doctor");
+const writeRoles = clinicalWriteRoles;
 const deleteRoles = roleGuard("owner", "admin");
 const ownerAdminRoles = roleGuard("owner", "admin");
 

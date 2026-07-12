@@ -9,7 +9,8 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import multer from "multer";
 import { DentalRepository } from "./dental.repository";
-import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { clinicalReadRoles, clinicalWriteRoles } from "../../lib/clinical-roles";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { PatientsRepository } from "../patients/patients.repository";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
@@ -75,8 +76,8 @@ const addTreatmentSchema = z.object({
 router.use(authMiddleware);
 diagnosisRouter.use(authMiddleware);
 
-const readRoles = roleGuard("owner", "admin", "doctor");
-const writeRoles = roleGuard("owner", "admin", "doctor");
+const readRoles = clinicalReadRoles;
+const writeRoles = clinicalWriteRoles;
 
 async function assertPatientAccess(patientId: string, clinicId: string, next: NextFunction) {
   const patient = await patientsRepo.findById(patientId, clinicId);

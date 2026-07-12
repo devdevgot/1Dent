@@ -1,7 +1,8 @@
 import { randomUUID } from "crypto";
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
-import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { clinicalWriteRoles } from "../../lib/clinical-roles";
 import { NotFoundError, ValidationError } from "../../shared/errors";
 import { TreatmentPlansRepository, PlanLockedError, ItemAlreadyCompletedError } from "./treatment-plans.repository";
 import { PatientsRepository } from "../patients/patients.repository";
@@ -22,7 +23,7 @@ const pricesRepo = new ClinicPricesRepository();
 const dentalRepo = new DentalRepository();
 const messagesRepo = new MessagesRepository();
 
-const docRoles = roleGuard("owner", "admin", "doctor");
+const docRoles = clinicalWriteRoles;
 
 const CreatePlanSchema = z.object({
   items: z
