@@ -6,7 +6,6 @@ export const SITE = {
     headlineAccent: "Клиника растёт.",
     subtitle:
       "CRM для стоматологий Казахстана — канбан, WhatsApp, финансы и FDI-карта в одной системе.",
-    trialNote: "3 дня бесплатно",
   },
   seo: {
     description:

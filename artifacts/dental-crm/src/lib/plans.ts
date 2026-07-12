@@ -182,6 +182,8 @@ export const COMPARISON_SECTIONS: ComparisonSection[] = [
 export const COMMON_FEATURES_SUMMARY =
   "Пациенты, расписание, WhatsApp, финансы, ИИ, договоры и облачное хранение";
 
+export const TRIAL_NOTE = "3 дня бесплатно. Без карты.";
+
 export const COMMON_FEATURES = [
   "Полноценная система управления стоматологией",
   "База пациентов и история лечения",

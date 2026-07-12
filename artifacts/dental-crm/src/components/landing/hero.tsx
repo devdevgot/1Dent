@@ -45,10 +45,6 @@ export function Hero() {
               </a>
             </motion.div>
 
-            <motion.p {...fadeUp(0.38)} className="text-xs font-manrope text-[#94a3b8] mb-6">
-              {SITE.hero.trialNote}. Без карты.
-            </motion.p>
-
             <motion.div
               {...fadeUp(0.4)}
               className="flex items-center justify-center lg:justify-start gap-6 flex-wrap"

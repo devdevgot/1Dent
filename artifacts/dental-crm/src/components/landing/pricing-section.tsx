@@ -3,7 +3,7 @@ import { CreditCard } from "lucide-react";
 import { Link } from "wouter";
 import { fadeUp, staggerParentVariants, staggerChildVariants } from "@/lib/landing-animations";
 import { PlanComparisonTable } from "@/components/pricing/plan-comparison-table";
-import { PLANS, COMMON_FEATURES_SUMMARY, formatPlanPrice } from "@/lib/plans";
+import { PLANS, COMMON_FEATURES_SUMMARY, TRIAL_NOTE, formatPlanPrice } from "@/lib/plans";
 import { Check, Star } from "lucide-react";
 
 export function PricingSection() {
@@ -19,9 +19,16 @@ export function PricingSection() {
             Выберите план
           </h2>
           <p className="landing-lead font-manrope max-w-xl mx-auto">
-            3 дня бесплатно. {COMMON_FEATURES_SUMMARY}.
+            {COMMON_FEATURES_SUMMARY}.
           </p>
         </motion.div>
+
+        <motion.p
+          {...fadeUp(0.05)}
+          className="text-center font-manrope text-sm font-medium text-[#475569] mb-6"
+        >
+          {TRIAL_NOTE}
+        </motion.p>
 
         <motion.div
           variants={staggerParentVariants(0.08)}
