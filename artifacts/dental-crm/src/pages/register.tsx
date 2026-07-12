@@ -21,12 +21,10 @@ import {
   Eye,
   EyeOff,
   MessageCircle,
-  ShieldCheck,
   Sparkles,
   UserRound,
   Wallet,
   Megaphone,
-  Users,
 } from "lucide-react";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
@@ -37,6 +35,7 @@ import {
   AuthPageShell,
   AuthPrimaryButton,
 } from "@/components/auth/auth-ui";
+import { RegisterDisclaimerStep } from "@/components/auth/register-disclaimer-step";
 import { WhatsappOtpFlow } from "@/components/auth/whatsapp-otp-flow";
 import { formatPhoneInput } from "@/lib/whatsapp-auth";
 import { cn } from "@/lib/utils";
@@ -204,45 +203,7 @@ export default function Register() {
             exit="exit"
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 shadow-sm bg-[#1f75fe]/10">
-                <ShieldCheck className="w-8 h-8 text-[#1f75fe]" />
-              </div>
-              <h2 className="text-xl font-bold text-[#0f172a] mb-2">{t("register.disclaimerTitle")}</h2>
-              <p className="text-sm text-[#64748b] leading-relaxed">
-                {t("register.disclaimerBody")}
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-[#e8e3d9] bg-[#faf8f4] p-4 mb-5 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#1f75fe]/10 flex items-center justify-center shrink-0">
-                  <Building2 className="w-4 h-4 text-[#1f75fe]" />
-                </div>
-                <p className="text-sm text-[#0f172a] text-left leading-relaxed">
-                  {t("register.disclaimerOwner")}
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4 text-[#128C7E]" />
-                </div>
-                <p className="text-sm text-[#64748b] text-left leading-relaxed">
-                  {t("register.disclaimerStaff")}
-                </p>
-              </div>
-            </div>
-
-            <AuthPrimaryButton onClick={() => goForward(1)}>
-              {t("register.disclaimerCta")}
-            </AuthPrimaryButton>
-
-            <div className="text-center mt-4">
-              <AuthLink href="/login">
-                {t("register.hasAccount")}{" "}
-                <span className="font-semibold text-[#1f75fe] hover:underline">{t("register.signIn")}</span>
-              </AuthLink>
-            </div>
+            <RegisterDisclaimerStep onContinue={() => goForward(1)} />
           </motion.div>
         )}
 

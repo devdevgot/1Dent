@@ -50,11 +50,15 @@ import {
   BranchesPageSkeleton,
   ClinicBranchesPageSkeleton,
   AppShellSkeleton,
-  AuthShellSkeleton,
   AccountSettingsPageSkeleton,
   AccountFormPageSkeleton,
   PricingPageSkeleton,
 } from "@/components/skeletons";
+import {
+  AuthSessionSkeleton,
+  LoginPageSkeleton,
+  RegisterDisclaimerPageSkeleton,
+} from "@/components/auth/auth-skeletons";
 
 type LazyPageModule = { default: React.ComponentType<any> };
 
@@ -72,10 +76,10 @@ function lazyPage(
   };
 }
 
-const Login = lazyPage(() => import("@/pages/login"));
-const Register = lazyPage(() => import("@/pages/register"));
-const ForgotPassword = lazyPage(() => import("@/pages/forgot-password"));
-const ResetPassword = lazyPage(() => import("@/pages/reset-password"));
+const Login = lazyPage(() => import("@/pages/login"), <LoginPageSkeleton />);
+const Register = lazyPage(() => import("@/pages/register"), <RegisterDisclaimerPageSkeleton />);
+const ForgotPassword = lazyPage(() => import("@/pages/forgot-password"), <LoginPageSkeleton />);
+const ResetPassword = lazyPage(() => import("@/pages/reset-password"), <LoginPageSkeleton />);
 const OwnerDashboard = lazyPage(() => import("@/pages/dashboard-owner"), <OwnerDashboardSkeleton />);
 const AdminDashboard = lazyPage(() => import("@/pages/dashboard-admin"), <AdminDashboardSkeleton />);
 const DoctorDashboard = lazyPage(() => import("@/pages/dashboard-doctor"), <DoctorDashboardSkeleton />);
@@ -199,7 +203,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [clearAuth, setLocation]);
 
   if (!DEV_BYPASS && isLoading) {
-    return <AuthShellSkeleton />;
+    return <AuthSessionSkeleton />;
   }
 
   return <>{children}</>;
