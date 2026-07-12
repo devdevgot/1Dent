@@ -1,7 +1,7 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, Suspense, startTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mic, Stethoscope, CheckCircle2, X, RotateCcw, Loader2,
+  Mic, Stethoscope, Check, X, RotateCcw, Loader2,
 } from "lucide-react";
 import {
   useUpdateTooth,
@@ -14,10 +14,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TabletDentalChart } from "./tablet-dental-chart";
-import {
-  VoiceDiagnosisModal,
-  type VoiceDiagnosisApplyResult,
-} from "@/components/dental-chart/voice-diagnosis-modal";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
+import type { VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
+const VoiceDiagnosisModal = lazyWithChunkRecovery(() =>
+  import("@/components/dental-chart/voice-diagnosis-modal").then((m) => ({ default: m.VoiceDiagnosisModal })),
+);
 import {
   CONDITION_META, type TabletPatient, type ToothCondition,
 } from "./mock-data";
@@ -63,6 +64,10 @@ export function TabletChartSection({
   const [diagnosisToothFdi, setDiagnosisToothFdi] = useState<number | null>(null);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const openVoiceModal = useCallback(() => {
+    startTransition(() => setShowVoiceModal(true));
+  }, []);
 
   const hasDiagnosis = useMemo(
     () => Object.values(teeth).some((c) => c !== "healthy"),
@@ -184,8 +189,8 @@ export function TabletChartSection({
           </button>
           <button
             type="button"
-            onClick={() => setShowVoiceModal(true)}
-            className="flex items-center gap-2 rounded-2xl border-2 border-[#1f75fe]/40 bg-[#1f75fe]/5 px-5 py-3 text-sm font-bold text-[#1f75fe] transition-colors hover:bg-[#1f75fe]/10 active:scale-[0.99]"
+            onClick={openVoiceModal}
+            className="flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-[#f1ede4] active:scale-[0.99]"
           >
             <Mic className="h-5 w-5" />
             Голосовая диагностика
@@ -261,10 +266,10 @@ export function TabletChartSection({
           >
             <div className="flex items-center justify-center gap-10">
               <ActionCircle label="Отмена" onClick={cancelDiagnosis} variant="muted">
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </ActionCircle>
-              <ActionCircle label="Голос" onClick={() => setShowVoiceModal(true)} variant="voice">
-                <Mic className="h-6 w-6" />
+              <ActionCircle label="Голос" onClick={openVoiceModal} variant="voice">
+                <Mic className="h-5 w-5" />
               </ActionCircle>
               <ActionCircle
                 label="Завершить"
@@ -272,7 +277,7 @@ export function TabletChartSection({
                 variant="primary"
                 disabled={diagnosisMap.size === 0 || saving}
               >
-                {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : <CheckCircle2 className="h-6 w-6" />}
+                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" strokeWidth={2.5} />}
               </ActionCircle>
             </div>
           </motion.div>
@@ -280,12 +285,14 @@ export function TabletChartSection({
       </AnimatePresence>
 
       {showVoiceModal && (
-        <VoiceDiagnosisModal
-          patientId={patientId}
-          activePlanId={activePlanId}
-          onClose={() => setShowVoiceModal(false)}
-          onApplied={handleVoiceApplied}
-        />
+        <Suspense fallback={null}>
+          <VoiceDiagnosisModal
+            patientId={patientId}
+            activePlanId={activePlanId}
+            onClose={() => setShowVoiceModal(false)}
+            onApplied={handleVoiceApplied}
+          />
+        </Suspense>
       )}
     </div>
   );
@@ -301,21 +308,21 @@ function ActionCircle({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-1.5">
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
         className={cn(
-          "flex h-14 w-14 items-center justify-center rounded-full border-2 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
-          variant === "muted" && "border-[#e8e3d9] text-[#64748b] hover:bg-[#faf8f4]",
-          variant === "voice" && "border-[#1f75fe]/40 bg-[#1f75fe]/5 text-[#1f75fe] hover:bg-[#1f75fe]/15",
-          variant === "primary" && "border-[#1f75fe] bg-[#1f75fe] text-white hover:bg-[#1a65e8]",
+          "flex h-10 w-10 items-center justify-center rounded-lg transition-colors active:scale-95 disabled:cursor-not-allowed disabled:opacity-40",
+          variant === "muted" && "text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a]",
+          variant === "voice" && "text-primary hover:bg-[#f1ede4]",
+          variant === "primary" && "bg-primary text-white hover:bg-primary/90",
         )}
       >
         {children}
       </button>
-      <span className="text-[11px] font-medium text-[#64748b]">{label}</span>
+      <span className="text-[11px] text-[#64748b]">{label}</span>
     </div>
   );
 }
