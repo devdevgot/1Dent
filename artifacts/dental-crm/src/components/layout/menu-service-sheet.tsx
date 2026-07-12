@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronLeft, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,23 +51,21 @@ export function MenuServiceSheet({
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <AnimatePresence mode="wait">
-      {open ? (
-        <motion.div
-          key="menu-service-overlay"
-          className={cn(
-            "fixed inset-0 z-[80] flex flex-col overflow-hidden bg-white",
-            "h-[100dvh] min-h-[100dvh] max-h-[100dvh]",
-            "h-[100svh] min-h-[100svh] max-h-[100svh]",
-          )}
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ duration: 0.5, ease: EASE }}
-        >
+    open ? (
+      <motion.div
+        key="menu-service-overlay"
+        className={cn(
+          "fixed inset-0 z-[80] flex flex-col overflow-hidden bg-white",
+          "h-[100dvh] min-h-[100dvh] max-h-[100dvh]",
+          "h-[100svh] min-h-[100svh] max-h-[100svh]",
+        )}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5, ease: EASE }}
+      >
           <header className="shrink-0 bg-white border-b border-[#e8e3d9] safe-area-top">
             <div className="flex items-center gap-2 px-4 sm:px-5 pt-3 pb-3">
               {onStackBack ? (
@@ -110,8 +108,7 @@ export function MenuServiceSheet({
             {children}
           </div>
         </motion.div>
-      ) : null}
-    </AnimatePresence>,
+    ) : null,
     document.body,
   );
 }
