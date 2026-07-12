@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, MessageSquare, Users } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { SITE } from "@/config/site";
 import { KanbanPageMockup } from "./mockups/kanban-page-mockup";
@@ -43,22 +43,6 @@ export function Hero() {
               <a href="#features" className="landing-btn landing-btn-secondary font-manrope">
                 Смотреть возможности
               </a>
-            </motion.div>
-
-            <motion.div
-              {...fadeUp(0.4)}
-              className="flex items-center justify-center lg:justify-start gap-6 flex-wrap"
-            >
-              {[
-                { icon: Bot, text: "AI-powered" },
-                { icon: MessageSquare, text: "WhatsApp" },
-                { icon: Users, text: "Для Казахстана" },
-              ].map((b) => (
-                <div key={b.text} className="flex items-center gap-2 text-sm font-manrope text-[#94a3b8]">
-                  <b.icon size={14} className="text-[#1f75fe]" />
-                  <span>{b.text}</span>
-                </div>
-              ))}
             </motion.div>
           </div>
 

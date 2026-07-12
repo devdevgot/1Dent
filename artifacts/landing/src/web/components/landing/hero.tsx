@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, MessageSquare, Users } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 24 },
@@ -77,23 +77,6 @@ export function Hero() {
           >
             Смотреть демо
           </a>
-        </motion.div>
-
-        {/* Social proof */}
-        <motion.div
-          {...fadeUp(0.4)}
-          className="flex items-center justify-center gap-8 flex-wrap"
-        >
-          {[
-            { icon: Bot, text: "AI-powered" },
-            { icon: MessageSquare, text: "WhatsApp интеграция" },
-            { icon: Users, text: "Для клиник Казахстана" },
-          ].map((b) => (
-            <div key={b.text} className="flex items-center gap-1.5 text-sm font-manrope text-[#94a3b8]">
-              <b.icon size={14} className="text-[#1f75fe]" />
-              <span>{b.text}</span>
-            </div>
-          ))}
         </motion.div>
       </div>
     </section>
