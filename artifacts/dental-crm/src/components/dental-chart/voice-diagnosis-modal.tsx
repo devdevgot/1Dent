@@ -147,6 +147,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const [error, setError] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
+  const [recordingAudioCtx, setRecordingAudioCtx] = useState<AudioContext | null>(null);
 
   // Per-tooth: one selected service from relevant transcript matches
   const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, string>>({});
@@ -239,16 +240,24 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     return () => clearInterval(id);
   }, [phase]);
 
-  const clearRecordingStream = useCallback(() => {
+  const clearRecordingAudio = useCallback(() => {
     setRecordingStream(null);
+    setRecordingAudioCtx((prev) => {
+      if (prev && prev.state !== "closed") void prev.close();
+      return null;
+    });
   }, []);
 
   const startRecording = useCallback(async () => {
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioCtx = new AudioContext();
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+
       streamRef.current = stream;
       setRecordingStream(stream);
+      setRecordingAudioCtx(audioCtx);
       const pickMimeType = () => {
         const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus", "audio/ogg"];
         for (const t of candidates) if (MediaRecorder.isTypeSupported(t)) return t;
@@ -263,7 +272,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
-        clearRecordingStream();
+        clearRecordingAudio();
         const blob = new Blob(chunksRef.current, { type: actualMime });
         await sendAudio(blob, actualMime);
       };
@@ -274,18 +283,21 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       setError(msg);
       toast({ title: "Нет доступа к микрофону", description: msg, variant: "destructive" });
     }
-  }, [toast, clearRecordingStream]);
+  }, [toast, clearRecordingAudio]);
 
   const stopRecording = useCallback(() => {
     setPhase("processing");
-    clearRecordingStream();
     mediaRecorderRef.current?.stop();
-  }, [clearRecordingStream]);
+  }, []);
 
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setRecordingStream(null);
+    setRecordingAudioCtx((prev) => {
+      if (prev && prev.state !== "closed") void prev.close();
+      return null;
+    });
   }, []);
 
   const getAudioExt = (mime: string) => {
@@ -610,7 +622,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     </span>
                   </div>
 
-                  <VoiceRecordingIndicator stream={recordingStream} active={phase === "recording"} />
+                  <VoiceRecordingIndicator
+                    stream={recordingStream}
+                    audioContext={recordingAudioCtx}
+                    active={phase === "recording"}
+                  />
 
                   <p className="text-xs text-[#94a3b8] text-center">
                     Говорите чётко, затем нажмите «Готово»
