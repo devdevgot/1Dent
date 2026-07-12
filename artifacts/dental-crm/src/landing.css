@@ -582,10 +582,221 @@ html {
   }
 }
 
+/* ── Sticky features showcase ──────────────────────────────────────────────── */
+.landing-features-scroll {
+  position: relative;
+}
+
+.landing-features-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.landing-features-sticky-inner {
+  width: 100%;
+}
+
+.landing-features-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 3rem;
+  align-items: center;
+}
+
+.landing-features-text-col {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.landing-features-sidebar {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding-top: 0.35rem;
+}
+
+.landing-features-progress-track {
+  width: 4px;
+  height: min(420px, 52vh);
+  border-radius: 9999px;
+  background: #f1ede4;
+  overflow: hidden;
+  margin-top: 0.35rem;
+}
+
+.landing-features-progress-fill {
+  width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #1f75fe 0%, #60a5fa 100%);
+  transition: height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-features-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: min(420px, 52vh);
+  overflow: hidden;
+  padding-right: 0.5rem;
+}
+
+.landing-features-step {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 0.2rem 0;
+  cursor: pointer;
+  opacity: 0.42;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.landing-features-step:hover {
+  opacity: 0.72;
+}
+
+.landing-features-step.is-active {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.landing-features-step.is-done {
+  opacity: 0.62;
+}
+
+.landing-features-step-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  flex-shrink: 0;
+  transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.landing-features-step.is-active .landing-features-step-dot {
+  background: #1f75fe;
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px rgba(31, 117, 254, 0.12);
+}
+
+.landing-features-step.is-done .landing-features-step-dot {
+  background: #94a3b8;
+}
+
+.landing-features-step-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.landing-features-step.is-active .landing-features-step-label {
+  color: #0f172a;
+}
+
+.landing-features-copy-wrap {
+  position: relative;
+  min-height: 220px;
+  min-width: 0;
+}
+
+.landing-features-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.landing-features-index {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #1f75fe;
+  margin-bottom: 0.85rem;
+}
+
+.landing-features-title {
+  font-size: clamp(1.75rem, 2.8vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.85rem;
+}
+
+.landing-features-desc {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  max-width: 30rem;
+}
+
+.landing-features-mockup-col {
+  position: relative;
+  min-width: 0;
+}
+
+.landing-features-mockup-glow {
+  position: absolute;
+  inset: 8% 4% 4% 8%;
+  border-radius: 28px;
+  background: radial-gradient(circle at 50% 30%, rgba(31, 117, 254, 0.14), transparent 68%);
+  pointer-events: none;
+}
+
+.landing-features-mockup-stage {
+  position: relative;
+  min-height: min(520px, 62vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.landing-features-mockup-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.landing-features-mockup-panel > * {
+  width: 100%;
+  max-width: 100%;
+}
+
 /* ── Reduced motion ────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .landing-features-scroll {
+    display: none !important;
+  }
+
+  .landing-features-fallback {
+    display: block !important;
+  }
+
+  .landing-features-progress-fill,
+  .landing-features-step,
+  .landing-features-step-dot {
+    transition: none;
   }
 
   .landing-btn:hover,
