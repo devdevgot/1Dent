@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   AlertTriangle,
@@ -19,7 +19,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
@@ -205,6 +204,17 @@ export function NotificationBell() {
   const unreadPendingPayments = unread.filter((n) => n.type === "pending_payment").length;
   const role = user?.role ?? "";
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   const handleNavigate = (notification: Notification) => {
     const target = getNotificationTarget(notification, role);
     if (!target) return;
@@ -236,7 +246,7 @@ export function NotificationBell() {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -262,11 +272,12 @@ export function NotificationBell() {
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[min(24rem,calc(100vw-2rem))] p-0 shadow-xl bg-[#faf8f4] border border-[#e8e3d9] rounded-2xl font-manrope overflow-hidden"
+        className="w-[min(24rem,calc(100vw-2rem))] p-0 shadow-xl bg-[#faf8f4] border border-[#e8e3d9] rounded-2xl font-manrope overflow-hidden flex flex-col max-h-[min(32rem,85vh)]"
         align="end"
         sideOffset={8}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-white border-b border-[#e8e3d9]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-white border-b border-[#e8e3d9] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center shrink-0">
               <Bell className="w-4 h-4 text-[#1f75fe]" />
@@ -297,7 +308,7 @@ export function NotificationBell() {
           )}
         </div>
 
-        <ScrollArea className="max-h-[min(28rem,70vh)]">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
           <div className="p-3 space-y-3">
             {notifications.length === 0 && (
               <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
@@ -344,7 +355,7 @@ export function NotificationBell() {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );
