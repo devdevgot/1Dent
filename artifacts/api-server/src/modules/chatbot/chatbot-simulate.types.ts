@@ -10,6 +10,9 @@ export interface ProcessMessageOptions {
   scenario?: PlaygroundScenario;
   /** Start dialog with bot greeting (no user message required) */
   initGreeting?: boolean;
+  /** Playground: simulate with real patient phone/session/history from DB */
+  useRealSession?: boolean;
+  realPatientPhone?: string;
 }
 
 export interface TurnResult {

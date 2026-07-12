@@ -145,6 +145,25 @@ import {
   wantsAlternativeDoctor,
 } from "./booking-fsm";
 import { logChatbotTurnMeta } from "./chatbot-prompt-log";
+import { canonicalChatbotPhone, chatbotPhoneLookupKeys } from "./chatbot-phone";
+import {
+  buildHistoryPreview,
+  computeHistoryAgeMs,
+  logChatbotTurnDiagnostics,
+  type ChatbotEarlyExitReason,
+  type ChatbotTurnDiagnostics,
+} from "./chatbot-turn-diagnostics";
+import {
+  buildKnowledgeQueryFromTurn,
+  excludeTrailingDuplicateUserMessage,
+} from "./chatbot-history";
+import {
+  clearTakeoverAt,
+  isBotResumeRequest,
+  markSessionHumanTakeover,
+  reopenDoneSessionData,
+  shouldAutoResetHumanTakeover,
+} from "./chatbot-session-resume";
 import {
   buildChatbotPrompt,
   buildTaskForState,
@@ -230,62 +249,72 @@ if (process.env["REDIS_URL"]) {
 }
 
 async function loadSession(clinicId: string, phone: string): Promise<SessionRecord | null> {
-  if (redis) {
-    try {
-      const raw = await redis.get(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
-      if (raw) return JSON.parse(raw) as SessionRecord;
-    } catch (err) {
-      logger.warn({ err }, "[ChatbotSession] Redis get failed, falling back to DB");
+  const keys = chatbotPhoneLookupKeys(phone);
+  for (const key of keys) {
+    if (redis) {
+      try {
+        const raw = await redis.get(`${REDIS_KEY_PREFIX}${clinicId}:${key}`);
+        if (raw) {
+          const session = JSON.parse(raw) as SessionRecord;
+          return { ...session, phone: canonicalChatbotPhone(session.phone) };
+        }
+      } catch (err) {
+        logger.warn({ err }, "[ChatbotSession] Redis get failed, falling back to DB");
+      }
     }
+
+    const [row] = await db
+      .select()
+      .from(chatbotSessionsTable)
+      .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, key)))
+      .limit(1);
+
+    if (!row) continue;
+
+    const age = Date.now() - new Date(row.updatedAt).getTime();
+    if (age > SESSION_TTL_SECONDS * 1000) continue;
+
+    const session: SessionRecord = {
+      id: row.id,
+      clinicId: row.clinicId,
+      phone: canonicalChatbotPhone(row.phone),
+      state: row.state as ChatbotState,
+      data: (row.data ?? {}) as ChatbotSessionData,
+      humanTakeover: row.humanTakeover,
+    };
+
+    if (redis) {
+      redis
+        .setex(`${REDIS_KEY_PREFIX}${clinicId}:${session.phone}`, SESSION_TTL_SECONDS, JSON.stringify(session))
+        .catch(() => {});
+    }
+
+    return session;
   }
 
-  const [row] = await db
-    .select()
-    .from(chatbotSessionsTable)
-    .where(and(eq(chatbotSessionsTable.clinicId, clinicId), eq(chatbotSessionsTable.phone, phone)))
-    .limit(1);
-
-  if (!row) return null;
-
-  const age = Date.now() - new Date(row.updatedAt).getTime();
-  if (age > SESSION_TTL_SECONDS * 1000) return null;
-
-  const session: SessionRecord = {
-    id: row.id,
-    clinicId: row.clinicId,
-    phone: row.phone,
-    state: row.state as ChatbotState,
-    data: (row.data ?? {}) as ChatbotSessionData,
-    humanTakeover: row.humanTakeover,
-  };
-
-  if (redis) {
-    redis
-      .setex(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`, SESSION_TTL_SECONDS, JSON.stringify(session))
-      .catch(() => {});
-  }
-
-  return session;
+  return null;
 }
 
 async function saveSession(session: SessionRecord): Promise<void> {
+  const canonicalPhone = canonicalChatbotPhone(session.phone);
+  const normalizedSession = { ...session, phone: canonicalPhone };
   await db
     .insert(chatbotSessionsTable)
     .values({
-      id: session.id,
-      clinicId: session.clinicId,
-      phone: session.phone,
-      state: session.state,
-      data: session.data as Record<string, unknown>,
-      humanTakeover: session.humanTakeover,
+      id: normalizedSession.id,
+      clinicId: normalizedSession.clinicId,
+      phone: normalizedSession.phone,
+      state: normalizedSession.state,
+      data: normalizedSession.data as Record<string, unknown>,
+      humanTakeover: normalizedSession.humanTakeover,
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
       target: [chatbotSessionsTable.clinicId, chatbotSessionsTable.phone],
       set: {
-        state: session.state,
-        data: session.data as Record<string, unknown>,
-        humanTakeover: session.humanTakeover,
+        state: normalizedSession.state,
+        data: normalizedSession.data as Record<string, unknown>,
+        humanTakeover: normalizedSession.humanTakeover,
         updatedAt: new Date(),
       },
     });
@@ -293,18 +322,19 @@ async function saveSession(session: SessionRecord): Promise<void> {
   if (redis) {
     redis
       .setex(
-        `${REDIS_KEY_PREFIX}${session.clinicId}:${session.phone}`,
+        `${REDIS_KEY_PREFIX}${normalizedSession.clinicId}:${normalizedSession.phone}`,
         SESSION_TTL_SECONDS,
-        JSON.stringify(session),
+        JSON.stringify(normalizedSession),
       )
       .catch((err: Error) => logger.warn({ err }, "[ChatbotSession] Redis setex failed after DB write"));
   }
 }
 
 async function deleteRedisSession(clinicId: string, phone: string): Promise<void> {
-  if (redis) {
+  if (!redis) return;
+  for (const key of chatbotPhoneLookupKeys(phone)) {
     try {
-      await redis.del(`${REDIS_KEY_PREFIX}${clinicId}:${phone}`);
+      await redis.del(`${REDIS_KEY_PREFIX}${clinicId}:${key}`);
     } catch (_) { /* ignore */ }
   }
 }
@@ -340,9 +370,10 @@ async function saveChatbotMessage(
   direction: "inbound" | "outbound",
   content: string,
 ): Promise<void> {
+  const canonicalPhone = canonicalChatbotPhone(phone);
   await db
     .insert(chatbotMessagesTable)
-    .values({ id: randomUUID(), clinicId, phone, direction, content })
+    .values({ id: randomUUID(), clinicId, phone: canonicalPhone, direction, content })
     .catch((err) => logger.error({ err }, "[ChatbotService] Failed to save chatbot message"));
 
   if (direction !== "outbound") return;
@@ -1796,22 +1827,23 @@ export class ChatbotService {
     text: string,
     options?: ProcessMessageOptions,
   ): Promise<string | null> {
-    return withSessionLock(clinicId, phone, async () => {
-      const stopTyping = startTypingKeepalive(clinicId, phone);
+    const canonicalPhone = canonicalChatbotPhone(phone);
+    return withSessionLock(clinicId, canonicalPhone, async () => {
+      const stopTyping = startTypingKeepalive(clinicId, canonicalPhone);
       try {
-        const turn = await this.safeExecuteTurn(clinicId, phone, text, { ...options, dryRun: false });
+        const turn = await this.safeExecuteTurn(clinicId, canonicalPhone, text, { ...options, dryRun: false });
         if (!turn?.outbound) {
           return null;
         }
         await saveSession(turn.session);
-        await deliverChatbotReply(clinicId, phone, turn.outbound, {
-          onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
+        await deliverChatbotReply(clinicId, canonicalPhone, turn.outbound, {
+          onPartDelivered: (part) => saveChatbotMessage(clinicId, canonicalPhone, "outbound", part),
         });
         return joinChatbotReply(turn.outbound);
       } catch (err) {
-        logger.error({ err, clinicId, phone }, "[ChatbotService] processMessage failed — patient safe fallback");
-        await sendOutboundReply(clinicId, phone, PATIENT_SAFE_FALLBACK_TEXT).catch((sendErr) =>
-          logger.error({ err: sendErr, clinicId, phone }, "[ChatbotService] failed to send patient safe fallback"),
+        logger.error({ err, clinicId, phone: canonicalPhone }, "[ChatbotService] processMessage failed — patient safe fallback");
+        await sendOutboundReply(clinicId, canonicalPhone, PATIENT_SAFE_FALLBACK_TEXT).catch((sendErr) =>
+          logger.error({ err: sendErr, clinicId, phone: canonicalPhone }, "[ChatbotService] failed to send patient safe fallback"),
         );
         return PATIENT_SAFE_FALLBACK_TEXT;
       } finally {
@@ -1855,9 +1887,27 @@ export class ChatbotService {
     options?: ProcessMessageOptions,
   ): Promise<TurnResult | null> {
     const dryRun = options?.dryRun ?? false;
+    const phoneRaw = phone;
+    phone = canonicalChatbotPhone(phone);
+    const promptChannel = dryRun ? ("playground" as const) : ("whatsapp" as const);
     const simulatedActions: string[] = [];
     let resolvedClinicNameForReply: string | undefined;
     let recentMessagesForReply: ChatMessage[] = [];
+    const turnDiag: ChatbotTurnDiagnostics = {
+      clinicId,
+      phoneCanonical: phone,
+      phoneRaw,
+      channel: promptChannel,
+      dryRun,
+      sessionState: "greeting",
+      sessionHumanTakeover: false,
+      messageText: "",
+      historyCount: 0,
+      historyPreview: [],
+      historyAgeMs: null,
+      knowledgeContextLength: 0,
+      agentUsed: false,
+    };
     const noteAction = (msg: string) => {
       if (dryRun) simulatedActions.push(msg);
     };
@@ -1865,6 +1915,9 @@ export class ChatbotService {
       if (!dryRun) await saveSession(session);
     };
     const finishTurn = async (session: SessionRecord, response: OutboundResponse): Promise<TurnResult> => {
+      turnDiag.sessionState = session.state;
+      turnDiag.sessionHumanTakeover = session.humanTakeover;
+      logChatbotTurnDiagnostics(turnDiag);
       logChatbotTurnMeta({
         clinicId,
         phone,
@@ -1906,6 +1959,7 @@ export class ChatbotService {
     if (options?.initGreeting && !messageText.trim()) {
       messageText = "Здравствуйте";
     }
+    turnDiag.messageText = messageText;
 
     let rawSettings: ChatbotSettings;
     try {
@@ -1957,6 +2011,16 @@ export class ChatbotService {
     );
     const calendarConfig = settings.calendarConfig;
     const stateAtTurnStart = session.state;
+    turnDiag.sessionState = session.state;
+    turnDiag.sessionHumanTakeover = session.humanTakeover;
+
+    const historyForKnowledge =
+      dryRun && options?.historyInput
+        ? options.historyInput
+        : await this.getRecentHistory(clinicId, phone, messageText);
+    turnDiag.historyCount = historyForKnowledge.length;
+    turnDiag.historyPreview = buildHistoryPreview(historyForKnowledge);
+    const knowledgeQuery = buildKnowledgeQueryFromTurn(messageText, historyForKnowledge);
 
     let managerExamples: ManagerExample[];
     let knowledgeContext: string;
@@ -1970,7 +2034,7 @@ export class ChatbotService {
       );
       [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName, clinicBranchNames] = await Promise.all([
         getManagerExamples(clinicId),
-        loadKnowledgeContext(clinicId, messageText),
+        loadKnowledgeContext(clinicId, knowledgeQuery),
         loadPriceListContext(clinicId),
         doctorsPromise,
         db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1).catch(() => []).then((rows) => rows[0]?.name),
@@ -1980,6 +2044,7 @@ export class ChatbotService {
       logger.error({ err }, "ChatbotService: failed to load context");
       return null;
     }
+    turnDiag.knowledgeContextLength = knowledgeContext.length;
     resolvedClinicNameForReply = resolveClinicName(settings, clinicName);
 
     const scenarioCtx = dryRun ? buildScenarioContext(options?.scenario, doctorsWithSlots) : null;
@@ -1992,10 +2057,27 @@ export class ChatbotService {
       const earlyPatient = await findPatientByPhoneNormalized(clinicId, phone);
       const allowAutoresponder =
         earlyPatient?.status === "repeat_sale" || session.state === "collect_review";
-      if (!allowAutoresponder) return null;
+      if (!allowAutoresponder) {
+        turnDiag.earlyExitReason = "bot_disabled";
+        logChatbotTurnDiagnostics(turnDiag);
+        return null;
+      }
     }
 
-    if (session.humanTakeover) return { outbound: null, session, simulatedActions };
+    if (session.humanTakeover) {
+      const autoReset =
+        isBotResumeRequest(messageText) || shouldAutoResetHumanTakeover(session.data.takeoverAt);
+      if (autoReset) {
+        session.humanTakeover = false;
+        session.data = clearTakeoverAt(session.data);
+        turnDiag.takeoverAutoReset = true;
+        turnDiag.sessionHumanTakeover = false;
+      } else {
+        turnDiag.earlyExitReason = "human_takeover";
+        logChatbotTurnDiagnostics(turnDiag);
+        return { outbound: null, session, simulatedActions };
+      }
+    }
 
     if (!dryRun && settings.enabled) {
       try {
@@ -2003,6 +2085,9 @@ export class ChatbotService {
         await aiCreditsService.consumeCredits({ clinicId, feature: "chatbot_reply" });
       } catch (err) {
         if (err instanceof InsufficientAiCreditsError || err instanceof PlanLimitExceededError) {
+          turnDiag.earlyExitReason =
+            err instanceof PlanLimitExceededError ? "plan_limit" : "credits_exhausted";
+          logChatbotTurnDiagnostics(turnDiag);
           const exhaustedReply =
             err instanceof PlanLimitExceededError
               ? "К сожалению, лимит диалогов чат-бота по вашему тарифу исчерпан. Администратору нужно перейти на тариф с большим лимитом."
@@ -2039,6 +2124,7 @@ export class ChatbotService {
         ? { id: row.id, name: row.name, status: row.status, doctorId: row.doctorId }
         : undefined;
     }
+    turnDiag.patientStatus = patientDb?.status ?? null;
 
     let state = session.state;
     let data = { ...session.data };
@@ -2056,8 +2142,6 @@ export class ChatbotService {
         if (singleBranch) data.selectedBranch = singleBranch;
       }
     }
-
-    const promptChannel = dryRun ? "playground" as const : "whatsapp" as const;
 
     const up = (
       promptState: ChatbotState,
@@ -2086,7 +2170,7 @@ export class ChatbotService {
     if (isOperatorRequest(messageText)) {
       session.state = "human_takeover";
       session.data = { ...data, handoffSummary: buildHandoffSummary({ ...session, data }) };
-      session.humanTakeover = true;
+      markSessionHumanTakeover(session);
       if (!dryRun) {
         logFunnelEvent({
           clinicId,
@@ -2206,17 +2290,25 @@ export class ChatbotService {
       if (!options?.skipRedAlert && isRedAlert(messageText)) {
         if (!dryRun) await triggerRedAlert(clinicId, phone, messageText, data.createdPatientId);
         else noteAction("Red alert");
+        turnDiag.earlyExitReason = "done_state";
         const alertReply = "🚨 Мы видим вашу проблему и передаём её администратору. Ожидайте, пожалуйста.";
         return finishTurn(session, alertReply);
       }
-      const doneReply = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
-      return finishTurn(session, doneReply);
+      if (messageText.trim() && !isOperatorRequest(messageText)) {
+        session.state = "greeting";
+        data = reopenDoneSessionData(data);
+        session.data = data;
+        state = session.state;
+        turnDiag.doneReopened = true;
+        turnDiag.sessionState = state;
+      } else {
+        turnDiag.earlyExitReason = "done_state";
+        const doneReply = "Рады вашему обращению! Если возникнут вопросы — пишите. Или напишите «оператор» для связи с администратором.";
+        return finishTurn(session, doneReply);
+      }
     }
 
-    const recentMessages =
-      dryRun && options?.historyInput
-        ? options.historyInput
-        : await this.getRecentHistory(clinicId, phone);
+    const recentMessages = historyForKnowledge;
     recentMessagesForReply = recentMessages;
 
     let response: OutboundResponse = null;
@@ -2235,6 +2327,8 @@ export class ChatbotService {
       !session.humanTakeover &&
       state !== "collect_iin"
     ) {
+      turnDiag.agentUsed = true;
+      turnDiag.earlyExitReason = "agent_turn";
       const resolvedName = resolvedClinicNameForReply ?? resolveClinicName(settings, clinicName);
       const doctorsList = await loadDoctorsContext(clinicId);
       const composedSystemPrompt = await getComposedChatbotPrompt({
@@ -2297,7 +2391,11 @@ export class ChatbotService {
 
       session.state = agentOutcome.state;
       session.data = agentOutcome.data;
-      session.humanTakeover = agentOutcome.humanTakeover;
+      if (agentOutcome.humanTakeover) {
+        markSessionHumanTakeover(session);
+      } else {
+        session.humanTakeover = false;
+      }
       if (agentOutcome.humanTakeover && !dryRun) {
         await this.notifyHumanTakeover(clinicId, phone, agentOutcome.data.patientName, agentOutcome.data.handoffSummary);
       } else if (agentOutcome.humanTakeover && dryRun) {
@@ -2305,6 +2403,8 @@ export class ChatbotService {
       }
       return finishTurn(session, agentOutcome.response);
     }
+
+    turnDiag.earlyExitReason = "legacy_fsm";
 
     switch (state) {
       case "greeting": {
@@ -3915,6 +4015,8 @@ export class ChatbotService {
       history?: ChatMessage[];
       scenario?: PlaygroundScenario;
       initGreeting?: boolean;
+      useRealSession?: boolean;
+      realPatientPhone?: string;
     },
   ): Promise<SimulateMessageResult> {
     try {
@@ -3942,17 +4044,23 @@ export class ChatbotService {
       }
 
       const settings = getEffectiveSettings(await getSettings(clinicId));
-      type PlaygroundRaceResult = { timedOut: true } | { timedOut: false; turn: TurnResult | null };
-      let raceResult: PlaygroundRaceResult;
-      try {
-        raceResult = await Promise.race([
-          this.safeExecuteTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
+      const simPhone = opts?.useRealSession && opts.realPatientPhone
+        ? canonicalChatbotPhone(opts.realPatientPhone)
+        : PLAYGROUND_SIM_PHONE;
+      const simOpts: ProcessMessageOptions = opts?.useRealSession && opts.realPatientPhone
+        ? { dryRun: true, initGreeting: opts.initGreeting }
+        : {
             dryRun: true,
             sessionInput: opts?.session,
             historyInput: opts?.history,
             scenario: opts?.scenario,
             initGreeting: opts?.initGreeting,
-          }).then((turn) => ({ timedOut: false as const, turn })),
+          };
+      type PlaygroundRaceResult = { timedOut: true } | { timedOut: false; turn: TurnResult | null };
+      let raceResult: PlaygroundRaceResult;
+      try {
+        raceResult = await Promise.race([
+          this.safeExecuteTurn(clinicId, simPhone, userMessage, simOpts).then((turn) => ({ timedOut: false as const, turn })),
           new Promise<PlaygroundRaceResult>((resolve) => {
             setTimeout(() => resolve({ timedOut: true }), PLAYGROUND_TURN_TIMEOUT_MS);
           }),
@@ -4120,20 +4228,36 @@ export class ChatbotService {
     );
   }
 
-  /** Get recent chatbot message history for AI context */
-  private async getRecentHistory(clinicId: string, phone: string): Promise<ChatMessage[]> {
+  /** Get recent chatbot message history for AI context (newest 20, chronological). */
+  private async getRecentHistory(
+    clinicId: string,
+    phone: string,
+    excludeContent?: string,
+  ): Promise<ChatMessage[]> {
     try {
+      const phoneKeys = chatbotPhoneLookupKeys(phone);
       const messages = await db
-        .select()
+        .select({
+          direction: chatbotMessagesTable.direction,
+          content: chatbotMessagesTable.content,
+          createdAt: chatbotMessagesTable.createdAt,
+        })
         .from(chatbotMessagesTable)
-        .where(and(eq(chatbotMessagesTable.clinicId, clinicId), eq(chatbotMessagesTable.phone, phone)))
-        .orderBy(asc(chatbotMessagesTable.createdAt))
+        .where(and(eq(chatbotMessagesTable.clinicId, clinicId), inArray(chatbotMessagesTable.phone, phoneKeys)))
+        .orderBy(desc(chatbotMessagesTable.createdAt))
         .limit(20);
 
-      return messages.map((m) => ({
-        role: m.direction === "inbound" ? "user" : "assistant",
+      const chronological = [...messages].reverse();
+      const mapped = chronological.map((m) => ({
+        role: (m.direction === "inbound" ? "user" : "assistant") as "user" | "assistant",
         content: m.content,
+        createdAt: m.createdAt,
       }));
+
+      const asChatMessages = mapped.map(({ role, content }) => ({ role, content }));
+      return excludeContent
+        ? excludeTrailingDuplicateUserMessage(asChatMessages, excludeContent)
+        : asChatMessages;
     } catch {
       return [];
     }
@@ -4328,21 +4452,75 @@ export class ChatbotService {
       session?: PlaygroundSessionInput;
       scenario?: PlaygroundScenario;
       initGreeting?: boolean;
+      useRealSession?: boolean;
+      realPatientPhone?: string;
     },
   ): Promise<SimulateMessageResult> {
     const sessionInput =
-      opts?.session ??
-      (opts?.fsmState
-        ? { state: opts.fsmState, data: {} as ChatbotSessionData, humanTakeover: false }
-        : undefined);
+      opts?.useRealSession
+        ? undefined
+        : opts?.session ??
+          (opts?.fsmState
+            ? { state: opts.fsmState, data: {} as ChatbotSessionData, humanTakeover: false }
+            : undefined);
 
     return this.simulateMessage(clinicId, userMessage, {
       userId,
       session: sessionInput,
       history: history.map((m) => ({ role: m.role, content: m.content })),
-      scenario: opts?.scenario,
+      scenario: opts?.useRealSession ? undefined : opts?.scenario,
       initGreeting: opts?.initGreeting ?? (!userMessage && history.length === 0),
+      useRealSession: opts?.useRealSession,
+      realPatientPhone: opts?.realPatientPhone,
     });
+  }
+
+  async getSessionByPhone(clinicId: string, phone: string) {
+    const canonical = canonicalChatbotPhone(phone);
+    const session = await loadSession(clinicId, canonical);
+    if (!session) return null;
+    return {
+      id: session.id,
+      clinicId: session.clinicId,
+      phone: session.phone,
+      state: session.state,
+      data: session.data,
+      humanTakeover: session.humanTakeover,
+    };
+  }
+
+  async compareTurn(clinicId: string, phone: string, userMessage: string) {
+    const canonical = canonicalChatbotPhone(phone);
+    const patient = await findPatientByPhoneNormalized(clinicId, canonical);
+    const [playgroundTurn, productionTurn, session, history] = await Promise.all([
+      this.safeExecuteTurn(clinicId, PLAYGROUND_SIM_PHONE, userMessage, {
+        dryRun: true,
+        scenario: "new_patient",
+      }),
+      this.safeExecuteTurn(clinicId, canonical, userMessage, { dryRun: true }),
+      loadSession(clinicId, canonical),
+      this.getRecentHistory(clinicId, canonical, userMessage),
+    ]);
+
+    const format = (turn: TurnResult | null) => ({
+      reply: turn?.outbound ? joinChatbotReply(turn.outbound) : null,
+      fsmState: turn?.session.state ?? null,
+      humanTakeover: turn?.session.humanTakeover ?? false,
+      sessionData: turn?.session.data ?? {},
+    });
+
+    return {
+      playground: format(playgroundTurn),
+      production: format(productionTurn),
+      diagnostics: {
+        phoneCanonical: canonical,
+        sessionState: session?.state ?? null,
+        sessionHumanTakeover: session?.humanTakeover ?? false,
+        historyCount: history.length,
+        historyPreview: buildHistoryPreview(history),
+        patientStatus: patient?.status ?? null,
+      },
+    };
   }
 
   async listSessions(clinicId: string) {
@@ -4355,10 +4533,11 @@ export class ChatbotService {
   }
 
   async listMessages(clinicId: string, phone: string) {
+    const phoneKeys = chatbotPhoneLookupKeys(phone);
     return db
       .select()
       .from(chatbotMessagesTable)
-      .where(and(eq(chatbotMessagesTable.clinicId, clinicId), eq(chatbotMessagesTable.phone, phone)))
+      .where(and(eq(chatbotMessagesTable.clinicId, clinicId), inArray(chatbotMessagesTable.phone, phoneKeys)))
       .orderBy(asc(chatbotMessagesTable.createdAt));
   }
 
@@ -4394,9 +4573,9 @@ export class ChatbotService {
   }
 
   async pauseBotForStaffMessage(clinicId: string, phone: string): Promise<void> {
-    const session = await loadSession(clinicId, phone);
+    const session = await loadSession(clinicId, canonicalChatbotPhone(phone));
     if (!session || session.humanTakeover) return;
-    session.humanTakeover = true;
+    markSessionHumanTakeover(session);
     await saveSession(session);
   }
 

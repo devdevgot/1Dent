@@ -20,6 +20,8 @@ export function PlaygroundTab() {
   const [session, setSession] = useState<PlaygroundSessionPayload | null>(null);
   const [humanTakeover, setHumanTakeover] = useState(false);
   const [simulatedActions, setSimulatedActions] = useState<string[]>([]);
+  const [useRealSession, setUseRealSession] = useState(false);
+  const [realPatientPhone, setRealPatientPhone] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cancelPartsRef = useRef<(() => void) | null>(null);
@@ -53,12 +55,15 @@ export function PlaygroundTab() {
       history: Array<{ role: "user" | "assistant"; content: string }>;
       session?: PlaygroundSessionPayload | null;
     }) => {
+      const realMode = useRealSession && realPatientPhone.trim().length >= 5;
       testMessage.mutate(
         {
           userMessage: payload.userMessage,
-          history: payload.history,
-          scenario: "new_patient",
-          session: payload.session ?? session ?? undefined,
+          history: realMode ? [] : payload.history,
+          scenario: realMode ? undefined : "new_patient",
+          session: realMode ? undefined : (payload.session ?? session ?? undefined),
+          useRealSession: realMode || undefined,
+          realPatientPhone: realMode ? realPatientPhone.trim() : undefined,
         },
         {
           onSuccess: applyResponse,
@@ -76,7 +81,7 @@ export function PlaygroundTab() {
         },
       );
     },
-    [testMessage, session, applyResponse],
+    [testMessage, session, applyResponse, useRealSession, realPatientPhone],
   );
 
   useEffect(() => {
@@ -110,6 +115,8 @@ export function PlaygroundTab() {
     setSession(null);
     setHumanTakeover(false);
     setSimulatedActions([]);
+    setUseRealSession(false);
+    setRealPatientPhone("");
   }, []);
 
   const handleSend = () => {
@@ -129,7 +136,12 @@ export function PlaygroundTab() {
     ? FSM_STATE_LABELS[session.state] ?? session.state
     : null;
 
-  const sendDisabled = !input.trim() || testMessage.isPending || isReceivingParts || humanTakeover;
+  const sendDisabled =
+    !input.trim() ||
+    testMessage.isPending ||
+    isReceivingParts ||
+    humanTakeover ||
+    (useRealSession && realPatientPhone.trim().length < 5);
 
   return (
     <div
@@ -141,9 +153,20 @@ export function PlaygroundTab() {
         <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-[#e8e3d9] bg-white">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#0f172a]">Playground</p>
-            <p className="text-xs text-[#64748b] truncate">Тест диалога как новый пациент</p>
+            <p className="text-xs text-[#64748b] truncate">
+              {useRealSession ? "Режим реального пациента (сессия + история из WhatsApp)" : "Тест диалога как новый пациент"}
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <label className="hidden sm:flex items-center gap-1.5 text-[10px] text-[#64748b] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useRealSession}
+                onChange={(e) => setUseRealSession(e.target.checked)}
+                className="rounded border-[#cbd5e1]"
+              />
+              Реальный пациент
+            </label>
             {stateLabel && (
               <span className="hidden sm:inline text-[10px] font-medium px-2 py-1 rounded-full bg-[#f1ede4] text-[#64748b] max-w-[140px] truncate">
                 {stateLabel}
@@ -231,6 +254,15 @@ export function PlaygroundTab() {
 
         {/* Composer */}
         <div className="shrink-0 border-t border-[#e8e3d9] bg-white px-4 py-3">
+          {useRealSession && (
+            <input
+              type="tel"
+              placeholder="Телефон пациента (+7700...)"
+              value={realPatientPhone}
+              onChange={(e) => setRealPatientPhone(e.target.value)}
+              className="w-full mb-2 rounded-xl border border-[#e8e3d9] bg-[#faf8f4] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1f75fe]/15"
+            />
+          )}
           {humanTakeover && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-2">
               Диалог передан оператору — сбросьте playground для нового теста

@@ -5,6 +5,7 @@ import {
   useListPatients,
   useListMessages,
   useSendMessage,
+  useGetChatbotSession,
   getListPatientsQueryKey,
   getListMessagesQueryKey,
   customFetch,
@@ -396,6 +397,11 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
     },
   });
 
+  const { data: chatbotSessionData } = useGetChatbotSession(patient.phone, {
+    query: { enabled: !!patient.phone },
+  });
+  const chatbotSession = chatbotSessionData?.data?.session ?? null;
+
   const sendMutation = useSendMessage({
     mutation: {
       onMutate: async (vars) => {
@@ -530,12 +536,24 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         sticky={false}
         icon={<Avatar name={patient.name} size={36} />}
         badge={
-          hasRedAlert ? (
-            <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
-              <AlertTriangle className="w-3 h-3" />
-              {t("chat.redAlert")}
-            </Badge>
-          ) : undefined
+          <div className="flex items-center gap-1.5 shrink-0">
+            {chatbotSession?.humanTakeover && (
+              <Badge className="flex items-center gap-1 text-xs bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-50">
+                Бот на паузе
+              </Badge>
+            )}
+            {chatbotSession?.state === "done" && !chatbotSession.humanTakeover && (
+              <Badge className="flex items-center gap-1 text-xs bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-50">
+                Сессия завершена
+              </Badge>
+            )}
+            {hasRedAlert ? (
+              <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
+                <AlertTriangle className="w-3 h-3" />
+                {t("chat.redAlert")}
+              </Badge>
+            ) : null}
+          </div>
         }
         className="md:[&>div:first-child>button:first-child]:hidden md:[&>div:first-child>div:first-child]:hidden"
       />
