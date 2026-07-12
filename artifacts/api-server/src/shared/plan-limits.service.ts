@@ -8,6 +8,7 @@ import {
   normalizeClinicPlan,
 } from "./plan-limits";
 import { PlanLimitExceededError } from "./errors";
+import { chatbotPhoneLookupKeys } from "../modules/chatbot/chatbot-phone";
 
 function monthBounds(date = new Date()) {
   const start = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -119,17 +120,19 @@ export class PlanLimitsService {
   }
 
   async phoneHasChatbotDialogThisMonth(clinicId: string, phone: string): Promise<boolean> {
+    const phoneKeys = chatbotPhoneLookupKeys(phone);
+    if (phoneKeys.length === 0) return false;
     const { start, end } = monthBounds();
     const { rows } = await pool.query<{ exists: boolean }>(
       `SELECT EXISTS (
          SELECT 1 FROM chatbot_messages
          WHERE clinic_id = $1
-           AND phone = $2
+           AND phone = ANY($2::text[])
            AND direction = 'outbound'
            AND created_at >= $3
            AND created_at <= $4
        ) AS exists`,
-      [clinicId, phone, start.toISOString(), end.toISOString()],
+      [clinicId, phoneKeys, start.toISOString(), end.toISOString()],
     );
     return Boolean(rows[0]?.exists);
   }
