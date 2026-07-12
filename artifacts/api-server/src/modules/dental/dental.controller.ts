@@ -292,7 +292,7 @@ diagnosisRouter.post("/diagnosis/complete", writeRoles, async (req: Request, res
 });
 
 // POST /patients/:id/teeth/voice-diagnose
-// Multilingual STT (GPT-4o Mini Transcribe) → FDI parse (Gemini Pro)
+// Multilingual STT (Gemini audio) → FDI parse (Gemini Flash, Pro fallback)
 router.post(
   "/voice-diagnose",
   writeRoles,
@@ -329,6 +329,7 @@ router.post(
     let sttModel = "";
     let sttMs = 0;
     let parseMs = 0;
+    let parseModel = "";
 
     try {
       const stt = await transcribeVoiceAudio(
@@ -359,8 +360,15 @@ router.post(
       const parsed = await parseVoiceDiagnoses(transcript);
       diagnoses = parsed.diagnoses;
       parseMs = parsed.ms;
+      parseModel = parsed.model;
     } catch (err) {
       logger.error({ err }, "[VoiceDiagnose] LLM parse error");
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("OpenRouterTimeout")) {
+        return next(new ValidationError(
+          "Анализ диагнозов занял слишком много времени. Попробуйте более короткую запись или повторите через минуту.",
+        ));
+      }
       return next(err);
     }
 
@@ -418,6 +426,7 @@ router.post(
         count: enriched.length,
         sttModel,
         sttMs,
+        parseModel,
         parseMs,
         totalMs: Date.now() - started,
         audioBytes: req.file.buffer.length,

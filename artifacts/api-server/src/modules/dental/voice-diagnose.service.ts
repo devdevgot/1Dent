@@ -8,10 +8,13 @@ export const VOICE_STT_MODEL =
 export const VOICE_STT_FALLBACK_MODEL =
   process.env["VOICE_STT_FALLBACK_MODEL"] ?? "openai/whisper-large-v3-turbo";
 export const VOICE_PARSE_MODEL =
-  process.env["VOICE_PARSE_MODEL"] ?? "google/gemini-2.5-pro";
+  process.env["VOICE_PARSE_MODEL"] ?? "google/gemini-2.5-flash";
+export const VOICE_PARSE_FALLBACK_MODEL =
+  process.env["VOICE_PARSE_FALLBACK_MODEL"] ?? "google/gemini-2.5-pro";
 
 const STT_TIMEOUT_MS = 45_000;
-const PARSE_TIMEOUT_MS = 28_000;
+const PARSE_TIMEOUT_MS = 45_000;
+const PARSE_FALLBACK_TIMEOUT_MS = 60_000;
 const MIN_AUDIO_BYTES = 1_000;
 
 const VALID_CONDITIONS = new Set([
@@ -266,12 +269,44 @@ export async function transcribeVoiceAudio(
 export async function parseVoiceDiagnoses(transcript: string): Promise<{
   diagnoses: VoiceDiagnosisRow[];
   ms: number;
+  model: string;
 }> {
   const started = Date.now();
+  const models = [VOICE_PARSE_MODEL, VOICE_PARSE_FALLBACK_MODEL].filter(
+    (m, i, arr) => arr.indexOf(m) === i,
+  );
+  const timeouts = [PARSE_TIMEOUT_MS, PARSE_FALLBACK_TIMEOUT_MS];
 
+  let lastErr: unknown;
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i]!;
+    const timeoutMs = timeouts[i] ?? PARSE_FALLBACK_TIMEOUT_MS;
+    try {
+      const diagnoses = await callParseModel(transcript, model, timeoutMs);
+      const ms = Date.now() - started;
+      logger.info({ model, ms, count: diagnoses.length }, "[VoiceDiagnose] Parse ok");
+      return { diagnoses, ms, model };
+    } catch (err) {
+      lastErr = err;
+      const hasNext = i < models.length - 1;
+      logger.warn({ err, model, hasNext }, "[VoiceDiagnose] Parse model failed");
+      if (!hasNext) break;
+    }
+  }
+
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("Voice diagnosis parse failed");
+}
+
+async function callParseModel(
+  transcript: string,
+  model: string,
+  timeoutMs: number,
+): Promise<VoiceDiagnosisRow[]> {
   const chatRes = await createChatCompletion(
     {
-      model: VOICE_PARSE_MODEL,
+      model,
       messages: [
         { role: "system", content: VOICE_PARSE_SYSTEM_PROMPT },
         {
@@ -280,17 +315,17 @@ export async function parseVoiceDiagnoses(transcript: string): Promise<{
         },
       ],
       temperature: 0.1,
-      max_tokens: 1500,
+      max_tokens: 1200,
       response_format: { type: "json_object" },
     },
-    { timeoutMs: PARSE_TIMEOUT_MS, label: "voice-diagnose-parse", disableReasoning: true },
+    { timeoutMs, label: `voice-diagnose-parse:${model}`, disableReasoning: true },
   );
 
   const raw = chatRes.choices[0]?.message?.content?.trim() ?? "{}";
   const parsed = parseLlmJson<{ diagnoses?: unknown[] }>(raw);
   const rows = Array.isArray(parsed?.diagnoses) ? parsed!.diagnoses! : [];
 
-  const diagnoses: VoiceDiagnosisRow[] = rows
+  return rows
     .filter(
       (d): d is Record<string, unknown> =>
         typeof d === "object" && d !== null,
@@ -313,11 +348,6 @@ export async function parseVoiceDiagnoses(transcript: string): Promise<{
         : (typeof d["notes"] === "string" ? (d["notes"] as string) : ""),
       spokenProcedure: typeof d["spokenProcedure"] === "string" ? (d["spokenProcedure"] as string) : "",
     }));
-
-  const ms = Date.now() - started;
-  logger.info({ model: VOICE_PARSE_MODEL, ms, count: diagnoses.length }, "[VoiceDiagnose] Parse ok");
-
-  return { diagnoses, ms };
 }
 
 export class VoiceTranscriptionError extends Error {
