@@ -124,3 +124,11 @@ export class TabletPinInvalidError extends AppError {
     super(message, 401, "TABLET_PIN_INVALID");
   }
 }
+
+export class TabletCabinetStaleError extends AppError {
+  constructor(
+    message = "Привязка к кабинету устарела. На планшете нажмите «Обновить код» и отсканируйте новый QR.",
+  ) {
+    super(message, 404, "TABLET_CABINET_STALE");
+  }
+}

@@ -9,6 +9,7 @@ import {
   NotFoundError,
   ValidationError,
   TabletPinInvalidError,
+  TabletCabinetStaleError,
 } from "../../shared/errors";
 import { getPublicAppBaseUrl } from "../../shared/public-url";
 import type { UserRole } from "@workspace/db";
@@ -71,6 +72,22 @@ const TABLET_AUTH_TTL = "12h";
 export class TabletService {
   private repo = new TabletRepository();
   private authRepo = new AuthRepository();
+
+  private async assertActiveClinic(clinicId: string) {
+    const active = await this.authRepo.isClinicActive(clinicId);
+    if (!active) {
+      throw new TabletCabinetStaleError();
+    }
+  }
+
+  private async assertActiveCabinet(cabinetId: string) {
+    const cabinet = await this.repo.findCabinetById(cabinetId);
+    if (!cabinet) {
+      throw new NotFoundError("Кабинет не найден");
+    }
+    await this.assertActiveClinic(cabinet.clinicId);
+    return cabinet;
+  }
 
   private async notifyOwnerPairing(
     owner: { id: string; clinicId: string },
@@ -182,6 +199,7 @@ export class TabletService {
 
     const cabinet = await this.repo.findCabinetByPairingCode(normalized);
     if (!cabinet) throw new NotFoundError("Кабинет с таким кодом не найден");
+    await this.assertActiveClinic(cabinet.clinicId);
 
     return {
       id: cabinet.id,
@@ -219,8 +237,7 @@ export class TabletService {
   }
 
   async getCabinetPublic(cabinetId: string) {
-    const cabinet = await this.repo.findCabinetById(cabinetId);
-    if (!cabinet) throw new NotFoundError("Кабинет не найден");
+    const cabinet = await this.assertActiveCabinet(cabinetId);
     return {
       id: cabinet.id,
       name: cabinet.name,
@@ -251,8 +268,7 @@ export class TabletService {
   }
 
   async createSession(cabinetId: string) {
-    const cabinet = await this.repo.findCabinetById(cabinetId);
-    if (!cabinet) throw new NotFoundError("Кабинет не найден");
+    const cabinet = await this.assertActiveCabinet(cabinetId);
 
     await this.repo.expirePendingSessionsForCabinet(cabinet.id);
 
@@ -420,8 +436,7 @@ export class TabletService {
 
   async verifyCabinetPin(cabinetId: string, pin: string) {
     validatePin(pin);
-    const cabinet = await this.repo.findCabinetById(cabinetId);
-    if (!cabinet) throw new NotFoundError("Кабинет не найден");
+    const cabinet = await this.assertActiveCabinet(cabinetId);
     if (!cabinet.pinHash) throw new ValidationError("PIN кабинета не настроен");
 
     const ok = await bcrypt.compare(pin, cabinet.pinHash);
@@ -432,8 +447,7 @@ export class TabletService {
 
   async unlockByUserPin(cabinetId: string, pin: string) {
     validatePin(pin);
-    const cabinet = await this.repo.findCabinetById(cabinetId);
-    if (!cabinet) throw new NotFoundError("Кабинет не найден");
+    const cabinet = await this.assertActiveCabinet(cabinetId);
 
     const users = await this.repo.listTabletUsersWithPins(cabinet.clinicId);
     let matched: (typeof users)[number] | null = null;
@@ -532,8 +546,14 @@ export class TabletService {
       };
     }
 
+    if (session.clinicId) {
+      await this.assertActiveClinic(session.clinicId);
+    }
+
     if (user.clinicId !== session.clinicId) {
-      throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+      throw new TabletCabinetStaleError(
+        "QR-код от другой клиники. На планшете нажмите «Обновить код» и отсканируйте новый QR.",
+      );
     }
 
     // Optional PIN verification when user explicitly provides it (tablet PIN path)

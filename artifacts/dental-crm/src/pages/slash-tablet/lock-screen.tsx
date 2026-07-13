@@ -10,6 +10,8 @@ import {
   getTabletSessionStatus,
   resolveCabinetIdFromUrl,
   applyCabinetIdToUrl,
+  clearStoredCabinetId,
+  shouldResetTabletCabinetBinding,
   type TabletCabinetBrief,
 } from "@/lib/tablet-api";
 import { bootstrapTabletSessionAuth } from "@/lib/tablet-auth";
@@ -64,11 +66,11 @@ export function LockScreen({
     }
   }, []);
 
-  const bootstrapSession = useCallback(async (forcedCabinetId?: string) => {
+  const bootstrapSession = useCallback(async (forcedCabinetId?: string, retryWithoutCabinet = false) => {
     if (bootstrappingRef.current) return;
     bootstrappingRef.current = true;
 
-    const id = forcedCabinetId ?? resolveCabinetIdFromUrl();
+    const id = retryWithoutCabinet ? null : (forcedCabinetId ?? resolveCabinetIdFromUrl());
     setLinkUrl("");
     setLoading(true);
     setBootError(null);
@@ -80,9 +82,18 @@ export function LockScreen({
       setSessionId(res.data.sessionId);
       if (res.data.cabinet) {
         setCabinetId(res.data.cabinet.id);
+      } else {
+        setCabinetId(null);
       }
       setLinkUrl(res.data.linkUrl);
-    } catch {
+    } catch (err) {
+      if (id && shouldResetTabletCabinetBinding(err)) {
+        clearStoredCabinetId();
+        setCabinetId(null);
+        bootstrappingRef.current = false;
+        void bootstrapSession(undefined, true);
+        return;
+      }
       setBootError("Не удалось создать сессию планшета. Проверьте подключение.");
     } finally {
       setLoading(false);
