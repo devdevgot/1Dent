@@ -7,6 +7,7 @@ import {
   getPendingTabletPairing,
   redeemTabletLink,
   resendTabletPairingCode,
+  getTabletLinkErrorMessage,
 } from "@/lib/tablet-api";
 
 type LinkFlowStatus = "idle" | "processing" | "success" | "pairing_pending" | "error";
@@ -84,11 +85,12 @@ export function useTabletLinkFlow() {
       });
       return true;
     } catch (err) {
+      const message = getTabletLinkErrorMessage(err);
       setStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Не удалось подключиться к планшету");
+      setErrorMessage(message);
       toast({
         title: "Ошибка",
-        description: err instanceof Error ? err.message : "Не удалось подключиться к планшету",
+        description: message,
         variant: "destructive",
       });
       return false;

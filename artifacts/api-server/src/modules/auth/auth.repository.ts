@@ -73,6 +73,15 @@ export class AuthRepository {
     return clinic as any;
   }
 
+  async isClinicActive(id: string): Promise<boolean> {
+    const [row] = await db
+      .select({ isActive: clinicsTable.isActive })
+      .from(clinicsTable)
+      .where(eq(clinicsTable.id, id))
+      .limit(1);
+    return row?.isActive ?? false;
+  }
+
   async createClinic(data: InsertClinic): Promise<Clinic> {
     const [clinic] = await db.insert(clinicsTable).values(data).returning();
     return clinic!;

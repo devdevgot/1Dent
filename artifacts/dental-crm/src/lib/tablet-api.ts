@@ -65,6 +65,50 @@ export function storeCabinetId(id: string) {
   }
 }
 
+export function clearStoredCabinetId() {
+  try {
+    localStorage.removeItem(CABINET_KEY);
+  } catch {
+    /* ignore */
+  }
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("cabinet")) return;
+  url.searchParams.delete("cabinet");
+  window.history.replaceState({}, "", url.toString());
+}
+
+type ApiErrorPayload = { code?: string; error?: string } | null;
+
+export function getTabletApiErrorCode(err: unknown): string | null {
+  if (!(err instanceof ApiError)) return null;
+  const data = err.data as ApiErrorPayload;
+  return data?.code ?? null;
+}
+
+/** True when the tablet should drop a cached cabinet id and bootstrap again. */
+export function shouldResetTabletCabinetBinding(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  const code = getTabletApiErrorCode(err);
+  if (code === "TABLET_CABINET_STALE") return true;
+  if (err.status === 404 && code === "NOT_FOUND") return true;
+  return false;
+}
+
+export function getTabletLinkErrorMessage(err: unknown): string {
+  if (!(err instanceof ApiError)) {
+    return err instanceof Error ? err.message : "Не удалось подключиться к планшету";
+  }
+  const code = getTabletApiErrorCode(err);
+  if (code === "TABLET_CABINET_STALE") {
+    return err.message.replace(/^HTTP \d+[^:]*:\s*/, "");
+  }
+  if (err.status === 404 && code === "NOT_FOUND") {
+    return "Ссылка устарела или уже использована. На планшете нажмите «Обновить код» и отсканируйте новый QR.";
+  }
+  return err.message.replace(/^HTTP \d+[^:]*:\s*/, "");
+}
+
 export function applyCabinetIdToUrl(id: string) {
   storeCabinetId(id);
   if (typeof window === "undefined") return;
