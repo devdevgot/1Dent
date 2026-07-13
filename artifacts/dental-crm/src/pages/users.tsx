@@ -180,12 +180,17 @@ export default function StaffPage() {
   const { user: currentUser } = useAuthStore();
   const [, navigate] = useLocation();
   const goBack = usePageBack({ menuFallback: true });
-  const { isOverlay, pushDetail } = useOverlayNavigation();
+  const { isOverlay, pushDetail, pushStaffTab } = useOverlayNavigation();
   const queryClient = useQueryClient();
 
   const openStaffDetail = (id: string) => {
     if (isOverlay) pushDetail(id);
     else navigate(`/users/${id}`);
+  };
+
+  const openStaffAnalytics = (id: string) => {
+    if (isOverlay) pushStaffTab(id, "analytics");
+    else navigate(`/users/${id}/analytics`);
   };
 
   const [search, setSearch] = useState("");
@@ -585,7 +590,7 @@ export default function StaffPage() {
                               onEdit={() => { setEditingUser(u); setEditDialogOpen(true); }}
                               onDelete={() => setDeleteConfirmId(u.id)}
                               onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
-                              onNavigate={() => openStaffDetail(u.id)}
+                              onNavigate={() => openStaffAnalytics(u.id)}
                             />
                           </td>
                         </tr>

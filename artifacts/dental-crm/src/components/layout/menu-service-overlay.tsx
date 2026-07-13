@@ -15,6 +15,7 @@ import { findCachedStaffUser } from "@workspace/api-client-react";
 import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 
 const StaffDetailPage = lazyWithChunkRecovery(() => import("@/pages/staff-detail"));
+const StaffAnalyticsPage = lazyWithChunkRecovery(() => import("@/pages/staff-analytics"));
 const DoctorScheduleDayPage = lazyWithChunkRecovery(() => import("@/pages/doctor-schedule-day"));
 
 export function MenuServiceOverlay() {
@@ -25,6 +26,7 @@ export function MenuServiceOverlay() {
     activeSlug,
     detailId,
     scheduleDate,
+    staffTab,
     stackDepth,
     dismiss,
     popStack,
@@ -81,7 +83,7 @@ export function MenuServiceOverlay() {
     };
   }, [service, detailId, cachedStaff, scheduleDate, t]);
 
-  const contentKey = `${activeSlug}-${detailId ?? ""}-${scheduleDate ?? ""}`;
+  const contentKey = `${activeSlug}-${detailId ?? ""}-${scheduleDate ?? ""}-${staffTab}`;
 
   const renderBody = () => {
     if (!service || !roleAllowed) return null;
@@ -106,6 +108,13 @@ export function MenuServiceOverlay() {
     }
 
     if (service.supportsDetail && detailId) {
+      if (staffTab === "analytics") {
+        return (
+          <Suspense fallback={<MenuServiceContentSkeleton variant="analytics" />}>
+            <StaffAnalyticsPage overlayDoctorId={detailId} />
+          </Suspense>
+        );
+      }
       return (
         <Suspense fallback={<MenuServiceContentSkeleton variant="users" />}>
           <StaffDetailPage overlayDoctorId={detailId} />

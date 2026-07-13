@@ -13,6 +13,9 @@ import { getMenuServiceBySlug } from "@/lib/menu-services";
 export const OVERLAY_PARAM_SERVICE = "service";
 export const OVERLAY_PARAM_DETAIL = "detail";
 export const OVERLAY_PARAM_DATE = "date";
+export const OVERLAY_PARAM_STAFF_TAB = "staffTab";
+
+export type StaffCabinetTab = "profile" | "analytics";
 
 type OverlayNavigationContextValue = {
   /** True only while the service sheet is open and valid */
@@ -20,9 +23,11 @@ type OverlayNavigationContextValue = {
   activeSlug: string | null;
   detailId: string | null;
   scheduleDate: string | null;
+  staffTab: StaffCabinetTab;
   stackDepth: number;
   openService: (slug: string, replace?: boolean) => void;
   pushDetail: (id: string) => void;
+  pushStaffTab: (id: string, tab: StaffCabinetTab) => void;
   pushDate: (date: string, replace?: boolean) => void;
   popStack: () => void;
   dismiss: () => void;
@@ -33,9 +38,11 @@ const OverlayNavigationContext = createContext<OverlayNavigationContextValue>({
   activeSlug: null,
   detailId: null,
   scheduleDate: null,
+  staffTab: "profile",
   stackDepth: 0,
   openService: () => {},
   pushDetail: () => {},
+  pushStaffTab: () => {},
   pushDate: () => {},
   popStack: () => {},
   dismiss: () => {},
@@ -63,6 +70,8 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
   const activeSlug = params.get(OVERLAY_PARAM_SERVICE);
   const detailId = params.get(OVERLAY_PARAM_DETAIL);
   const scheduleDate = params.get(OVERLAY_PARAM_DATE);
+  const staffTabRaw = params.get(OVERLAY_PARAM_STAFF_TAB);
+  const staffTab: StaffCabinetTab = staffTabRaw === "analytics" ? "analytics" : "profile";
 
   const service = getMenuServiceBySlug(activeSlug);
   const roleAllowed =
@@ -76,6 +85,7 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
       p.delete(OVERLAY_PARAM_SERVICE);
       p.delete(OVERLAY_PARAM_DETAIL);
       p.delete(OVERLAY_PARAM_DATE);
+      p.delete(OVERLAY_PARAM_STAFF_TAB);
     });
     navigate(next, { replace: true });
   }, [navigate, path, search]);
@@ -93,6 +103,7 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
         p.set(OVERLAY_PARAM_SERVICE, slug);
         p.delete(OVERLAY_PARAM_DETAIL);
         p.delete(OVERLAY_PARAM_DATE);
+        p.delete(OVERLAY_PARAM_STAFF_TAB);
       });
       navigate(next, { replace });
     },
@@ -104,8 +115,25 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
       const next = buildUrl(path, search, (p) => {
         p.set(OVERLAY_PARAM_DETAIL, id);
         p.delete(OVERLAY_PARAM_DATE);
+        p.delete(OVERLAY_PARAM_STAFF_TAB);
       });
       navigate(next);
+    },
+    [navigate, path, search],
+  );
+
+  const pushStaffTab = useCallback(
+    (id: string, tab: StaffCabinetTab) => {
+      const next = buildUrl(path, search, (p) => {
+        p.set(OVERLAY_PARAM_DETAIL, id);
+        p.delete(OVERLAY_PARAM_DATE);
+        if (tab === "analytics") {
+          p.set(OVERLAY_PARAM_STAFF_TAB, "analytics");
+        } else {
+          p.delete(OVERLAY_PARAM_STAFF_TAB);
+        }
+      });
+      navigate(next, { replace: true });
     },
     [navigate, path, search],
   );
@@ -115,6 +143,7 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
       const next = buildUrl(path, search, (p) => {
         p.set(OVERLAY_PARAM_DATE, date);
         p.delete(OVERLAY_PARAM_DETAIL);
+        p.delete(OVERLAY_PARAM_STAFF_TAB);
       });
       navigate(next, { replace });
     },
@@ -126,6 +155,7 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
       const next = buildUrl(path, search, (p) => {
         p.delete(OVERLAY_PARAM_DETAIL);
         p.delete(OVERLAY_PARAM_DATE);
+        p.delete(OVERLAY_PARAM_STAFF_TAB);
       });
       navigate(next, { replace: true });
       return;
@@ -139,9 +169,11 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
       activeSlug,
       detailId,
       scheduleDate,
+      staffTab,
       stackDepth,
       openService,
       pushDetail,
+      pushStaffTab,
       pushDate,
       popStack,
       dismiss,
@@ -151,9 +183,11 @@ export function OverlayNavigationProvider({ children }: { children: ReactNode })
       activeSlug,
       detailId,
       scheduleDate,
+      staffTab,
       stackDepth,
       openService,
       pushDetail,
+      pushStaffTab,
       pushDate,
       popStack,
       dismiss,
