@@ -203,6 +203,12 @@
     border-radius: 99px;
   }
 
+  /* Kanban: skip layout/paint for off-screen cards inside columns */
+  .kanban-column-list > * {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
+  }
+
   /* Horizontal scroll for tables inside modals — clip overscroll, no white bleed */
   .table-h-scroll {
     overflow-x: auto;

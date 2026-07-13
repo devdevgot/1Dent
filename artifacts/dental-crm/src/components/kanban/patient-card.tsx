@@ -7,6 +7,7 @@ import type { PatientTreatmentProgress } from "@/hooks/use-patient-treatment-pro
 import { PatientTreatmentProgressBar } from "./patient-treatment-progress-bar";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { cn } from "@/lib/utils";
+import { useKanbanDragActiveRef } from "@/components/kanban/kanban-drag-context";
 
 export interface PatientCardViewProps {
   patient: Patient;
@@ -14,7 +15,6 @@ export interface PatientCardViewProps {
   progress?: PatientTreatmentProgress;
   onSelect?: (patientId: string) => void;
   className?: string;
-  hideProgress?: boolean;
 }
 
 export const PatientCardView = memo(function PatientCardView({
@@ -23,7 +23,6 @@ export const PatientCardView = memo(function PatientCardView({
   progress,
   onSelect,
   className,
-  hideProgress = false,
 }: PatientCardViewProps) {
   const sourceLabel = SOURCE_LABELS[patient.source] ?? patient.source;
   const sourceColor = SOURCE_COLORS[patient.source] ?? "bg-[#f1ede4] text-[#64748b]";
@@ -70,21 +69,19 @@ export const PatientCardView = memo(function PatientCardView({
         {statusLabel}
       </span>
 
-      {!hideProgress && (
-        <div className="mb-2.5">
-          <p className="text-[9px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-1.5">Прогресс</p>
-          {progress && (progress.paid > 0 || progress.debt > 0 || progress.pending > 0) ? (
-            <PatientTreatmentProgressBar data={progress} compact />
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full border-[3px] border-[#e8e3d9] flex items-center justify-center shrink-0">
-                <span className="text-[10px] text-[#94a3b8]">—</span>
-              </div>
-              <span className="text-[10px] text-[#94a3b8]">Нет плана</span>
+      <div className="mb-2.5">
+        <p className="text-[9px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-1.5">Прогресс</p>
+        {progress && (progress.paid > 0 || progress.debt > 0 || progress.pending > 0) ? (
+          <PatientTreatmentProgressBar data={progress} compact />
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full border-[3px] border-[#e8e3d9] flex items-center justify-center shrink-0">
+              <span className="text-[10px] text-[#94a3b8]">—</span>
             </div>
-          )}
-        </div>
-      )}
+            <span className="text-[10px] text-[#94a3b8]">Нет плана</span>
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center justify-between text-[11px] text-[#64748b]">
         <div className="flex items-center gap-1">
@@ -137,18 +134,16 @@ export const PatientCardDragPreview = memo(function PatientCardDragPreview({
   );
 });
 
-interface PatientCardProps extends PatientCardViewProps {
-  isBoardDragging?: boolean;
-}
+interface PatientCardProps extends PatientCardViewProps {}
 
 export const PatientCard = memo(function PatientCard({
   patient,
   hasRedAlert,
   progress,
   onSelect,
-  isBoardDragging = false,
 }: PatientCardProps) {
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const boardDraggingRef = useKanbanDragActiveRef();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: patient.id,
     data: { type: "patient", status: patient.status },
@@ -172,7 +167,7 @@ export const PatientCard = memo(function PatientCard({
         pointerStart.current = { x: event.clientX, y: event.clientY };
       }}
       onClick={(event) => {
-        if (isBoardDragging || isDragging || !onSelect) return;
+        if (boardDraggingRef.current || isDragging || !onSelect) return;
         const start = pointerStart.current;
         if (!start) return;
         const moved =
@@ -186,7 +181,6 @@ export const PatientCard = memo(function PatientCard({
         patient={patient}
         hasRedAlert={hasRedAlert}
         progress={progress}
-        hideProgress={isBoardDragging}
         className={isDragging ? "pointer-events-none" : undefined}
       />
     </div>

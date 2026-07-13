@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useSearch, useLocation } from "wouter";
 import {
   useListPatients,
@@ -59,6 +59,14 @@ const STATUS_ORDER: Record<PatientStatus, number> = {
 const ALL_SOURCES: PatientSource[] = [
   "instagram", "referral", "walk_in", "website", "whatsapp", "other",
 ];
+
+function patientListsEqual(a: Patient[], b: Patient[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
 
 
 /* ─── List view ───────────────────────────────────────────────────────────── */
@@ -358,6 +366,12 @@ function PatientsKanbanView({
     });
   }, [patients, search, statusFilter, sourceFilter, dateFilterFn]);
 
+  const stableVisiblePatientsRef = useRef<Patient[]>(visiblePatients);
+  if (!patientListsEqual(stableVisiblePatientsRef.current, visiblePatients)) {
+    stableVisiblePatientsRef.current = visiblePatients;
+  }
+  const boardPatients = stableVisiblePatientsRef.current;
+
   return (
     <div className="flex flex-col h-full bg-[#faf8f4]">
       <div className="flex flex-col flex-1 overflow-hidden gap-4 p-4">
@@ -369,7 +383,7 @@ function PatientsKanbanView({
           </div>
         ) : (
           <KanbanBoard
-            patients={visiblePatients}
+            patients={boardPatients}
             onSelectPatient={onSelectPatient}
             className="flex gap-3 overflow-x-auto pb-4 flex-1 items-stretch custom-scrollbar"
           />

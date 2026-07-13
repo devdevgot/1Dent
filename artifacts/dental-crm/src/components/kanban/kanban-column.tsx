@@ -14,7 +14,6 @@ interface KanbanColumnProps {
   redAlertPatientIds: ReadonlySet<string>;
   progressMap?: Record<string, PatientTreatmentProgress>;
   onSelectPatient: (patientId: string) => void;
-  isBoardDragging?: boolean;
 }
 
 const ColumnPatientList = memo(function ColumnPatientList({
@@ -22,13 +21,11 @@ const ColumnPatientList = memo(function ColumnPatientList({
   redAlertPatientIds,
   progressMap,
   onSelectPatient,
-  isBoardDragging,
 }: {
   patients: Patient[];
   redAlertPatientIds: ReadonlySet<string>;
   progressMap?: Record<string, PatientTreatmentProgress>;
   onSelectPatient: (patientId: string) => void;
-  isBoardDragging?: boolean;
 }) {
   return (
     <>
@@ -39,7 +36,6 @@ const ColumnPatientList = memo(function ColumnPatientList({
           hasRedAlert={redAlertPatientIds.has(patient.id)}
           progress={progressMap?.[patient.id]}
           onSelect={onSelectPatient}
-          isBoardDragging={isBoardDragging}
         />
       ))}
     </>
@@ -61,7 +57,7 @@ const ColumnDropZone = memo(function ColumnDropZone({
       ref={setNodeRef}
       className="relative flex-1 min-h-[120px] flex flex-col"
     >
-      <div className="flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto overscroll-contain">
+      <div className="kanban-column-list flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto overscroll-contain">
         {children}
       </div>
       {isOver && (
@@ -82,7 +78,6 @@ export const KanbanColumn = memo(function KanbanColumn({
   redAlertPatientIds,
   progressMap,
   onSelectPatient,
-  isBoardDragging = false,
 }: KanbanColumnProps) {
   const headerColor = COLUMN_HEADER_COLOR[id];
   const count = patients.length;
@@ -93,9 +88,8 @@ export const KanbanColumn = memo(function KanbanColumn({
       redAlertPatientIds,
       progressMap,
       onSelectPatient,
-      isBoardDragging,
     }),
-    [patients, redAlertPatientIds, progressMap, onSelectPatient, isBoardDragging],
+    [patients, redAlertPatientIds, progressMap, onSelectPatient],
   );
 
   return (

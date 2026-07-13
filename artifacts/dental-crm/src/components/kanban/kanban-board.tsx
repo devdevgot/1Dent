@@ -5,6 +5,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   DragOverlay,
+  MeasuringStrategy,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -23,6 +24,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { PatientCardDragPreview } from "@/components/kanban/patient-card";
+import { KanbanDragActiveRefContext } from "@/components/kanban/kanban-drag-context";
 import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
@@ -69,6 +71,24 @@ function progressMapsEqual(
   return true;
 }
 
+function patientListsEqual(a: Patient[], b: Patient[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function groupPatientsByColumn(patients: Patient[]): Record<PatientStatus, Patient[]> {
+  const grouped = Object.fromEntries(
+    KANBAN_COLUMNS.map((col) => [col.id, [] as Patient[]]),
+  ) as Record<PatientStatus, Patient[]>;
+  for (const patient of patients) {
+    grouped[patient.status]?.push(patient);
+  }
+  return grouped;
+}
+
 export const KanbanBoard = memo(function KanbanBoard({
   patients: patientsProp,
   onSelectPatient,
@@ -79,13 +99,16 @@ export const KanbanBoard = memo(function KanbanBoard({
   const isDragging = activeDragPatient !== null;
   const isDraggingRef = useRef(false);
   const patientsRef = useRef<Patient[]>([]);
+  const stableColumnMapRef = useRef<Record<PatientStatus, Patient[]>>(
+    groupPatientsByColumn([]),
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 10 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 10 },
+      activationConstraint: { delay: 150, tolerance: 8 },
     }),
   );
 
@@ -99,8 +122,6 @@ export const KanbanBoard = memo(function KanbanBoard({
   const patients = patientsProp ?? data?.data?.patients ?? [];
   patientsRef.current = patients;
 
-  // Check the drag ref at refetch time so polling options stay stable and
-  // react-query doesn't re-subscribe on every drag start/end.
   const { data: notificationsData } = useListNotifications({
     query: {
       queryKey: getListNotificationsQueryKey(),
@@ -202,13 +223,18 @@ export const KanbanBoard = memo(function KanbanBoard({
   );
 
   const patientsByColumnMap = useMemo(() => {
-    const grouped = Object.fromEntries(
-      KANBAN_COLUMNS.map((col) => [col.id, [] as Patient[]]),
-    ) as Record<PatientStatus, Patient[]>;
-    for (const patient of patients) {
-      grouped[patient.status]?.push(patient);
+    const next = groupPatientsByColumn(patients);
+    const prev = stableColumnMapRef.current;
+    const stable = {} as Record<PatientStatus, Patient[]>;
+
+    for (const col of KANBAN_COLUMNS) {
+      const nextList = next[col.id] ?? [];
+      const prevList = prev[col.id] ?? [];
+      stable[col.id] = patientListsEqual(prevList, nextList) ? prevList : nextList;
     }
-    return grouped;
+
+    stableColumnMapRef.current = stable;
+    return stable;
   }, [patients]);
 
   const renderSnapshotRef = useRef({
@@ -227,39 +253,52 @@ export const KanbanBoard = memo(function KanbanBoard({
   const renderRedAlert = isDragging ? renderSnapshotRef.current.redAlert : stableRedAlertRef.current;
   const renderProgress = isDragging ? renderSnapshotRef.current.progress : stableProgressRef.current;
 
-  return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={collisionDetection}
-      autoScroll={{ threshold: { x: 0.15, y: 0.15 }, acceleration: 10 }}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className={cn(className, !isDragging && "snap-x snap-mandatory sm:snap-none")}>
-        {KANBAN_COLUMNS.map((col) => (
-          <KanbanColumn
-            key={col.id}
-            id={col.id}
-            label={col.label}
-            colorClass={col.color}
-            patients={renderColumns[col.id] ?? []}
-            redAlertPatientIds={renderRedAlert}
-            progressMap={renderProgress}
-            onSelectPatient={onSelectPatient}
-            isBoardDragging={isDragging}
-          />
-        ))}
-      </div>
+  const columnLabels = useMemo(
+    () => Object.fromEntries(KANBAN_COLUMNS.map((col) => [col.id, col.label])) as Record<PatientStatus, string>,
+    // Labels follow i18n; recompute only when column ids are static.
+    [],
+  );
 
-      <DragOverlay adjustScale={false} dropAnimation={null}>
-        {activeDragPatient ? (
-          <PatientCardDragPreview
-            patient={activeDragPatient}
-            hasRedAlert={renderRedAlert.has(activeDragPatient.id)}
-          />
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+  return (
+    <KanbanDragActiveRefContext.Provider value={isDraggingRef}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        measuring={{
+          droppable: { strategy: MeasuringStrategy.BeforeDragging },
+        }}
+        autoScroll={{ threshold: { x: 0.12, y: 0.12 }, acceleration: 8 }}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div
+          data-kanban-dragging={isDragging ? "" : undefined}
+          className={cn(className, !isDragging && "snap-x snap-mandatory sm:snap-none")}
+        >
+          {KANBAN_COLUMNS.map((col) => (
+            <KanbanColumn
+              key={col.id}
+              id={col.id}
+              label={columnLabels[col.id]}
+              colorClass={col.color}
+              patients={renderColumns[col.id] ?? []}
+              redAlertPatientIds={renderRedAlert}
+              progressMap={renderProgress}
+              onSelectPatient={onSelectPatient}
+            />
+          ))}
+        </div>
+
+        <DragOverlay adjustScale={false} dropAnimation={null}>
+          {activeDragPatient ? (
+            <PatientCardDragPreview
+              patient={activeDragPatient}
+              hasRedAlert={renderRedAlert.has(activeDragPatient.id)}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </KanbanDragActiveRefContext.Provider>
   );
 });
