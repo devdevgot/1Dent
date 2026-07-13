@@ -34,11 +34,6 @@ async function main() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 
-  await page.addInitScript(() => {
-    localStorage.setItem("onboarding_completed", "true");
-    localStorage.removeItem("show_onboarding_wizard");
-  });
-
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     const pathname = url.pathname;
