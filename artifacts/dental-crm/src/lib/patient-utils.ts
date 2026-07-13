@@ -21,29 +21,29 @@ function mkCol(
 }
 
 export const KANBAN_COLUMNS = [
-  mkCol("new_request",           "bg-slate-100 border-slate-300",  "text-slate-600 bg-slate-200"),
-  mkCol("initial_consultation",  "bg-blue-50 border-blue-200",     "text-blue-700 bg-blue-100"),
-  mkCol("diagnostics",           "bg-yellow-50 border-yellow-200", "text-yellow-700 bg-yellow-100"),
-  mkCol("treatment_assigned",    "bg-orange-50 border-orange-200", "text-orange-700 bg-orange-100"),
-  mkCol("treatment_in_progress", "bg-purple-50 border-purple-200", "text-purple-700 bg-purple-100"),
-  mkCol("payment_processing",    "bg-indigo-50 border-indigo-200", "text-indigo-700 bg-indigo-100"),
-  mkCol("post_op_monitoring",    "bg-pink-50 border-pink-200",     "text-pink-700 bg-pink-100"),
-  mkCol("completed",             "bg-green-50 border-green-200",   "text-green-700 bg-green-100"),
-  mkCol("repeat_sale",           "bg-teal-50 border-teal-200",     "text-teal-700 bg-teal-100"),
-  mkCol("rejected",              "bg-red-50 border-red-200",       "text-red-700 bg-red-100"),
+  mkCol("new_request",           "bg-[#d4d8df] border-[#8b95a5]",  "text-white bg-[#5a6474]"),
+  mkCol("initial_consultation",  "bg-[#c2cad4] border-[#6e7a8a]",  "text-white bg-[#4a5568]"),
+  mkCol("diagnostics",           "bg-[#c8c2b8] border-[#827a70]",  "text-white bg-[#5c554c]"),
+  mkCol("treatment_assigned",    "bg-[#b5c0bc] border-[#5f6e6a]",  "text-white bg-[#3f4f4b]"),
+  mkCol("treatment_in_progress", "bg-[#a5b2b6] border-[#4f6166]",  "text-white bg-[#334449]"),
+  mkCol("payment_processing",    "bg-[#95a5a8] border-[#3f4f52]",  "text-white bg-[#2a383b]"),
+  mkCol("post_op_monitoring",    "bg-[#b0a698] border-[#6a5f52]",  "text-white bg-[#4f463c]"),
+  mkCol("completed",             "bg-[#8da090] border-[#3f5243]",  "text-white bg-[#2d4431]"),
+  mkCol("repeat_sale",           "bg-[#7a9180] border-[#334a38]",  "text-white bg-[#243a28]"),
+  mkCol("rejected",              "bg-[#b89898] border-[#7a4f4f]",  "text-white bg-[#5c3333]"),
 ];
 
 export const COLUMN_HEADER_COLOR: Record<PatientStatus, string> = {
-  new_request:           "text-slate-600 bg-slate-200",
-  initial_consultation:  "text-blue-700 bg-blue-100",
-  diagnostics:           "text-yellow-700 bg-yellow-100",
-  treatment_assigned:    "text-orange-700 bg-orange-100",
-  treatment_in_progress: "text-purple-700 bg-purple-100",
-  payment_processing:    "text-indigo-700 bg-indigo-100",
-  post_op_monitoring:    "text-pink-700 bg-pink-100",
-  completed:             "text-green-700 bg-green-100",
-  repeat_sale:           "text-teal-700 bg-teal-100",
-  rejected:              "text-red-700 bg-red-100",
+  new_request:           "text-white bg-[#5a6474]",
+  initial_consultation:  "text-white bg-[#4a5568]",
+  diagnostics:           "text-white bg-[#5c554c]",
+  treatment_assigned:    "text-white bg-[#3f4f4b]",
+  treatment_in_progress: "text-white bg-[#334449]",
+  payment_processing:    "text-white bg-[#2a383b]",
+  post_op_monitoring:    "text-white bg-[#4f463c]",
+  completed:             "text-white bg-[#2d4431]",
+  repeat_sale:           "text-white bg-[#243a28]",
+  rejected:              "text-white bg-[#5c3333]",
 };
 
 export const SOURCE_LABELS: Record<PatientSource, string> = new Proxy(

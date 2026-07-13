@@ -14,6 +14,7 @@ export interface PatientCardViewProps {
   progress?: PatientTreatmentProgress;
   onSelect?: (patientId: string) => void;
   className?: string;
+  hideProgress?: boolean;
 }
 
 export const PatientCardView = memo(function PatientCardView({
@@ -22,6 +23,7 @@ export const PatientCardView = memo(function PatientCardView({
   progress,
   onSelect,
   className,
+  hideProgress = false,
 }: PatientCardViewProps) {
   const sourceLabel = SOURCE_LABELS[patient.source] ?? patient.source;
   const sourceColor = SOURCE_COLORS[patient.source] ?? "bg-[#f1ede4] text-[#64748b]";
@@ -68,19 +70,21 @@ export const PatientCardView = memo(function PatientCardView({
         {statusLabel}
       </span>
 
-      <div className="mb-2.5">
-        <p className="text-[9px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-1.5">Прогресс</p>
-        {progress && (progress.paid > 0 || progress.debt > 0 || progress.pending > 0) ? (
-          <PatientTreatmentProgressBar data={progress} compact />
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full border-[3px] border-[#e8e3d9] flex items-center justify-center shrink-0">
-              <span className="text-[10px] text-[#94a3b8]">—</span>
+      {!hideProgress && (
+        <div className="mb-2.5">
+          <p className="text-[9px] font-semibold text-[#94a3b8] uppercase tracking-wide mb-1.5">Прогресс</p>
+          {progress && (progress.paid > 0 || progress.debt > 0 || progress.pending > 0) ? (
+            <PatientTreatmentProgressBar data={progress} compact />
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-full border-[3px] border-[#e8e3d9] flex items-center justify-center shrink-0">
+                <span className="text-[10px] text-[#94a3b8]">—</span>
+              </div>
+              <span className="text-[10px] text-[#94a3b8]">Нет плана</span>
             </div>
-            <span className="text-[10px] text-[#94a3b8]">Нет плана</span>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between text-[11px] text-[#64748b]">
         <div className="flex items-center gap-1">
@@ -111,6 +115,25 @@ export const PatientCardOverlay = memo(function PatientCardOverlay(props: Patien
         props.className,
       )}
     />
+  );
+});
+
+/** Lightweight drag preview — avoids re-rendering SVG progress charts during drag. */
+export const PatientCardDragPreview = memo(function PatientCardDragPreview({
+  patient,
+  hasRedAlert = false,
+}: {
+  patient: Patient;
+  hasRedAlert?: boolean;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-primary/30 p-3.5 shadow-2xl rotate-1 scale-[1.02] cursor-grabbing will-change-transform w-[240px] select-none">
+      <p className="font-semibold text-sm text-[#0f172a] leading-tight line-clamp-1 flex items-center gap-1">
+        {hasRedAlert && <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+        {patient.name}
+      </p>
+      <p className="text-xs text-[#64748b] mt-1 font-mono tracking-tight">{patient.phone}</p>
+    </div>
   );
 });
 
@@ -163,6 +186,7 @@ export const PatientCard = memo(function PatientCard({
         patient={patient}
         hasRedAlert={hasRedAlert}
         progress={progress}
+        hideProgress={isBoardDragging}
         className={isDragging ? "pointer-events-none" : undefined}
       />
     </div>

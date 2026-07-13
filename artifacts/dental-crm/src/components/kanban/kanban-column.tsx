@@ -46,6 +46,34 @@ const ColumnPatientList = memo(function ColumnPatientList({
   );
 });
 
+/** Isolated droppable zone so isOver updates don't re-render the column shell or cards. */
+const ColumnDropZone = memo(function ColumnDropZone({
+  id,
+  children,
+}: {
+  id: PatientStatus;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="relative flex-1 min-h-[120px] flex flex-col"
+    >
+      <div className="flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto overscroll-contain">
+        {children}
+      </div>
+      {isOver && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-b-2xl border-2 border-primary/50 ring-1 ring-primary/20"
+        />
+      )}
+    </div>
+  );
+});
+
 export const KanbanColumn = memo(function KanbanColumn({
   id,
   label,
@@ -56,7 +84,6 @@ export const KanbanColumn = memo(function KanbanColumn({
   onSelectPatient,
   isBoardDragging = false,
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id });
   const headerColor = COLUMN_HEADER_COLOR[id];
   const count = patients.length;
 
@@ -73,11 +100,9 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   return (
     <div
-      ref={setNodeRef}
       className={cn(
-        "flex flex-col rounded-2xl border-2 w-[85vw] min-w-[85vw] sm:w-[260px] sm:min-w-[260px] flex-shrink-0 snap-center h-full transition-[border-color,box-shadow] duration-150",
+        "flex flex-col rounded-2xl border-2 w-[85vw] min-w-[85vw] sm:w-[260px] sm:min-w-[260px] flex-shrink-0 snap-center h-full",
         colorClass,
-        isOver && "border-primary/50 ring-1 ring-primary/20",
       )}
     >
       <div className="p-3 flex items-center justify-between shrink-0 sticky top-0 z-10 rounded-t-2xl bg-inherit">
@@ -89,9 +114,9 @@ export const KanbanColumn = memo(function KanbanColumn({
         </span>
       </div>
 
-      <div className="flex-1 px-2 pb-3 space-y-2 min-h-[120px] overflow-y-auto overscroll-contain">
+      <ColumnDropZone id={id}>
         <ColumnPatientList {...listProps} />
-      </div>
+      </ColumnDropZone>
     </div>
   );
 });
