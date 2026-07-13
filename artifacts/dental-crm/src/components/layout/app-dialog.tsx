@@ -60,7 +60,9 @@ export function AppDialog({
       <DialogContent
         hideClose
         className={cn(
-          "flex flex-col gap-0 overflow-hidden border-[#e8e3d9] bg-white p-0 font-manrope shadow-xl",
+          // DialogContent base uses `grid`; force flex column so body scroll works.
+          "!flex !flex-col gap-0 overflow-hidden border-[#e8e3d9] bg-white p-0 font-manrope shadow-xl",
+          isTablet && "max-h-[min(88dvh,900px)]",
           !isTablet && [
             "max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto",
             "max-sm:left-0 max-sm:right-0 max-sm:w-full max-sm:max-w-none",
@@ -108,7 +110,13 @@ export function AppDialog({
           </div>
         </DialogHeader>
 
-        <div className={cn("flex-1 min-h-0 overflow-y-auto px-5 py-4 custom-scrollbar", bodyClassName)}>
+        <div
+          className={cn(
+            "flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-5 py-4 custom-scrollbar",
+            isTablet && "touch-pan-y [-webkit-overflow-scrolling:touch]",
+            bodyClassName,
+          )}
+        >
           {children}
         </div>
 
