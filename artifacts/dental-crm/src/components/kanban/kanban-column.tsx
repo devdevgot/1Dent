@@ -67,7 +67,7 @@ const ColumnDropZone = memo(function ColumnDropZone({
       {isOver && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-b-2xl border-2 border-primary/50 ring-1 ring-primary/20"
+          className="pointer-events-none absolute inset-0 rounded-b-2xl shadow-[inset_0_0_0_3px_#2563eb]"
         />
       )}
     </div>
@@ -101,12 +101,12 @@ export const KanbanColumn = memo(function KanbanColumn({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-2xl border-2 w-[85vw] min-w-[85vw] sm:w-[260px] sm:min-w-[260px] flex-shrink-0 snap-center h-full",
+        "flex flex-col rounded-2xl w-[85vw] min-w-[85vw] sm:w-[260px] sm:min-w-[260px] flex-shrink-0 snap-center h-full",
         colorClass,
       )}
     >
       <div className="p-3 flex items-center justify-between shrink-0 sticky top-0 z-10 rounded-t-2xl bg-inherit">
-        <h3 className="font-semibold text-xs uppercase tracking-wider text-[#0f172a]/80 leading-tight">
+        <h3 className="font-semibold text-xs uppercase tracking-wider text-[#1e293b] leading-tight">
           {label}
         </h3>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${headerColor}`}>

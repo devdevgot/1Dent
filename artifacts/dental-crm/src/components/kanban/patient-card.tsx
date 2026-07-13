@@ -43,9 +43,9 @@ export const PatientCardView = memo(function PatientCardView({
   return (
     <div
       className={cn(
-        "bg-white rounded-2xl border p-3.5 select-none group shadow-sm",
-        hasRedAlert ? "border-red-400 bg-red-50/40" : "border-[#e8e3d9]/60",
-        onSelect && "cursor-pointer hover:shadow-md",
+        "rounded-2xl p-3.5 select-none group shadow-md",
+        hasRedAlert ? "bg-[#fde8e8]" : "bg-white",
+        onSelect && "cursor-pointer hover:shadow-lg",
         className,
       )}
     >
@@ -108,7 +108,7 @@ export const PatientCardOverlay = memo(function PatientCardOverlay(props: Patien
     <PatientCardView
       {...props}
       className={cn(
-        "shadow-2xl rotate-1 scale-[1.02] cursor-grabbing border-primary/30 will-change-transform",
+        "shadow-2xl rotate-1 scale-[1.02] cursor-grabbing will-change-transform",
         props.className,
       )}
     />
@@ -124,7 +124,7 @@ export const PatientCardDragPreview = memo(function PatientCardDragPreview({
   hasRedAlert?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-primary/30 p-3.5 shadow-2xl rotate-1 scale-[1.02] cursor-grabbing will-change-transform w-[240px] select-none">
+    <div className="bg-white rounded-2xl p-3.5 shadow-2xl rotate-1 scale-[1.02] cursor-grabbing will-change-transform w-[240px] select-none">
       <p className="font-semibold text-sm text-[#0f172a] leading-tight line-clamp-1 flex items-center gap-1">
         {hasRedAlert && <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
         {patient.name}
