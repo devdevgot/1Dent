@@ -16,7 +16,7 @@ import { eq, and, isNotNull, ne, sql, inArray, asc, gte } from "drizzle-orm";
 import { sendToPatient } from "../../shared/messaging";
 import { logger } from "../../lib/logger";
 import { generateBroadcastMessageAi } from "./dental-broadcast-ai";
-import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
+import { transitionPatientStage, PATIENT_STAGE_TRIGGERS, BROADCAST_ELIGIBLE_STATUSES } from "../patients/patient-stage.service";
 
 // Conditions that still require active treatment
 const PROBLEM_CONDITIONS = [
@@ -154,6 +154,7 @@ async function fetchPatientsForBroadcast(
       and(
         eq(toothRecordsTable.clinicId, clinicId),
         inArray(toothRecordsTable.condition, [...PROBLEM_CONDITIONS]),
+        inArray(patientsTable.status, [...BROADCAST_ELIGIBLE_STATUSES]),
         isNotNull(patientsTable.phone),
         ne(patientsTable.phone, ""),
         eq(patientsTable.marketingOptOut, false),
@@ -172,6 +173,7 @@ async function countPatientsForBroadcast(clinicId: string): Promise<number> {
       and(
         eq(toothRecordsTable.clinicId, clinicId),
         inArray(toothRecordsTable.condition, [...PROBLEM_CONDITIONS]),
+        inArray(patientsTable.status, [...BROADCAST_ELIGIBLE_STATUSES]),
         isNotNull(patientsTable.phone),
         ne(patientsTable.phone, ""),
         eq(patientsTable.marketingOptOut, false),
