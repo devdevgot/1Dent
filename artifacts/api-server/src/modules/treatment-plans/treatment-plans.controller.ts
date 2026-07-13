@@ -327,6 +327,30 @@ router.post(
       return next(new NotFoundError("Treatment plan item not found"));
     }
 
+    const patientId = req.params["id"] as string;
+    const clinicId = req.user!.clinicId;
+    const actorId = req.user!.userId;
+
+    await transitionPatientStage({
+      patientId,
+      clinicId,
+      toStatus: "treatment_in_progress",
+      trigger: PATIENT_STAGE_TRIGGERS.TREATMENT_STARTED,
+      actorId,
+    }).catch((err) => {
+      logger.warn({ err, patientId }, "Failed to transition patient to treatment_in_progress after item complete");
+    });
+
+    await transitionPatientStage({
+      patientId,
+      clinicId,
+      toStatus: "payment_processing",
+      trigger: PATIENT_STAGE_TRIGGERS.TREATMENT_COMPLETED,
+      actorId,
+    }).catch((err) => {
+      logger.warn({ err, patientId }, "Failed to transition patient to payment_processing after item complete");
+    });
+
     res.json({ success: true, data: { item: result.item, procedureId: result.procedureId } });
   },
 );

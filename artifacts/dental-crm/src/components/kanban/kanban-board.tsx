@@ -26,6 +26,7 @@ import { KanbanColumn } from "@/components/kanban/kanban-column";
 import { PatientCardDragPreview } from "@/components/kanban/patient-card";
 import { KanbanDragActiveRefContext } from "@/components/kanban/kanban-drag-context";
 import { usePatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
+import { useAuthStore } from "@/hooks/use-auth";
 import { KANBAN_COLUMNS } from "@/lib/patient-utils";
 import type { Patient, PatientStatus } from "@workspace/api-client-react";
 import type { PatientTreatmentProgress } from "@/hooks/use-patient-treatment-progress";
@@ -95,6 +96,8 @@ export const KanbanBoard = memo(function KanbanBoard({
   className,
 }: KanbanBoardProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const canDragPatients = user?.role === "owner" || user?.role === "admin";
   const [activeDragPatient, setActiveDragPatient] = useState<Patient | null>(null);
   const isDragging = activeDragPatient !== null;
   const isDraggingRef = useRef(false);
@@ -177,10 +180,11 @@ export const KanbanBoard = memo(function KanbanBoard({
   }, []);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    if (!canDragPatients) return;
     isDraggingRef.current = true;
     const patient = patientsRef.current.find((p) => p.id === event.active.id);
     setActiveDragPatient(patient ?? null);
-  }, []);
+  }, [canDragPatients]);
 
   const handleDragCancel = useCallback(() => {
     isDraggingRef.current = false;
@@ -189,6 +193,10 @@ export const KanbanBoard = memo(function KanbanBoard({
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      if (!canDragPatients) {
+        handleDragCancel();
+        return;
+      }
       const { active, over } = event;
       isDraggingRef.current = false;
       setActiveDragPatient(null);
@@ -219,7 +227,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         data: { status: overColumnId as PatientStatus },
       });
     },
-    [queryClient, resolveOverColumn, statusMutation],
+    [queryClient, resolveOverColumn, statusMutation, canDragPatients, handleDragCancel],
   );
 
   const patientsByColumnMap = useMemo(() => {
@@ -255,7 +263,6 @@ export const KanbanBoard = memo(function KanbanBoard({
 
   const columnLabels = useMemo(
     () => Object.fromEntries(KANBAN_COLUMNS.map((col) => [col.id, col.label])) as Record<PatientStatus, string>,
-    // Labels follow i18n; recompute only when column ids are static.
     [],
   );
 
@@ -286,6 +293,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               redAlertPatientIds={renderRedAlert}
               progressMap={renderProgress}
               onSelectPatient={onSelectPatient}
+              canDragPatients={canDragPatients}
             />
           ))}
         </div>

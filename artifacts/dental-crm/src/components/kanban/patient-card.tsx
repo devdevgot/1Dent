@@ -134,24 +134,25 @@ export const PatientCardDragPreview = memo(function PatientCardDragPreview({
   );
 });
 
-interface PatientCardProps extends PatientCardViewProps {}
+interface PatientCardProps extends PatientCardViewProps {
+  draggable?: boolean;
+}
 
 export const PatientCard = memo(function PatientCard({
   patient,
   hasRedAlert,
   progress,
   onSelect,
+  draggable = false,
 }: PatientCardProps) {
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const boardDraggingRef = useKanbanDragActiveRef();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: patient.id,
     data: { type: "patient", status: patient.status },
+    disabled: !draggable,
   });
 
-  // The moving clone is rendered by <DragOverlay>, so the source card stays in
-  // place and is only dimmed. Avoiding a translate transform here means the
-  // active card doesn't have to recompute its style on every pointer move.
   const style = {
     opacity: isDragging ? 0.25 : 1,
     touchAction: "none" as const,
@@ -161,8 +162,8 @@ export const PatientCard = memo(function PatientCard({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(draggable ? attributes : undefined)}
+      {...(draggable ? listeners : undefined)}
       onPointerDown={(event) => {
         pointerStart.current = { x: event.clientX, y: event.clientY };
       }}
@@ -175,7 +176,7 @@ export const PatientCard = memo(function PatientCard({
         if (moved) return;
         onSelect(patient.id);
       }}
-      className="cursor-grab active:cursor-grabbing touch-none"
+      className={draggable ? "cursor-grab active:cursor-grabbing touch-none" : "touch-none"}
     >
       <PatientCardView
         patient={patient}

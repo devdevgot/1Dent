@@ -68,6 +68,27 @@ async function incrementDoctorKpi(opts: {
     });
 }
 
+async function schedulePostOpFollowupsIfNeeded(
+  clinicId: string,
+  patientId: string,
+  procedureId: string,
+): Promise<void> {
+  const [existing] = await db
+    .select({ id: postopFollowupsTable.id })
+    .from(postopFollowupsTable)
+    .where(
+      and(
+        eq(postopFollowupsTable.procedureId, procedureId),
+        eq(postopFollowupsTable.clinicId, clinicId),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    await scheduleFollowups({ clinicId, patientId, procedureId });
+  }
+}
+
 const procedureStatusValues = [
   "scheduled",
   "in_progress",
@@ -357,25 +378,24 @@ router.patch(
       }).catch((err) => logger.error({ err }, "[Procedures] Failed to increment doctor KPI on completion"));
     }
 
-    if ((parsed.data.status === "completed" || parsed.data.status === "pending_payment") && procedure.patientId) {
-      const [existing] = await db
-        .select({ id: postopFollowupsTable.id })
-        .from(postopFollowupsTable)
-        .where(
-          and(
-            eq(postopFollowupsTable.procedureId, procedure.id),
-            eq(postopFollowupsTable.clinicId, clinicId),
-          ),
-        )
-        .limit(1);
+    if (isFirstCompletion && procedure.patientId) {
+      await schedulePostOpFollowupsIfNeeded(clinicId, procedure.patientId, procedure.id).catch((err) => {
+        logger.warn({ err, procedureId: procedure.id }, "[Procedures] Failed to schedule post-op followups");
+      });
+    }
 
-      if (!existing) {
-        scheduleFollowups({
-          clinicId,
-          patientId: procedure.patientId,
-          procedureId: procedure.id,
-        }).catch(() => {});
-      }
+    const isFirstPendingPayment =
+      parsed.data.status === "pending_payment" && previousStatus !== "pending_payment";
+    if (isFirstPendingPayment && procedure.patientId) {
+      await transitionPatientStage({
+        patientId: procedure.patientId,
+        clinicId,
+        toStatus: "payment_processing",
+        trigger: PATIENT_STAGE_TRIGGERS.TREATMENT_COMPLETED,
+        actorId: userId,
+      }).catch((err) => {
+        logger.warn({ err, patientId: procedure.patientId }, "[Procedures] Failed to transition patient to payment_processing");
+      });
     }
 
     if (parsed.data.status === "cancelled" && procedure.patientId) {
@@ -386,8 +406,6 @@ router.patch(
     }
 
     // Notify admins/owners when a procedure moves to pending_payment for the first time
-    const isFirstPendingPayment =
-      parsed.data.status === "pending_payment" && previousStatus !== "pending_payment";
     if (isFirstPendingPayment) {
       (async () => {
         try {
@@ -460,6 +478,12 @@ router.patch(
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+
+    if (procedure.patientId && !wasAlreadyCompleted) {
+      await schedulePostOpFollowupsIfNeeded(clinicId, procedure.patientId, procedure.id).catch((err) => {
+        logger.warn({ err, procedureId: procedure.id }, "[Procedures] Failed to schedule post-op followups after payment");
+      });
+    }
 
     // Feedback loop: increment revenue only if not already counted at completion.
     // Also count proceduresCount if payment is the terminal step (status was pending_payment).
