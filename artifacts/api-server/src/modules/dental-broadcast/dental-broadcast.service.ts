@@ -12,11 +12,14 @@ import {
   treatmentPlansTable,
   treatmentPlanItemsTable,
 } from "@workspace/db";
-import { eq, and, isNotNull, ne, sql, inArray, asc, gte } from "drizzle-orm";
+import { eq, and, isNotNull, ne, sql, inArray, asc, gte, lte } from "drizzle-orm";
 import { sendToPatient } from "../../shared/messaging";
 import { logger } from "../../lib/logger";
 import { generateBroadcastMessageAi } from "./dental-broadcast-ai";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS, BROADCAST_ELIGIBLE_STATUSES } from "../patients/patient-stage.service";
+import { getCachedChatbotDefaults } from "../platform-config/platform-config.service";
+import { DEFAULT_BROADCAST_TEMPLATE } from "../platform-config/platform-config.defaults";
+import { isWhatsAppEnabled } from "../../shared/messaging";
 
 // Conditions that still require active treatment
 const PROBLEM_CONDITIONS = [
@@ -325,20 +328,26 @@ function buildToothLines(problems: ToothProblem[]): string {
   return lines;
 }
 
+function applyBroadcastTemplate(
+  template: string,
+  vars: { firstName: string; toothLines: string; urgency: string },
+): string {
+  return template
+    .replace(/\{\{firstName\}\}/g, vars.firstName)
+    .replace(/\{\{toothLines\}\}/g, vars.toothLines)
+    .replace(/\{\{urgency\}\}/g, vars.urgency);
+}
+
 function buildMessage(patientName: string, problems: ToothProblem[]): string | null {
   if (problems.length === 0) return null;
 
   const firstName = patientName.trim().split(" ")[0] ?? patientName;
   const toothLines = buildToothLines(problems);
   const urgency = getUrgencyMessage(problems);
+  const defaults = getCachedChatbotDefaults();
+  const template = defaults.broadcastTemplate?.trim() || DEFAULT_BROADCAST_TEMPLATE;
 
-  return (
-    `Здравствуйте, ${firstName}! 👋\n\n` +
-    `По вашей зубной карте в плане лечения остались шаги, которые ещё не завершены:\n\n` +
-    `${toothLines}\n\n` +
-    `${urgency}\n\n` +
-    `Когда будет удобно — напишите «Продолжить», и мы подберём время для записи 🤍`
-  );
+  return applyBroadcastTemplate(template, { firstName, toothLines, urgency });
 }
 
 async function ensureBroadcastAiColumn(): Promise<void> {
@@ -548,6 +557,22 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
   );
 }
 
+const STALE_RUN_MS = 2 * 60 * 60 * 1000;
+
+export async function recoverStaleBroadcastRuns(clinicId: string): Promise<void> {
+  const cutoff = new Date(Date.now() - STALE_RUN_MS);
+  await db
+    .update(dentalBroadcastRunsTable)
+    .set({ status: "failed", completedAt: new Date() })
+    .where(
+      and(
+        eq(dentalBroadcastRunsTable.clinicId, clinicId),
+        eq(dentalBroadcastRunsTable.status, "running"),
+        lte(dentalBroadcastRunsTable.startedAt, cutoff),
+      ),
+    );
+}
+
 export async function runDentalBroadcastForClinic(
   clinicId: string,
 ): Promise<typeof dentalBroadcastRunsTable.$inferSelect> {
@@ -569,19 +594,30 @@ export async function runDentalBroadcastForClinic(
 }
 
 export async function runDentalBroadcastForAllClinics(): Promise<void> {
+  const metaEnabled = isWhatsAppEnabled();
   const clinics = await db
-    .select({ id: clinicsTable.id, timezone: clinicsTable.timezone })
+    .select({
+      id: clinicsTable.id,
+      timezone: clinicsTable.timezone,
+      greenApiInstanceId: clinicsTable.greenApiInstanceId,
+      greenApiToken: clinicsTable.greenApiToken,
+    })
     .from(clinicsTable)
-    .where(
-      and(
-        isNotNull(clinicsTable.greenApiInstanceId),
-        ne(clinicsTable.greenApiInstanceId, ""),
-        isNotNull(clinicsTable.greenApiToken),
-        ne(clinicsTable.greenApiToken, ""),
-      ),
-    );
+    .where(eq(clinicsTable.isActive, true));
 
   for (const clinic of clinics) {
+    const hasGreenApi =
+      !!clinic.greenApiInstanceId &&
+      clinic.greenApiInstanceId !== "" &&
+      !!clinic.greenApiToken &&
+      clinic.greenApiToken !== "";
+    if (!hasGreenApi && !metaEnabled) {
+      logger.info(
+        { clinicId: clinic.id },
+        "[DentalBroadcast] Skipping clinic — no WhatsApp provider configured",
+      );
+      continue;
+    }
     const timezone = clinic.timezone ?? "Asia/Almaty";
     if (!isClinicBroadcastDay(timezone)) continue;
 

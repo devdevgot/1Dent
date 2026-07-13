@@ -80,6 +80,9 @@ export function createPlatformConfigTmaRouter(): IRouter {
         followup24hTemplate: z.string().max(4000).optional(),
         followup72hTemplate: z.string().max(4000).optional(),
         followup168hTemplate: z.string().max(4000).optional(),
+        broadcastTemplate: z.string().min(20).max(4000).optional(),
+        broadcastAiSystemPrompt: z.string().min(50).max(8000).optional(),
+        broadcastAiEnabledDefault: z.boolean().optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) {

@@ -587,14 +587,198 @@ function PatientsTab({ clinicId }: { clinicId: string }) {
   );
 }
 
+// ── ИИ Рассылка (dental broadcast) ──
+type DentalBroadcastRun = {
+  id: string;
+  runDate: string;
+  status: "pending" | "running" | "completed" | "failed";
+  totalPatients: number;
+  processedPatients: number;
+  messagesSent: number;
+  repliesCount: number;
+  bookingsCount: number;
+  errorsCount: number;
+  replyRate?: number;
+  bookingRate?: number;
+  startedAt: string;
+  completedAt: string | null;
+};
+
+function AiBroadcastTab({ clinicId }: { clinicId: string }) {
+  const qc = useQueryClient();
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const platformQ = useQuery({
+    queryKey: ["tma-platform-chatbot"],
+    queryFn: () => api.get<{ success: boolean; data: { broadcastTemplate?: string } }>("/platform/chatbot-defaults"),
+  });
+
+  const settingsQ = useQuery({
+    queryKey: ["tma-clinic-chatbot-settings", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { settings: Record<string, unknown> | null } }>(`/clinics/${clinicId}/chatbot/settings`),
+  });
+
+  const runsQ = useQuery({
+    queryKey: ["tma-dental-broadcast-runs", clinicId],
+    queryFn: () => api.get<{ success: boolean; data: { runs: DentalBroadcastRun[] } }>(`/clinics/${clinicId}/dental-broadcast/runs?limit=10`),
+    refetchInterval: (query) => {
+      const runs = query.state.data?.data?.runs ?? [];
+      return runs.some((r) => r.status === "running") ? 3000 : false;
+    },
+  });
+
+  const broadcastAiEnabled = Boolean(settingsQ.data?.data?.settings?.["broadcastAiEnabled"] ?? false);
+  const chatbotEnabled = Boolean(settingsQ.data?.data?.settings?.["enabled"] ?? true);
+  const runs = runsQ.data?.data?.runs ?? [];
+  const latestRun = runs[0] ?? null;
+  const isRunning = latestRun?.status === "running";
+
+  const toggleAiMut = useMutation({
+    mutationFn: (enabled: boolean) => api.patch(`/clinics/${clinicId}/chatbot/settings`, { broadcastAiEnabled: enabled }),
+    onSuccess: () => {
+      hapticNotify("success");
+      qc.invalidateQueries({ queryKey: ["tma-clinic-chatbot-settings", clinicId] });
+    },
+    onError: (err) => { hapticNotify("error"); tgAlert(err instanceof Error ? err.message : "Ошибка"); },
+  });
+
+  const triggerMut = useMutation({
+    mutationFn: () => api.post<{ success: boolean; data: { run: DentalBroadcastRun } }>(`/clinics/${clinicId}/dental-broadcast/trigger`, { force: true }),
+    onSuccess: () => {
+      hapticNotify("success");
+      setShowConfirm(false);
+      qc.invalidateQueries({ queryKey: ["tma-dental-broadcast-runs", clinicId] });
+    },
+    onError: (err) => { hapticNotify("error"); tgAlert(err instanceof Error ? err.message : "Не удалось запустить"); },
+  });
+
+  const template = platformQ.data?.data?.broadcastTemplate ?? "";
+  const preview = template
+    .replace(/\{\{firstName\}\}/g, "Анна")
+    .replace(/\{\{toothLines\}\}/g, "🦷 Зуб 16 — кариес\n🦷 Зуб 26 — установка коронки")
+    .replace(/\{\{urgency\}\}/g, "Кариес на этом этапе обычно лечится быстро.");
+
+  const statusLabel: Record<string, string> = {
+    pending: "Ожидание", running: "В процессе", completed: "Завершено", failed: "Ошибка",
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+        <p className="text-sm font-semibold text-foreground">ИИ Рассылка по WhatsApp</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Персональные сообщения пациентам с нелечёными находками. Автозапуск 15-го числа и в последний день месяца.
+          Шаблон редактируется глобально в разделе «Контент → Чатбот».
+        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-foreground">ИИ-генерация текста</p>
+            <p className="text-[11px] text-muted-foreground">2 кредита / сообщение</p>
+          </div>
+          <button
+            onClick={() => { haptic("light"); toggleAiMut.mutate(!broadcastAiEnabled); }}
+            disabled={toggleAiMut.isPending}
+            className={`w-12 h-6 rounded-full transition-colors ${broadcastAiEnabled ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${broadcastAiEnabled ? "translate-x-6" : "translate-x-0"}`} />
+          </button>
+        </div>
+      </div>
+
+      {!chatbotEnabled && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-600">
+          Чатбот выключен — ответы «Продолжить» не обработаются автоматически.
+        </div>
+      )}
+
+      <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase">Пример сообщения (глобальный шаблон)</p>
+        <p className="text-sm whitespace-pre-wrap leading-relaxed">{preview || "Загрузка шаблона..."}</p>
+      </div>
+
+      {latestRun && (
+        <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-foreground">Последний запуск</p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted">{statusLabel[latestRun.status] ?? latestRun.status}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-muted/40 rounded-lg p-2">
+              <p className="text-lg font-semibold">{latestRun.messagesSent}</p>
+              <p className="text-[10px] text-muted-foreground">Отправлено</p>
+            </div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <p className="text-lg font-semibold text-emerald-600">{latestRun.replyRate ?? 0}%</p>
+              <p className="text-[10px] text-muted-foreground">Ответили</p>
+            </div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <p className="text-lg font-semibold text-blue-600">{latestRun.bookingRate ?? 0}%</p>
+              <p className="text-[10px] text-muted-foreground">Записались</p>
+            </div>
+          </div>
+          {isRunning && (
+            <p className="text-xs text-primary">
+              Обработано {latestRun.processedPatients} / {latestRun.totalPatients} пациентов
+            </p>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={() => { haptic("medium"); setShowConfirm(true); }}
+        disabled={isRunning || triggerMut.isPending}
+        className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium text-sm disabled:opacity-50"
+      >
+        {triggerMut.isPending || isRunning ? "Рассылка выполняется..." : "📣 Запустить рассылку"}
+      </button>
+
+      {runsQ.isLoading ? <LoadingSkeleton rows={2} /> : runs.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">История запусков</p>
+          {runs.map((run) => (
+            <div key={run.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{new Date(run.startedAt).toLocaleDateString("ru")}</p>
+                <p className="text-xs text-muted-foreground">{statusLabel[run.status]}</p>
+              </div>
+              <p className="text-sm font-semibold">{run.messagesSent} / {run.totalPatients}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border rounded-2xl p-5 max-w-sm w-full space-y-4">
+            <p className="text-sm font-semibold">Запустить ИИ Рассылку?</p>
+            <p className="text-xs text-muted-foreground">
+              {broadcastAiEnabled
+                ? "Пациенты получат персональное сообщение (ИИ, 2 кредита/сообщение)."
+                : "Пациенты получат сообщение по глобальному шаблону."}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowConfirm(false)} className="flex-1 py-2 rounded-lg border border-border text-sm">Отмена</button>
+              <button onClick={() => triggerMut.mutate()} disabled={triggerMut.isPending}
+                className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50">
+                Запустить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Chatbot Overview + Settings ──
 function ChatbotTab({ clinicId }: { clinicId: string }) {
   const qc = useQueryClient();
-  const [subTab, setSubTab] = useState<"overview" | "settings">("overview");
+  const [subTab, setSubTab] = useState<"overview" | "settings" | "ai-broadcast">("overview");
   const [pingStatus, setPingStatus] = useState<string | null>(null);
   const [settingsForm, setSettingsForm] = useState({
     enabled: true,
     greetingTemplate: "",
+    broadcastAiEnabled: false,
     greenApiInstanceId: "",
     greenApiToken: "",
     greenApiUrl: "",
@@ -621,6 +805,7 @@ function ChatbotTab({ clinicId }: { clinicId: string }) {
       setSettingsForm({
         enabled: Boolean(s?.["enabled"] ?? true),
         greetingTemplate: String(s?.["greetingTemplate"] ?? ""),
+        broadcastAiEnabled: Boolean(s?.["broadcastAiEnabled"] ?? false),
         greenApiInstanceId: String(c?.["greenApiInstanceId"] ?? ""),
         greenApiToken: String(c?.["greenApiToken"] ?? ""),
         greenApiUrl: String(c?.["greenApiUrl"] ?? ""),
@@ -651,10 +836,10 @@ function ChatbotTab({ clinicId }: { clinicId: string }) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        {(["overview", "settings"] as const).map((t) => (
+        {(["overview", "settings", "ai-broadcast"] as const).map((t) => (
           <button key={t} onClick={() => { haptic("light"); setSubTab(t); setSettingsLoaded(false); }}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${subTab === t ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}>
-            {t === "overview" ? "Обзор" : "Настройки"}
+            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${subTab === t ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"}`}>
+            {t === "overview" ? "Обзор" : t === "settings" ? "Настройки" : "ИИ Рассылка"}
           </button>
         ))}
       </div>
@@ -685,6 +870,8 @@ function ChatbotTab({ clinicId }: { clinicId: string }) {
         )
       )}
 
+      {subTab === "ai-broadcast" && <AiBroadcastTab clinicId={clinicId} />}
+
       {subTab === "settings" && (
         settingsQ.isLoading ? <LoadingSkeleton rows={3} /> : (
           <div className="space-y-3">
@@ -695,6 +882,13 @@ function ChatbotTab({ clinicId }: { clinicId: string }) {
                 <button onClick={() => setSettingsForm(p => ({ ...p, enabled: !p.enabled }))}
                   className={`w-12 h-6 rounded-full transition-colors ${settingsForm.enabled ? "bg-primary" : "bg-muted"}`}>
                   <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${settingsForm.enabled ? "translate-x-6" : "translate-x-0"}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-foreground">ИИ-генерация рассылки</span>
+                <button onClick={() => setSettingsForm(p => ({ ...p, broadcastAiEnabled: !p.broadcastAiEnabled }))}
+                  className={`w-12 h-6 rounded-full transition-colors ${settingsForm.broadcastAiEnabled ? "bg-primary" : "bg-muted"}`}>
+                  <span className={`block w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${settingsForm.broadcastAiEnabled ? "translate-x-6" : "translate-x-0"}`} />
                 </button>
               </div>
               <div>

@@ -27,11 +27,13 @@ import {
   appointmentRemindersTable,
   postopFollowupsTable,
   adminBroadcastsTable,
+  dentalBroadcastRunsTable,
+  dentalBroadcastDeliveriesTable,
   doctorCapacityTable,
   inventoryItemsTable,
   inventoryStockTable,
 } from "@workspace/db";
-import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull, type SQL } from "drizzle-orm";
+import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull, ne, inArray, type SQL } from "drizzle-orm";
 import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
@@ -43,6 +45,12 @@ import { createPlatformConfigTmaRouter } from "../platform-config/platform-confi
 import { getPlatformWebhookUrl, getTmaUrl } from "../../shared/platform-bot";
 import { getPlatformAdminTelegramIds, sendPlatformAdminTelegramMessage } from "../../shared/platform-admin-notify";
 import { processKnowledgeSource, scrapeUrl } from "../knowledge/knowledge.service";
+import {
+  runDentalBroadcastForClinic,
+  clinicLocalDateString,
+  recoverStaleBroadcastRuns,
+} from "../dental-broadcast/dental-broadcast.service";
+import { computeRates } from "../dental-broadcast/dental-broadcast-metrics";
 
 const router = Router();
 router.use(requireTmaAdmin);
@@ -670,6 +678,7 @@ router.patch("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Re
       followup24hTemplate: z.string().optional(),
       followup72hTemplate: z.string().optional(),
       followup168hTemplate: z.string().optional(),
+      broadcastAiEnabled: z.boolean().optional(),
       greenApiInstanceId: z.string().optional(),
       greenApiToken: z.string().optional(),
       greenApiUrl: z.string().url().optional(),
@@ -707,6 +716,83 @@ router.patch("/clinics/:clinicId/chatbot/settings", async (req: Request, res: Re
       [settings] = await db.select().from(chatbotSettingsTable).where(eq(chatbotSettingsTable.clinicId, clinicId)).limit(1);
     }
     res.json({ success: true, data: { settings } });
+  } catch (err) { next(err); }
+});
+
+// ── DENTAL BROADCAST (ИИ Рассылка) ───────────────────────────────────────────
+function enrichDentalBroadcastRun(run: typeof dentalBroadcastRunsTable.$inferSelect) {
+  const { replyRate, bookingRate } = computeRates(run.messagesSent, run.repliesCount, run.bookingsCount);
+  return { ...run, replyRate, bookingRate };
+}
+
+router.get("/clinics/:clinicId/dental-broadcast/runs", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const rawLimit = req.query["limit"];
+    const limit = typeof rawLimit === "string" ? Math.max(1, Math.min(parseInt(rawLimit, 10) || 20, 100)) : 20;
+    const runs = await db
+      .select()
+      .from(dentalBroadcastRunsTable)
+      .where(eq(dentalBroadcastRunsTable.clinicId, clinicId))
+      .orderBy(desc(dentalBroadcastRunsTable.startedAt))
+      .limit(limit);
+    res.json({ success: true, data: { runs: runs.map(enrichDentalBroadcastRun) } });
+  } catch (err) { next(err); }
+});
+
+router.post("/clinics/:clinicId/dental-broadcast/trigger", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clinicId = req.params["clinicId"] as string;
+    const force = req.body?.force === true;
+
+    await recoverStaleBroadcastRuns(clinicId);
+
+    const [existingRunning] = await db
+      .select({ id: dentalBroadcastRunsTable.id })
+      .from(dentalBroadcastRunsTable)
+      .where(and(eq(dentalBroadcastRunsTable.clinicId, clinicId), eq(dentalBroadcastRunsTable.status, "running")))
+      .limit(1);
+    if (existingRunning) return next(new ValidationError("Рассылка уже выполняется"));
+
+    if (!force) {
+      const [clinicRow] = await db
+        .select({ timezone: clinicsTable.timezone })
+        .from(clinicsTable)
+        .where(eq(clinicsTable.id, clinicId))
+        .limit(1);
+      const runDate = clinicLocalDateString(clinicRow?.timezone ?? "Asia/Almaty");
+      const [existingToday] = await db
+        .select({ id: dentalBroadcastRunsTable.id })
+        .from(dentalBroadcastRunsTable)
+        .where(and(eq(dentalBroadcastRunsTable.clinicId, clinicId), eq(dentalBroadcastRunsTable.runDate, runDate)))
+        .limit(1);
+      if (existingToday) {
+        return next(new ValidationError("Рассылка уже выполнялась сегодня. Используйте force=true для повторного запуска."));
+      }
+    } else {
+      const [clinicRow] = await db
+        .select({ timezone: clinicsTable.timezone })
+        .from(clinicsTable)
+        .where(eq(clinicsTable.id, clinicId))
+        .limit(1);
+      const runDate = clinicLocalDateString(clinicRow?.timezone ?? "Asia/Almaty");
+      const staleRuns = await db
+        .select({ id: dentalBroadcastRunsTable.id })
+        .from(dentalBroadcastRunsTable)
+        .where(and(
+          eq(dentalBroadcastRunsTable.clinicId, clinicId),
+          eq(dentalBroadcastRunsTable.runDate, runDate),
+          ne(dentalBroadcastRunsTable.status, "running"),
+        ));
+      if (staleRuns.length > 0) {
+        const staleRunIds = staleRuns.map((run) => run.id);
+        await db.delete(dentalBroadcastDeliveriesTable).where(inArray(dentalBroadcastDeliveriesTable.runId, staleRunIds));
+        await db.delete(dentalBroadcastRunsTable).where(inArray(dentalBroadcastRunsTable.id, staleRunIds));
+      }
+    }
+
+    const run = await runDentalBroadcastForClinic(clinicId);
+    res.status(201).json({ success: true, data: { run: enrichDentalBroadcastRun(run) } });
   } catch (err) { next(err); }
 });
 
