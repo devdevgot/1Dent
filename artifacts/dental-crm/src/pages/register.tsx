@@ -159,7 +159,6 @@ export default function Register() {
         title: t("register.successTitle"),
         description: t("register.successDesc", { name: response.data.user.name }),
       });
-      localStorage.setItem("show_onboarding_wizard", "true");
       setLocation(getRoleDashboardPath(response.data.user.role));
     } catch (error) {
       toast({
