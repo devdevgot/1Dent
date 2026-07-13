@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   progressMap?: Record<string, PatientTreatmentProgress>;
   onSelectPatient: (patientId: string) => void;
   isBoardDragging?: boolean;
+  canDragPatients?: boolean;
 }
 
 const ColumnPatientList = memo(function ColumnPatientList({
@@ -23,12 +24,14 @@ const ColumnPatientList = memo(function ColumnPatientList({
   progressMap,
   onSelectPatient,
   isBoardDragging,
+  canDragPatients = false,
 }: {
   patients: Patient[];
   redAlertPatientIds: ReadonlySet<string>;
   progressMap?: Record<string, PatientTreatmentProgress>;
   onSelectPatient: (patientId: string) => void;
   isBoardDragging?: boolean;
+  canDragPatients?: boolean;
 }) {
   return (
     <>
@@ -40,6 +43,7 @@ const ColumnPatientList = memo(function ColumnPatientList({
           progress={progressMap?.[patient.id]}
           onSelect={onSelectPatient}
           isBoardDragging={isBoardDragging}
+          draggable={canDragPatients}
         />
       ))}
     </>
@@ -55,6 +59,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   progressMap,
   onSelectPatient,
   isBoardDragging = false,
+  canDragPatients = false,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const headerColor = COLUMN_HEADER_COLOR[id];
@@ -67,8 +72,9 @@ export const KanbanColumn = memo(function KanbanColumn({
       progressMap,
       onSelectPatient,
       isBoardDragging,
+      canDragPatients,
     }),
-    [patients, redAlertPatientIds, progressMap, onSelectPatient, isBoardDragging],
+    [patients, redAlertPatientIds, progressMap, onSelectPatient, isBoardDragging, canDragPatients],
   );
 
   return (

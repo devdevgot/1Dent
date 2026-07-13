@@ -125,7 +125,6 @@ import {
   isPriceInquiry,
 } from "./clinic-knowledge";
 import { scheduleAppointmentReminders } from "../followups/appointment-reminders.queue";
-import { scheduleFollowups } from "../followups/followup.queue";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import {
   isExplicitNegativeRepeatSaleReply,
@@ -1650,9 +1649,8 @@ async function finalizeBookingAppointment(params: {
             doctorName: data.suggestedDoctorName ?? "",
             clinicName: clinicRow?.name ?? "",
           });
-          await scheduleFollowups({ clinicId, patientId, procedureId });
         } catch (schedErr) {
-          logger.warn({ err: schedErr, procedureId }, "ChatbotService: failed to schedule reminders/followups after booking");
+          logger.warn({ err: schedErr, procedureId }, "ChatbotService: failed to schedule reminders after booking");
         }
 
         const staffRecipients = await db

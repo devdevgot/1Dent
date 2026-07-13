@@ -70,13 +70,14 @@ async function processFollowupJob(data: FollowupJobData): Promise<void> {
         "[FollowupQueue] WhatsApp disabled — post-op followup would have been sent",
       );
     }
-    await transitionPatientStage({
-      patientId,
-      clinicId,
-      toStatus: "post_op_monitoring",
-      trigger: PATIENT_STAGE_TRIGGERS.POST_OP_FOLLOWUP_SENT,
-    });
   }
+
+  await transitionPatientStage({
+    patientId,
+    clinicId,
+    toStatus: "post_op_monitoring",
+    trigger: PATIENT_STAGE_TRIGGERS.POST_OP_FOLLOWUP_SENT,
+  });
 
   await db
     .update(postopFollowupsTable)

@@ -116,6 +116,7 @@ export const PatientCardOverlay = memo(function PatientCardOverlay(props: Patien
 
 interface PatientCardProps extends PatientCardViewProps {
   isBoardDragging?: boolean;
+  draggable?: boolean;
 }
 
 export const PatientCard = memo(function PatientCard({
@@ -124,11 +125,13 @@ export const PatientCard = memo(function PatientCard({
   progress,
   onSelect,
   isBoardDragging = false,
+  draggable = false,
 }: PatientCardProps) {
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: patient.id,
     data: { type: "patient", status: patient.status },
+    disabled: !draggable,
   });
 
   // The moving clone is rendered by <DragOverlay>, so the source card stays in
@@ -143,8 +146,8 @@ export const PatientCard = memo(function PatientCard({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(draggable ? attributes : undefined)}
+      {...(draggable ? listeners : undefined)}
       onPointerDown={(event) => {
         pointerStart.current = { x: event.clientX, y: event.clientY };
       }}
@@ -157,7 +160,7 @@ export const PatientCard = memo(function PatientCard({
         if (moved) return;
         onSelect(patient.id);
       }}
-      className="cursor-grab active:cursor-grabbing touch-none"
+      className={draggable ? "cursor-grab active:cursor-grabbing touch-none" : "touch-none"}
     >
       <PatientCardView
         patient={patient}

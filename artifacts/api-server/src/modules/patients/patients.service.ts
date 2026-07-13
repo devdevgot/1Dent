@@ -1,5 +1,9 @@
 import { randomUUID } from "crypto";
 import { PatientsRepository } from "./patients.repository";
+import {
+  transitionPatientStage,
+  PATIENT_STAGE_TRIGGERS,
+} from "./patient-stage.service";
 import { NotFoundError, ForbiddenError } from "../../shared/errors";
 import { parseIIN, isIINError } from "@workspace/api-zod";
 import type {
@@ -174,19 +178,17 @@ export class PatientsService {
     const existing = await this.repo.findById(id, clinicId);
     if (!existing) throw new NotFoundError("Patient not found");
 
-    const updated = await this.repo.updateStatus(id, clinicId, status);
-    if (!updated) throw new NotFoundError("Patient not found");
+    await transitionPatientStage({
+      patientId: id,
+      clinicId,
+      toStatus: status,
+      trigger: PATIENT_STAGE_TRIGGERS.MANUAL,
+      actorId: requestingUserId,
+      repo: this.repo,
+    });
 
-    if (existing.status !== status) {
-      await this.repo.createInteraction({
-        id: randomUUID(),
-        patientId: id,
-        clinicId,
-        userId: requestingUserId,
-        type: "status_change",
-        content: `${existing.status} → ${status}`,
-      });
-    }
+    const updated = await this.repo.findById(id, clinicId);
+    if (!updated) throw new NotFoundError("Patient not found");
 
     return { ...updated, phone: maskPhone(updated.phone, requestingRole) };
   }
