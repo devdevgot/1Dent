@@ -12,9 +12,59 @@ export const VOICE_PARSE_MODEL =
 export const VOICE_PARSE_FALLBACK_MODEL =
   process.env["VOICE_PARSE_FALLBACK_MODEL"] ?? "google/gemini-2.5-pro";
 
-const STT_TIMEOUT_MS = 45_000;
+const STT_LONG_AUDIO_BYTES = 400_000;
+const STT_TIMEOUT_LONG_MS = 55_000;
+const STT_TIMEOUT_SHORT_MS = 28_000;
 const PARSE_TIMEOUT_MS = 45_000;
 const PARSE_FALLBACK_TIMEOUT_MS = 60_000;
+const PARSE_CHUNK_TIMEOUT_MS = 28_000;
+const PARSE_CHUNK_MAX_CHARS = 2_200;
+function sttMaxTokens(bufferBytes: number): number {
+  return Math.min(8_000, Math.max(2_000, Math.ceil(bufferBytes / 6)));
+}
+
+function parseMaxTokens(transcript: string): number {
+  return Math.min(8_000, Math.max(1_200, Math.ceil(transcript.length * 0.9)));
+}
+
+/** Split long transcripts near FDI tooth boundaries for parallel LLM parse. */
+export function splitTranscriptForParsing(transcript: string): string[] {
+  const trimmed = transcript.trim();
+  if (trimmed.length <= PARSE_CHUNK_MAX_CHARS) return [trimmed];
+
+  const parts = trimmed.split(/(?=(?:^|\s)(?:1[1-8]|2[1-8]|3[1-8]|4[1-8])(?:\s|[-–—]|$))/u);
+  if (parts.length <= 1) {
+    const mid = Math.floor(trimmed.length / 2);
+    const splitAt = trimmed.lastIndexOf(". ", mid);
+    if (splitAt > 0) {
+      return [trimmed.slice(0, splitAt + 1).trim(), trimmed.slice(splitAt + 1).trim()].filter(Boolean);
+    }
+    return [trimmed];
+  }
+
+  const chunks: string[] = [];
+  let current = "";
+  for (const part of parts) {
+    const next = (current + part).trim();
+    if (next.length > PARSE_CHUNK_MAX_CHARS && current.trim()) {
+      chunks.push(current.trim());
+      current = part;
+    } else {
+      current = next;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.length > 0 ? chunks : [trimmed];
+}
+
+function mergeDiagnosisRows(rows: VoiceDiagnosisRow[]): VoiceDiagnosisRow[] {
+  const byFdi = new Map<number, VoiceDiagnosisRow>();
+  for (const row of rows) {
+    byFdi.set(row.fdi, row);
+  }
+  return [...byFdi.values()].sort((a, b) => a.fdi - b.fdi);
+}
+
 const MIN_AUDIO_BYTES = 1_000;
 
 const VALID_CONDITIONS = new Set([
@@ -105,12 +155,14 @@ async function callAudioChatTranscription(
   buffer: Buffer,
   mime: string,
   filename: string,
+  timeoutMs: number,
+  maxTokens: number,
 ): Promise<string> {
   const format = resolveAudioFormat(mime, filename);
   const base64Audio = buffer.toString("base64");
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), STT_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -140,7 +192,7 @@ async function callAudioChatTranscription(
           },
         ],
         temperature: 0,
-        max_tokens: 2000,
+        max_tokens: maxTokens,
       }),
       signal: controller.signal,
     });
@@ -179,6 +231,7 @@ async function callTranscriptionApi(
   buffer: Buffer,
   mime: string,
   filename: string,
+  timeoutMs: number,
 ): Promise<string> {
   const format = resolveAudioFormat(mime, filename);
   const base64Audio = buffer.toString("base64");
@@ -188,10 +241,8 @@ async function callTranscriptionApi(
     input_audio: { data: base64Audio, format },
   };
 
-  // Omit `language` — auto-detect handles RU/KK/UZ/KY/EN and code-switching.
-
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), STT_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch("https://openrouter.ai/api/v1/audio/transcriptions", {
@@ -236,34 +287,57 @@ export async function transcribeVoiceAudio(
     );
   }
 
-  const models = [
-    VOICE_STT_AUDIO_MODEL,
-    VOICE_STT_MODEL,
-    VOICE_STT_FALLBACK_MODEL,
-  ].filter((m, i, arr) => arr.indexOf(m) === i);
+  const isLong = buffer.length >= STT_LONG_AUDIO_BYTES;
+  const timeoutMs = isLong ? STT_TIMEOUT_LONG_MS : STT_TIMEOUT_SHORT_MS;
+  const maxTokens = sttMaxTokens(buffer.length);
+  const modelOrder = isLong
+    ? [VOICE_STT_FALLBACK_MODEL, VOICE_STT_MODEL, VOICE_STT_AUDIO_MODEL]
+    : [VOICE_STT_AUDIO_MODEL, VOICE_STT_MODEL, VOICE_STT_FALLBACK_MODEL];
+  const models = modelOrder.filter((m, i, arr) => arr.indexOf(m) === i).slice(0, 2);
 
   let lastErr: unknown;
   for (const model of models) {
     const started = Date.now();
     try {
       const transcript = model === VOICE_STT_AUDIO_MODEL || model.includes("gemini")
-        ? await callAudioChatTranscription(apiKey, model, buffer, mime, filename)
-        : await callTranscriptionApi(apiKey, model, buffer, mime, filename);
+        ? await callAudioChatTranscription(apiKey, model, buffer, mime, filename, timeoutMs, maxTokens)
+        : await callTranscriptionApi(apiKey, model, buffer, mime, filename, timeoutMs);
       const ms = Date.now() - started;
       if (!transcript) {
         throw new Error(`STT ${model} returned empty transcript`);
       }
-      logger.info({ model, ms, bytes: buffer.length, format: resolveAudioFormat(mime, filename) }, "[VoiceDiagnose] STT ok");
+      logger.info({ model, ms, bytes: buffer.length, format: resolveAudioFormat(mime, filename), isLong }, "[VoiceDiagnose] STT ok");
       return { transcript, model, ms };
     } catch (err) {
       lastErr = err;
-      logger.warn({ err, model }, "[VoiceDiagnose] STT model failed, trying next");
+      logger.warn({ err, model, isLong }, "[VoiceDiagnose] STT model failed, trying next");
     }
   }
 
   throw lastErr instanceof Error
     ? lastErr
     : new Error("Speech transcription failed");
+}
+
+async function parseTranscriptChunks(
+  transcript: string,
+  model: string,
+  timeoutMs: number,
+): Promise<VoiceDiagnosisRow[]> {
+  const chunks = splitTranscriptForParsing(transcript);
+  if (chunks.length === 1) {
+    return callParseModel(chunks[0]!, model, timeoutMs, transcript);
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk, index) =>
+      callParseModel(chunk, model, timeoutMs, transcript, {
+        chunkIndex: index,
+        chunkCount: chunks.length,
+      }),
+    ),
+  );
+  return mergeDiagnosisRows(results.flat());
 }
 
 export async function parseVoiceDiagnoses(transcript: string): Promise<{
@@ -275,21 +349,24 @@ export async function parseVoiceDiagnoses(transcript: string): Promise<{
   const models = [VOICE_PARSE_MODEL, VOICE_PARSE_FALLBACK_MODEL].filter(
     (m, i, arr) => arr.indexOf(m) === i,
   );
-  const timeouts = [PARSE_TIMEOUT_MS, PARSE_FALLBACK_TIMEOUT_MS];
+  const chunks = splitTranscriptForParsing(transcript);
+  const timeouts = chunks.length > 1
+    ? [PARSE_CHUNK_TIMEOUT_MS, PARSE_CHUNK_TIMEOUT_MS + 8_000]
+    : [PARSE_TIMEOUT_MS, PARSE_FALLBACK_TIMEOUT_MS];
 
   let lastErr: unknown;
   for (let i = 0; i < models.length; i++) {
     const model = models[i]!;
     const timeoutMs = timeouts[i] ?? PARSE_FALLBACK_TIMEOUT_MS;
     try {
-      const diagnoses = await callParseModel(transcript, model, timeoutMs);
+      const diagnoses = await parseTranscriptChunks(transcript, model, timeoutMs);
       const ms = Date.now() - started;
-      logger.info({ model, ms, count: diagnoses.length }, "[VoiceDiagnose] Parse ok");
+      logger.info({ model, ms, count: diagnoses.length, chunks: chunks.length }, "[VoiceDiagnose] Parse ok");
       return { diagnoses, ms, model };
     } catch (err) {
       lastErr = err;
       const hasNext = i < models.length - 1;
-      logger.warn({ err, model, hasNext }, "[VoiceDiagnose] Parse model failed");
+      logger.warn({ err, model, hasNext, chunks: chunks.length }, "[VoiceDiagnose] Parse model failed");
       if (!hasNext) break;
     }
   }
@@ -303,7 +380,13 @@ async function callParseModel(
   transcript: string,
   model: string,
   timeoutMs: number,
+  fullTranscript?: string,
+  chunk?: { chunkIndex: number; chunkCount: number },
 ): Promise<VoiceDiagnosisRow[]> {
+  const userContent = chunk && chunk.chunkCount > 1
+    ? `Фрагмент ${chunk.chunkIndex + 1} из ${chunk.chunkCount} полной расшифровки осмотра. Извлеки диагнозы только для зубов, упомянутых в этом фрагменте:\n"""\n${transcript}\n"""`
+    : `Расшифровка осмотра (многоязычная, как сказал врач):\n"""\n${transcript}\n"""`;
+
   const chatRes = await createChatCompletion(
     {
       model,
@@ -311,11 +394,11 @@ async function callParseModel(
         { role: "system", content: VOICE_PARSE_SYSTEM_PROMPT },
         {
           role: "user",
-          content: `Расшифровка осмотра (многоязычная, как сказал врач):\n"""\n${transcript}\n"""`,
+          content: userContent,
         },
       ],
       temperature: 0.1,
-      max_tokens: 1200,
+      max_tokens: parseMaxTokens(fullTranscript ?? transcript),
       response_format: { type: "json_object" },
     },
     { timeoutMs, label: `voice-diagnose-parse:${model}`, disableReasoning: true },
