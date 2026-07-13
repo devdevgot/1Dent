@@ -2,6 +2,8 @@ import { CHAT_MODEL, createChatCompletion } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { InsufficientAiCreditsError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
+import { getCachedChatbotDefaults } from "../platform-config/platform-config.service";
+import { DEFAULT_BROADCAST_AI_SYSTEM_PROMPT } from "../platform-config/platform-config.defaults";
 
 export type BroadcastToothProblem = {
   toothFdi: number;
@@ -50,17 +52,11 @@ export async function generateBroadcastMessageAi(params: {
     throw err;
   }
 
-  const systemPrompt = `Ты — менеджер стоматологической клиники. Напиши короткое персональное WhatsApp-сообщение пациенту на русском языке.
+  const defaults = getCachedChatbotDefaults();
+  const systemPromptBase = defaults.broadcastAiSystemPrompt?.trim() || DEFAULT_BROADCAST_AI_SYSTEM_PROMPT;
+  const systemPrompt = `${systemPromptBase}
 
-Правила:
-- Обращайся по имени (${firstName}), тон тёплый и спокойный — как живой администратор, не как медицинская справка
-- Упомяни конкретные зубы и процедуры ТОЛЬКО из предоставленных данных — ничего не выдумывай
-- Структура: приветствие → что осталось в плане (1–2 строки с 🦷) → одна короткая мотивирующая фраза без запугивания → призыв к действию
-- 3–6 предложений, короткие абзацы, эмодзи умеренно (👋 🦷 🤍)
-- Без медицинского жаргона, аббревиатур клиники и фраз про «дорого/страшно/сложно»
-- Обязательно заверши призывом: «${CTA_LINE}»
-- Не упоминай ИИ, ботов или автоматизацию
-- Не указывай цены и точные даты`;
+Обращайся по имени (${firstName}). Обязательно заверши призывом: «${CTA_LINE}»`;
 
   const userPrompt = `Клиника: ${clinicName ?? "стоматология"}
 Пациент: ${patientName}

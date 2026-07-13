@@ -2,7 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { db, dentalBroadcastRunsTable, clinicsTable, dentalBroadcastDeliveriesTable } from "@workspace/db";
 import { eq, and, desc, ne, inArray } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { runDentalBroadcastForClinic, clinicLocalDateString } from "./dental-broadcast.service";
+import { runDentalBroadcastForClinic, clinicLocalDateString, recoverStaleBroadcastRuns } from "./dental-broadcast.service";
 import { computeRates, listPatientBroadcastHistory } from "./dental-broadcast-metrics";
 import { ValidationError } from "../../shared/errors";
 import { MessagesRepository } from "../messages/messages.repository";
@@ -74,6 +74,8 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const clinicId = req.user!.clinicId;
+
+      await recoverStaleBroadcastRuns(clinicId);
 
       const [existingRunning] = await db
         .select({ id: dentalBroadcastRunsTable.id })

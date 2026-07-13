@@ -28,7 +28,32 @@ export interface PlatformChatbotDefaults {
   followup24hTemplate: string;
   followup72hTemplate: string;
   followup168hTemplate: string;
+  /** WhatsApp re-engagement template for ИИ Рассылка. Placeholders: {{firstName}}, {{toothLines}}, {{urgency}} */
+  broadcastTemplate: string;
+  /** Optional system prompt override for AI-generated broadcast messages */
+  broadcastAiSystemPrompt: string;
+  /** Default AI generation toggle for new clinics */
+  broadcastAiEnabledDefault: boolean;
 }
+
+export const DEFAULT_BROADCAST_TEMPLATE =
+  "Здравствуйте, {{firstName}}! 👋\n\n" +
+  "По вашей зубной карте в плане лечения остались шаги, которые ещё не завершены:\n\n" +
+  "{{toothLines}}\n\n" +
+  "{{urgency}}\n\n" +
+  "Когда будет удобно — напишите «Продолжить», и мы подберём время для записи 🤍";
+
+export const DEFAULT_BROADCAST_AI_SYSTEM_PROMPT = `Ты — менеджер стоматологической клиники. Напиши короткое персональное WhatsApp-сообщение пациенту на русском языке.
+
+Правила:
+- Обращайся по имени, тон тёплый и спокойный — как живой администратор, не как медицинская справка
+- Упомяни конкретные зубы и процедуры ТОЛЬКО из предоставленных данных — ничего не выдумывай
+- Структура: приветствие → что осталось в плане (1–2 строки с 🦷) → одна короткая мотивирующая фраза без запугивания → призыв к действию
+- 3–6 предложений, короткие абзацы, эмодзи умеренно (👋 🦷 🤍)
+- Без медицинского жаргона, аббревиатур клиники и фраз про «дорого/страшно/сложно»
+- Обязательно заверши призывом с «Продолжить»
+- Не упоминай ИИ, ботов или автоматизацию
+- Не указывай цены и точные даты`;
 
 /** Platform-wide meta-prompt for Claude Opus that composes per-clinic chatbot system prompts. */
 export interface PlatformChatbotPromptComposerConfig {
@@ -182,6 +207,9 @@ export const DEFAULT_CHATBOT_DEFAULTS: PlatformChatbotDefaults = {
     "Добрый день! Мы всё ещё готовы помочь вам в {{clinic_name}}. Подобрать удобное время?",
   followup168hTemplate:
     "Здравствуйте! Вы интересовались приёмом в {{clinic_name}}. Могу записать вас на удобное время.",
+  broadcastTemplate: DEFAULT_BROADCAST_TEMPLATE,
+  broadcastAiSystemPrompt: DEFAULT_BROADCAST_AI_SYSTEM_PROMPT,
+  broadcastAiEnabledDefault: false,
 };
 
 export function buildDefaultContractTemplatesConfig(): PlatformContractTemplatesConfig {

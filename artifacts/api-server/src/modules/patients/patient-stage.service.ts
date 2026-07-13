@@ -36,6 +36,8 @@ export const MAIN_FUNNEL_STATUSES: readonly PatientStatus[] = [
 
 /** Patients eligible for dental re-engagement broadcast. */
 export const BROADCAST_ELIGIBLE_STATUSES: readonly PatientStatus[] = [
+  "diagnostics",
+  "treatment_assigned",
   "completed",
   "repeat_sale",
   "post_op_monitoring",

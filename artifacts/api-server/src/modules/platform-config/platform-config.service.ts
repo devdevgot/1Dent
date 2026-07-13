@@ -187,7 +187,7 @@ export const platformConfigService = new PlatformConfigService();
 export function chatbotDefaultsForNewClinic(): Pick<
   PlatformChatbotDefaults,
   "greetingTemplate" | "followup24hTemplate" | "followup72hTemplate" | "followup168hTemplate"
-> & { enabled: boolean } {
+> & { enabled: boolean; broadcastAiEnabled: boolean } {
   const d = getCachedChatbotDefaults();
   return {
     enabled: d.defaultEnabled,
@@ -195,5 +195,6 @@ export function chatbotDefaultsForNewClinic(): Pick<
     followup24hTemplate: d.followup24hTemplate,
     followup72hTemplate: d.followup72hTemplate,
     followup168hTemplate: d.followup168hTemplate,
+    broadcastAiEnabled: d.broadcastAiEnabledDefault ?? false,
   };
 }

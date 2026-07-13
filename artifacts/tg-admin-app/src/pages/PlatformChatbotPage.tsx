@@ -11,6 +11,22 @@ interface ChatbotDefaults {
   followup24hTemplate: string;
   followup72hTemplate: string;
   followup168hTemplate: string;
+  broadcastTemplate: string;
+  broadcastAiSystemPrompt: string;
+  broadcastAiEnabledDefault: boolean;
+}
+
+const BROADCAST_TEMPLATE_PREVIEW = {
+  firstName: "Анна",
+  toothLines: "🦷 Зуб 16 — кариес\n🦷 Зуб 26 — установка коронки",
+  urgency: "Кариес на этом этапе обычно лечится быстро — откладывать чаще всего значит более объёмное лечение.",
+};
+
+function renderBroadcastPreview(template: string): string {
+  return template
+    .replace(/\{\{firstName\}\}/g, BROADCAST_TEMPLATE_PREVIEW.firstName)
+    .replace(/\{\{toothLines\}\}/g, BROADCAST_TEMPLATE_PREVIEW.toothLines)
+    .replace(/\{\{urgency\}\}/g, BROADCAST_TEMPLATE_PREVIEW.urgency);
 }
 
 interface ChatbotPromptComposerConfig {
@@ -71,6 +87,9 @@ export default function PlatformChatbotPage() {
     return <div className="p-6 text-sm text-muted-foreground">Загрузка...</div>;
   }
 
+  const broadcastTemplate = working.broadcastTemplate ?? "";
+  const broadcastAiSystemPrompt = working.broadcastAiSystemPrompt ?? "";
+
   const field = (
     label: string,
     key: keyof ChatbotDefaults,
@@ -78,15 +97,25 @@ export default function PlatformChatbotPage() {
   ) => (
     <div key={key}>
       <label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label>
-      {key === "defaultEnabled" ? (
+      {key === "defaultEnabled" || key === "broadcastAiEnabledDefault" ? (
         <button
           type="button"
-          onClick={() => setDraft({ ...working, defaultEnabled: !working.defaultEnabled })}
+          onClick={() => {
+            if (key === "defaultEnabled") {
+              setDraft({ ...working, defaultEnabled: !working.defaultEnabled });
+            } else {
+              setDraft({ ...working, broadcastAiEnabledDefault: !working.broadcastAiEnabledDefault });
+            }
+          }}
           className={`px-4 py-2 rounded-lg text-sm font-semibold ${
-            working.defaultEnabled ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            (key === "defaultEnabled" ? working.defaultEnabled : working.broadcastAiEnabledDefault)
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground"
           }`}
         >
-          {working.defaultEnabled ? "Включён для новых клиник" : "Выключен для новых клиник"}
+          {key === "defaultEnabled"
+            ? (working.defaultEnabled ? "Включён для новых клиник" : "Выключен для новых клиник")
+            : (working.broadcastAiEnabledDefault ? "ИИ-генерация включена" : "ИИ-генерация выключена")}
         </button>
       ) : (
         <textarea
@@ -102,9 +131,32 @@ export default function PlatformChatbotPage() {
   return (
     <TmaPage
       title="Чатбот — глобально"
-      subtitle="Дефолтные тексты и meta-prompt для Opus (composer)"
+      subtitle="Дефолтные тексты, ИИ Рассылка и meta-prompt Opus"
       onBack={() => navigate("/content")}
     >
+      <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+        <p className="text-xs font-semibold text-foreground">ИИ Рассылка — глобальный шаблон</p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Плейсхолдеры: {"{{firstName}}"}, {"{{toothLines}}"}, {"{{urgency}}"}. Имя, зубы и мотивация подставляются из карты пациента.
+        </p>
+        {field("Шаблон WhatsApp-рассылки", "broadcastTemplate", 8)}
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2">Превью</p>
+          <p className="text-sm whitespace-pre-wrap leading-relaxed">
+            {renderBroadcastPreview(broadcastTemplate)}
+          </p>
+        </div>
+        {field("ИИ-генерация для новых клиник", "broadcastAiEnabledDefault")}
+        <textarea
+          rows={10}
+          value={broadcastAiSystemPrompt}
+          onChange={(e) => setDraft({ ...working, broadcastAiSystemPrompt: e.target.value })}
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y"
+          placeholder="System prompt для ИИ-рассылки"
+        />
+        <p className="text-[10px] text-muted-foreground">System prompt для ИИ-рассылки</p>
+      </div>
+
       <div className="rounded-xl border border-border bg-card p-4 space-y-4">
         <p className="text-xs font-semibold text-foreground">Дефолтные тексты клиник</p>
         {field("Статус по умолчанию", "defaultEnabled")}
