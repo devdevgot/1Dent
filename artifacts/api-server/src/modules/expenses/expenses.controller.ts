@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
-import { ValidationError, NotFoundError } from "../../shared/errors";
+import { ValidationError, NotFoundError, ForbiddenError } from "../../shared/errors";
 import { ExpensesRepository } from "./expenses.repository";
 
 const router: IRouter = Router();
@@ -35,16 +35,30 @@ const canWrite = roleGuard("owner", "admin");
 
 router.get(
   "/expenses",
-  canRead,
+  (req: Request, res: Response, next: NextFunction) => {
+    const { role, userId } = req.user!;
+    const subcategory = typeof req.query["subcategory"] === "string" ? req.query["subcategory"] : undefined;
+    if (role === "owner" || role === "admin" || role === "accountant") {
+      return next();
+    }
+    if (subcategory === `аванс:${userId}`) {
+      return next();
+    }
+    return next(new ForbiddenError("Insufficient permissions"));
+  },
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { clinicId } = req.user!;
+      const { clinicId, role, userId } = req.user!;
       const dateFrom = typeof req.query["dateFrom"] === "string" ? new Date(req.query["dateFrom"]) : undefined;
       const dateTo = typeof req.query["dateTo"] === "string" ? new Date(req.query["dateTo"] + "T23:59:59Z") : undefined;
       const category = typeof req.query["category"] === "string" ? req.query["category"] : undefined;
-      const subcategory = typeof req.query["subcategory"] === "string" ? req.query["subcategory"] : undefined;
+      let subcategory = typeof req.query["subcategory"] === "string" ? req.query["subcategory"] : undefined;
       const periodMonth = typeof req.query["periodMonth"] === "string" ? Number(req.query["periodMonth"]) : undefined;
       const periodYear = typeof req.query["periodYear"] === "string" ? Number(req.query["periodYear"]) : undefined;
+
+      if (role !== "owner" && role !== "admin" && role !== "accountant") {
+        subcategory = `аванс:${userId}`;
+      }
 
       const expenses = await repo.listExpenses(clinicId, {
         dateFrom: dateFrom && !isNaN(dateFrom.getTime()) ? dateFrom : undefined,

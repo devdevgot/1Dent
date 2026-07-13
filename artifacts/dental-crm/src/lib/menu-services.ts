@@ -142,10 +142,10 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.myAnalytics",
     href: "/doctor-analytics",
     img: "/icons/menu/analytics.png",
-    roles: ["doctor"],
+    roles: ["doctor", "admin", "accountant", "warehouse", "assistant", "nurse"],
     category: "finance",
-    component: lazyWithChunkRecovery(() => import("@/pages/doctor-analytics")),
-    skeletonVariant: "analytics",
+    component: lazyWithChunkRecovery(() => import("@/pages/staff-self-analytics-redirect")),
+    skeletonVariant: "users",
   },
   {
     slug: "financials",
@@ -239,7 +239,10 @@ export function getHomeServiceSlugsForRole(role: string | undefined | null): rea
     return ["patients", "schedule", "services", "contract-templates", "doctor-analytics"];
   }
   if (role === "assistant" || role === "nurse") {
-    return ["patients", "schedule", "services"];
+    return ["patients", "schedule", "services", "doctor-analytics"];
+  }
+  if (role === "admin" || role === "accountant" || role === "warehouse") {
+    return ["patients", "schedule", "services", "doctor-analytics"];
   }
   if (!role) return [];
   return HOME_SERVICE_SLUGS.filter((slug) => {
