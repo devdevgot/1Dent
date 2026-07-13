@@ -122,7 +122,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.contractTemplates",
     href: "/contract-templates",
     img: "/icons/menu/contracts.png",
-    roles: ["owner", "admin", "doctor"],
+    roles: ["owner", "admin"],
     category: "clinic",
     component: lazyWithChunkRecovery(() => import("@/pages/contract-templates")),
     skeletonVariant: "default",
@@ -236,7 +236,7 @@ export const HOME_SERVICE_SLUGS = [
 export function getHomeServiceSlugsForRole(role: string | undefined | null): readonly string[] {
   if (role === "owner") return HOME_SERVICE_SLUGS;
   if (role === "doctor") {
-    return ["patients", "schedule", "services", "contract-templates", "doctor-analytics"];
+    return ["patients", "schedule", "services", "doctor-analytics"];
   }
   if (role === "assistant" || role === "nurse") {
     return ["patients", "schedule", "services"];

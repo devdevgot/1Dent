@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/hooks/use-auth";
 import { matchSubcategoriesFromTitles } from "@/lib/contract-service-matching";
 import {
   FileText, Send, CheckCircle2, Eye, ExternalLink,
@@ -244,6 +245,7 @@ function BundleModal({ bundle, onClose }: { bundle: BundleGroup; onClose: () => 
 
 export function ContractsTab({ patientId, planServiceTitles = [], bundle }: ContractsTabProps) {
   const { toast } = useToast();
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -252,6 +254,8 @@ export function ContractsTab({ patientId, planServiceTitles = [], bundle }: Cont
   const { data: contractsData, isLoading: contractsLoading } = useListPatientContracts(patientId);
   const { data: templatesData, isLoading: templatesLoading } = useListContractTemplates();
   const sendMutation = useSendContract();
+
+  const canManageContractTemplates = user?.role === "owner" || user?.role === "admin";
 
   const allContracts = contractsData?.data?.contracts ?? [];
   const contracts = allContracts;
@@ -349,7 +353,11 @@ export function ContractsTab({ patientId, planServiceTitles = [], bundle }: Cont
                         ? "Добавьте услуги в план лечения, чтобы увидеть встроенные шаблоны. "
                         : "Нет подходящих шаблонов для услуг в плане. "}
                     {userTemplates.length === 0 && (
-                      <span className="font-medium text-primary">Меню → Шаблоны договоров</span>
+                      canManageContractTemplates ? (
+                        <span className="font-medium text-primary">Меню → Шаблоны договоров</span>
+                      ) : (
+                        <span className="font-medium text-primary">Обратитесь к администратору</span>
+                      )
                     )}
                   </p>
                 </div>
