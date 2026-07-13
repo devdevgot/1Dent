@@ -1,5 +1,5 @@
 import { type ComponentType } from "react";
-import { CLINICAL_STAFF_ROLES } from "@/lib/role-groups";
+import { CLINICAL_STAFF_ROLES, isClinicalStaff } from "@/lib/role-groups";
 import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 import type { MenuServiceSkeletonVariant } from "@/components/skeletons/menu-service-content-skeleton";
 
@@ -122,7 +122,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.contractTemplates",
     href: "/contract-templates",
     img: "/icons/menu/contracts.png",
-    roles: ["owner", "admin", "doctor"],
+    roles: ["owner", "admin"],
     category: "clinic",
     component: lazyWithChunkRecovery(() => import("@/pages/contract-templates")),
     skeletonVariant: "default",
@@ -235,11 +235,9 @@ export const HOME_SERVICE_SLUGS = [
 /** Returns home tile slugs allowed for the given role. */
 export function getHomeServiceSlugsForRole(role: string | undefined | null): readonly string[] {
   if (role === "owner") return HOME_SERVICE_SLUGS;
-  if (role === "doctor") {
-    return ["patients", "schedule", "services", "contract-templates", "doctor-analytics"];
-  }
-  if (role === "assistant" || role === "nurse") {
-    return ["patients", "schedule", "services"];
+  if (isClinicalStaff(role)) {
+    const tiles = ["patients", "schedule", "services"] as const;
+    return role === "doctor" ? [...tiles, "doctor-analytics"] : tiles;
   }
   if (!role) return [];
   return HOME_SERVICE_SLUGS.filter((slug) => {
