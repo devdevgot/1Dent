@@ -98,6 +98,7 @@ const UsersPage = lazyPage(() => import("@/pages/users"), <UsersPageSkeleton />)
 const DoctorRatingsPage = lazyPage(() => import("@/pages/doctor-ratings"), <UsersPageSkeleton />);
 const ChatbotPage = lazyPage(() => import("@/pages/chatbot"), <ChatbotPageSkeleton />);
 const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffDetailPageSkeleton />);
+const StaffAnalyticsPage = lazyPage(() => import("@/pages/staff-analytics"), <DoctorAnalyticsPageSkeleton />);
 const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"), <DoctorAnalyticsPageSkeleton />);
 const DoctorSchedulePage = lazyPage(() => import("@/pages/doctor-schedule"), <DoctorSchedulePageSkeleton />);
 const DoctorScheduleDayPage = lazyPage(() => import("@/pages/doctor-schedule-day"), <DoctorScheduleDayPageSkeleton />);
@@ -360,6 +361,9 @@ function Router() {
       </Route>
 
 
+      <Route path="/users/:doctorId/analytics">
+        <ProtectedRoute component={StaffAnalyticsPage} allowedRoles={['owner', 'admin']} />
+      </Route>
       <Route path="/users/:doctorId">
         <ProtectedRoute component={StaffDetailPage} allowedRoles={['owner', 'admin']} />
       </Route>

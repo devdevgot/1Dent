@@ -1,16 +1,13 @@
-import { useParams, useLocation } from "wouter";
+import { useParams } from "wouter";
 import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Users, TrendingUp, DollarSign, Activity,
-  Banknote, CheckCircle, Clock, Wallet, SlidersHorizontal,
+  Banknote, CheckCircle, Clock, Wallet,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
-import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { motion } from "framer-motion";
 import {
-  useGetDoctorKpis,
   useGetPayrollRecords,
   useGetSalarySettings,
   useUpdateSalarySettings,
@@ -19,7 +16,6 @@ import {
   useListProceduresScoped,
   findCachedStaffUser,
   STAFF_LIST_STALE_MS,
-  type DoctorKpi,
   type PayrollRecord,
 } from "@workspace/api-client-react";
 import PayrollApproveModal from "./payroll-approve-modal";
@@ -28,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getBaseUrl } from "@/lib/base-url";
 import { usePageBack } from "@/hooks/use-page-back";
+import { StaffCabinetNav } from "@/components/staff/staff-cabinet-nav";
 
 interface GeoEvent {
   id: string;
@@ -54,7 +51,6 @@ export default function StaffDetailPage({
   const { t } = useTranslation();
   const { doctorId: routeDoctorId } = useParams<{ doctorId: string }>();
   const doctorId = overlayDoctorId ?? routeDoctorId;
-  const [, setLocation] = useLocation();
   const goBack = usePageBack({ menuFallback: true });
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -80,13 +76,6 @@ export default function StaffDetailPage({
   const selectedUser =
     cachedUser ?? usersData?.data?.users?.find((u) => u && u.id === doctorId);
   const isDoctor = selectedUser?.role === "doctor";
-  const isAssistant = selectedUser?.role === "assistant";
-
-  const { data: kpiData } = useGetDoctorKpis({
-    query: { enabled: !!isDoctor, staleTime: 5 * 60_000 },
-  });
-  const doctors: DoctorKpi[] = kpiData?.data?.kpis ?? [];
-  const doctorKpi = doctors.find((d) => d && d.doctorId === doctorId);
 
   const canManagePayroll = user?.role === "owner" || user?.role === "accountant" || user?.role === "admin";
 
@@ -103,8 +92,7 @@ export default function StaffDetailPage({
   const [salaryType, setSalaryType] = useState<"fixed" | "commission" | "fixed_plus_commission" | "hourly">("fixed");
   const [fixedAmount, setFixedAmount] = useState(0);
   const [commissionPercent, setCommissionPercent] = useState(0);
-  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "halfYear" | "year">("today");
-  const [showFilters, setShowFilters] = useState(false);
+  const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "halfYear" | "year">("month");
 
   const dates = useMemo(() => {
     const now = new Date();
@@ -168,7 +156,7 @@ export default function StaffDetailPage({
     };
   }, [dateFilter]);
 
-  const { data: proceduresData, isFetching: proceduresLoading } = useListProceduresScoped(
+  const { data: proceduresData } = useListProceduresScoped(
     {
       doctorId: isDoctor ? doctorId : undefined,
       dateFrom: dates.dateFromShort,
@@ -182,7 +170,7 @@ export default function StaffDetailPage({
     },
   );
 
-  const { data: expensesData, isFetching: expensesLoading } = useListExpenses(
+  const { data: expensesData } = useListExpenses(
     {
       dateFrom: dates.dateFromShort,
       dateTo: dates.dateToShort,
@@ -251,16 +239,6 @@ export default function StaffDetailPage({
     return name.split(" ").map((w: string) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   };
 
-  const isDayTime = (dateStr?: string | null) => {
-    if (!dateStr) return true;
-    try {
-      const hour = new Date(dateStr).getHours();
-      return hour >= 8 && hour < 20;
-    } catch {
-      return true;
-    }
-  };
-
   const workHours = useMemo(() => {
     if (geoEvents.length === 0) return 0;
     const userEvents = [...geoEvents].sort((a, b) => {
@@ -309,7 +287,13 @@ export default function StaffDetailPage({
     [filteredProcedures],
   );
 
-  const metricsLoading = proceduresLoading || geoLoading || expensesLoading;
+  const targetCompletedProcedures = isDoctor ? completedDoctorProcedures : completedClinicProcedures;
+
+  let totalRevenue = 0;
+  targetCompletedProcedures.forEach((p) => {
+    if (!p) return;
+    totalRevenue += Number(p.price) || 0;
+  });
 
   if (!selectedUser && usersLoading) {
     return (
@@ -334,82 +318,6 @@ export default function StaffDetailPage({
       </PageShell>
     );
   }
-
-  const nps = isDoctor && doctorKpi ? Number(doctorKpi.nps) : 0;
-
-  const targetAllProcedures = isDoctor ? doctorProcedures : filteredProcedures;
-  const targetCompletedProcedures = isDoctor ? completedDoctorProcedures : completedClinicProcedures;
-
-  // 1. Всего пациентов
-  const totalPatientsSet = new Set<string>();
-  const totalPatientsDaySet = new Set<string>();
-  const totalPatientsNightSet = new Set<string>();
-
-  targetAllProcedures.forEach((p) => {
-    if (!p) return;
-    const time = p.scheduledAt || p.createdAt;
-    if (p.patientId) {
-      totalPatientsSet.add(p.patientId);
-      if (isDayTime(time)) {
-        totalPatientsDaySet.add(p.patientId);
-      } else {
-        totalPatientsNightSet.add(p.patientId);
-      }
-    }
-  });
-
-  const totalPatientsCount = totalPatientsSet.size;
-  const totalPatientsDay = totalPatientsDaySet.size;
-  const totalPatientsNight = totalPatientsNightSet.size;
-
-  // 2. Принятые пациенты
-  const completedPatientsSet = new Set<string>();
-  const completedPatientsDaySet = new Set<string>();
-  const completedPatientsNightSet = new Set<string>();
-
-  targetCompletedProcedures.forEach((p) => {
-    if (!p) return;
-    const time = p.completedAt || p.scheduledAt || p.createdAt;
-    if (p.patientId) {
-      completedPatientsSet.add(p.patientId);
-      if (isDayTime(time)) {
-        completedPatientsDaySet.add(p.patientId);
-      } else {
-        completedPatientsNightSet.add(p.patientId);
-      }
-    }
-  });
-
-  const completedPatientsCount = completedPatientsSet.size;
-  const completedPatientsDay = completedPatientsDaySet.size;
-  const completedPatientsNight = completedPatientsNightSet.size;
-
-  // 3. Конверсия
-  const conversionPercent = totalPatientsCount > 0 
-    ? Math.round((completedPatientsCount / totalPatientsCount) * 100) 
-    : 0;
-
-  // 4. Общая выручка
-  let totalRevenue = 0;
-  let dayRevenue = 0;
-  let nightRevenue = 0;
-
-  targetCompletedProcedures.forEach((p) => {
-    if (!p) return;
-    const time = p.completedAt || p.scheduledAt || p.createdAt;
-    const price = Number(p.price) || 0;
-    totalRevenue += price;
-    if (isDayTime(time)) {
-      dayRevenue += price;
-    } else {
-      nightRevenue += price;
-    }
-  });
-
-  // 5. Средний чек
-  const avgCheckTotal = completedPatientsCount > 0 ? Math.round(totalRevenue / completedPatientsCount) : 0;
-  const avgCheckDay = completedPatientsDay > 0 ? Math.round(dayRevenue / completedPatientsDay) : 0;
-  const avgCheckNight = completedPatientsNight > 0 ? Math.round(nightRevenue / completedPatientsNight) : 0;
 
   // Salary calculations
   const fixedSal = Number(settings?.fixedAmount) || 0;
@@ -443,233 +351,43 @@ export default function StaffDetailPage({
             {getInitials(selectedUser.name)}
           </div>
         }
-        right={
-          <PageHeaderIconButton
-            onClick={() => setShowFilters((v) => !v)}
-            active={showFilters || dateFilter !== "month"}
-            title="Фильтры"
-            className="relative"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            {dateFilter !== "month" && (
-              <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-[var(--ds-primary)] rounded-full" />
-            )}
-          </PageHeaderIconButton>
-        }
         bottom={
-          showFilters ? (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-xs font-bold text-[#94a3b8] mr-2 uppercase tracking-wider">Период:</span>
-                {[
-                  { value: "today", label: "Сегодня" },
-                  { value: "week", label: "На неделю" },
-                  { value: "month", label: "На месяц" },
-                  { value: "halfYear", label: "На полгода" },
-                  { value: "year", label: "На год" },
-                ].map((item) => {
-                  const isActive = dateFilter === item.value;
-                  return (
-                    <button
-                      key={item.value}
-                      onClick={() => setDateFilter(item.value as typeof dateFilter)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
-                        isActive
-                          ? "bg-[var(--ds-primary)] text-white shadow-sm"
-                          : "bg-[#f1ede4] text-[#64748b] hover:bg-[var(--ds-border)] hover:text-[#0f172a]",
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          ) : undefined
+          <div className="space-y-3">
+            {doctorId && <StaffCabinetNav doctorId={doctorId} active="profile" />}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs font-bold text-[#94a3b8] mr-2 uppercase tracking-wider">Период:</span>
+              {[
+                { value: "today", label: "Сегодня" },
+                { value: "week", label: "На неделю" },
+                { value: "month", label: "На месяц" },
+                { value: "halfYear", label: "На полгода" },
+                { value: "year", label: "На год" },
+              ].map((item) => {
+                const isActive = dateFilter === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => setDateFilter(item.value as typeof dateFilter)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200",
+                      isActive
+                        ? "bg-[var(--ds-primary)] text-white shadow-sm"
+                        : "bg-[#f1ede4] text-[#64748b] hover:bg-[var(--ds-border)] hover:text-[#0f172a]",
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         }
       />
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="p-6 space-y-6">
 
-          {/* Metrics Cards */}
-          {(isDoctor || isAssistant) ? (
-            metricsLoading ? (
-              <div className="grid grid-cols-2 gap-4 sm:gap-6">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-[130px] rounded-2xl bg-[#f1ede4]" />
-                ))}
-              </div>
-            ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 sm:gap-6">
-                
-                {/* Left Column: Rows 1, 2, 3 */}
-                <div className="flex flex-col gap-4">
-                  {/* Card 1: Всего пациентов */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
-                    <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Всего пациентов</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">{totalPatientsCount}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{totalPatientsDay}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{totalPatientsNight}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 2: Принятые пациенты */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
-                    <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Принятые пациенты</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">{completedPatientsCount}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{completedPatientsDay}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">{completedPatientsNight}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 3: Конверсия приёма / Часы работы */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
-                    <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">
-                        {(isAssistant || salType === "hourly") ? "Часы работы" : "Конверсия приёма"}
-                      </h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">
-                        {(isAssistant || salType === "hourly") ? `${workHours.toFixed(1)} ч.` : `${conversionPercent}%`}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">
-                          {(isAssistant || salType === "hourly") ? "Ставка" : "День"}
-                        </span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">
-                          {(isAssistant || salType === "hourly") ? `₸${fixedSal.toLocaleString()}` : "—"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">
-                          {(isAssistant || salType === "hourly") ? "Бонус" : "Ночь"}
-                        </span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">
-                          {(isAssistant || salType === "hourly") ? `+${commPercent}%` : "—"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column: Rows 4, 5, 6 */}
-                <div className="flex flex-col gap-4">
-                  {/* Card 4: Выручка */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
-                    <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">
-                        {isDoctor ? "Общая выручка" : "Выручка клиники"}
-                      </h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{totalRevenue.toLocaleString()}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{dayRevenue.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{nightRevenue.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 5: Средний чек */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
-                    <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Средний чек</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{avgCheckTotal.toLocaleString()}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{avgCheckDay.toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#0f172a] block mt-0.5 truncate">₸{avgCheckNight.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 6: Выданный аванс */}
-                  <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
-                    <div>
-                      <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Выданный аванс</h4>
-                      <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{advance.toLocaleString()}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                        <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="text-right text-xs text-[#94a3b8] mt-2">
-                Показатели рассчитаны автоматически на основании гео-событий трекера и завершенных процедур.
-              </div>
-            </div>
-            )
-          ) : (
-            <div className="grid grid-cols-2 gap-4 sm:gap-6">
-              {/* Card 6: Выданный аванс for other employees */}
-              <div className="bg-white rounded-2xl border border-[#e8e3d9] p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-200 flex flex-col justify-between h-[130px]">
-                <div>
-                  <h4 className="text-[11px] font-bold text-[#64748b] uppercase tracking-wider truncate">Выданный аванс</h4>
-                  <span className="text-xl sm:text-2xl font-black text-[#0f172a] block mt-1 truncate">₸{advance.toLocaleString()}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e8e3d9] items-center">
-                  <div>
-                    <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">День</span>
-                    <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-[#94a3b8] block font-medium uppercase tracking-tight truncate">Ночь</span>
-                    <span className="text-xs sm:text-sm font-semibold text-[#94a3b8] block mt-0.5 truncate">—</span>
-                  </div>
-                </div>
-              </div>
-              <div className="hidden sm:block" />
-            </div>
-          )}
-
-          {/* Card 7: Зарплата (stretched full-width) */}
+          {/* Card: Зарплата (stretched full-width) */}
           <div className="bg-white rounded-2xl border border-[#e8e3d9] p-6 shadow-md">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[#e8e3d9]">
               <div className="flex items-center gap-4">
