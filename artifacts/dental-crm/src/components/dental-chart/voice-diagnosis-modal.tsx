@@ -29,7 +29,8 @@ import { VoiceRecordingIndicator } from "./voice-recording-indicator";
 const AUTH_TOKEN_KEY = "auth_token";
 const MIN_RECORDING_MS = 1_500;
 const MIN_AUDIO_BYTES = 2_000;
-const UPLOAD_TIMEOUT_MS = 90_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
+const APPLY_CONCURRENCY = 6;
 
 const CONDITION_VALUES: ToothCondition[] = [
   "healthy", "cavity", "treated", "crown",
@@ -93,8 +94,65 @@ function plural(n: number, one: string, few: string, many: string) {
   return many;
 }
 
-function formatTime(ts: number) {
-  return new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+function formatVoiceApiError(err: unknown, status?: number, serverMessage?: string): string {
+  const raw = serverMessage ?? (err instanceof Error ? err.message : "");
+  if (err instanceof Error && err.name === "AbortError") {
+    return "Превышено время ожидания. Попробуйте ещё раз или продиктуйте 10–12 зубов за одну запись.";
+  }
+  if (
+    status === 502
+    || status === 504
+    || raw.includes("Application failed to respond")
+    || raw.includes("Gateway Timeout")
+  ) {
+    return "Сервер не успел обработать длинную запись. Повторите или разделите осмотр на две записи по 10–12 зубов.";
+  }
+  if (raw) return raw.replace(/^HTTP \d+[^:]*:\s*/, "");
+  return "Ошибка при обработке голоса";
+}
+
+async function voiceApiFetch<T>(
+  url: string,
+  init: RequestInit,
+  timeoutMs = UPLOAD_TIMEOUT_MS,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    const json = (await res.json().catch(() => ({}))) as {
+      success?: boolean;
+      error?: string;
+      message?: string;
+      data?: T;
+    };
+    if (!res.ok) {
+      throw new Error(formatVoiceApiError(null, res.status, json.error ?? json.message));
+    }
+    return json as T;
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Сервер не успел")) throw err;
+    if (err instanceof Error && err.message.startsWith("Превышено время")) throw err;
+    throw new Error(formatVoiceApiError(err));
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let index = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (index < items.length) {
+      const current = items[index];
+      index += 1;
+      if (current !== undefined) await worker(current);
+    }
+  });
+  await Promise.all(runners);
 }
 
 function normalizeDraftSelections(
@@ -355,26 +413,39 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     formData.append("audio", file);
     const token = localStorage.getItem(AUTH_TOKEN_KEY) ?? "";
     const baseUrl = getBaseUrl();
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+    const authHeaders = { Authorization: `Bearer ${token}` };
+
+    setProcessingStep("transcribing");
 
     try {
-      const res = await fetch(`${baseUrl}/api/patients/${patientId}/teeth/voice-diagnose`, {
+      const transcribeJson = await voiceApiFetch<{
+        success: boolean;
+        data: { transcript: string };
+      }>(`${baseUrl}/api/patients/${patientId}/teeth/voice-diagnose/transcribe`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders,
         body: formData,
-        signal: controller.signal,
       });
-      if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-        throw new Error(json.error ?? json.message ?? `Ошибка сервера: ${res.status}`);
+
+      const nextTranscript = transcribeJson.data?.transcript ?? "";
+      if (!nextTranscript.trim()) {
+        throw new Error("Не удалось распознать речь. Попробуйте записать снова.");
       }
-      const json = (await res.json()) as {
+
+      setTranscript(nextTranscript);
+      setProcessingStep("parsing");
+
+      const parseJson = await voiceApiFetch<{
         success: boolean;
         data: { transcript: string; diagnoses: VoiceDiagnosisEntry[] };
-      };
-      const diagEntries = json.data.diagnoses ?? [];
-      setTranscript(json.data.transcript ?? "");
+      }>(`${baseUrl}/api/patients/${patientId}/teeth/voice-diagnose/parse`, {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: nextTranscript }),
+      });
+
+      const diagEntries = parseJson.data?.diagnoses ?? [];
+      setTranscript(parseJson.data?.transcript ?? nextTranscript);
       setEntries(diagEntries);
       const autoSelected: Record<number, string> = {};
       for (const d of diagEntries) {
@@ -383,15 +454,8 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       setSelectedServiceIds(autoSelected);
       setPhase("review");
     } catch (err) {
-      const msg = err instanceof Error && err.name === "AbortError"
-        ? "Превышено время ожидания. Попробуйте более короткую запись."
-        : err instanceof Error
-          ? err.message
-          : "Ошибка при обработке голоса";
-      setError(msg);
+      setError(formatVoiceApiError(err));
       setPhase("idle");
-    } finally {
-      clearTimeout(timeoutId);
     }
   };
 
@@ -461,7 +525,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       const appliedFdis: number[] = [];
       const toothErrors: string[] = [];
 
-      for (const entry of entries) {
+      await runWithConcurrency(entries, APPLY_CONCURRENCY, async (entry) => {
         try {
           await updateToothMutation.mutateAsync({
             id: patientId,
@@ -471,12 +535,12 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               notes: entry.notes || undefined,
             },
           });
-          appliedTeeth++;
+          appliedTeeth += 1;
           appliedFdis.push(entry.fdi);
         } catch {
           toothErrors.push(`Зуб ${entry.fdi}`);
         }
-      }
+      });
 
       await qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
 
@@ -484,13 +548,15 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       let appliedServices = 0;
       const serviceErrors: string[] = [];
 
-      for (const [fdiStr, id] of Object.entries(selectedServiceIds)) {
-        if (!id) continue;
-        const fdi = Number(fdiStr);
+      const serviceJobs = Object.entries(selectedServiceIds)
+        .filter(([, id]) => Boolean(id))
+        .map(([fdiStr, id]) => ({ fdi: Number(fdiStr), id: id! }));
+
+      await runWithConcurrency(serviceJobs, APPLY_CONCURRENCY, async ({ fdi, id }) => {
         const entry = entries.find((e) => e.fdi === fdi);
         const tpl = allTemplates.find((t) => t.id === id)
           ?? entry?.suggestedTemplates?.find((s) => s.id === id);
-        if (!tpl) continue;
+        if (!tpl) return;
         const price = "defaultPrice" in tpl ? tpl.defaultPrice : 0;
         const name = tpl.name;
         try {
@@ -503,7 +569,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
               price,
             },
           });
-          appliedServices++;
+          appliedServices += 1;
         } catch {
           serviceErrors.push(name);
         }
@@ -525,7 +591,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
             // Non-critical: plan might be locked or already have this item
           }
         }
-      }
+      });
 
       if (appliedServices > 0) {
         await qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });

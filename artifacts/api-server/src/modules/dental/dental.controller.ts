@@ -45,6 +45,69 @@ const CONDITION_TO_CATEGORY: Record<string, string | undefined> = {
   missing: "surgery",
 };
 
+const voiceParseBodySchema = z.object({
+  transcript: z.string().min(1),
+});
+
+async function enrichVoiceDiagnoses(
+  clinicId: string,
+  transcript: string,
+  diagnoses: Awaited<ReturnType<typeof parseVoiceDiagnoses>>["diagnoses"],
+) {
+  const [prices, allTemplates] = await Promise.all([
+    pricesRepo.getConditionPrices(clinicId),
+    procRepo.listTemplates(clinicId),
+  ]);
+  if (!prices) return null;
+
+  return diagnoses.map((d) => {
+    const cat = CONDITION_TO_CATEGORY[d.condition];
+    const { suggestions, bestMatchId } = matchVoiceServices({
+      transcript,
+      condition: d.condition,
+      diagnosisText: d.diagnosisText,
+      notes: d.notes,
+      spokenProcedure: d.spokenProcedure,
+      fdi: d.fdi,
+      category: cat,
+      templates: allTemplates.map((t) => ({
+        id: t.id,
+        name: t.name,
+        defaultPrice: t.defaultPrice,
+        description: t.description,
+        category: t.category,
+      })),
+    });
+
+    const bestMatch = bestMatchId
+      ? suggestions.find((s) => s.id === bestMatchId)
+      : undefined;
+    const matchedPrice = bestMatch
+      ? bestMatch.defaultPrice
+      : (prices[d.condition]?.price ?? 0);
+
+    return {
+      fdi: d.fdi,
+      condition: d.condition,
+      notes: d.notes,
+      diagnosisText: d.diagnosisText,
+      spokenProcedure: d.spokenProcedure,
+      price: matchedPrice,
+      mkb10Code: prices[d.condition]?.mkb10 ?? "",
+      suggestedTemplates: suggestions,
+      bestMatchId,
+    };
+  });
+}
+
+function voiceParseTimeoutMessage(err: unknown): string | null {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.includes("OpenRouterTimeout")) {
+    return "Анализ диагнозов занял слишком много времени. Попробуйте более короткую запись или повторите через минуту.";
+  }
+  return null;
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
@@ -292,6 +355,125 @@ diagnosisRouter.post("/diagnosis/complete", writeRoles, async (req: Request, res
   res.status(200).json({ success: true });
 });
 
+// POST /patients/:id/teeth/voice-diagnose/transcribe — STT only (step 1)
+router.post(
+  "/voice-diagnose/transcribe",
+  writeRoles,
+  upload.single("audio"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["id"]);
+    const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+    if (!ok) return;
+
+    if (!req.file) {
+      return next(new ValidationError("Audio file is required (field: audio)"));
+    }
+
+    const apiKey = process.env["OPENROUTER_API_KEY"];
+    if (!apiKey) {
+      return next(new ValidationError("OpenRouter API key is not configured"));
+    }
+
+    try {
+      await aiCreditsService.consumeCredits({
+        clinicId: req.user!.clinicId,
+        userId: req.user!.id,
+        feature: "voice_transcribe",
+        description: "Голосовая диагностика зубов",
+      });
+    } catch (err) {
+      if (err instanceof InsufficientAiCreditsError) return next(err);
+      return next(err);
+    }
+
+    try {
+      const stt = await transcribeVoiceAudio(
+        apiKey,
+        req.file.buffer,
+        req.file.mimetype || "audio/webm",
+        req.file.originalname || "recording.webm",
+      );
+      if (!stt.transcript) {
+        return next(new ValidationError(
+          "Не удалось распознать речь. Говорите чётко на русском, казахском, узбекском, кыргызском или английском.",
+        ));
+      }
+      logger.info(
+        {
+          patientId,
+          clinicId: req.user!.clinicId,
+          sttModel: stt.model,
+          sttMs: stt.ms,
+          audioBytes: req.file.buffer.length,
+          transcriptPreview: stt.transcript.slice(0, 200),
+        },
+        "[VoiceDiagnose] Transcribe ok",
+      );
+      res.json({ success: true, data: { transcript: stt.transcript } });
+    } catch (err) {
+      if (err instanceof VoiceTranscriptionError) {
+        return next(new ValidationError(err.message));
+      }
+      logger.error({ err }, "[VoiceDiagnose] STT failed");
+      return next(err);
+    }
+  },
+);
+
+// POST /patients/:id/teeth/voice-diagnose/parse — FDI parse + enrich (step 2)
+router.post(
+  "/voice-diagnose/parse",
+  writeRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["id"]);
+    const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+    if (!ok) return;
+
+    const parsedBody = voiceParseBodySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return next(new ValidationError(parsedBody.error.errors[0]?.message ?? "Validation failed"));
+    }
+
+    const apiKey = process.env["OPENROUTER_API_KEY"];
+    if (!apiKey) {
+      return next(new ValidationError("OpenRouter API key is not configured"));
+    }
+
+    const { transcript } = parsedBody.data;
+    const started = Date.now();
+
+    try {
+      const parsed = await parseVoiceDiagnoses(transcript);
+      const enriched = await enrichVoiceDiagnoses(
+        req.user!.clinicId,
+        transcript,
+        parsed.diagnoses,
+      );
+      if (!enriched) return;
+
+      logger.info(
+        {
+          patientId,
+          clinicId: req.user!.clinicId,
+          count: enriched.length,
+          parseModel: parsed.model,
+          parseMs: parsed.ms,
+          totalMs: Date.now() - started,
+          transcriptChars: transcript.length,
+        },
+        "[VoiceDiagnose] Parse ok",
+      );
+
+      res.json({ success: true, data: { transcript, diagnoses: enriched } });
+    } catch (err) {
+      logger.error({ err }, "[VoiceDiagnose] LLM parse error");
+      const timeoutMsg = voiceParseTimeoutMessage(err);
+      if (timeoutMsg) return next(new ValidationError(timeoutMsg));
+      return next(err);
+    }
+  },
+);
+
 // POST /patients/:id/teeth/voice-diagnose
 // Multilingual STT (Gemini audio) → FDI parse (Gemini Flash, Pro fallback)
 router.post(
@@ -364,60 +546,17 @@ router.post(
       parseModel = parsed.model;
     } catch (err) {
       logger.error({ err }, "[VoiceDiagnose] LLM parse error");
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("OpenRouterTimeout")) {
-        return next(new ValidationError(
-          "Анализ диагнозов занял слишком много времени. Попробуйте более короткую запись или повторите через минуту.",
-        ));
-      }
+      const timeoutMsg = voiceParseTimeoutMessage(err);
+      if (timeoutMsg) return next(new ValidationError(timeoutMsg));
       return next(err);
     }
 
-    // ── Enrich with clinic prices + transcript-relevant procedure templates ──
-    const [prices, allTemplates] = await Promise.all([
-      pricesRepo.getConditionPrices(req.user!.clinicId),
-      procRepo.listTemplates(req.user!.clinicId),
-    ]);
-    if (!prices) return;
-
-    const enriched = diagnoses.map((d) => {
-      const cat = CONDITION_TO_CATEGORY[d.condition];
-      const { suggestions, bestMatchId } = matchVoiceServices({
-        transcript,
-        condition: d.condition,
-        diagnosisText: d.diagnosisText,
-        notes: d.notes,
-        spokenProcedure: d.spokenProcedure,
-        fdi: d.fdi,
-        category: cat,
-        templates: allTemplates.map((t) => ({
-          id: t.id,
-          name: t.name,
-          defaultPrice: t.defaultPrice,
-          description: t.description,
-          category: t.category,
-        })),
-      });
-
-      const bestMatch = bestMatchId
-        ? suggestions.find((s) => s.id === bestMatchId)
-        : undefined;
-      const matchedPrice = bestMatch
-        ? bestMatch.defaultPrice
-        : (prices[d.condition]?.price ?? 0);
-
-      return {
-        fdi: d.fdi,
-        condition: d.condition,
-        notes: d.notes,
-        diagnosisText: d.diagnosisText,
-        spokenProcedure: d.spokenProcedure,
-        price: matchedPrice,
-        mkb10Code: prices[d.condition]?.mkb10 ?? "",
-        suggestedTemplates: suggestions,
-        bestMatchId,
-      };
-    });
+    const enriched = await enrichVoiceDiagnoses(
+      req.user!.clinicId,
+      transcript,
+      diagnoses,
+    );
+    if (!enriched) return;
 
     logger.info(
       {
