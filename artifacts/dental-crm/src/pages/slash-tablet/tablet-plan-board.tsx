@@ -425,7 +425,7 @@ export function TabletPlanBoard({
 
       {filterFdi != null && (
         <p className={cn("text-xs font-medium text-[#1f75fe]", embedded ? "px-4 pt-3" : "")}>
-          Показаны позиции по зубу {filterFdi}
+          Зуб {filterFdi} — подсвечены позиции плана для этого зуба
         </p>
       )}
 
@@ -516,14 +516,20 @@ export function TabletPlanBoard({
           {nc.length === 0 ? (
             <p className="py-6 text-center text-sm text-[#94a3b8]">Нет позиций</p>
           ) : (
-            nc.map((item) => (
+            nc.map((item) => {
+              const toothHighlighted = filterFdi != null && item.toothFdi === filterFdi;
+              const toothDimmed = filterFdi != null && !toothHighlighted;
+              return (
               <div
                 key={item.id}
-                className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 shadow-sm ${
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 shadow-sm transition-all duration-200",
                   item.status === "completed"
                     ? "border-emerald-100 bg-emerald-50/60"
-                    : "border-[#e8e3d9] bg-white"
-                }`}
+                    : "border-[#e8e3d9] bg-white",
+                  toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06]",
+                  toothDimmed && "opacity-45",
+                )}
               >
                 {item.status === "completed" ? (
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
@@ -555,7 +561,8 @@ export function TabletPlanBoard({
                   )}
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

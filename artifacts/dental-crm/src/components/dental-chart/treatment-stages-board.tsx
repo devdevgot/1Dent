@@ -278,15 +278,21 @@ interface ItemActions {
   onOpenModal: (itemId: string) => void;
 }
 
+function isPlanItemForTooth(item: TreatmentPlanItem, toothFdi: number | null | undefined): boolean {
+  return toothFdi != null && item.toothFdi === toothFdi;
+}
+
 // ── PlanItemCard ──────────────────────────────────────────────────────────────
 
 function PlanItemCard({
   item,
   showTooth,
+  highlightFdi,
   actions,
 }: {
   item: TreatmentPlanItem;
   showTooth?: boolean;
+  highlightFdi?: number | null;
   actions: ItemActions;
 }) {
   const { user } = useAuthStore();
@@ -301,6 +307,8 @@ function PlanItemCard({
 
   const isEditing = actions.editingItemId === item.id;
   const isSavingEdit = actions.savingEditId === item.id;
+  const toothHighlighted = isPlanItemForTooth(item, highlightFdi);
+  const toothDimmed = highlightFdi != null && !toothHighlighted;
 
   // ── Edit mode: inline form ───────────────────────────────────────────────
   if (actions.isEditMode && isPending && isEditing) {
@@ -368,6 +376,8 @@ function PlanItemCard({
           : isRunning
           ? "border-blue-200 bg-blue-50/30 shadow-sm"
           : "border-[#e8e3d9] bg-white",
+        toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06] shadow-sm",
+        toothDimmed && "opacity-45",
       )}
     >
       {/* Main row */}
@@ -399,7 +409,12 @@ function PlanItemCard({
           {/* Badges row */}
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {showTooth && item.toothFdi && (
-              <span className="text-[10px] bg-[#f1ede4] text-[#64748b] px-1.5 py-0.5 rounded font-medium">
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                toothHighlighted
+                  ? "bg-[#1f75fe]/15 text-[#1f75fe] font-bold"
+                  : "bg-[#f1ede4] text-[#64748b]",
+              )}>
                 з.{item.toothFdi}
               </span>
             )}
@@ -837,6 +852,7 @@ interface StageDetailSheetProps {
   doctorName?: string;
   planNotes?: string;
   historicalItems?: TreatmentPlanItem[];
+  highlightFdi?: number | null;
 }
 
 function StageDetailSheet({
@@ -849,6 +865,7 @@ function StageDetailSheet({
   doctorName,
   planNotes,
   historicalItems = [],
+  highlightFdi,
 }: StageDetailSheetProps) {
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
   const orphanItems = planItems.filter(
@@ -968,6 +985,7 @@ function StageDetailSheet({
                       condCfg={condCfg}
                       stage={stage}
                       doctorName={doctorName}
+                      highlightFdi={highlightFdi}
                       actions={actions}
                     />
                   );
@@ -988,6 +1006,7 @@ function StageDetailSheet({
                         condCfg={condCfg}
                         stage={stage}
                         doctorName={doctorName}
+                        highlightFdi={highlightFdi}
                         actions={actions}
                       />
                     ));
@@ -997,6 +1016,7 @@ function StageDetailSheet({
                       key={item.id}
                       item={item}
                       doctorName={doctorName}
+                      highlightFdi={highlightFdi}
                       actions={actions}
                       stage={stage}
                     />
@@ -1125,6 +1145,7 @@ function DetailProcedureCard({
   condCfg,
   stage,
   doctorName,
+  highlightFdi,
   actions,
 }: {
   item: TreatmentPlanItem;
@@ -1132,6 +1153,7 @@ function DetailProcedureCard({
   condCfg?: any;
   stage: StageConfig;
   doctorName?: string;
+  highlightFdi?: number | null;
   actions: ItemActions;
 }) {
   const { user } = useAuthStore();
@@ -1140,6 +1162,8 @@ function DetailProcedureCard({
   const timerStart = actions.getTimerStart(item.id);
   const isRunning = timerStart !== undefined;
   const timerDuration = actions.getTimerDuration(item.id);
+  const toothHighlighted = isPlanItemForTooth(item, highlightFdi);
+  const toothDimmed = highlightFdi != null && !toothHighlighted;
 
   const [showPicker, setShowPicker] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -1155,10 +1179,12 @@ function DetailProcedureCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border px-4 py-3 bg-white",
+        "rounded-2xl border px-4 py-3 bg-white transition-all duration-200",
         isDone ? "border-emerald-100 bg-emerald-50/30"
           : isRunning ? "border-blue-100 bg-blue-50/20"
           : "border-[#e8e3d9]",
+        toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06] shadow-sm",
+        toothDimmed && "opacity-45",
       )}
     >
       <div className="flex items-start gap-3">
@@ -1329,12 +1355,13 @@ interface SortablePlanItemCardProps {
   completingId: string | null;
   cancellingId: string | null;
   activeTimers: Map<string, number>;
+  highlightFdi?: number | null;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onOpenModal: (id: string) => void;
 }
 
-function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimers, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
+function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimers, highlightFdi, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
@@ -1357,6 +1384,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
   const isPending = item.status === "pending";
   const isCompleted = item.status === "completed";
   const isCancellingThis = cancellingId === item.id;
+  const toothHighlighted = isPlanItemForTooth(item, highlightFdi);
+  const toothDimmed = highlightFdi != null && !toothHighlighted;
 
   // Timer-aware states
   const isActive = activeTimers.has(item.id);
@@ -1377,6 +1406,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
         isCompleted && "bg-emerald-50/60 border-emerald-100",
         // Normal pending
         !isActive && !isBlocked && !isCompleted && "bg-white border-[#e8e3d9]",
+        toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06] shadow-sm",
+        toothDimmed && "opacity-45",
         !isEditMode && !isBlocked && "cursor-pointer active:bg-[#faf8f4]",
         !isEditMode && isBlocked && "cursor-pointer active:bg-amber-50",
       )}
@@ -1469,6 +1500,7 @@ interface StageContainerProps {
   completingId: string | null;
   cancellingId: string | null;
   activeTimers: Map<string, number>;
+  highlightFdi?: number | null;
   handleComplete: (id: string) => void;
   handleCancel: (id: string) => void;
   setModalItemId: (id: string) => void;
@@ -1482,6 +1514,7 @@ function StageContainer({
   completingId,
   cancellingId,
   activeTimers,
+  highlightFdi,
   handleComplete,
   handleCancel,
   setModalItemId,
@@ -1588,6 +1621,7 @@ function StageContainer({
               completingId={completingId}
               cancellingId={cancellingId}
               activeTimers={activeTimers}
+              highlightFdi={highlightFdi}
               onComplete={handleComplete}
               onCancel={handleCancel}
               onOpenModal={setModalItemId}
@@ -2072,18 +2106,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
 
   // ── Stage filtering + DnD ─────────────────────────────────────────────────
 
-  const stageItems = useMemo(() => {
-    const items = buildStageItems(teeth, activePlan);
-    if (filterFdi == null) return items;
-    const filtered = new Map<string, StageData>();
-    for (const [stageId, data] of items) {
-      filtered.set(stageId, {
-        teeth: data.teeth.filter((t) => t.toothFdi === filterFdi),
-        planItems: data.planItems.filter((p) => p.toothFdi === filterFdi),
-      });
-    }
-    return filtered;
-  }, [teeth, activePlan, filterFdi]);
+  const stageItems = useMemo(
+    () => buildStageItems(teeth, activePlan),
+    [teeth, activePlan],
+  );
 
   // ── Historical completed items from all plans, grouped by stage ──────────
 
@@ -2347,6 +2373,14 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
         </div>
       )}
 
+      {filterFdi != null && (
+        <div className="mx-0.5 rounded-xl border border-[#1f75fe]/25 bg-[#1f75fe]/[0.06] px-3 py-2">
+          <p className="text-xs font-semibold text-[#1f75fe]">
+            Выбран зуб {filterFdi} — подсвечены позиции плана для этого зуба
+          </p>
+        </div>
+      )}
+
       {/* Stages columns with DnD reordering */}
       {localItems.length === 0 && archivedItems.length === 0 ? (
         <p className="text-sm text-[#94a3b8] text-center py-6">Нет позиций в плане</p>
@@ -2385,6 +2419,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
                   completingId={completingId}
                   cancellingId={cancellingId}
                   activeTimers={activeTimers}
+                  highlightFdi={filterFdi}
                   handleComplete={handleComplete}
                   handleCancel={handleCancel}
                   setModalItemId={setModalItemId}
@@ -2431,6 +2466,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
             doctorName={doctorName}
             planNotes={activePlan?.notes ?? undefined}
             historicalItems={historyByStage.get(detailStageId) ?? []}
+            highlightFdi={filterFdi}
           />
         );
       })()}
