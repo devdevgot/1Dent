@@ -24,7 +24,7 @@ export interface TabletSessionCreateResult {
 
 export interface TabletSessionStatus {
   sessionId: string;
-  status: "pending" | "awaiting_pairing" | "unlocked" | "expired";
+  status: "pending" | "awaiting_pairing" | "unlocked" | "expired" | "released";
   cabinet: TabletCabinetBrief | null;
   doctor?: TabletDoctorBrief | null;
   pairingCode?: string | null;
@@ -172,21 +172,6 @@ export async function getTabletSessionStatus(sessionId: string) {
   );
 }
 
-export async function confirmTabletPairing(sessionId: string) {
-  return customFetch<{
-    success: boolean;
-    data: {
-      sessionId: string;
-      cabinet: TabletCabinetBrief;
-      doctor: TabletDoctorBrief | null;
-      auth?: TabletUnlockResult["auth"] | null;
-    };
-  }>("/api/tablet/link/confirm-pairing", {
-    method: "POST",
-    body: JSON.stringify({ sessionId }),
-  });
-}
-
 export async function getPendingTabletPairing() {
   return customFetch<{
     success: boolean;
@@ -223,10 +208,36 @@ export async function setTabletPin(pin: string, linkToken?: string) {
 }
 
 export interface TabletRedeemResult {
-  pairingRequired: boolean;
+  pairingRequired?: boolean;
+  ownerActionRequired?: boolean;
   sessionId: string;
   cabinet: TabletCabinetBrief | null;
   doctor: TabletDoctorBrief | null;
+}
+
+export async function enterTabletSession(sessionId: string) {
+  return customFetch<{
+    success: boolean;
+    data: {
+      sessionId: string;
+      cabinet: TabletCabinetBrief;
+      doctor: TabletDoctorBrief | null;
+      auth?: TabletUnlockResult["auth"] | null;
+    };
+  }>("/api/tablet/link/enter", {
+    method: "POST",
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+export async function releaseTabletSession(sessionId: string) {
+  return customFetch<{
+    success: boolean;
+    data: { sessionId: string };
+  }>("/api/tablet/link/release", {
+    method: "POST",
+    body: JSON.stringify({ sessionId }),
+  });
 }
 
 export async function redeemTabletLink(token: string, pin?: string) {

@@ -1,18 +1,21 @@
 import { TabletQrScannerButton } from "./tablet-qr-scanner";
-import { TabletPairingConfirmModal } from "./tablet-pairing-confirm-modal";
+import { TabletOwnerActionModal } from "./tablet-owner-action-modal";
 import { TabletNotPairedModal } from "./tablet-not-paired-modal";
 import { useTabletLinkFlow } from "@/hooks/use-tablet-link-flow";
 
 export function TabletScannerSlot() {
   const {
-    pairingModalOpen,
+    ownerModalOpen,
+    ownerModalMode,
     cabinetName,
-    confirmingPairing,
+    enteringTablet,
+    removingTablet,
     notPairedModalOpen,
     closeNotPairedModal,
     processToken,
-    confirmPairing,
-    closePairingModal,
+    enterTablet,
+    removeTablet,
+    closeOwnerModal,
   } = useTabletLinkFlow();
 
   return (
@@ -21,12 +24,15 @@ export function TabletScannerSlot() {
         onScan={(token) => void processToken(token)}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f1ede4] text-[#1f75fe] transition-colors hover:bg-[var(--ds-border)]/60"
       />
-      <TabletPairingConfirmModal
-        open={pairingModalOpen}
-        onClose={closePairingModal}
+      <TabletOwnerActionModal
+        open={ownerModalOpen}
+        onClose={closeOwnerModal}
         cabinetName={cabinetName}
-        onConfirm={() => void confirmPairing()}
-        confirming={confirmingPairing}
+        isFirstPairing={ownerModalMode === "pairing"}
+        onEnter={() => void enterTablet()}
+        onRemove={() => void removeTablet()}
+        entering={enteringTablet}
+        removing={removingTablet}
       />
       <TabletNotPairedModal
         open={notPairedModalOpen}

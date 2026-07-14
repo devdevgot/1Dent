@@ -510,6 +510,19 @@ export class TabletService {
       );
     }
 
+    const doctor = await this.repo.getDoctorPublic(userId);
+    const cabinet = await this.repo.findCabinetById(session.cabinetId);
+
+    if (role === "owner") {
+      return {
+        success: true as const,
+        ownerActionRequired: true as const,
+        sessionId: session.id,
+        cabinet: cabinet ? { id: cabinet.id, name: cabinet.name } : null,
+        doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
+      };
+    }
+
     // Optional PIN verification when user explicitly provides it (tablet PIN path)
     if (pin) {
       const pinHash = await this.repo.getUserTabletPinHash(userId);
@@ -523,15 +536,83 @@ export class TabletService {
     const unlocked = await this.repo.unlockSession(session.id, userId);
     if (!unlocked) throw new NotFoundError("Не удалось разблокировать планшет");
 
-    const doctor = await this.repo.getDoctorPublic(userId);
-    const cabinet = await this.repo.findCabinetById(session.cabinetId);
-
     return {
       success: true as const,
       pairingRequired: false as const,
       sessionId: session.id,
       cabinet: cabinet ? { id: cabinet.id, name: cabinet.name } : null,
       doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
+    };
+  }
+
+  async enterTablet(
+    userId: string,
+    role: UserRole,
+    clinicId: string,
+    sessionId: string,
+  ) {
+    assertTabletOwner(role);
+
+    const session = await this.repo.findSessionById(sessionId);
+    if (!session) throw new NotFoundError("Сессия не найдена");
+
+    if (session.status === "awaiting_pairing") {
+      return this.confirmPairing(sessionId, { userId, role, clinicId });
+    }
+
+    if (session.status === "pending" && session.cabinetId) {
+      if (session.clinicId && session.clinicId !== clinicId) {
+        throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+      }
+
+      const user = await this.authRepo.findUserById(userId);
+      if (!user || user.clinicId !== session.clinicId) {
+        throw new TabletCabinetStaleError();
+      }
+
+      const unlocked = await this.repo.unlockSession(session.id, userId);
+      if (!unlocked) throw new NotFoundError("Не удалось разблокировать планшет");
+
+      const doctor = await this.repo.getDoctorPublic(userId);
+      const cabinet = await this.repo.findCabinetById(session.cabinetId);
+
+      return {
+        success: true as const,
+        sessionId: session.id,
+        cabinet: cabinet ? { id: cabinet.id, name: cabinet.name } : null,
+        doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
+        auth: session.clinicId ? await this.buildSessionAuth(userId, session.clinicId) : null,
+      };
+    }
+
+    throw new ValidationError("Сессия недоступна для входа");
+  }
+
+  async releaseTablet(userId: string, role: UserRole, clinicId: string, sessionId: string) {
+    assertTabletOwner(role);
+
+    const session = await this.repo.findSessionById(sessionId);
+    if (!session) throw new NotFoundError("Сессия не найдена");
+
+    if (session.status !== "pending" && session.status !== "awaiting_pairing") {
+      throw new ValidationError("Сессия не ожидает действия");
+    }
+
+    if (session.clinicId && session.clinicId !== clinicId) {
+      throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+    }
+
+    const user = await this.authRepo.findUserById(userId);
+    if (!user || (session.clinicId && user.clinicId !== session.clinicId)) {
+      throw new ForbiddenError("Сессия не принадлежит вашей клинике");
+    }
+
+    const released = await this.repo.releaseSession(sessionId);
+    if (!released) throw new NotFoundError("Не удалось отвязать планшет");
+
+    return {
+      success: true as const,
+      sessionId: session.id,
     };
   }
 }

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useSearch, useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTabletLinkFlow } from "@/hooks/use-tablet-link-flow";
-import { TabletPairingConfirmModal } from "@/components/tablet/tablet-pairing-confirm-modal";
+import { TabletOwnerActionModal } from "@/components/tablet/tablet-owner-action-modal";
 import { TabletNotPairedModal } from "@/components/tablet/tablet-not-paired-modal";
 import { parseTabletLinkToken } from "@/lib/tablet-api";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
@@ -13,17 +13,20 @@ export default function TabletLinkPage() {
   const [, navigate] = useLocation();
   const { isAuthenticated, isLoading, user } = useAuthStore();
   const {
-    pairingModalOpen,
+    ownerModalOpen,
+    ownerModalMode,
     cabinetName,
-    confirmingPairing,
+    enteringTablet,
+    removingTablet,
     submitting,
     status,
     errorMessage,
     notPairedModalOpen,
     closeNotPairedModal,
     processToken,
-    confirmPairing,
-    closePairingModal,
+    enterTablet,
+    removeTablet,
+    closeOwnerModal,
   } = useTabletLinkFlow();
   const token = parseTabletLinkToken(new URLSearchParams(search).get("token") ?? "");
 
@@ -52,8 +55,8 @@ export default function TabletLinkPage() {
   }
 
   const showProcessing = submitting || status === "processing";
-  const showSuccess = status === "success" && !pairingModalOpen && !submitting;
-  const showError = status === "error" && !pairingModalOpen && !submitting && !notPairedModalOpen;
+  const showSuccess = status === "success" && !ownerModalOpen && !submitting;
+  const showError = status === "error" && !ownerModalOpen && !submitting && !notPairedModalOpen;
 
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#faf8f4] px-6 font-manrope">
@@ -104,12 +107,15 @@ export default function TabletLinkPage() {
         )}
       </div>
 
-      <TabletPairingConfirmModal
-        open={pairingModalOpen}
-        onClose={closePairingModal}
+      <TabletOwnerActionModal
+        open={ownerModalOpen}
+        onClose={closeOwnerModal}
         cabinetName={cabinetName}
-        onConfirm={() => void confirmPairing()}
-        confirming={confirmingPairing}
+        isFirstPairing={ownerModalMode === "pairing"}
+        onEnter={() => void enterTablet()}
+        onRemove={() => void removeTablet()}
+        entering={enteringTablet}
+        removing={removingTablet}
       />
       <TabletNotPairedModal
         open={notPairedModalOpen}

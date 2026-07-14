@@ -125,6 +125,14 @@ export function LockScreen({
           return;
         }
 
+        if (status === "released") {
+          clearStoredCabinetId();
+          setCabinetId(null);
+          setWaitingForOwner(false);
+          void bootstrapSession(undefined, true);
+          return;
+        }
+
         if (status === "unlocked" && doctor && cabinet) {
           handleUnlock(
             {

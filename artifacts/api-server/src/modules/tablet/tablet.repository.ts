@@ -180,6 +180,22 @@ export class TabletRepository {
     return row ?? null;
   }
 
+  async releaseSession(sessionId: string): Promise<TabletSession | null> {
+    const now = new Date();
+    const [row] = await db
+      .update(tabletSessionsTable)
+      .set({ status: "released" })
+      .where(
+        and(
+          eq(tabletSessionsTable.id, sessionId),
+          inArray(tabletSessionsTable.status, ["pending", "awaiting_pairing"]),
+          gt(tabletSessionsTable.expiresAt, now),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
   async expireSession(sessionId: string): Promise<void> {
     await db
       .update(tabletSessionsTable)
