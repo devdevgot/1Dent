@@ -54,7 +54,7 @@ const PAGE_ITEMS: {
   { label: "Пациенты",   href: "/patients",                  roles: ["owner","admin","doctor","accountant"],        Icon: Users,           iconBg: "bg-[var(--info-light)]",    iconColor: "text-[var(--info)]" },
   { label: "Расписание", href: "/schedule",        roles: ["doctor"],                                         Icon: Calendar,        iconBg: "bg-[var(--warning-light)]", iconColor: "text-[#d97706]" },
   { label: "Аналитика",  href: "/analytics",       roles: ["owner"],                                          Icon: BarChart3,       iconBg: "bg-[var(--success-light)]",   iconColor: "text-[#16a34a]" },
-  { label: "Аналитика врача", href: "/doctor-analytics", roles: ["doctor"],                                   Icon: BarChart3,       iconBg: "bg-[var(--success-light)]",   iconColor: "text-[#16a34a]" },
+  { label: "Моя аналитика", href: "/doctor-analytics", roles: ["doctor", "admin", "accountant", "warehouse", "assistant", "nurse"], Icon: BarChart3,       iconBg: "bg-[var(--success-light)]",   iconColor: "text-[#16a34a]" },
   { label: "Финансы",    href: "/financials",      roles: ["owner","accountant"],                             Icon: Wallet,          iconBg: "bg-[var(--warning-light)]",iconColor: "text-[#d97706]" },
   { label: "WhatsApp",   href: "/chat",            roles: ["owner","admin","doctor"],                         Icon: FaWhatsapp,      iconBg: "bg-[var(--success-light)]",  iconColor: "text-[#16a34a]" },
   { label: "Сотрудники", href: "/users",           roles: ["owner"],                                          Icon: Contact,         iconBg: "bg-[#f1ede4]",  iconColor: "text-[#64748b]" },

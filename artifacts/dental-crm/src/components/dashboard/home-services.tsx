@@ -245,33 +245,18 @@ function ClinicalPromoBanners({ role }: { role: string | undefined }) {
         subtitle="Карточки, воронка, FDI-карта"
         img="/icons/menu/patients.png"
       />
-      {isDoctor ? (
-        <PromoBanner
-          slug="doctor-analytics"
-          title={
-            <>
-              Моя
-              <br />
-              аналитика
-            </>
-          }
-          subtitle="Выручка и показатели"
-          img="/icons/menu/analytics.png"
-        />
-      ) : (
-        <PromoBanner
-          slug="services"
-          title={
-            <>
-              Прайс
-              <br />
-              услуг
-            </>
-          }
-          subtitle="Стоимость и категории"
-          img="/icons/menu/services.png"
-        />
-      )}
+      <PromoBanner
+        slug="doctor-analytics"
+        title={
+          <>
+            Моя
+            <br />
+            аналитика
+          </>
+        }
+        subtitle="Выручка и показатели"
+        img="/icons/menu/analytics.png"
+      />
     </HomeScrollRow>
   );
 }

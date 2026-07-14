@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
-import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
+import { authMiddleware, roleGuard, selfOrRoleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { PayrollRepository } from "./payroll.repository";
 import { db, usersTable } from "@workspace/db";
@@ -49,7 +49,7 @@ router.get(
 
 router.get(
   "/settings/:userId",
-  roleGuard("owner", "admin", "accountant"),
+  selfOrRoleGuard((req) => String(req.params["userId"] ?? ""), "owner", "admin", "accountant"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = String(req.params["userId"]);
@@ -157,7 +157,13 @@ router.post(
 
 router.get(
   "/records",
-  roleGuard("owner", "admin", "accountant"),
+  (req: Request, res: Response, next: NextFunction) => {
+    const userId = typeof req.query["userId"] === "string" ? req.query["userId"] : undefined;
+    const guard = userId
+      ? selfOrRoleGuard(() => userId, "owner", "admin", "accountant")
+      : roleGuard("owner", "admin", "accountant");
+    return guard(req, res, next);
+  },
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = typeof req.query["userId"] === "string" ? req.query["userId"] : undefined;

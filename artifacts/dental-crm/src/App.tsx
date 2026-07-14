@@ -24,7 +24,6 @@ import {
   AppointmentNewPageSkeleton,
   DoctorSchedulePageSkeleton,
   DoctorScheduleDayPageSkeleton,
-  DoctorAnalyticsPageSkeleton,
   AdminDashboardSkeleton,
   OwnerDashboardSkeleton,
   DoctorDashboardSkeleton,
@@ -98,7 +97,10 @@ const UsersPage = lazyPage(() => import("@/pages/users"), <UsersPageSkeleton />)
 const DoctorRatingsPage = lazyPage(() => import("@/pages/doctor-ratings"), <UsersPageSkeleton />);
 const ChatbotPage = lazyPage(() => import("@/pages/chatbot"), <ChatbotPageSkeleton />);
 const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffDetailPageSkeleton />);
-const DoctorAnalyticsPage = lazyPage(() => import("@/pages/doctor-analytics"), <DoctorAnalyticsPageSkeleton />);
+const StaffSelfAnalyticsRedirect = lazyPage(
+  () => import("@/pages/staff-self-analytics-redirect"),
+  <StaffDetailPageSkeleton />,
+);
 const DoctorSchedulePage = lazyPage(() => import("@/pages/doctor-schedule"), <DoctorSchedulePageSkeleton />);
 const DoctorScheduleDayPage = lazyPage(() => import("@/pages/doctor-schedule-day"), <DoctorScheduleDayPageSkeleton />);
 const AccountSettingsPage = lazyPage(() => import("@/pages/account-settings"), <AccountSettingsPageSkeleton />);
@@ -361,12 +363,18 @@ function Router() {
 
 
       <Route path="/users/:doctorId">
-        <ProtectedRoute component={StaffDetailPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute
+          component={StaffDetailPage}
+          allowedRoles={["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]}
+        />
       </Route>
 
-      {/* Doctor analytics */}
+      {/* Legacy doctor analytics URL → per-employee analytics */}
       <Route path="/doctor-analytics">
-        <ProtectedRoute component={DoctorAnalyticsPage} allowedRoles={['owner', 'admin', 'doctor']} />
+        <ProtectedRoute
+          component={StaffSelfAnalyticsRedirect}
+          allowedRoles={["owner", "admin", "doctor", "accountant", "warehouse", "assistant", "nurse"]}
+        />
       </Route>
 
       {/* Menu page */}

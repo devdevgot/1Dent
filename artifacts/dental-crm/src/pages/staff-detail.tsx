@@ -17,10 +17,12 @@ import {
   useListUsersAll,
   useListExpenses,
   useListProceduresScoped,
+  useGetMe,
   findCachedStaffUser,
   STAFF_LIST_STALE_MS,
   type DoctorKpi,
   type PayrollRecord,
+  type User,
 } from "@workspace/api-client-react";
 import PayrollApproveModal from "./payroll-approve-modal";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -59,16 +61,24 @@ export default function StaffDetailPage({
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
+  const isSelfView = !!doctorId && !!user?.id && doctorId === user.id;
+  const canViewAnyStaff = user?.role === "owner" || user?.role === "admin";
+  const canViewPage = canViewAnyStaff || isSelfView;
+
   const cachedUser = useMemo(
     () => (doctorId ? findCachedStaffUser(queryClient, doctorId) : undefined),
     [queryClient, doctorId],
   );
 
+  const { data: meData, isLoading: meLoading } = useGetMe({
+    query: { enabled: isSelfView && !cachedUser, staleTime: STAFF_LIST_STALE_MS },
+  });
+
   const { data: usersData, isLoading: usersLoading } = useListUsersAll(
     { includeInactive: true },
     {
       query: {
-        enabled: !cachedUser,
+        enabled: canViewAnyStaff && !cachedUser && !isSelfView,
         staleTime: STAFF_LIST_STALE_MS,
         placeholderData: () =>
           queryClient.getQueryData(["/api/users", { includeInactive: true }]) ??
@@ -77,13 +87,15 @@ export default function StaffDetailPage({
     },
   );
 
-  const selectedUser =
-    cachedUser ?? usersData?.data?.users?.find((u) => u && u.id === doctorId);
+  const selectedUser: User | undefined =
+    cachedUser
+    ?? (isSelfView ? (meData?.data?.user ?? user ?? undefined) : undefined)
+    ?? usersData?.data?.users?.find((u) => u && u.id === doctorId);
   const isDoctor = selectedUser?.role === "doctor";
   const isAssistant = selectedUser?.role === "assistant";
 
   const { data: kpiData } = useGetDoctorKpis({
-    query: { enabled: !!isDoctor, staleTime: 5 * 60_000 },
+    query: { enabled: !!isDoctor && canViewAnyStaff, staleTime: 5 * 60_000 },
   });
   const doctors: DoctorKpi[] = kpiData?.data?.kpis ?? [];
   const doctorKpi = doctors.find((d) => d && d.doctorId === doctorId);
@@ -311,7 +323,15 @@ export default function StaffDetailPage({
 
   const metricsLoading = proceduresLoading || geoLoading || expensesLoading;
 
-  if (!selectedUser && usersLoading) {
+  if (!canViewPage) {
+    return (
+      <PageShell className="h-full flex items-center justify-center">
+        <p className="text-[#64748b]">{t("staff.notFound")}</p>
+      </PageShell>
+    );
+  }
+
+  if (!selectedUser && (usersLoading || meLoading)) {
     return (
       <PageShell className="h-full flex flex-col overflow-hidden" animate={false}>
         <div className="px-5 pt-4">

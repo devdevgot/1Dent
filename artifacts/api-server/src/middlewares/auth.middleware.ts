@@ -97,3 +97,23 @@ export function roleGuard(...allowedRoles: UserRole[]) {
     next();
   };
 }
+
+/** Allows access when the target user id matches the authenticated user, otherwise requires role. */
+export function selfOrRoleGuard(
+  resolveTargetUserId: (req: Request) => string | undefined,
+  ...allowedRoles: UserRole[]
+) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      return next(new UnauthorizedError());
+    }
+    const targetId = resolveTargetUserId(req);
+    if (targetId && targetId === req.user.userId) {
+      return next();
+    }
+    if (!allowedRoles.includes(req.user.role)) {
+      return next(new ForbiddenError("Insufficient permissions"));
+    }
+    next();
+  };
+}

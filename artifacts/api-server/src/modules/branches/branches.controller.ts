@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { randomBytes } from "crypto";
-import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
+import { authMiddleware, roleGuard, selfOrRoleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { BranchesRepository } from "./branches.repository";
 
@@ -164,7 +164,13 @@ router.post("/clinic/telegram-test", ownerOnly, async (req: Request, res: Respon
 
 // ── GET /api/geo/tracking ─────────────────────────────────────────────────────
 // Returns geo events for the clinic, optionally filtered by branchId and date range
-router.get("/geo/tracking", roleGuard("owner", "admin"), async (req: Request, res: Response, next: NextFunction) => {
+router.get("/geo/tracking", (req: Request, res: Response, next: NextFunction) => {
+  const userId = typeof req.query["userId"] === "string" ? req.query["userId"] : undefined;
+  const guard = userId
+    ? selfOrRoleGuard(() => userId, "owner", "admin")
+    : roleGuard("owner", "admin");
+  return guard(req, res, next);
+}, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { branchId, userId, dateFrom, dateTo } = req.query as Record<string, string | undefined>;
 
