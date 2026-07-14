@@ -1,10 +1,13 @@
 import { randomUUID } from "crypto";
+import { and, eq } from "drizzle-orm";
+import { db, doctorHandoffsTable, usersTable } from "@workspace/db";
 import { PatientsRepository } from "./patients.repository";
+import { ProceduresRepository } from "../procedures/procedures.repository";
 import {
   transitionPatientStage,
   PATIENT_STAGE_TRIGGERS,
 } from "./patient-stage.service";
-import { NotFoundError, ForbiddenError } from "../../shared/errors";
+import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/errors";
 import { parseIIN, isIINError } from "@workspace/api-zod";
 import type {
   Patient,
@@ -31,6 +34,7 @@ export interface PatientDTO extends Omit<Patient, "phone"> {
 
 export class PatientsService {
   private repo = new PatientsRepository();
+  private proceduresRepo = new ProceduresRepository();
 
   async list(
     clinicId: string,
@@ -230,5 +234,109 @@ export class PatientsService {
       type: data.type,
       content: data.content,
     });
+  }
+
+  async transfer(
+    id: string,
+    clinicId: string,
+    data: {
+      toDoctorId: string;
+      scheduledAt: string;
+      reason?: string;
+    },
+    requestingRole: UserRole,
+    requestingUserId: string,
+  ): Promise<{ patient: PatientDTO; procedureId: string }> {
+    if (!["owner", "admin", "doctor"].includes(requestingRole)) {
+      throw new ForbiddenError("Insufficient permissions");
+    }
+
+    const existing = await this.repo.findById(id, clinicId);
+    if (!existing) throw new NotFoundError("Patient not found");
+
+    const fromDoctorId = existing.doctorId;
+
+    if (requestingRole === "doctor") {
+      if (!fromDoctorId || fromDoctorId !== requestingUserId) {
+        throw new ForbiddenError("Вы можете передать только своих пациентов");
+      }
+    }
+
+    if (fromDoctorId === data.toDoctorId) {
+      throw new ValidationError("Пациент уже назначен на этого врача");
+    }
+
+    const [toDoctor] = await db
+      .select({ id: usersTable.id, name: usersTable.name })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.id, data.toDoctorId),
+          eq(usersTable.clinicId, clinicId),
+          eq(usersTable.role, "doctor"),
+        ),
+      )
+      .limit(1);
+
+    if (!toDoctor) {
+      throw new NotFoundError("Целевой врач не найден в этой клинике");
+    }
+
+    const scheduledDate = new Date(data.scheduledAt);
+    if (Number.isNaN(scheduledDate.getTime())) {
+      throw new ValidationError("Некорректная дата и время приёма");
+    }
+    if (scheduledDate.getTime() < Date.now()) {
+      throw new ValidationError("Нельзя записать на прошедшее время");
+    }
+
+    const updated = await this.repo.update(id, clinicId, { doctorId: data.toDoctorId });
+    if (!updated) throw new NotFoundError("Patient not found");
+
+    const procedureId = randomUUID();
+    const procedure = await this.proceduresRepo.create({
+      id: procedureId,
+      clinicId,
+      patientId: id,
+      doctorId: data.toDoctorId,
+      name: "Передача пациента",
+      notes: data.reason ?? undefined,
+      scheduledAt: scheduledDate,
+    });
+
+    if (fromDoctorId) {
+      await db.insert(doctorHandoffsTable).values({
+        id: randomUUID(),
+        clinicId,
+        fromDoctorId,
+        toDoctorId: data.toDoctorId,
+        procedureId,
+        reason: data.reason ?? null,
+      });
+    }
+
+    const fromDoctorName = fromDoctorId
+      ? (
+          await db
+            .select({ name: usersTable.name })
+            .from(usersTable)
+            .where(eq(usersTable.id, fromDoctorId))
+            .limit(1)
+        )[0]?.name ?? "предыдущего врача"
+      : "предыдущего врача";
+
+    await this.repo.createInteraction({
+      id: randomUUID(),
+      patientId: id,
+      clinicId,
+      userId: requestingUserId,
+      type: "appointment",
+      content: `Пациент передан от ${fromDoctorName} к ${toDoctor.name}. Запись: ${scheduledDate.toLocaleString("ru-RU")}`,
+    });
+
+    return {
+      patient: { ...updated, phone: maskPhone(updated.phone, requestingRole) },
+      procedureId: procedure.id,
+    };
   }
 }

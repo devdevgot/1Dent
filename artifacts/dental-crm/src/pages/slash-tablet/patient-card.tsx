@@ -4,7 +4,7 @@ import {
   ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info,
   Plus, Phone, AlertTriangle, FileText,
   Sparkles, X, Calendar, IdCard, User as UserIcon, Stethoscope,
-  ChevronDown, CreditCard, Megaphone, Loader2,
+  ChevronDown, CreditCard, Megaphone, Loader2, ArrowRightLeft,
 } from "lucide-react";
 import {
   useGetPatient, useListTeeth, useGetActiveTreatmentPlan,
@@ -30,6 +30,7 @@ import { itemDisplayPrice } from "./tablet-plan-utils";
 import { KANBAN_COLUMNS, SOURCE_LABELS, SOURCE_COLORS } from "@/lib/patient-utils";
 import { useTabletVideos, filterVideosByCondition, type TabletVideoItem } from "@/hooks/use-tablet-videos";
 import { PatientBroadcastHistory } from "@/components/kanban/patient-broadcast-history";
+import { PatientTransferDialog } from "@/components/kanban/patient-transfer-dialog";
 import { ContractsTab } from "@/components/kanban/contracts-tab";
 
 type Tab = "chart" | "plan" | "contracts" | "video" | "info";
@@ -414,8 +415,14 @@ function PatientInfo({
 
   const canChangeStatus = user?.role === "owner" || user?.role === "admin";
   const isDoctor = user?.role === "doctor";
+  const canTransferPatient = !!apiPatient.doctorId && (
+    user?.role === "owner"
+    || user?.role === "admin"
+    || (isDoctor && apiPatient.doctorId === user?.id)
+  );
 
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [financialCollapsed, setFinancialCollapsed] = useState(false);
   const [proceduresCollapsed, setProceduresCollapsed] = useState(false);
 
@@ -564,9 +571,21 @@ function PatientInfo({
 
       {/* Лечащий врач */}
       <div className="rounded-2xl border border-[#e8e3d9] bg-white p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#64748b]">
-          Лечащий врач
-        </p>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">
+            Лечащий врач
+          </p>
+          {canTransferPatient && (
+            <button
+              type="button"
+              onClick={() => setTransferDialogOpen(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1f75fe] hover:text-[#1f75fe]/80 transition-colors"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Передать пациента
+            </button>
+          )}
+        </div>
         {doctorUser ? (
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-sm font-bold text-[#1f75fe]">
@@ -586,6 +605,17 @@ function PatientInfo({
           </div>
         )}
       </div>
+
+      <PatientTransferDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
+        patientId={apiPatient.id}
+        patientName={apiPatient.name}
+        currentDoctorId={apiPatient.doctorId ?? null}
+        currentDoctorName={doctorUser?.name}
+        allUsers={allUsers}
+        canTransfer={canTransferPatient}
+      />
 
       {/* WhatsApp broadcasts */}
       <div className="rounded-2xl border border-[#e8e3d9] bg-[#faf8f4] p-4 space-y-3">
