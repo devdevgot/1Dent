@@ -3,29 +3,31 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTabletPairingUiStore } from "@/hooks/use-tablet-pairing-ui";
 import {
-  confirmTabletPairing,
+  enterTabletSession,
   getPendingTabletPairing,
   redeemTabletLink,
-  resendTabletPairingCode,
+  releaseTabletSession,
   getTabletLinkErrorMessage,
+  isTabletNotPairedByOwnerError,
 } from "@/lib/tablet-api";
 
-type LinkFlowStatus = "idle" | "processing" | "success" | "pairing_pending" | "error";
+type LinkFlowStatus = "idle" | "processing" | "success" | "error";
 
 export function useTabletLinkFlow() {
   const { toast } = useToast();
   const { user } = useAuthStore();
-  const pairingCodeOpen = useTabletPairingUiStore((s) => s.isOpen);
-  const pairingCode = useTabletPairingUiStore((s) => s.pairingCode);
-  const pairingSessionId = useTabletPairingUiStore((s) => s.sessionId);
+  const ownerModalOpen = useTabletPairingUiStore((s) => s.isOpen);
+  const ownerSessionId = useTabletPairingUiStore((s) => s.sessionId);
   const cabinetName = useTabletPairingUiStore((s) => s.cabinetName);
-  const openPairingModal = useTabletPairingUiStore((s) => s.open);
-  const closePairingModal = useTabletPairingUiStore((s) => s.close);
-  const [resendingPairing, setResendingPairing] = useState(false);
-  const [confirmingPairing, setConfirmingPairing] = useState(false);
+  const ownerModalMode = useTabletPairingUiStore((s) => s.mode);
+  const openOwnerModal = useTabletPairingUiStore((s) => s.open);
+  const closeOwnerModal = useTabletPairingUiStore((s) => s.close);
+  const [enteringTablet, setEnteringTablet] = useState(false);
+  const [removingTablet, setRemovingTablet] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<LinkFlowStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [notPairedModalOpen, setNotPairedModalOpen] = useState(false);
   const shownPendingRef = useRef<string | null>(null);
 
   const processToken = useCallback(async (raw: string) => {
@@ -50,29 +52,23 @@ export function useTabletLinkFlow() {
     setSubmitting(true);
     setStatus("processing");
     setErrorMessage(null);
+    setNotPairedModalOpen(false);
     try {
       const result = await redeemTabletLink(token);
 
-      if (result.data.pairingRequired) {
-        if (result.data.pairingCode) {
-          openPairingModal(
-            result.data.sessionId,
-            result.data.pairingCode,
-            result.data.cabinet?.name ?? null,
-          );
-          setStatus("success");
-          toast({
-            title: "Подключение планшета",
-            description: "Подтвердите подключение кодом ниже",
-          });
-          return true;
+      if (result.data.pairingRequired || result.data.ownerActionRequired) {
+        if (user?.role !== "owner") {
+          setNotPairedModalOpen(true);
+          setStatus("idle");
+          return false;
         }
 
-        setStatus("pairing_pending");
-        toast({
-          title: "Запрос отправлен",
-          description: "Код подключения отправлен владельцу клиники",
-        });
+        openOwnerModal(
+          result.data.sessionId,
+          result.data.cabinet?.name ?? null,
+          result.data.pairingRequired ? "pairing" : "enter",
+        );
+        setStatus("success");
         return true;
       }
 
@@ -85,6 +81,12 @@ export function useTabletLinkFlow() {
       });
       return true;
     } catch (err) {
+      if (isTabletNotPairedByOwnerError(err)) {
+        setNotPairedModalOpen(true);
+        setStatus("idle");
+        return false;
+      }
+
       const message = getTabletLinkErrorMessage(err);
       setStatus("error");
       setErrorMessage(message);
@@ -97,60 +99,63 @@ export function useTabletLinkFlow() {
     } finally {
       setSubmitting(false);
     }
-  }, [toast, openPairingModal]);
+  }, [toast, openOwnerModal, user?.role]);
 
-  const resendPairingCode = useCallback(async () => {
-    if (!pairingSessionId) return;
-    setResendingPairing(true);
+  const enterTablet = useCallback(async () => {
+    if (!ownerSessionId) return false;
+    setEnteringTablet(true);
     try {
-      const result = await resendTabletPairingCode(pairingSessionId);
-      openPairingModal(
-        pairingSessionId,
-        result.data.pairingCode,
-        result.data.cabinet.name,
-      );
-      toast({
-        title: "Новый код отправлен",
-        description: `Код обновлён для ${result.data.cabinet.name}`,
-      });
-    } catch (err) {
-      toast({
-        title: "Не удалось отправить код",
-        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
-        variant: "destructive",
-      });
-    } finally {
-      setResendingPairing(false);
-    }
-  }, [pairingSessionId, toast, openPairingModal]);
-
-  const confirmPairing = useCallback(async () => {
-    if (!pairingSessionId || !pairingCode) return false;
-    setConfirmingPairing(true);
-    try {
-      await confirmTabletPairing(pairingSessionId, pairingCode);
-      closePairingModal();
+      await enterTabletSession(ownerSessionId);
+      closeOwnerModal();
       shownPendingRef.current = null;
       setStatus("success");
       toast({
-        title: "Планшет подключён",
-        description: "Кабинет привязан к клинике",
+        title: ownerModalMode === "pairing" ? "Планшет подключён" : "Планшет разблокирован",
+        description:
+          ownerModalMode === "pairing"
+            ? "Кабинет привязан к клинике"
+            : "Можно принимать пациентов на планшете",
       });
       return true;
     } catch (err) {
       toast({
-        title: "Не удалось подтвердить",
-        description: err instanceof Error ? err.message : "Проверьте код и попробуйте снова",
+        title: "Не удалось войти",
+        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
         variant: "destructive",
       });
       return false;
     } finally {
-      setConfirmingPairing(false);
+      setEnteringTablet(false);
     }
-  }, [pairingSessionId, pairingCode, toast, closePairingModal]);
+  }, [ownerSessionId, ownerModalMode, toast, closeOwnerModal]);
+
+  const removeTablet = useCallback(async () => {
+    if (!ownerSessionId) return false;
+    setRemovingTablet(true);
+    try {
+      await releaseTabletSession(ownerSessionId);
+      closeOwnerModal();
+      shownPendingRef.current = null;
+      setStatus("idle");
+      toast({
+        title: "Планшет отвязан",
+        description: "Устройство свободно — другой владелец может подключить его к своей клинике",
+      });
+      return true;
+    } catch (err) {
+      toast({
+        title: "Не удалось отвязать",
+        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setRemovingTablet(false);
+    }
+  }, [ownerSessionId, toast, closeOwnerModal]);
 
   useEffect(() => {
-    if (user?.role !== "owner" || pairingCodeOpen) return;
+    if (user?.role !== "owner" || ownerModalOpen) return;
 
     const poll = window.setInterval(() => {
       void getPendingTabletPairing()
@@ -158,7 +163,7 @@ export function useTabletLinkFlow() {
           const pending = res.data;
           if (!pending || shownPendingRef.current === pending.sessionId) return;
           shownPendingRef.current = pending.sessionId;
-          openPairingModal(pending.sessionId, pending.pairingCode, pending.cabinet.name);
+          openOwnerModal(pending.sessionId, pending.cabinet.name, "pairing");
         })
         .catch(() => {
           /* ignore */
@@ -166,20 +171,22 @@ export function useTabletLinkFlow() {
     }, 5000);
 
     return () => window.clearInterval(poll);
-  }, [user?.role, pairingCodeOpen, openPairingModal]);
+  }, [user?.role, ownerModalOpen, openOwnerModal]);
 
   return {
-    pairingCodeOpen,
-    pairingCode,
+    ownerModalOpen,
+    ownerModalMode,
     cabinetName,
-    resendingPairing,
-    confirmingPairing,
+    enteringTablet,
+    removingTablet,
     submitting,
     status,
     errorMessage,
+    notPairedModalOpen,
+    closeNotPairedModal: () => setNotPairedModalOpen(false),
     processToken,
-    resendPairingCode,
-    confirmPairing,
-    closePairingModal,
+    enterTablet,
+    removeTablet,
+    closeOwnerModal,
   };
 }

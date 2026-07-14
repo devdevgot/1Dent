@@ -7,6 +7,7 @@ export const tabletSessionStatusEnum = pgEnum("tablet_session_status", [
   "awaiting_pairing",
   "unlocked",
   "expired",
+  "released",
 ]);
 
 export const tabletCabinetsTable = pgTable("tablet_cabinets", {

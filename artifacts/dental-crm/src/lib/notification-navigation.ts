@@ -3,7 +3,6 @@ import { getRoleDashboardPath } from "@/lib/role-redirect";
 
 export interface TabletPairingTarget {
   sessionId: string;
-  pairingCode: string;
   cabinetName?: string | null;
 }
 
@@ -75,13 +74,11 @@ export function getNotificationTarget(
 
       if (kind === "tablet_pairing") {
         const sessionId = payloadStr(payload, "sessionId");
-        const pairingCode = payloadStr(payload, "pairingCode");
-        if (sessionId && pairingCode) {
+        if (sessionId) {
           return {
             href: "/tablet/link",
             tabletPairing: {
               sessionId,
-              pairingCode,
               cabinetName: payloadStr(payload, "cabinetName"),
             },
           };

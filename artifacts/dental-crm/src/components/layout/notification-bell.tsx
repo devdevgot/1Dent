@@ -228,7 +228,6 @@ export function NotificationBell() {
     if (target.tabletPairing) {
       openTabletPairing(
         target.tabletPairing.sessionId,
-        target.tabletPairing.pairingCode,
         target.tabletPairing.cabinetName,
       );
       return;

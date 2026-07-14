@@ -29,7 +29,10 @@ const resendPairingSchema = z.object({
 
 const confirmPairingSchema = z.object({
   sessionId: z.string().min(1),
-  code: z.string().min(6).max(6),
+});
+
+const sessionIdSchema = z.object({
+  sessionId: z.string().min(1),
 });
 
 router.get("/me", async (req: Request, res: Response, next: NextFunction) => {
@@ -127,11 +130,45 @@ router.post("/link/confirm-pairing", tabletOwnerRoles, async (req: Request, res:
     const parsed = confirmPairingSchema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
 
-    const data = await service.confirmPairing(parsed.data.sessionId, parsed.data.code, {
+    const data = await service.confirmPairing(parsed.data.sessionId, {
       userId: req.user!.userId,
       role: req.user!.role,
       clinicId: req.user!.clinicId,
     });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/link/enter", tabletOwnerRoles, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = sessionIdSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+
+    const data = await service.enterTablet(
+      req.user!.userId,
+      req.user!.role,
+      req.user!.clinicId,
+      parsed.data.sessionId,
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/link/release", tabletOwnerRoles, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = sessionIdSchema.safeParse(req.body);
+    if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+
+    const data = await service.releaseTablet(
+      req.user!.userId,
+      req.user!.role,
+      req.user!.clinicId,
+      parsed.data.sessionId,
+    );
     res.json({ success: true, data });
   } catch (err) {
     next(err);

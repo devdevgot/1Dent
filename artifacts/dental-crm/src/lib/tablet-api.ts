@@ -24,7 +24,7 @@ export interface TabletSessionCreateResult {
 
 export interface TabletSessionStatus {
   sessionId: string;
-  status: "pending" | "awaiting_pairing" | "unlocked" | "expired";
+  status: "pending" | "awaiting_pairing" | "unlocked" | "expired" | "released";
   cabinet: TabletCabinetBrief | null;
   doctor?: TabletDoctorBrief | null;
   pairingCode?: string | null;
@@ -100,6 +100,9 @@ export function getTabletLinkErrorMessage(err: unknown): string {
     return err instanceof Error ? err.message : "Не удалось подключиться к планшету";
   }
   const code = getTabletApiErrorCode(err);
+  if (code === "TABLET_NOT_PAIRED_BY_OWNER") {
+    return err.message.replace(/^HTTP \d+[^:]*:\s*/, "");
+  }
   if (code === "TABLET_CABINET_STALE") {
     return err.message.replace(/^HTTP \d+[^:]*:\s*/, "");
   }
@@ -107,6 +110,10 @@ export function getTabletLinkErrorMessage(err: unknown): string {
     return "Ссылка устарела или уже использована. На планшете нажмите «Обновить код» и отсканируйте новый QR.";
   }
   return err.message.replace(/^HTTP \d+[^:]*:\s*/, "");
+}
+
+export function isTabletNotPairedByOwnerError(err: unknown): boolean {
+  return getTabletApiErrorCode(err) === "TABLET_NOT_PAIRED_BY_OWNER";
 }
 
 export function applyCabinetIdToUrl(id: string) {
@@ -165,27 +172,11 @@ export async function getTabletSessionStatus(sessionId: string) {
   );
 }
 
-export async function confirmTabletPairing(sessionId: string, code: string) {
-  return customFetch<{
-    success: boolean;
-    data: {
-      sessionId: string;
-      cabinet: TabletCabinetBrief;
-      doctor: TabletDoctorBrief | null;
-      auth?: TabletUnlockResult["auth"] | null;
-    };
-  }>("/api/tablet/link/confirm-pairing", {
-    method: "POST",
-    body: JSON.stringify({ sessionId, code }),
-  });
-}
-
 export async function getPendingTabletPairing() {
   return customFetch<{
     success: boolean;
     data: {
       sessionId: string;
-      pairingCode: string;
       cabinet: TabletCabinetBrief;
     } | null;
   }>("/api/tablet/pending-pairing");
@@ -217,12 +208,36 @@ export async function setTabletPin(pin: string, linkToken?: string) {
 }
 
 export interface TabletRedeemResult {
-  pairingRequired: boolean;
-  pairingCode?: string;
-  codeSentToOwner?: boolean;
+  pairingRequired?: boolean;
+  ownerActionRequired?: boolean;
   sessionId: string;
   cabinet: TabletCabinetBrief | null;
   doctor: TabletDoctorBrief | null;
+}
+
+export async function enterTabletSession(sessionId: string) {
+  return customFetch<{
+    success: boolean;
+    data: {
+      sessionId: string;
+      cabinet: TabletCabinetBrief;
+      doctor: TabletDoctorBrief | null;
+      auth?: TabletUnlockResult["auth"] | null;
+    };
+  }>("/api/tablet/link/enter", {
+    method: "POST",
+    body: JSON.stringify({ sessionId }),
+  });
+}
+
+export async function releaseTabletSession(sessionId: string) {
+  return customFetch<{
+    success: boolean;
+    data: { sessionId: string };
+  }>("/api/tablet/link/release", {
+    method: "POST",
+    body: JSON.stringify({ sessionId }),
+  });
 }
 
 export async function redeemTabletLink(token: string, pin?: string) {
@@ -235,19 +250,6 @@ export async function redeemTabletLink(token: string, pin?: string) {
   });
 }
 
-export async function resendTabletPairingCode(sessionId: string) {
-  return customFetch<{
-    success: boolean;
-    data: {
-      sessionId: string;
-      pairingCode: string;
-      cabinet: TabletCabinetBrief;
-    };
-  }>("/api/tablet/link/resend-pairing", {
-    method: "POST",
-    body: JSON.stringify({ sessionId }),
-  });
-}
 
 export async function issueTabletPairingCode(cabinetId?: string) {
   return customFetch<{

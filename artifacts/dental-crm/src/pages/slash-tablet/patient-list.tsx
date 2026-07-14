@@ -37,6 +37,25 @@ function isSameDay(a: Date, b: Date) {
     && a.getDate() === b.getDate();
 }
 
+/** Patients assigned to or scheduled with the staff member who unlocked the tablet. */
+function filterPatientsForStaff(
+  patients: Patient[],
+  procedures: Procedure[],
+  staffUserId: string | undefined,
+): Patient[] {
+  if (!staffUserId) return [];
+
+  const ids = new Set<string>();
+  for (const patient of patients) {
+    if (patient.doctorId === staffUserId) ids.add(patient.id);
+  }
+  for (const proc of procedures) {
+    if (proc.doctorId === staffUserId && proc.patientId) ids.add(proc.patientId);
+  }
+
+  return patients.filter((p) => ids.has(p.id));
+}
+
 export function PatientList({ onSelect }: { onSelect: (patientId: string) => void }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -57,11 +76,22 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
 
   const allPatients: Patient[] = data?.data?.patients ?? [];
   const procedures = proceduresData?.data?.procedures ?? [];
+  const staffUserId = user?.id;
+
+  const myPatients = useMemo(
+    () => filterPatientsForStaff(allPatients, procedures, staffUserId),
+    [allPatients, procedures, staffUserId],
+  );
+
+  const staffProcedures = useMemo(
+    () => (staffUserId ? procedures.filter((p) => p.doctorId === staffUserId) : []),
+    [procedures, staffUserId],
+  );
 
   const todayProcedures = useMemo(() => {
     const now = new Date();
     const map = new Map<string, Procedure[]>();
-    for (const proc of procedures) {
+    for (const proc of staffProcedures) {
       if (!proc.patientId || !proc.scheduledAt) continue;
       const at = new Date(proc.scheduledAt);
       if (!isSameDay(at, now)) continue;
@@ -74,7 +104,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
       map.set(id, list);
     }
     return map;
-  }, [procedures]);
+  }, [staffProcedures]);
 
   const dateFilterFn = useMemo(() => {
     if (dateFilter === "all") return () => true;
@@ -91,13 +121,13 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
 
   const statusCounts = useMemo(() => {
     const counts: Partial<Record<PatientStatus, number>> = {};
-    allPatients.forEach((p) => { counts[p.status] = (counts[p.status] ?? 0) + 1; });
+    myPatients.forEach((p) => { counts[p.status] = (counts[p.status] ?? 0) + 1; });
     return counts;
-  }, [allPatients]);
+  }, [myPatients]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    return allPatients
+    return myPatients
       .filter((p) => {
         if (!dateFilterFn(p)) return false;
         if (statusFilter !== "all" && p.status !== statusFilter) return false;
@@ -115,7 +145,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
         if (bProc?.scheduledAt) return 1;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [allPatients, query, statusFilter, sourceFilter, dateFilterFn, todayProcedures]);
+  }, [myPatients, query, statusFilter, sourceFilter, dateFilterFn, todayProcedures]);
 
   const now = new Date();
   const todayLabel = now.toLocaleDateString("ru", { weekday: "long", day: "numeric", month: "long" });
@@ -137,7 +167,7 @@ export function PatientList({ onSelect }: { onSelect: (patientId: string) => voi
             <Users className="h-6 w-6 text-[#1f75fe]" /> Пациенты
           </h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm capitalize text-[#64748b]">
-            <CalendarDays className="h-4 w-4" /> {todayLabel} · {filtered.length} из {allPatients.length}
+            <CalendarDays className="h-4 w-4" /> {todayLabel} · {filtered.length} из {myPatients.length}
           </p>
         </div>
         <div className="flex items-center gap-2">

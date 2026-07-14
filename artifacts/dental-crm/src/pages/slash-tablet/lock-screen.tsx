@@ -125,6 +125,14 @@ export function LockScreen({
           return;
         }
 
+        if (status === "released") {
+          clearStoredCabinetId();
+          setCabinetId(null);
+          setWaitingForOwner(false);
+          void bootstrapSession(undefined, true);
+          return;
+        }
+
         if (status === "unlocked" && doctor && cabinet) {
           handleUnlock(
             {
@@ -193,7 +201,7 @@ export function LockScreen({
                 ? "Ожидание подтверждения владельцем клиники…"
                 : cabinetId
                   ? "Отсканируйте QR-код в CRM на телефоне"
-                  : "При первом подключении отсканируйте QR. Код подтверждения придёт владельцу клиники."}
+                  : "Владелец клиники должен отсканировать QR и подтвердить подключение."}
             </p>
 
             <button
