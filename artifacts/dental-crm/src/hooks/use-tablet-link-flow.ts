@@ -6,26 +6,25 @@ import {
   confirmTabletPairing,
   getPendingTabletPairing,
   redeemTabletLink,
-  resendTabletPairingCode,
   getTabletLinkErrorMessage,
+  isTabletNotPairedByOwnerError,
 } from "@/lib/tablet-api";
 
-type LinkFlowStatus = "idle" | "processing" | "success" | "pairing_pending" | "error";
+type LinkFlowStatus = "idle" | "processing" | "success" | "error";
 
 export function useTabletLinkFlow() {
   const { toast } = useToast();
   const { user } = useAuthStore();
-  const pairingCodeOpen = useTabletPairingUiStore((s) => s.isOpen);
-  const pairingCode = useTabletPairingUiStore((s) => s.pairingCode);
+  const pairingModalOpen = useTabletPairingUiStore((s) => s.isOpen);
   const pairingSessionId = useTabletPairingUiStore((s) => s.sessionId);
   const cabinetName = useTabletPairingUiStore((s) => s.cabinetName);
   const openPairingModal = useTabletPairingUiStore((s) => s.open);
   const closePairingModal = useTabletPairingUiStore((s) => s.close);
-  const [resendingPairing, setResendingPairing] = useState(false);
   const [confirmingPairing, setConfirmingPairing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<LinkFlowStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [notPairedModalOpen, setNotPairedModalOpen] = useState(false);
   const shownPendingRef = useRef<string | null>(null);
 
   const processToken = useCallback(async (raw: string) => {
@@ -50,28 +49,19 @@ export function useTabletLinkFlow() {
     setSubmitting(true);
     setStatus("processing");
     setErrorMessage(null);
+    setNotPairedModalOpen(false);
     try {
       const result = await redeemTabletLink(token);
 
       if (result.data.pairingRequired) {
-        if (result.data.pairingCode) {
-          openPairingModal(
-            result.data.sessionId,
-            result.data.pairingCode,
-            result.data.cabinet?.name ?? null,
-          );
-          setStatus("success");
-          toast({
-            title: "Подключение планшета",
-            description: "Подтвердите подключение кодом ниже",
-          });
-          return true;
-        }
-
-        setStatus("pairing_pending");
+        openPairingModal(
+          result.data.sessionId,
+          result.data.cabinet?.name ?? null,
+        );
+        setStatus("success");
         toast({
-          title: "Запрос отправлен",
-          description: "Код подключения отправлен владельцу клиники",
+          title: "Подключение планшета",
+          description: "Подтвердите подключение на этом экране",
         });
         return true;
       }
@@ -85,6 +75,12 @@ export function useTabletLinkFlow() {
       });
       return true;
     } catch (err) {
+      if (isTabletNotPairedByOwnerError(err)) {
+        setNotPairedModalOpen(true);
+        setStatus("idle");
+        return false;
+      }
+
       const message = getTabletLinkErrorMessage(err);
       setStatus("error");
       setErrorMessage(message);
@@ -99,36 +95,11 @@ export function useTabletLinkFlow() {
     }
   }, [toast, openPairingModal]);
 
-  const resendPairingCode = useCallback(async () => {
-    if (!pairingSessionId) return;
-    setResendingPairing(true);
-    try {
-      const result = await resendTabletPairingCode(pairingSessionId);
-      openPairingModal(
-        pairingSessionId,
-        result.data.pairingCode,
-        result.data.cabinet.name,
-      );
-      toast({
-        title: "Новый код отправлен",
-        description: `Код обновлён для ${result.data.cabinet.name}`,
-      });
-    } catch (err) {
-      toast({
-        title: "Не удалось отправить код",
-        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
-        variant: "destructive",
-      });
-    } finally {
-      setResendingPairing(false);
-    }
-  }, [pairingSessionId, toast, openPairingModal]);
-
   const confirmPairing = useCallback(async () => {
-    if (!pairingSessionId || !pairingCode) return false;
+    if (!pairingSessionId) return false;
     setConfirmingPairing(true);
     try {
-      await confirmTabletPairing(pairingSessionId, pairingCode);
+      await confirmTabletPairing(pairingSessionId);
       closePairingModal();
       shownPendingRef.current = null;
       setStatus("success");
@@ -140,17 +111,17 @@ export function useTabletLinkFlow() {
     } catch (err) {
       toast({
         title: "Не удалось подтвердить",
-        description: err instanceof Error ? err.message : "Проверьте код и попробуйте снова",
+        description: err instanceof Error ? err.message : "Попробуйте ещё раз",
         variant: "destructive",
       });
       return false;
     } finally {
       setConfirmingPairing(false);
     }
-  }, [pairingSessionId, pairingCode, toast, closePairingModal]);
+  }, [pairingSessionId, toast, closePairingModal]);
 
   useEffect(() => {
-    if (user?.role !== "owner" || pairingCodeOpen) return;
+    if (user?.role !== "owner" || pairingModalOpen) return;
 
     const poll = window.setInterval(() => {
       void getPendingTabletPairing()
@@ -158,7 +129,7 @@ export function useTabletLinkFlow() {
           const pending = res.data;
           if (!pending || shownPendingRef.current === pending.sessionId) return;
           shownPendingRef.current = pending.sessionId;
-          openPairingModal(pending.sessionId, pending.pairingCode, pending.cabinet.name);
+          openPairingModal(pending.sessionId, pending.cabinet.name);
         })
         .catch(() => {
           /* ignore */
@@ -166,19 +137,18 @@ export function useTabletLinkFlow() {
     }, 5000);
 
     return () => window.clearInterval(poll);
-  }, [user?.role, pairingCodeOpen, openPairingModal]);
+  }, [user?.role, pairingModalOpen, openPairingModal]);
 
   return {
-    pairingCodeOpen,
-    pairingCode,
+    pairingModalOpen,
     cabinetName,
-    resendingPairing,
     confirmingPairing,
     submitting,
     status,
     errorMessage,
+    notPairedModalOpen,
+    closeNotPairedModal: () => setNotPairedModalOpen(false),
     processToken,
-    resendPairingCode,
     confirmPairing,
     closePairingModal,
   };

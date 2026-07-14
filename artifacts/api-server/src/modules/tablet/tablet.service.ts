@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID, randomBytes, createHash } from "crypto";
-import { db, notificationsTable } from "@workspace/db";
 import { TabletRepository } from "./tablet.repository";
 import { AuthRepository } from "../auth/auth.repository";
 import {
@@ -10,6 +9,7 @@ import {
   ValidationError,
   TabletPinInvalidError,
   TabletCabinetStaleError,
+  TabletNotPairedByOwnerError,
 } from "../../shared/errors";
 import { getPublicAppBaseUrl } from "../../shared/public-url";
 import type { UserRole } from "@workspace/db";
@@ -89,30 +89,6 @@ export class TabletService {
     return cabinet;
   }
 
-  private async notifyOwnerPairing(
-    owner: { id: string; clinicId: string },
-    scannerName: string,
-    cabinet: { id: string; name: string },
-    pairingCode: string,
-    sessionId: string,
-  ) {
-    await db.insert(notificationsTable).values({
-      id: randomUUID(),
-      clinicId: owner.clinicId,
-      userId: owner.id,
-      type: "system",
-      message: `${scannerName} запросил подключение планшета «${cabinet.name}». Откройте уведомление, чтобы подтвердить.`,
-      read: false,
-      payload: {
-        kind: "tablet_pairing",
-        sessionId,
-        pairingCode,
-        cabinetId: cabinet.id,
-        cabinetName: cabinet.name,
-      },
-    });
-  }
-
   async getPendingPairing(_userId: string, role: UserRole, clinicId: string) {
     assertTabletOwner(role);
 
@@ -120,11 +96,10 @@ export class TabletService {
     if (!session?.cabinetId) return null;
 
     const cabinet = await this.repo.findCabinetById(session.cabinetId);
-    if (!cabinet?.pairingCode) return null;
+    if (!cabinet) return null;
 
     return {
       sessionId: session.id,
-      pairingCode: cabinet.pairingCode,
       cabinet: { id: cabinet.id, name: cabinet.name },
     };
   }
@@ -386,16 +361,10 @@ export class TabletService {
 
   async confirmPairing(
     sessionId: string,
-    code: string,
     options?: { userId?: string; role?: UserRole; clinicId?: string },
   ) {
     if (options?.role) {
       assertTabletOwner(options.role);
-    }
-
-    const normalized = code.replace(/\D/g, "");
-    if (!/^\d{6}$/.test(normalized)) {
-      throw new ValidationError("Код подключения должен состоять из 6 цифр");
     }
 
     const session = await this.repo.findSessionById(sessionId);
@@ -408,10 +377,8 @@ export class TabletService {
       throw new ForbiddenError("Сессия не принадлежит вашей клинике");
     }
 
-    const cabinet = await this.repo.findCabinetByPairingCode(normalized);
-    if (!cabinet || cabinet.id !== session.cabinetId) {
-      throw new NotFoundError("Код не найден. Проверьте код на телефоне.");
-    }
+    const cabinet = await this.repo.findCabinetById(session.cabinetId);
+    if (!cabinet) throw new NotFoundError("Кабинет не найден");
 
     const unlocked = await this.repo.confirmPairingSession(session.id, cabinet.id);
     if (!unlocked) throw new NotFoundError("Не удалось подключить планшет");
@@ -502,16 +469,17 @@ export class TabletService {
     const user = await this.authRepo.findUserById(userId);
     if (!user) throw new NotFoundError("Пользователь не найден");
 
-    // First-time pairing: tablet has no cabinet yet
+    // First-time pairing: tablet has no cabinet yet — only the clinic owner may connect it
     if (!session.cabinetId) {
+      if (role !== "owner") {
+        throw new TabletNotPairedByOwnerError();
+      }
+
       const clinic = await this.authRepo.findClinicById(user.clinicId);
       let cabinet = await this.repo.findDefaultCabinet(user.clinicId);
       if (!cabinet) {
         cabinet = await this.seedDefaultCabinet(user.clinicId, clinic?.name ?? "Клиника");
       }
-
-      const pairingCode = generatePairingCode();
-      await this.repo.updatePairingCode(cabinet.id, pairingCode);
 
       const assigned = await this.repo.assignSessionForPairing(
         session.id,
@@ -522,24 +490,10 @@ export class TabletService {
       if (!assigned) throw new NotFoundError("Не удалось начать подключение планшета");
 
       const doctor = await this.repo.getDoctorPublic(userId);
-      const isOwner = role === "owner";
-      const owner = isOwner ? null : await this.repo.findClinicOwner(user.clinicId);
-
-      if (owner) {
-        await this.notifyOwnerPairing(
-          owner,
-          user.name,
-          { id: cabinet.id, name: cabinet.name },
-          pairingCode,
-          session.id,
-        );
-      }
 
       return {
         success: true as const,
         pairingRequired: true as const,
-        pairingCode: isOwner ? pairingCode : undefined,
-        codeSentToOwner: !isOwner,
         sessionId: session.id,
         cabinet: { id: cabinet.id, name: cabinet.name },
         doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,

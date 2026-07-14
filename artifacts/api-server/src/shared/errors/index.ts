@@ -132,3 +132,11 @@ export class TabletCabinetStaleError extends AppError {
     super(message, 404, "TABLET_CABINET_STALE");
   }
 }
+
+export class TabletNotPairedByOwnerError extends AppError {
+  constructor(
+    message = "Владелец еще не подключил этот планшет",
+  ) {
+    super(message, 403, "TABLET_NOT_PAIRED_BY_OWNER");
+  }
+}
