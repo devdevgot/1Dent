@@ -209,15 +209,16 @@
     contain-intrinsic-size: auto 120px;
   }
 
-  /* Horizontal scroll for tables inside modals — clip overscroll, no white bleed */
+  /* Scrollable tables inside modals — horizontal + vertical, clip overscroll */
   .table-h-scroll {
-    overflow-x: auto;
-    overscroll-behavior-x: none;
+    overflow: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
     background: hsl(var(--background));
   }
   .table-h-scroll::-webkit-scrollbar {
+    width: 4px;
     height: 4px;
   }
   .table-h-scroll::-webkit-scrollbar-track {

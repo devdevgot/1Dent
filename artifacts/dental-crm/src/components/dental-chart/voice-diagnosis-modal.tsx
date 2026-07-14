@@ -715,7 +715,13 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         )}
 
         {/* Body */}
-        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar overscroll-contain">
+        <div
+          className={cn(
+            "flex-1 min-h-0 min-w-0 flex flex-col",
+            phase !== "review" && "overflow-y-auto overflow-x-hidden custom-scrollbar overscroll-contain",
+            isTablet && phase !== "review" && "touch-pan-y [-webkit-overflow-scrolling:touch]",
+          )}
+        >
 
           {/* Idle / Recording */}
           {(phase === "idle" || phase === "recording") && (
@@ -807,10 +813,10 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
           {/* Review */}
           {phase === "review" && (
-            <div className="p-4 space-y-3 min-w-0">
+            <div className="flex flex-col flex-1 min-h-0 p-4 gap-3 min-w-0">
               {/* Transcript */}
               {transcript && (
-                <>
+                <div className="shrink-0 space-y-2">
                   <button
                     onClick={() => setTranscriptOpen((v) => !v)}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-[#faf8f4] border border-[#e8e3d9]/40 rounded-xl text-left hover:bg-[#f1ede4] transition-colors"
@@ -825,7 +831,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                       «{transcript}»
                     </p>
                   )}
-                </>
+                </div>
               )}
 
               {entries.length === 0 ? (
@@ -838,12 +844,17 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-[#64748b] px-1">
+                  <p className="text-xs text-[#64748b] px-1 shrink-0">
                     Проверьте диагнозы. Услуги подбираются по словам врача о процедуре и диагнозе.
                   </p>
 
-                  <div className="border border-[#e8e3d9]/50 rounded-xl overflow-hidden w-full max-w-full isolate">
-                    <div className="table-h-scroll w-full max-w-full touch-pan-x overscroll-x-contain">
+                  <div className="flex-1 min-h-0 min-w-0 border border-[#e8e3d9]/50 rounded-xl overflow-hidden isolate">
+                    <div
+                      className={cn(
+                        "table-h-scroll h-full w-full max-w-full overscroll-contain custom-scrollbar",
+                        isTablet && "touch-pan-y [-webkit-overflow-scrolling:touch]",
+                      )}
+                    >
                       <table className="text-xs w-full table-fixed min-w-[680px]">
                         <colgroup>
                           <col style={{ width: "72px" }} />
@@ -852,7 +863,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                           <col style={{ width: "88px" }} />
                           <col style={{ width: "52px" }} />
                         </colgroup>
-                        <thead>
+                        <thead className="sticky top-0 z-10">
                           <tr className="bg-[#faf8f4] border-b border-[#e8e3d9]/50 text-[10px] uppercase tracking-wide text-[#64748b]">
                             <th className="text-left font-semibold px-3 py-2">Зуб</th>
                             <th className="text-left font-semibold px-3 py-2">Диагноз</th>
@@ -948,7 +959,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
                   <button
                     onClick={() => setPhase("idle")}
-                    className="text-xs text-[#64748b] hover:text-[#0f172a] underline underline-offset-2 transition-colors"
+                    className="shrink-0 text-xs text-[#64748b] hover:text-[#0f172a] underline underline-offset-2 transition-colors"
                   >
                     Записать снова
                   </button>
