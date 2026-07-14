@@ -57,26 +57,26 @@ export function TabHomeIcon(props: TabIconProps) {
   );
 }
 
-export function TabCalendarIcon(props: TabIconProps) {
+export function TabCalendarIcon({ active, ...props }: TabIconProps) {
+  const bodyPath =
+    "M5.75 8.5h12.5A1.75 1.75 0 0 1 20 10.25v9.5A1.75 1.75 0 0 1 18.25 21.5H5.75A1.75 1.75 0 0 1 4 19.75v-9.5A1.75 1.75 0 0 1 5.75 8.5Z";
+
   return (
-    <TabIconShell {...props} highlightId="tab-calendar">
+    <TabIconShell active={active} {...props} highlightId="tab-calendar">
       {(gradId) => (
         <>
-          <rect x="5.25" y="7" width="13.5" height="12.25" rx="2.25" />
-          <rect x="7.75" y="4.75" width="2" height="3.75" rx="1" />
-          <rect x="14.25" y="4.75" width="2" height="3.75" rx="1" />
-          <rect x="5.25" y="10.25" width="13.5" height="1.75" fill="white" fillOpacity={props.active ? 0.7 : 0.5} />
-          <rect x="8" y="13" width="2.25" height="2.25" rx=".5" fill="white" fillOpacity={props.active ? 0.85 : 0.65} />
-          <rect x="11.875" y="13" width="2.25" height="2.25" rx=".5" fill="white" fillOpacity={props.active ? 0.55 : 0.4} />
-          <rect x="15.75" y="13" width="2.25" height="2.25" rx=".5" fill="white" fillOpacity={props.active ? 0.55 : 0.4} />
-          <rect
-            x="5.25"
-            y="7"
-            width="13.5"
-            height="12.25"
-            rx="2.25"
-            fill={`url(#${gradId})`}
+          <rect x="7.5" y="4.75" width="2" height="4.25" rx="1" />
+          <rect x="14.5" y="4.75" width="2" height="4.25" rx="1" />
+          <path d={bodyPath} />
+          <path
+            d="M5.75 8.5h12.5v3.25H5.75V8.5Z"
+            fill="white"
+            fillOpacity={active ? 0.72 : 0.52}
           />
+          <circle cx="9" cy="15.25" r="1.25" fill="white" fillOpacity={active ? 0.85 : 0.65} />
+          <circle cx="12" cy="15.25" r="1.25" fill="white" fillOpacity={active ? 0.55 : 0.4} />
+          <circle cx="15" cy="15.25" r="1.25" fill="white" fillOpacity={active ? 0.55 : 0.4} />
+          <path d={bodyPath} fill={`url(#${gradId})`} />
         </>
       )}
     </TabIconShell>

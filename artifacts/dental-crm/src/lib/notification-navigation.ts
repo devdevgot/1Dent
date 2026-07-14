@@ -38,6 +38,9 @@ function scheduleHref(role: string, scheduledAt?: string): string {
     }
     return "/schedule";
   }
+  if (role === "owner") {
+    return "/calendar";
+  }
   return "/admin/calendar";
 }
 
