@@ -22,6 +22,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { TreatmentStagesBoard } from "@/components/dental-chart/treatment-stages-board";
 import { cn } from "@/lib/utils";
+import { useTabletVideos, getFirstVideoForToothFdi, type TabletVideoItem } from "@/hooks/use-tablet-videos";
+import { Play } from "lucide-react";
 
 const PLAN_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   draft:       { label: "Черновик",   cls: "bg-slate-50 text-slate-500 border-slate-200" },
@@ -57,6 +59,7 @@ export function TabletPlanBoard({
   onGoToChart,
   embedded = false,
   filterFdi = null,
+  onPlayVideo,
 }: {
   patientId: string;
   onGoToChart: () => void;
@@ -64,10 +67,13 @@ export function TabletPlanBoard({
   embedded?: boolean;
   /** Фильтр позиций по выбранному зубу на карте */
   filterFdi?: number | null;
+  /** Воспроизведение обучающего видео по диагнозу зуба */
+  onPlayVideo?: (video: TabletVideoItem) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [planDetailId, setPlanDetailId] = useState<string | null>(null);
+  const { data: tabletVideos = [] } = useTabletVideos();
 
   const { data: teethData, isLoading: teethLoading } = useListTeeth(patientId);
   const teethRecords = teethData?.data?.teeth ?? [];
@@ -425,7 +431,7 @@ export function TabletPlanBoard({
 
       {filterFdi != null && (
         <p className={cn("text-xs font-medium text-[#1f75fe]", embedded ? "px-4 pt-3" : "")}>
-          Показаны позиции по зубу {filterFdi}
+          Зуб {filterFdi} — подсвечены позиции плана для этого зуба
         </p>
       )}
 
@@ -506,6 +512,8 @@ export function TabletPlanBoard({
             teeth={teethRecords}
             activePlan={activePlan}
             filterFdi={filterFdi}
+            toothVideos={onPlayVideo ? tabletVideos : undefined}
+            onPlayToothVideo={onPlayVideo}
           />
         </div>
       )}
@@ -516,14 +524,23 @@ export function TabletPlanBoard({
           {nc.length === 0 ? (
             <p className="py-6 text-center text-sm text-[#94a3b8]">Нет позиций</p>
           ) : (
-            nc.map((item) => (
+            nc.map((item) => {
+              const toothHighlighted = filterFdi != null && item.toothFdi === filterFdi;
+              const toothDimmed = filterFdi != null && !toothHighlighted;
+              const toothVideo = onPlayVideo
+                ? getFirstVideoForToothFdi(item.toothFdi, teethRecords, tabletVideos)
+                : null;
+              return (
               <div
                 key={item.id}
-                className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 shadow-sm ${
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 shadow-sm transition-all duration-200",
                   item.status === "completed"
                     ? "border-emerald-100 bg-emerald-50/60"
-                    : "border-[#e8e3d9] bg-white"
-                }`}
+                    : "border-[#e8e3d9] bg-white",
+                  toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06]",
+                  toothDimmed && "opacity-45",
+                )}
               >
                 {item.status === "completed" ? (
                   <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
@@ -554,8 +571,20 @@ export function TabletPlanBoard({
                     </span>
                   )}
                 </div>
+                {toothVideo && onPlayVideo && (
+                  <button
+                    type="button"
+                    onClick={() => onPlayVideo(toothVideo)}
+                    className="flex aspect-square h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#1f75fe]/30 bg-gradient-to-br from-[#1f75fe]/15 to-[#7c3aed]/10 transition-all hover:border-[#1f75fe]/50 hover:from-[#1f75fe]/25 active:scale-95"
+                    aria-label={`Воспроизвести: ${toothVideo.title}`}
+                    title={toothVideo.title}
+                  >
+                    <Play className="h-4 w-4 fill-[#1f75fe] text-[#1f75fe]" />
+                  </button>
+                )}
               </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

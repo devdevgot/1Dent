@@ -74,6 +74,7 @@ import {
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
+import { getFirstVideoForToothFdi, type TabletVideoItem } from "@/hooks/use-tablet-videos";
 import type { ToothRecord, TreatmentPlan, TreatmentPlanItem, UpdateTreatmentPlanItemRequest } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
 
@@ -278,15 +279,21 @@ interface ItemActions {
   onOpenModal: (itemId: string) => void;
 }
 
+function isPlanItemForTooth(item: TreatmentPlanItem, toothFdi: number | null | undefined): boolean {
+  return toothFdi != null && item.toothFdi === toothFdi;
+}
+
 // ── PlanItemCard ──────────────────────────────────────────────────────────────
 
 function PlanItemCard({
   item,
   showTooth,
+  highlightFdi,
   actions,
 }: {
   item: TreatmentPlanItem;
   showTooth?: boolean;
+  highlightFdi?: number | null;
   actions: ItemActions;
 }) {
   const { user } = useAuthStore();
@@ -301,6 +308,8 @@ function PlanItemCard({
 
   const isEditing = actions.editingItemId === item.id;
   const isSavingEdit = actions.savingEditId === item.id;
+  const toothHighlighted = isPlanItemForTooth(item, highlightFdi);
+  const toothDimmed = highlightFdi != null && !toothHighlighted;
 
   // ── Edit mode: inline form ───────────────────────────────────────────────
   if (actions.isEditMode && isPending && isEditing) {
@@ -368,6 +377,8 @@ function PlanItemCard({
           : isRunning
           ? "border-blue-200 bg-blue-50/30 shadow-sm"
           : "border-[#e8e3d9] bg-white",
+        toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06] shadow-sm",
+        toothDimmed && "opacity-45",
       )}
     >
       {/* Main row */}
@@ -399,7 +410,12 @@ function PlanItemCard({
           {/* Badges row */}
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {showTooth && item.toothFdi && (
-              <span className="text-[10px] bg-[#f1ede4] text-[#64748b] px-1.5 py-0.5 rounded font-medium">
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.5 rounded font-medium",
+                toothHighlighted
+                  ? "bg-[#1f75fe]/15 text-[#1f75fe] font-bold"
+                  : "bg-[#f1ede4] text-[#64748b]",
+              )}>
                 з.{item.toothFdi}
               </span>
             )}
@@ -837,6 +853,7 @@ interface StageDetailSheetProps {
   doctorName?: string;
   planNotes?: string;
   historicalItems?: TreatmentPlanItem[];
+  highlightFdi?: number | null;
 }
 
 function StageDetailSheet({
@@ -849,6 +866,7 @@ function StageDetailSheet({
   doctorName,
   planNotes,
   historicalItems = [],
+  highlightFdi,
 }: StageDetailSheetProps) {
   const toothFdiSet = new Set(teeth.map((t) => t.toothFdi));
   const orphanItems = planItems.filter(
@@ -968,6 +986,7 @@ function StageDetailSheet({
                       condCfg={condCfg}
                       stage={stage}
                       doctorName={doctorName}
+                      highlightFdi={highlightFdi}
                       actions={actions}
                     />
                   );
@@ -988,6 +1007,7 @@ function StageDetailSheet({
                         condCfg={condCfg}
                         stage={stage}
                         doctorName={doctorName}
+                        highlightFdi={highlightFdi}
                         actions={actions}
                       />
                     ));
@@ -997,6 +1017,7 @@ function StageDetailSheet({
                       key={item.id}
                       item={item}
                       doctorName={doctorName}
+                      highlightFdi={highlightFdi}
                       actions={actions}
                       stage={stage}
                     />
@@ -1125,6 +1146,7 @@ function DetailProcedureCard({
   condCfg,
   stage,
   doctorName,
+  highlightFdi,
   actions,
 }: {
   item: TreatmentPlanItem;
@@ -1132,6 +1154,7 @@ function DetailProcedureCard({
   condCfg?: any;
   stage: StageConfig;
   doctorName?: string;
+  highlightFdi?: number | null;
   actions: ItemActions;
 }) {
   const { user } = useAuthStore();
@@ -1140,6 +1163,8 @@ function DetailProcedureCard({
   const timerStart = actions.getTimerStart(item.id);
   const isRunning = timerStart !== undefined;
   const timerDuration = actions.getTimerDuration(item.id);
+  const toothHighlighted = isPlanItemForTooth(item, highlightFdi);
+  const toothDimmed = highlightFdi != null && !toothHighlighted;
 
   const [showPicker, setShowPicker] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -1155,10 +1180,12 @@ function DetailProcedureCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border px-4 py-3 bg-white",
+        "rounded-2xl border px-4 py-3 bg-white transition-all duration-200",
         isDone ? "border-emerald-100 bg-emerald-50/30"
           : isRunning ? "border-blue-100 bg-blue-50/20"
           : "border-[#e8e3d9]",
+        toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06] shadow-sm",
+        toothDimmed && "opacity-45",
       )}
     >
       <div className="flex items-start gap-3">
@@ -1329,12 +1356,27 @@ interface SortablePlanItemCardProps {
   completingId: string | null;
   cancellingId: string | null;
   activeTimers: Map<string, number>;
+  highlightFdi?: number | null;
+  toothVideo?: TabletVideoItem | null;
+  onPlayToothVideo?: (video: TabletVideoItem) => void;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onOpenModal: (id: string) => void;
 }
 
-function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimers, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
+function SortablePlanItemCard({
+  item,
+  isEditMode,
+  completingId,
+  cancellingId,
+  activeTimers,
+  highlightFdi,
+  toothVideo,
+  onPlayToothVideo,
+  onComplete,
+  onCancel,
+  onOpenModal,
+}: SortablePlanItemCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
@@ -1357,6 +1399,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
   const isPending = item.status === "pending";
   const isCompleted = item.status === "completed";
   const isCancellingThis = cancellingId === item.id;
+  const toothHighlighted = isPlanItemForTooth(item, highlightFdi);
+  const toothDimmed = highlightFdi != null && !toothHighlighted;
 
   // Timer-aware states
   const isActive = activeTimers.has(item.id);
@@ -1377,6 +1421,8 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
         isCompleted && "bg-emerald-50/60 border-emerald-100",
         // Normal pending
         !isActive && !isBlocked && !isCompleted && "bg-white border-[#e8e3d9]",
+        toothHighlighted && "ring-2 ring-[#1f75fe]/80 ring-offset-1 border-[#1f75fe] bg-[#1f75fe]/[0.06] shadow-sm",
+        toothDimmed && "opacity-45",
         !isEditMode && !isBlocked && "cursor-pointer active:bg-[#faf8f4]",
         !isEditMode && isBlocked && "cursor-pointer active:bg-amber-50",
       )}
@@ -1446,6 +1492,21 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
           )}
         </div>
 
+        {toothVideo && onPlayToothVideo && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlayToothVideo(toothVideo);
+            }}
+            className="flex aspect-square h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#1f75fe]/30 bg-gradient-to-br from-[#1f75fe]/15 to-[#7c3aed]/10 transition-all hover:border-[#1f75fe]/50 hover:from-[#1f75fe]/25 active:scale-95"
+            aria-label={`Воспроизвести: ${toothVideo.title}`}
+            title={toothVideo.title}
+          >
+            <Play className="h-4 w-4 fill-[#1f75fe] text-[#1f75fe]" />
+          </button>
+        )}
+
         {isEditMode && isPending && !isBlocked && (
           <button
             onClick={(e) => { e.stopPropagation(); if (!isCancellingThis) onCancel(item.id); }}
@@ -1465,10 +1526,14 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
 interface StageContainerProps {
   stage: StageConfig;
   items: TreatmentPlanItem[];
+  teeth: ToothRecord[];
   isEditMode: boolean;
   completingId: string | null;
   cancellingId: string | null;
   activeTimers: Map<string, number>;
+  highlightFdi?: number | null;
+  toothVideos?: TabletVideoItem[];
+  onPlayToothVideo?: (video: TabletVideoItem) => void;
   handleComplete: (id: string) => void;
   handleCancel: (id: string) => void;
   setModalItemId: (id: string) => void;
@@ -1478,10 +1543,14 @@ interface StageContainerProps {
 function StageContainer({
   stage,
   items,
+  teeth,
   isEditMode,
   completingId,
   cancellingId,
   activeTimers,
+  highlightFdi,
+  toothVideos,
+  onPlayToothVideo,
   handleComplete,
   handleCancel,
   setModalItemId,
@@ -1588,6 +1657,13 @@ function StageContainer({
               completingId={completingId}
               cancellingId={cancellingId}
               activeTimers={activeTimers}
+              highlightFdi={highlightFdi}
+              toothVideo={
+                toothVideos && onPlayToothVideo
+                  ? getFirstVideoForToothFdi(item.toothFdi, teeth, toothVideos)
+                  : null
+              }
+              onPlayToothVideo={onPlayToothVideo}
               onComplete={handleComplete}
               onCancel={handleCancel}
               onOpenModal={setModalItemId}
@@ -1650,9 +1726,18 @@ interface TreatmentStagesBoardProps {
   teeth: ToothRecord[];
   activePlan: TreatmentPlan | null;
   filterFdi?: number | null;
+  toothVideos?: TabletVideoItem[];
+  onPlayToothVideo?: (video: TabletVideoItem) => void;
 }
 
-export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi = null }: TreatmentStagesBoardProps) {
+export function TreatmentStagesBoard({
+  patientId,
+  teeth,
+  activePlan,
+  filterFdi = null,
+  toothVideos,
+  onPlayToothVideo,
+}: TreatmentStagesBoardProps) {
   const isTablet = useIsSlashTablet();
   const STORAGE_KEY = `1dent:stages-order:${patientId}`;
   const qc = useQueryClient();
@@ -2072,18 +2157,10 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
 
   // ── Stage filtering + DnD ─────────────────────────────────────────────────
 
-  const stageItems = useMemo(() => {
-    const items = buildStageItems(teeth, activePlan);
-    if (filterFdi == null) return items;
-    const filtered = new Map<string, StageData>();
-    for (const [stageId, data] of items) {
-      filtered.set(stageId, {
-        teeth: data.teeth.filter((t) => t.toothFdi === filterFdi),
-        planItems: data.planItems.filter((p) => p.toothFdi === filterFdi),
-      });
-    }
-    return filtered;
-  }, [teeth, activePlan, filterFdi]);
+  const stageItems = useMemo(
+    () => buildStageItems(teeth, activePlan),
+    [teeth, activePlan],
+  );
 
   // ── Historical completed items from all plans, grouped by stage ──────────
 
@@ -2347,6 +2424,14 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
         </div>
       )}
 
+      {filterFdi != null && (
+        <div className="mx-0.5 rounded-xl border border-[#1f75fe]/25 bg-[#1f75fe]/[0.06] px-3 py-2">
+          <p className="text-xs font-semibold text-[#1f75fe]">
+            Выбран зуб {filterFdi} — подсвечены позиции плана для этого зуба
+          </p>
+        </div>
+      )}
+
       {/* Stages columns with DnD reordering */}
       {localItems.length === 0 && archivedItems.length === 0 ? (
         <p className="text-sm text-[#94a3b8] text-center py-6">Нет позиций в плане</p>
@@ -2381,10 +2466,14 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
                   key={stage.id}
                   stage={stage}
                   items={stageItems}
+                  teeth={teeth}
                   isEditMode={isEditMode}
                   completingId={completingId}
                   cancellingId={cancellingId}
                   activeTimers={activeTimers}
+                  highlightFdi={filterFdi}
+                  toothVideos={toothVideos}
+                  onPlayToothVideo={onPlayToothVideo}
                   handleComplete={handleComplete}
                   handleCancel={handleCancel}
                   setModalItemId={setModalItemId}
@@ -2431,6 +2520,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
             doctorName={doctorName}
             planNotes={activePlan?.notes ?? undefined}
             historicalItems={historyByStage.get(detailStageId) ?? []}
+            highlightFdi={filterFdi}
           />
         );
       })()}
