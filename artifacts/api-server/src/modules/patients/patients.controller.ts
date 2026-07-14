@@ -85,6 +85,12 @@ const addInteractionSchema = z.object({
   content: z.string().min(1),
 });
 
+const transferPatientSchema = z.object({
+  toDoctorId: z.string().min(1),
+  scheduledAt: z.string().datetime(),
+  reason: z.string().max(500).optional(),
+});
+
 router.use(authMiddleware);
 
 const patientReadRoles = roleGuard("owner", "admin", "doctor", "accountant", "assistant", "nurse");
@@ -353,6 +359,35 @@ router.get(
       .get(id, req.user!.clinicId, req.user!.role, req.user!.userId)
       .catch(next);
     if (!result) return;
+    res.json({ success: true, data: result });
+  },
+);
+
+// POST /patients/:id/transfer — transfer patient to another doctor with appointment
+router.post(
+  "/:id/transfer",
+  patientCreateRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const parsed = transferPatientSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(
+        new ValidationError(
+          parsed.error.errors[0]?.message ?? "Validation failed",
+        ),
+      );
+    }
+    const id = String(req.params["id"]);
+    const result = await service
+      .transfer(
+        id,
+        req.user!.clinicId,
+        parsed.data,
+        req.user!.role,
+        req.user!.userId,
+      )
+      .catch(next);
+    if (!result) return;
+    analyticsRepo.invalidateClinicCache(req.user!.clinicId).catch(() => {});
     res.json({ success: true, data: result });
   },
 );

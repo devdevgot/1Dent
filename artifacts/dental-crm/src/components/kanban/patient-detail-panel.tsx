@@ -54,7 +54,7 @@ import {
   Phone, User, Calendar, CreditCard, Stethoscope, Copy, Save, IdCard,
   ClipboardList, Plus, BadgeCheck, Circle, ArrowLeft, Square, CheckSquare, Loader2,
   Scissors, Crown, Wrench, Baby, Sparkles, Activity, ScanLine, Paintbrush, Search, GripVertical, Mic, Trash2,
-  FileText, Ban, Megaphone,
+  FileText, Ban, Megaphone, ArrowRightLeft,
 } from "lucide-react";
 import { calculateAge, formatDateOfBirth, maskIIN } from "@workspace/api-zod";
 import { getBaseUrl } from "@/lib/base-url";
@@ -73,6 +73,7 @@ import {
 import type { PatientStatus, InteractionType, ToothCondition } from "@workspace/api-client-react";
 import { FdiChart, CONDITION_CONFIG, getCanalCount } from "@/components/dental-chart/fdi-chart";
 import { TreatmentStagesBoard } from "@/components/dental-chart/treatment-stages-board";
+import { PatientTransferDialog } from "@/components/kanban/patient-transfer-dialog";
 import { useTranslation } from "react-i18next";
 import {
   DndContext,
@@ -841,6 +842,7 @@ export function PatientDetailPanel() {
   const [interactionType, setInteractionType] = useState<InteractionType>("note");
   const [interactionContent, setInteractionContent] = useState("");
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
 
   const [treatmentStep, setTreatmentStep] = useState<1 | 2 | 3>(1);
   const [bundleToken, setBundleToken] = useState<string | null>(null);
@@ -1721,6 +1723,11 @@ export function PatientDetailPanel() {
   const canChangeStatus =
     user?.role === "owner" || user?.role === "admin";
   const isDoctor = user?.role === "doctor";
+  const canTransferPatient = !!patient?.doctorId && (
+    user?.role === "owner"
+    || user?.role === "admin"
+    || (isDoctor && patient.doctorId === user?.id)
+  );
 
   const currentColumn = patient ? KANBAN_COLUMNS.find((c) => c.id === patient.status) : null;
   const sourceLabel = patient ? (SOURCE_LABELS[patient.source] ?? patient.source) : "";
@@ -1916,7 +1923,19 @@ export function PatientDetailPanel() {
 
                   {/* Doctor */}
                   <div className="bg-[#faf8f4] rounded-2xl p-4">
-                    <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-3">Лечащий врач</p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide">Лечащий врач</p>
+                      {canTransferPatient && (
+                        <button
+                          type="button"
+                          onClick={() => setTransferDialogOpen(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                        >
+                          <ArrowRightLeft className="w-3.5 h-3.5" />
+                          Передать пациента
+                        </button>
+                      )}
+                    </div>
                     {doctorUser ? (
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
@@ -3035,6 +3054,19 @@ export function PatientDetailPanel() {
           </div>
         </div>
       </AppDialog>
+
+      {patient && (
+        <PatientTransferDialog
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          patientId={patient.id}
+          patientName={patient.name}
+          currentDoctorId={patient.doctorId ?? null}
+          currentDoctorName={doctorUser?.name}
+          allUsers={allUsers}
+          canTransfer={canTransferPatient}
+        />
+      )}
 
       <DocumentPreviewDialog
         open={bundlePreviewOpen && !!bundleToken}
