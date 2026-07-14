@@ -48,6 +48,8 @@ function getWorkTab(role: string): { labelKey: string; icon: TabIcon; href: stri
     return { labelKey: "nav.schedule", icon: TabCalendarIcon, href: "/schedule" };
   }
   switch (role) {
+    case "owner":
+      return { labelKey: "nav.calendar", icon: TabCalendarIcon, href: "/calendar" };
     case "accountant":
       return { labelKey: "nav.financials", icon: TabFinanceIcon, href: "/financials" };
     case "warehouse":

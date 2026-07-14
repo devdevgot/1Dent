@@ -1,6 +1,7 @@
 /** Paths that require the user to be inside a clinic geo-zone (non-owners). */
 export const GEO_RESTRICTED_PREFIXES = [
   "/patients",
+  "/calendar",
   "/chat",
   "/analytics",
   "/doctor-analytics",
