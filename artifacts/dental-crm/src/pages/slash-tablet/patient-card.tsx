@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Eye, Activity, ClipboardList, PlayCircle, Info,
-  Plus, Phone, AlertTriangle, FileText,
+  Phone, AlertTriangle, FileText,
   Sparkles, X, Calendar, IdCard, User as UserIcon, Stethoscope,
   ChevronDown, CreditCard, Megaphone, Loader2,
 } from "lucide-react";
@@ -22,13 +22,13 @@ import { TabletChartSection } from "./tablet-chart-section";
 import { TabletPlanBoard } from "./tablet-plan-board";
 import { TabletPresentationMode } from "./tablet-presentation-mode";
 import {
-  CONDITION_META, STATUS_META, initials,
+  STATUS_META, initials,
   type ToothCondition,
 } from "./mock-data";
 import { apiPatientToTablet, apiPlanToStages, apiTeethToMap } from "./tablet-patient-adapter";
 import { itemDisplayPrice } from "./tablet-plan-utils";
 import { KANBAN_COLUMNS, SOURCE_LABELS, SOURCE_COLORS } from "@/lib/patient-utils";
-import { useTabletVideos, filterVideosByCondition, type TabletVideoItem } from "@/hooks/use-tablet-videos";
+import { useTabletVideos, type TabletVideoItem } from "@/hooks/use-tablet-videos";
 import { PatientBroadcastHistory } from "@/components/kanban/patient-broadcast-history";
 import { ContractsTab } from "@/components/kanban/contracts-tab";
 
@@ -87,11 +87,6 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
     () => plan.flatMap((s) => s.items).reduce((s, i) => s + itemDisplayPrice(i), 0),
     [plan],
   );
-
-  const selectedCond = selectedFdi ? (teeth[selectedFdi] ?? "healthy") : null;
-  const relatedVideos = selectedCond
-    ? filterVideosByCondition(videos, selectedCond)
-    : [];
 
   if (isLoading || !patient) {
     return (
@@ -187,15 +182,6 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
                 selectedFdi={selectedFdi}
                 onSelectFdi={setSelectedFdi}
               />
-              {selectedFdi && selectedCond && (
-                <ToothDetail
-                  fdi={selectedFdi}
-                  cond={selectedCond}
-                  relatedVideos={relatedVideos}
-                  onPlayVideo={(v) => setActiveVideo(v)}
-                  onClose={() => setSelectedFdi(null)}
-                />
-              )}
             </div>
             {/* Правая: план */}
             <div className="h-full overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white">
@@ -204,6 +190,7 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
                 onGoToChart={() => setTab("chart")}
                 embedded
                 filterFdi={selectedFdi}
+                onPlayVideo={setActiveVideo}
               />
             </div>
           </div>
@@ -211,7 +198,11 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
 
         {tab === "plan" && (
           <div className="mx-auto w-full max-w-6xl px-4">
-            <TabletPlanBoard patientId={patientId} onGoToChart={() => setTab("chart")} />
+            <TabletPlanBoard
+              patientId={patientId}
+              onGoToChart={() => setTab("chart")}
+              onPlayVideo={setActiveVideo}
+            />
           </div>
         )}
 
@@ -235,55 +226,6 @@ export function PatientCard({ patientId, onBack }: { patientId: string; onBack: 
         {activeVideo && <VideoPlayer video={activeVideo} onClose={() => setActiveVideo(null)} />}
       </AnimatePresence>
     </div>
-  );
-}
-
-// ── Деталь зуба ───────────────────────────────────────────────────────────────
-function ToothDetail({
-  fdi, cond, relatedVideos, onPlayVideo, onClose,
-}: {
-  fdi: number;
-  cond: keyof typeof CONDITION_META;
-  relatedVideos: TabletVideoItem[];
-  onPlayVideo: (v: TabletVideoItem) => void;
-  onClose: () => void;
-}) {
-  const meta = CONDITION_META[cond];
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-[#e8e3d9] bg-white p-5"
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl text-lg font-black"
-            style={{ color: meta.color, backgroundColor: meta.bg }}>
-            {fdi}
-          </div>
-          <div>
-            <p className="text-base font-bold text-[#0f172a]">Зуб {fdi}</p>
-            <p className="text-sm font-semibold" style={{ color: meta.color }}>{meta.label}</p>
-          </div>
-        </div>
-        <button onClick={onClose} className="rounded-lg p-1.5 text-[#94a3b8] hover:bg-[#faf8f4]">
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button className="flex items-center gap-1.5 rounded-xl bg-[#1f75fe] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1a65e8]">
-          <Plus className="h-4 w-4" /> Добавить в план
-        </button>
-        {relatedVideos[0] && (
-          <button
-            onClick={() => onPlayVideo(relatedVideos[0]!)}
-            className="flex items-center gap-1.5 rounded-xl border border-[#e8e3d9] bg-white px-4 py-2.5 text-sm font-semibold text-[#0f172a] transition-colors hover:bg-[#faf8f4]"
-          >
-            <PlayCircle className="h-4 w-4 text-[#1f75fe]" /> Видео: {relatedVideos[0]!.title}
-          </button>
-        )}
-      </div>
-    </motion.div>
   );
 }
 

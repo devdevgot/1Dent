@@ -34,6 +34,19 @@ export function filterVideosByCondition(
   return videos.filter((v) => v.relatedConditions.includes(condition));
 }
 
+/** Первое обучающее видео для зуба по его диагнозу (кариес, каналы и т.д.) */
+export function getFirstVideoForToothFdi(
+  toothFdi: number | null | undefined,
+  teeth: { toothFdi: number; condition: string | null }[],
+  videos: TabletVideoItem[],
+): TabletVideoItem | null {
+  if (toothFdi == null || videos.length === 0) return null;
+  const record = teeth.find((t) => t.toothFdi === toothFdi);
+  if (!record?.condition || record.condition === "healthy") return null;
+  const related = filterVideosByCondition(videos, record.condition as ToothCondition);
+  return related[0] ?? null;
+}
+
 export function groupVideosByCategory(videos: TabletVideoItem[]): Map<string, TabletVideoItem[]> {
   const map = new Map<string, TabletVideoItem[]>();
   for (const v of videos) {

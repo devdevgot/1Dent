@@ -74,6 +74,7 @@ import {
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
+import { getFirstVideoForToothFdi, type TabletVideoItem } from "@/hooks/use-tablet-videos";
 import type { ToothRecord, TreatmentPlan, TreatmentPlanItem, UpdateTreatmentPlanItemRequest } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
 
@@ -1356,12 +1357,26 @@ interface SortablePlanItemCardProps {
   cancellingId: string | null;
   activeTimers: Map<string, number>;
   highlightFdi?: number | null;
+  toothVideo?: TabletVideoItem | null;
+  onPlayToothVideo?: (video: TabletVideoItem) => void;
   onComplete: (id: string) => void;
   onCancel: (id: string) => void;
   onOpenModal: (id: string) => void;
 }
 
-function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, activeTimers, highlightFdi, onComplete, onCancel, onOpenModal }: SortablePlanItemCardProps) {
+function SortablePlanItemCard({
+  item,
+  isEditMode,
+  completingId,
+  cancellingId,
+  activeTimers,
+  highlightFdi,
+  toothVideo,
+  onPlayToothVideo,
+  onComplete,
+  onCancel,
+  onOpenModal,
+}: SortablePlanItemCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     disabled: !isEditMode || item.status !== "pending",
@@ -1477,6 +1492,21 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
           )}
         </div>
 
+        {toothVideo && onPlayToothVideo && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlayToothVideo(toothVideo);
+            }}
+            className="flex aspect-square h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#1f75fe]/30 bg-gradient-to-br from-[#1f75fe]/15 to-[#7c3aed]/10 transition-all hover:border-[#1f75fe]/50 hover:from-[#1f75fe]/25 active:scale-95"
+            aria-label={`Воспроизвести: ${toothVideo.title}`}
+            title={toothVideo.title}
+          >
+            <Play className="h-4 w-4 fill-[#1f75fe] text-[#1f75fe]" />
+          </button>
+        )}
+
         {isEditMode && isPending && !isBlocked && (
           <button
             onClick={(e) => { e.stopPropagation(); if (!isCancellingThis) onCancel(item.id); }}
@@ -1496,11 +1526,14 @@ function SortablePlanItemCard({ item, isEditMode, completingId, cancellingId, ac
 interface StageContainerProps {
   stage: StageConfig;
   items: TreatmentPlanItem[];
+  teeth: ToothRecord[];
   isEditMode: boolean;
   completingId: string | null;
   cancellingId: string | null;
   activeTimers: Map<string, number>;
   highlightFdi?: number | null;
+  toothVideos?: TabletVideoItem[];
+  onPlayToothVideo?: (video: TabletVideoItem) => void;
   handleComplete: (id: string) => void;
   handleCancel: (id: string) => void;
   setModalItemId: (id: string) => void;
@@ -1510,11 +1543,14 @@ interface StageContainerProps {
 function StageContainer({
   stage,
   items,
+  teeth,
   isEditMode,
   completingId,
   cancellingId,
   activeTimers,
   highlightFdi,
+  toothVideos,
+  onPlayToothVideo,
   handleComplete,
   handleCancel,
   setModalItemId,
@@ -1622,6 +1658,12 @@ function StageContainer({
               cancellingId={cancellingId}
               activeTimers={activeTimers}
               highlightFdi={highlightFdi}
+              toothVideo={
+                toothVideos && onPlayToothVideo
+                  ? getFirstVideoForToothFdi(item.toothFdi, teeth, toothVideos)
+                  : null
+              }
+              onPlayToothVideo={onPlayToothVideo}
               onComplete={handleComplete}
               onCancel={handleCancel}
               onOpenModal={setModalItemId}
@@ -1684,9 +1726,18 @@ interface TreatmentStagesBoardProps {
   teeth: ToothRecord[];
   activePlan: TreatmentPlan | null;
   filterFdi?: number | null;
+  toothVideos?: TabletVideoItem[];
+  onPlayToothVideo?: (video: TabletVideoItem) => void;
 }
 
-export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi = null }: TreatmentStagesBoardProps) {
+export function TreatmentStagesBoard({
+  patientId,
+  teeth,
+  activePlan,
+  filterFdi = null,
+  toothVideos,
+  onPlayToothVideo,
+}: TreatmentStagesBoardProps) {
   const isTablet = useIsSlashTablet();
   const STORAGE_KEY = `1dent:stages-order:${patientId}`;
   const qc = useQueryClient();
@@ -2415,11 +2466,14 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
                   key={stage.id}
                   stage={stage}
                   items={stageItems}
+                  teeth={teeth}
                   isEditMode={isEditMode}
                   completingId={completingId}
                   cancellingId={cancellingId}
                   activeTimers={activeTimers}
                   highlightFdi={filterFdi}
+                  toothVideos={toothVideos}
+                  onPlayToothVideo={onPlayToothVideo}
                   handleComplete={handleComplete}
                   handleCancel={handleCancel}
                   setModalItemId={setModalItemId}
