@@ -112,9 +112,11 @@ export function TabletPlanPanel({
       return n;
     });
 
-  const stages = filterFdi
-    ? plan.map((s) => ({ ...s, items: s.items.filter((i) => i.tooth === filterFdi) })).filter((s) => s.items.length)
-    : plan;
+  const itemMatchesTooth = useCallback(
+    (item: PlanStage["items"][number]) =>
+      filterFdi != null && item.tooth === filterFdi,
+    [filterFdi],
+  );
 
   const displayStatus = useCallback((item: PlanStage["items"][number]) => {
     if (item.status === "completed") return "completed" as const;
@@ -149,44 +151,60 @@ export function TabletPlanPanel({
           <div className="h-full rounded-full bg-[#1f75fe] transition-all" style={{ width: `${progress}%` }} />
         </div>
         {filterFdi && (
-          <p className="mt-2 text-xs font-medium text-[#1f75fe]">Показаны позиции по зубу {filterFdi}</p>
+          <p className="mt-2 text-xs font-medium text-[#1f75fe]">
+            Зуб {filterFdi} — подсвечены позиции плана для этого зуба
+          </p>
         )}
       </div>
 
       <div className="flex-1 overflow-auto p-3">
-        {stages.length === 0 ? (
-          <p className="p-6 text-center text-sm text-[#94a3b8]">Нет позиций по выбранному зубу</p>
-        ) : (
-          <div className="space-y-2">
-            {stages.map((stage) => {
-              const open = expanded.has(stage.id);
-              const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
-              return (
-                <div key={stage.id} className="overflow-hidden rounded-xl border border-[#f1ede4]">
-                  <button
-                    type="button"
-                    onClick={() => toggle(stage.id)}
-                    className="flex w-full items-center justify-between px-3 py-2.5 transition-colors hover:bg-[#faf8f4]"
-                    style={{ backgroundColor: open ? stage.bg : undefined }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                      <span className="text-sm font-bold text-[#0f172a]">{stage.label}</span>
-                      <span className="text-xs text-[#94a3b8]">({stage.items.length})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-[#64748b]">{fmtTenge(stageTotal)}</span>
-                      <ChevronDown className={cn("h-4 w-4 text-[#94a3b8] transition-transform", open && "rotate-180")} />
-                    </div>
-                  </button>
-                  {open && (
-                    <div className="divide-y divide-[#f1ede4]">
-                      {stage.items.map((item) => {
-                        const status = displayStatus(item);
-                        const timerStart = activeTimers.get(item.id);
-                        const isCompleting = completingId === item.id;
-                        return (
-                          <div key={item.id} className="flex items-center gap-3 px-3 py-3">
+        <div className="space-y-2">
+          {plan.map((stage) => {
+            const open = expanded.has(stage.id);
+            const stageTotal = stage.items.reduce((s, i) => s + i.price, 0);
+            const highlightedCount = filterFdi
+              ? stage.items.filter((i) => itemMatchesTooth(i)).length
+              : 0;
+            return (
+              <div key={stage.id} className="overflow-hidden rounded-xl border border-[#f1ede4]">
+                <button
+                  type="button"
+                  onClick={() => toggle(stage.id)}
+                  className="flex w-full items-center justify-between px-3 py-2.5 transition-colors hover:bg-[#faf8f4]"
+                  style={{ backgroundColor: open ? stage.bg : undefined }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+                    <span className="text-sm font-bold text-[#0f172a]">{stage.label}</span>
+                    <span className="text-xs text-[#94a3b8]">({stage.items.length})</span>
+                    {filterFdi != null && highlightedCount > 0 && (
+                      <span className="rounded-full bg-[#1f75fe]/10 px-2 py-0.5 text-[10px] font-bold text-[#1f75fe]">
+                        {highlightedCount} для зуба
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-[#64748b]">{fmtTenge(stageTotal)}</span>
+                    <ChevronDown className={cn("h-4 w-4 text-[#94a3b8] transition-transform", open && "rotate-180")} />
+                  </div>
+                </button>
+                {open && (
+                  <div className="divide-y divide-[#f1ede4]">
+                    {stage.items.map((item) => {
+                      const status = displayStatus(item);
+                      const timerStart = activeTimers.get(item.id);
+                      const isCompleting = completingId === item.id;
+                      const highlighted = itemMatchesTooth(item);
+                      const dimmed = filterFdi != null && !highlighted;
+                      return (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-3 transition-all duration-200",
+                            highlighted && "bg-[#1f75fe]/[0.06] ring-2 ring-inset ring-[#1f75fe]/50",
+                            dimmed && "opacity-45",
+                          )}
+                        >
                             <StatusIcon status={status} />
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium text-[#0f172a]">{item.title}</p>
@@ -239,7 +257,6 @@ export function TabletPlanPanel({
               );
             })}
           </div>
-        )}
       </div>
 
       <div className="border-t border-[#f1ede4] bg-[#faf8f4] p-4">
