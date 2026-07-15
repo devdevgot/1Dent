@@ -1,0 +1,68 @@
+{
+  "name": "1Dent — CRM для стоматологии",
+  "short_name": "1Dent",
+  "description": "1Dent — CRM для стоматологических клиник: пациенты, расписание, зубная карта, финансы и AI-ассистент.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#faf8f4",
+  "theme_color": "#1f75fe",
+  "lang": "ru",
+  "dir": "ltr",
+  "categories": ["medical", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/pwa/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Пациенты",
+      "short_name": "Пациенты",
+      "url": "/patients?source=pwa",
+      "icons": [{ "src": "/icons/menu/patients.png", "sizes": "any", "type": "image/png" }]
+    },
+    {
+      "name": "Расписание",
+      "short_name": "Расписание",
+      "url": "/calendar?source=pwa",
+      "icons": [{ "src": "/icons/menu/schedule.png", "sizes": "any", "type": "image/png" }]
+    },
+    {
+      "name": "Планшет кабинета",
+      "short_name": "Планшет",
+      "url": "/tablet?source=pwa",
+      "icons": [{ "src": "/icons/menu/dashboard.png", "sizes": "any", "type": "image/png" }]
+    }
+  ]
+}
