@@ -7,6 +7,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { RootTabHeader } from "@/components/layout/root-tab-header";
 import { MENU_CATEGORIES, MENU_SERVICES } from "@/lib/menu-services";
 import { useOpenMenuService } from "@/components/layout/menu-service-overlay";
+import { InstallAppCard } from "@/components/pwa/install-app";
 
 function CategoryCard({
   title,
@@ -76,6 +77,7 @@ export default function MenuPage() {
       <RootTabHeader title={t("nav.servicesHub")} />
 
       <div className="px-4 pt-2 space-y-4">
+        <InstallAppCard />
         {categoriesWithItems.length === 0 ? (
           <p className="py-10 text-center text-xs text-[#94a3b8]">
             {t("menuPage.noShortcuts")}

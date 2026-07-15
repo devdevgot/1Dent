@@ -40,6 +40,16 @@ export function setSpaStaticCacheHeaders(res: Response, filePath: string): void 
     res.setHeader("Cache-Control", "no-cache");
     return;
   }
+  // Service worker and manifest must revalidate so PWA updates roll out promptly.
+  if (filePath.endsWith(`${path.sep}sw.js`)) {
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Service-Worker-Allowed", "/");
+    return;
+  }
+  if (filePath.endsWith(".webmanifest")) {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    return;
+  }
   if (filePath.includes(`${path.sep}assets${path.sep}`)) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   }

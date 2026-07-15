@@ -3,6 +3,7 @@ import { TabletSmartphone, Smartphone, KeyRound } from "lucide-react";
 import { TabletPinSetupModal } from "@/components/tablet/tablet-pin-setup-modal";
 import { setTabletPin } from "@/lib/tablet-api";
 import { useToast } from "@/hooks/use-toast";
+import { InstallAppButton } from "@/components/pwa/install-app";
 
 export function TabletDoctorSetup() {
   const [pinModalOpen, setPinModalOpen] = useState(false);
@@ -60,6 +61,8 @@ export function TabletDoctorSetup() {
           <KeyRound className="h-4 w-4 text-[#1f75fe]" />
           Настроить PIN для входа без QR
         </button>
+
+        <InstallAppButton className="mt-3" />
       </div>
 
       <TabletPinSetupModal
