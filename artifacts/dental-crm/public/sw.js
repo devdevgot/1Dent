@@ -13,7 +13,7 @@
  *  - API requests (/api/*) and cross-origin requests: never handled by the SW.
  */
 
-const VERSION = "1dent-pwa-v1";
+const VERSION = "1dent-pwa-v2";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
