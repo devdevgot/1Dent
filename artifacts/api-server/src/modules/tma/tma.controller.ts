@@ -243,11 +243,20 @@ router.patch("/clinics/:clinicId", async (req: Request, res: Response, next: Nex
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    const clinicId = req.params["clinicId"] as string;
     const [clinic] = await db.update(clinicsTable)
       .set(parsed.data)
-      .where(eq(clinicsTable.id, req.params["clinicId"] as string))
+      .where(eq(clinicsTable.id, clinicId))
       .returning();
     if (!clinic) return next(new NotFoundError("Clinic not found"));
+
+    // Clinic deactivation disables all users; reactivation must restore them too.
+    if (parsed.data.isActive === true) {
+      await db.update(usersTable)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(usersTable.clinicId, clinicId));
+    }
+
     res.json({ success: true, data: { clinic } });
   } catch (err) { next(err); }
 });

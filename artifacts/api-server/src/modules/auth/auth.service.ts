@@ -130,7 +130,7 @@ export class AuthService {
     let user: User | undefined;
 
     if (data.phone) {
-      const matches = await this.repo.findUsersByPhone(data.phone);
+      const matches = await this.repo.findUsersByPhone(data.phone, true);
       if (matches.length === 0) {
         throw new UnauthorizedError("Неверный номер или пароль");
       }
@@ -139,7 +139,7 @@ export class AuthService {
       }
       user = matches[0];
     } else if (data.email) {
-      user = await this.repo.findUserByEmail(data.email.toLowerCase());
+      user = await this.repo.findUserByEmailAnyStatus(data.email.toLowerCase());
     } else {
       throw new ValidationError("Укажите номер WhatsApp");
     }
@@ -154,7 +154,9 @@ export class AuthService {
     }
 
     if (user.isActive === false) {
-      throw new UnauthorizedError("Account is deactivated");
+      throw new UnauthorizedError(
+        "Аккаунт деактивирован. Если вы только что восстановили клинику в админке — активируйте сотрудника или обратитесь в поддержку 1Dent.",
+      );
     }
 
     const clinic = await this.repo.findClinicById(user.clinicId);
