@@ -9,7 +9,7 @@
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#faf8f4",
-  "theme_color": "#1f75fe",
+  "theme_color": "#faf8f4",
   "lang": "ru",
   "dir": "ltr",
   "categories": ["medical", "business", "productivity"],

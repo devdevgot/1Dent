@@ -108,7 +108,21 @@ export function initPwa(): void {
   });
 
   const standaloneQuery = window.matchMedia?.("(display-mode: standalone)");
-  standaloneQuery?.addEventListener?.("change", emit);
+  standaloneQuery?.addEventListener?.("change", () => {
+    applyStandaloneDocumentClass();
+    emit();
+  });
+
+  applyStandaloneDocumentClass();
+}
+
+/** Apply CSS hooks for installed / standalone layout (safe-area, viewport height). */
+export function applyStandaloneDocumentClass(): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  const standalone = detectStandalone();
+  root.classList.toggle("pwa-standalone", standalone);
+  root.classList.toggle("pwa-ios-standalone", standalone && detectIos());
 }
 
 /**

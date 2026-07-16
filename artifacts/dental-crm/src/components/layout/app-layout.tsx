@@ -114,7 +114,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <OverlayNavigationProvider>
-      <div className="flex flex-col h-[100dvh] bg-[#faf8f4] overflow-hidden font-manrope">
+      <div className="flex flex-col h-app bg-[#faf8f4] overflow-hidden font-manrope">
       {afterFirstPaint && (
         <Suspense fallback={null}>
           <AppointmentReminderModal />
@@ -124,7 +124,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Home page header */}
       {isHomePage && (
-        <header className="flex-none bg-white border-b border-[#e8e3d9] z-20 safe-area-top border-t-[1px]">
+        <header className="flex-none bg-white border-b border-[#e8e3d9] z-20 safe-area-top">
           {/* Branch selector — owner only, only when branches exist */}
           {showBranchSelector && (
             <div className="px-4 pt-2.5 pb-1.5">
