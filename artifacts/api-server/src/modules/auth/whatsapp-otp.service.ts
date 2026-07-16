@@ -40,16 +40,17 @@ function normalizePhone(phone: string): string {
 }
 
 function otpMessage(code: string, purpose: WhatsappOtpPurpose): string {
-  const prefix =
+  const suffix = "Код действителен 5 минут. Не передавайте его третьим лицам.";
+  const label =
     purpose === "login"
-      ? "🔐 Код для входа в 1Dent"
+      ? "Ваш код для входа в 1Dent"
       : purpose === "register"
-        ? "🔐 Код для регистрации в 1Dent"
+        ? "Ваш код для подтверждения регистрации"
         : purpose === "reset_password"
-          ? "🔐 Код для сброса пароля в 1Dent"
-          : "🔐 Код подтверждения 1Dent";
+          ? "Ваш код для сброса пароля"
+          : "Ваш код подтверждения 1Dent";
 
-  return `${prefix}:\n\n*${code}*\n\nКод действителен 5 минут. Не передавайте его третьим лицам.`;
+  return `${code} - ${label}. ${suffix}`;
 }
 
 export function formatPhoneForDisplay(phone: string): string {
