@@ -49,6 +49,33 @@ export interface AuthResult {
 export class AuthService {
   private repo = new AuthRepository();
 
+  private async releaseInactiveRegistrationClaims(
+    verifiedPhone: string | null,
+    normalizedEmail: string,
+  ): Promise<void> {
+    const existingByEmail = await this.repo.findUserByEmailAnyStatus(normalizedEmail);
+    if (existingByEmail?.isActive) {
+      throw new ConflictError("Этот email уже зарегистрирован");
+    }
+    if (existingByEmail) {
+      await this.repo.archiveUserCredentials(existingByEmail.id);
+    }
+
+    if (!verifiedPhone) return;
+
+    const phoneUsers = await this.repo.findUsersByPhone(verifiedPhone, true);
+    for (const user of phoneUsers) {
+      if (user.isActive) {
+        throw new ConflictError(
+          "Этот номер WhatsApp уже привязан к аккаунту. Войдите или восстановите пароль на странице входа.",
+        );
+      }
+      if (user.id !== existingByEmail?.id) {
+        await this.repo.archiveUserCredentials(user.id);
+      }
+    }
+  }
+
   async register(data: {
     clinicName: string;
     name: string;
@@ -65,10 +92,6 @@ export class AuthService {
         data.phoneVerificationToken,
         "register",
       );
-      const phoneUsers = await this.repo.findUsersByPhone(verifiedPhone);
-      if (phoneUsers.length > 0) {
-        throw new ConflictError("Этот номер WhatsApp уже привязан к другому аккаунту");
-      }
     }
 
     const normalizedEmail = data.email
@@ -81,10 +104,7 @@ export class AuthService {
       throw new ValidationError("Подтвердите WhatsApp для регистрации");
     }
 
-    const existing = await this.repo.findUserByEmail(normalizedEmail);
-    if (existing) {
-      throw new ConflictError("Этот email уже зарегистрирован");
-    }
+    await this.releaseInactiveRegistrationClaims(verifiedPhone, normalizedEmail);
 
     const clinic = await this.repo.createClinic({
       id: randomUUID(),
