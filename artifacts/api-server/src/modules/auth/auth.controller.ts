@@ -100,6 +100,9 @@ router.post("/whatsapp/request-otp", async (req: Request, res: Response, next: N
     if (parsed.data.purpose === "reset_password") {
       await authService.assertPhoneAccountForPasswordReset(parsed.data.phone);
     }
+    if (parsed.data.purpose === "register") {
+      await authService.assertPhoneAvailableForRegistration(parsed.data.phone);
+    }
 
     const result = await whatsappOtpService.requestOtp(parsed.data.phone, parsed.data.purpose);
     const response: Record<string, unknown> = {

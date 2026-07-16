@@ -1,7 +1,7 @@
 import { db, usersTable, clinicsTable, userSalarySettingsTable, doctorCapacityTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import type { InsertUser, InsertClinic, User, Clinic } from "@workspace/db";
-import { phonesMatch } from "../../shared/phone";
+import { phonesMatch, syntheticWhatsappEmail } from "../../shared/phone";
 
 export type SafeClinic = Omit<Clinic, "greenApiInstanceId" | "greenApiToken">;
 
@@ -35,7 +35,21 @@ export class AuthRepository {
           .select()
           .from(usersTable)
           .where(eq(usersTable.isActive, true));
-    return rows.filter((u) => u.phone && phonesMatch(u.phone, phone)) as User[];
+
+    const byPhone = rows.filter((u) => u.phone && phonesMatch(u.phone, phone)) as User[];
+    if (byPhone.length > 0) return byPhone;
+
+    let syntheticEmail: string;
+    try {
+      syntheticEmail = syntheticWhatsappEmail(phone);
+    } catch {
+      return [];
+    }
+
+    const bySyntheticEmail = rows.filter(
+      (u) => u.email.toLowerCase() === syntheticEmail,
+    ) as User[];
+    return bySyntheticEmail;
   }
 
   async findUserById(id: string): Promise<User | undefined> {

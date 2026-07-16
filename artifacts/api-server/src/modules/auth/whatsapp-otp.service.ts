@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { normalizePhoneDigits, phonesMatch } from "../../shared/phone";
+import { normalizePhoneDigits, phonesMatch, normalizeAuthPhone } from "../../shared/phone";
 import { sendPlatformWhatsApp } from "../../shared/platform-whatsapp";
 import { ValidationError, UnauthorizedError, NotFoundError, TooManyRequestsError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
@@ -32,17 +32,11 @@ function generateOtpCode(): string {
 }
 
 function normalizePhone(phone: string): string {
-  const digits = normalizePhoneDigits(phone);
-  if (digits.length < 10) {
+  try {
+    return normalizeAuthPhone(phone);
+  } catch {
     throw new ValidationError("Введите корректный номер телефона");
   }
-  if (digits.length === 11 && digits.startsWith("8")) {
-    return `7${digits.slice(1)}`;
-  }
-  if (digits.length === 10) {
-    return `7${digits}`;
-  }
-  return digits;
 }
 
 function otpMessage(code: string, purpose: WhatsappOtpPurpose): string {

@@ -42,6 +42,7 @@ export default function Login() {
   const [mode, setMode] = useState<LoginMode>(initialMode);
   const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>("otp");
   const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [recoveryPhoneDraft, setRecoveryPhoneDraft] = useState("");
   const [recoveryToken, setRecoveryToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -97,6 +98,7 @@ export default function Login() {
   function resetRecoveryFlow() {
     setRecoveryStep("otp");
     setRecoveryPhone("");
+    setRecoveryPhoneDraft("");
     setRecoveryToken("");
     setNewPassword("");
     setConfirmPassword("");
@@ -217,6 +219,7 @@ export default function Login() {
                 type="button"
                 onClick={() => {
                   resetRecoveryFlow();
+                  setRecoveryPhoneDraft(phoneValue);
                   setMode("whatsapp-recovery");
                 }}
                 className="text-xs font-medium text-[#1f75fe] hover:underline transition-all duration-200"
@@ -252,6 +255,7 @@ export default function Login() {
             purpose="reset_password"
             title={t("auth.forgotTitle")}
             subtitle={t("auth.forgotWhatsappSubtitle")}
+            initialPhone={recoveryPhoneDraft}
             onResetVerified={({ phone, verificationToken }) => {
               setRecoveryPhone(phone);
               setRecoveryToken(verificationToken);

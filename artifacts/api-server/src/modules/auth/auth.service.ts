@@ -159,7 +159,11 @@ export class AuthService {
 
     const clinic = await this.repo.findClinicById(user.clinicId);
     if (!clinic) {
-      throw new UnauthorizedError("Clinic not found");
+      throw new UnauthorizedError("Клиника не найдена. Обратитесь в поддержку 1Dent.");
+    }
+    const clinicActive = await this.repo.isClinicActive(user.clinicId);
+    if (!clinicActive) {
+      throw new UnauthorizedError("Клиника деактивирована. Обратитесь в поддержку 1Dent.");
     }
 
     const token = this.generateToken(user, user.clinicId);
@@ -167,15 +171,62 @@ export class AuthService {
     return { user: safeUser, clinic, token };
   }
 
+  private async resolveActiveUsersByPhone(phone: string): Promise<User[]> {
+    return this.repo.findUsersByPhone(phone);
+  }
+
+  private async resolveAnyUsersByPhone(phone: string): Promise<User[]> {
+    return this.repo.findUsersByPhone(phone, true);
+  }
+
+  private async assertSinglePhoneAccount(
+    phone: string,
+    options?: { allowInactive?: boolean; skipClinicCheck?: boolean },
+  ): Promise<User> {
+    const activeMatches = await this.resolveActiveUsersByPhone(phone);
+
+    if (activeMatches.length === 1) {
+      const user = activeMatches[0]!;
+      if (!options?.skipClinicCheck) {
+        const clinicActive = await this.repo.isClinicActive(user.clinicId);
+        if (!clinicActive) {
+          throw new NotFoundError("Клиника деактивирована. Обратитесь в поддержку 1Dent.");
+        }
+      }
+      return user;
+    }
+
+    if (activeMatches.length > 1) {
+      throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
+    }
+
+    if (options?.allowInactive) {
+      const inactiveMatches = await this.resolveAnyUsersByPhone(phone);
+      if (inactiveMatches.length > 0) {
+        throw new NotFoundError("Аккаунт деактивирован. Обратитесь в поддержку 1Dent.");
+      }
+    }
+
+    throw new NotFoundError(
+      "Аккаунт с этим номером WhatsApp не найден. Проверьте номер или войдите по паролю на странице входа.",
+    );
+  }
+
   async assertPhoneAccountForPasswordReset(phone: string): Promise<void> {
     const normalized = whatsappOtpService.normalizePhone(phone);
-    const matches = await this.repo.findUsersByPhone(normalized);
+    await this.assertSinglePhoneAccount(normalized, {
+      allowInactive: true,
+      skipClinicCheck: true,
+    });
+  }
 
-    if (matches.length === 0) {
-      throw new NotFoundError("Аккаунт с этим номером не найден");
-    }
-    if (matches.length > 1) {
-      throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
+  async assertPhoneAvailableForRegistration(phone: string): Promise<void> {
+    const normalized = whatsappOtpService.normalizePhone(phone);
+    const activeMatches = await this.resolveActiveUsersByPhone(normalized);
+    if (activeMatches.length > 0) {
+      throw new ConflictError(
+        "Этот номер WhatsApp уже привязан к аккаунту. Войдите или восстановите пароль на странице входа.",
+      );
     }
   }
 
@@ -189,35 +240,21 @@ export class AuthService {
       data.verificationToken,
       "reset_password",
     );
-    const matches = await this.repo.findUsersByPhone(normalized);
+    const user = await this.assertSinglePhoneAccount(normalized, {
+      allowInactive: true,
+      skipClinicCheck: true,
+    });
 
-    if (matches.length === 0) {
-      throw new NotFoundError("Аккаунт с этим номером не найден");
-    }
-    if (matches.length > 1) {
-      throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
-    }
-
-    const user = matches[0]!;
     const passwordHash = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
     await this.repo.updateUserPassword(user.id, passwordHash);
   }
 
   async loginViaWhatsapp(data: { phone: string; code: string }): Promise<AuthResult> {
     const normalized = whatsappOtpService.consumeVerificationForLogin(data.phone, data.code);
-    const matches = await this.repo.findUsersByPhone(normalized);
-
-    if (matches.length === 0) {
-      throw new UnauthorizedError("Аккаунт с этим номером не найден");
-    }
-    if (matches.length > 1) {
-      throw new ValidationError("Номер привязан к нескольким аккаунтам. Обратитесь в поддержку.");
-    }
-
-    const user = matches[0]!;
+    const user = await this.assertSinglePhoneAccount(normalized);
     const clinic = await this.repo.findClinicById(user.clinicId);
     if (!clinic) {
-      throw new UnauthorizedError("Clinic not found");
+      throw new UnauthorizedError("Клиника не найдена. Обратитесь в поддержку 1Dent.");
     }
 
     const token = this.generateToken(user, user.clinicId);
