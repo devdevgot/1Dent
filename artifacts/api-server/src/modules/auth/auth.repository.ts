@@ -96,6 +96,17 @@ export class AuthRepository {
     return row?.isActive ?? false;
   }
 
+  async archiveUserCredentials(userId: string): Promise<void> {
+    await db
+      .update(usersTable)
+      .set({
+        email: `inactive+${userId}@archived.1dent.internal`,
+        phone: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, userId));
+  }
+
   async createClinic(data: InsertClinic): Promise<Clinic> {
     const [clinic] = await db.insert(clinicsTable).values(data).returning();
     return clinic!;
