@@ -24,6 +24,7 @@ interface WhatsappOtpFlowProps {
   purpose: WhatsappOtpPurpose;
   title: string;
   subtitle: string;
+  initialPhone?: string;
   onLoginSuccess?: (data: {
     user: NonNullable<Awaited<ReturnType<typeof verifyWhatsappOtpLogin>>["data"]>["user"];
     clinic: NonNullable<Awaited<ReturnType<typeof verifyWhatsappOtpLogin>>["data"]>["clinic"];
@@ -37,12 +38,15 @@ export function WhatsappOtpFlow({
   purpose,
   title,
   subtitle,
+  initialPhone = "",
   onLoginSuccess,
   onRegisterVerified,
   onResetVerified,
 }: WhatsappOtpFlowProps) {
   const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(() =>
+    initialPhone ? formatPhoneInput(initialPhone) : "",
+  );
   const [normalizedPhone, setNormalizedPhone] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
