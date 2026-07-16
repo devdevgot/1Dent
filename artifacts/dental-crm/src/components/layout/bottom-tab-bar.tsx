@@ -95,7 +95,7 @@ function buildTabs(
       icon: work.icon,
       geoRestricted: true,
       isActive:
-        activeService === workOverlaySlug ||
+        (workOverlaySlug != null && activeService === workOverlaySlug) ||
         (!activeService && matchesPath(location, work.href)),
       overlaySlug: workOverlaySlug,
     },
