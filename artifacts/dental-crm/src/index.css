@@ -137,8 +137,19 @@
   * {
     @apply border-border;
   }
+  html {
+    background-color: #faf8f4;
+  }
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    min-height: 100dvh;
+    min-height: 100svh;
+  }
   body {
     @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
+    overscroll-behavior-y: none;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight;
@@ -183,13 +194,33 @@
   }
 
   .safe-area-top {
-    padding-top: env(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top, 0px);
   }
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .pb-safe {
-    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /** Full viewport shell — prefer svh on mobile to avoid iOS browser/PWA gaps. */
+  .h-app {
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  /**
+   * iOS home-screen PWA with status-bar-style "default": the status bar sits
+   * outside the webview. Extra safe-area-top padding only creates empty bands.
+   */
+  html.pwa-ios-standalone .safe-area-top {
+    padding-top: 0;
+  }
+
+  @media (display-mode: standalone) {
+    html:not(.pwa-ios-standalone) .safe-area-top {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
   }
 
   .custom-scrollbar::-webkit-scrollbar {

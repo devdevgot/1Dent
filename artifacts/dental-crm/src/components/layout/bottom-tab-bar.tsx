@@ -161,8 +161,8 @@ export function BottomTabBar({
   }, []);
 
   return (
-    <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 safe-area-bottom">
-      <div className="flex items-stretch h-[calc(4rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)]">
+    <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="flex items-stretch h-16">
         {tabs.map((tab) => {
           const blocked = isRestricted && hasBranches && tab.geoRestricted;
           const Icon = tab.icon;

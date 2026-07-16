@@ -175,7 +175,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <OverlayNavigationProvider>
-    <div className="flex h-[100dvh] bg-[#faf8f4] overflow-hidden font-manrope">
+    <div className="flex h-app bg-[#faf8f4] overflow-hidden font-manrope">
       {/* Desktop/Tablet sidebar — shown at ≥768px */}
       {!isMobile && (
         <aside
