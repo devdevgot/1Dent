@@ -1,4 +1,5 @@
 import { getBaseUrl } from "@/lib/base-url";
+import { isPwaStandalone } from "@/lib/pwa";
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem("auth_token");
@@ -24,6 +25,11 @@ export function isPushSupported(): boolean {
     "PushManager" in window &&
     "Notification" in window
   );
+}
+
+/** Push is gated to the installed PWA (not a regular browser tab). */
+export function isPwaPushAvailable(): boolean {
+  return isPushSupported() && isPwaStandalone();
 }
 
 export function getNotificationPermission(): NotificationPermission | "unsupported" {
@@ -108,9 +114,10 @@ async function registerSubscriptionOnServer(subscription: PushSubscription): Pro
 }
 
 export async function subscribeToPushNotifications(): Promise<
-  "granted" | "denied" | "unsupported" | "server_disabled" | "sw_unavailable"
+  "granted" | "denied" | "unsupported" | "server_disabled" | "sw_unavailable" | "pwa_required"
 > {
   if (!isPushSupported()) return "unsupported";
+  if (!isPwaStandalone()) return "pwa_required";
 
   const registration = await getServiceWorkerRegistration();
   if (!registration) return "sw_unavailable";
@@ -171,7 +178,7 @@ export async function unsubscribeFromPushNotifications(): Promise<void> {
 }
 
 export async function syncPushSubscriptionIfGranted(): Promise<boolean> {
-  if (!isPushSupported()) return false;
+  if (!isPwaPushAvailable()) return false;
   if (Notification.permission !== "granted") return false;
 
   try {

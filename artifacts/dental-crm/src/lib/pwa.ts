@@ -43,6 +43,11 @@ function detectStandalone(): boolean {
   return matchesDisplayMode || iosStandalone;
 }
 
+/** True when CRM is opened from the home-screen PWA (not a browser tab). */
+export function isPwaStandalone(): boolean {
+  return detectStandalone();
+}
+
 function detectIos(): boolean {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent;

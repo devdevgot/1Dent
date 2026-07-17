@@ -5,6 +5,7 @@ import { useAppLockStore } from "@/lib/app-lock/store";
 import { markAppHidden } from "@/lib/app-lock/storage";
 import { loadAppLockConfig } from "@/lib/app-lock/storage";
 import { AppLockScreen } from "./app-lock-screen";
+import { isPwaStandalone } from "@/lib/pwa";
 
 const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
 const SKIP_LOCK_PREFIXES = ["/tablet"];
@@ -42,6 +43,7 @@ export function AppLockProvider({ children }: AppLockProviderProps) {
   }, [user?.id, isLoading, init, reset]);
 
   useEffect(() => {
+    if (!isPwaStandalone()) return;
     const active = loadAppLockConfig();
     if (!active || !isInitialized) return;
 
@@ -92,6 +94,7 @@ export function AppLockProvider({ children }: AppLockProviderProps) {
   const skip = shouldSkipAppLock(location);
   const active = loadAppLockConfig();
   const showLock =
+    isPwaStandalone() &&
     !skip &&
     !isLoading &&
     Boolean(user?.id) &&

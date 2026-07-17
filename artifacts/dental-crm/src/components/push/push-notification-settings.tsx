@@ -5,11 +5,19 @@ import { Switch } from "@/components/ui/switch";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { PwaExclusiveGate } from "@/components/pwa/pwa-exclusive-gate";
 import {
   getPushSettingsState,
+  isPushSupported,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
 } from "@/lib/push-notifications";
+
+const PUSH_PWA_FEATURES = [
+  "pwa.exclusive.pushFeature1",
+  "pwa.exclusive.pushFeature2",
+  "pwa.exclusive.pushFeature3",
+] as const;
 
 function SettingsRowIcon({
   icon: Icon,
@@ -30,13 +38,12 @@ function SettingsRowIcon({
   );
 }
 
-export function PushNotificationSettings() {
+function PushNotificationSettingsInner() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [enabled, setEnabled] = useState(false);
-  const [supported, setSupported] = useState(true);
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
   const [hint, setHint] = useState<string | null>(null);
 
@@ -44,17 +51,14 @@ export function PushNotificationSettings() {
     setLoading(true);
     try {
       const state = await getPushSettingsState();
-      setSupported(state.supported);
       setPermission(state.permission);
       setEnabled(state.subscribed);
       setHint(
-        !state.supported
-          ? t("push.unsupported")
-          : state.permission === "denied"
-            ? t("push.deniedHint")
-            : !state.serverEnabled
-              ? t("push.serverDisabledHint")
-              : null,
+        state.permission === "denied"
+          ? t("push.deniedHint")
+          : !state.serverEnabled
+            ? t("push.serverDisabledHint")
+            : null,
       );
     } finally {
       setLoading(false);
@@ -66,11 +70,6 @@ export function PushNotificationSettings() {
   }, [refresh]);
 
   const handleToggle = async (checked: boolean) => {
-    if (!supported) {
-      toast({ title: t("push.unsupported"), variant: "destructive" });
-      return;
-    }
-
     setBusy(true);
     try {
       if (checked) {
@@ -89,6 +88,11 @@ export function PushNotificationSettings() {
             title: t("common.error", { defaultValue: "Ошибка" }),
             description: t("push.swNotReady"),
             variant: "destructive",
+          });
+        } else if (result === "pwa_required") {
+          toast({
+            title: t("pwa.exclusive.badge"),
+            description: t("pwa.exclusive.pushDesc"),
           });
         } else {
           toast({ title: t("push.serverDisabled"), variant: "destructive" });
@@ -111,7 +115,7 @@ export function PushNotificationSettings() {
     }
   };
 
-  if (!supported) return null;
+  if (!isPushSupported()) return null;
 
   return (
     <IosSection title={t("push.sectionTitle")}>
@@ -138,5 +142,22 @@ export function PushNotificationSettings() {
         </IosGroupRow>
       </IosGroup>
     </IosSection>
+  );
+}
+
+export function PushNotificationSettings() {
+  const { t } = useTranslation();
+
+  return (
+    <PwaExclusiveGate
+      sectionTitle={t("push.sectionTitle")}
+      icon={BellRing}
+      iconClassName="bg-[#ec4899] text-white"
+      titleKey="pwa.exclusive.pushTitle"
+      descriptionKey="pwa.exclusive.pushDesc"
+      featureKeys={[...PUSH_PWA_FEATURES]}
+    >
+      <PushNotificationSettingsInner />
+    </PwaExclusiveGate>
   );
 }
