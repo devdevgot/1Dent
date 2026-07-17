@@ -72,7 +72,8 @@ function useAfterFirstPaint() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const [location] = useLocation();
-  const { status, activeBranch, isRestricted, hasBranches } = useGeoRestriction();
+  const { status, activeBranch, isRestricted, hasBranches, permissionPhase, requestGeolocationPermission } =
+    useGeoRestriction();
   const queryClient = useQueryClient();
   const { branches, selectedBranchId, setSelectedBranchId, fetchBranches, hasFetched } = useBranchStore();
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
@@ -209,12 +210,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Status indicator when geo is loading or denied (only if branches exist) */}
-      {hasBranches && status === "denied" && (
+      {hasBranches && (status === "denied" || permissionPhase === "prompt") && (
         <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[#faf8f4] border-b border-[#e8e3d9] z-10">
-          <AlertTriangle className="w-4 h-4 text-[#94a3b8] shrink-0" />
-          <p className="text-xs text-[#64748b]">
-            Геолокация недоступна — разрешите доступ в настройках браузера
+          <AlertTriangle className="w-4 h-4 text-[#d97706] shrink-0" />
+          <p className="flex-1 text-xs text-[#64748b]">
+            {status === "denied"
+              ? "Геолокация запрещена — включите в настройках телефона для автотрекинга"
+              : "Разрешите геолокацию для автоматического трекинга прихода и ухода"}
           </p>
+          {permissionPhase !== "denied" && (
+            <button
+              type="button"
+              onClick={() => void requestGeolocationPermission({ warmMedia: true })}
+              className="shrink-0 rounded-full bg-[#1f75fe] px-3 py-1 text-[11px] font-semibold text-white"
+            >
+              Разрешить
+            </button>
+          )}
         </div>
       )}
 

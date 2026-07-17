@@ -1241,6 +1241,19 @@
     "trackingTestSentDesc": "Осы құрылғыда хабарландыруды тексеріңіз",
     "trackingTestFailed": "Push жіберу сәтсіз аяқталды"
   },
+  "permissions": {
+    "geoPromptTitle": "Трекинг үшін рұқсат",
+    "geoPromptDesc": "Бір рет рұқсат етіңіз — келу/кету автоматты тіркеледі, иесіне қайта сұраусыз хабарланады.",
+    "geoItemTitle": "Геолокация",
+    "geoItemDesc": "Клиникаға кіргенде check-in, кеткенде check-out",
+    "cameraItemTitle": "Камера",
+    "cameraItemDesc": "Процедура фото және QR — қайта сұраусыз",
+    "micItemTitle": "Микрофон",
+    "micItemDesc": "Диагноз дауыспен — қайта сұраусыз",
+    "onceHint": "iOS бір рет сұрайды. «Рұқсат ету» кейін қайталанбайды.",
+    "allowButton": "Рұқсат ету",
+    "laterButton": "Кейін"
+  },
   "channels": {
     "sectionTitle": "Тарту арналары",
     "sectionDesc": "Науқас көздерін бақылауға арналған бірегей сілтемелер",

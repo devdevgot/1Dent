@@ -17,6 +17,7 @@ import {
 import type { ProcedureTemplate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { requestMicrophoneAccess } from "@/lib/device-permissions";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import { getBaseUrl } from "@/lib/base-url";
@@ -327,14 +328,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const startRecording = useCallback(async () => {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
+      const stream = await requestMicrophoneAccess({ keepStream: true });
+      if (!stream) {
+        setError("Нет доступа к микрофону");
+        return;
+      }
       const audioCtx = new AudioContext();
       if (audioCtx.state === "suspended") await audioCtx.resume();
 

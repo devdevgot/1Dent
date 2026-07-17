@@ -1241,6 +1241,19 @@
     "trackingTestSentDesc": "Check the notification on this device",
     "trackingTestFailed": "Failed to send push"
   },
+  "permissions": {
+    "geoPromptTitle": "Access for tracking",
+    "geoPromptDesc": "Allow once — check-in and check-out will work automatically and the owner gets notified without repeated prompts.",
+    "geoItemTitle": "Location",
+    "geoItemDesc": "Automatic check-in when entering the clinic and check-out when leaving",
+    "cameraItemTitle": "Camera",
+    "cameraItemDesc": "Procedure photos and QR scanner without repeated prompts",
+    "micItemTitle": "Microphone",
+    "micItemDesc": "Voice diagnosis input without repeated prompts",
+    "onceHint": "iOS asks once. After you allow, you won't be prompted again.",
+    "allowButton": "Allow",
+    "laterButton": "Later"
+  },
   "channels": {
     "sectionTitle": "Acquisition Channels",
     "sectionDesc": "Unique tracking links for patient source attribution",
