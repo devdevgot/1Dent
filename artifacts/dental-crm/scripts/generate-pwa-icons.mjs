@@ -4,9 +4,9 @@
  * Requires: npm install sharp (one-off or devDependency)
  * Run from artifacts/dental-crm: node scripts/generate-pwa-icons.mjs
  *
- * iOS 26 (Liquid Glass): ~88% safe zone — room for system glass/refraction.
- * iOS 18 and below: logo fills ~94% of the canvas so the mark reads full-size
- * inside Apple's squircle mask (no "tiny logo in a big icon" look).
+ * iOS 26 (Liquid Glass): system applies its own glass/refraction on top.
+ * Apple touch icons: white mark scaled to match logo_clean.png proportions
+ * (mark size relative to artwork), not an arbitrary fill percentage.
  */
 import sharp from "sharp";
 import path from "path";
@@ -17,10 +17,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.resolve(__dirname, "../public");
 const SRC = path.join(PUBLIC, "logo_clean.png");
 
-/** Apple home-screen — larger mark for pre–iOS 26 squircle display. */
-const APPLE_TOUCH_SAFE_RATIO = 0.94;
-
-const BRAND_BLUE = { r: 21, g: 123, b: 251 };
+/** Small boost so the mark stays legible inside iOS squircle masking. */
+const IOS_MARK_BOOST = 1.06;
 
 async function trimmedLogo() {
   return sharp(SRC).trim({ threshold: 1 }).toBuffer();
@@ -71,11 +69,26 @@ async function whiteMarkBuffer() {
     .toBuffer();
 }
 
-/**
- * Opaque home-screen icon: white 1D on full-bleed brand blue.
- * Uses white-mark crop so pre–iOS 26 icons show a full-size logo, not a tiny mark.
- */
-async function makeAppleTouchIcon(size, outPath, safeRatio = APPLE_TOUCH_SAFE_RATIO) {
+/** White-mark size vs logo_clean canvas — keeps home-screen icon on-brand. */
+async function computeAppleTouchMarkRatio() {
+  const trimmedBuf = await trimmedLogo();
+  const { width: canvasWidth = 1, height: canvasHeight = 1 } =
+    await sharp(trimmedBuf).metadata();
+  const markBuf = await whiteMarkBuffer();
+  const { width: markWidth = 1, height: markHeight = 1 } =
+    await sharp(markBuf).metadata();
+
+  const canvasMin = Math.min(canvasWidth, canvasHeight);
+  const markMax = Math.max(markWidth, markHeight);
+  const baseRatio = markMax / canvasMin;
+
+  return Math.min(0.78, baseRatio * IOS_MARK_BOOST);
+}
+
+const BRAND_BLUE = { r: 21, g: 123, b: 251 };
+
+/** Opaque home-screen icon: white 1D on full-bleed brand blue. */
+async function makeAppleTouchIcon(size, outPath, safeRatio) {
   const mark = await whiteMarkBuffer();
   const target = Math.round(size * safeRatio);
   const logo = await sharp(mark)
@@ -145,6 +158,9 @@ async function main() {
     process.exit(1);
   }
 
+  const appleTouchMarkRatio = await computeAppleTouchMarkRatio();
+  console.log(`Apple touch mark ratio: ${(appleTouchMarkRatio * 100).toFixed(1)}%`);
+
   const pwaDir = path.join(PUBLIC, "icons/pwa");
   const appleDir = path.join(PUBLIC, "icons/apple");
   fs.mkdirSync(pwaDir, { recursive: true });
@@ -153,9 +169,9 @@ async function main() {
   console.log("Generating from", SRC);
 
   for (const size of [152, 167, 180]) {
-    await makeAppleTouchIcon(size, path.join(appleDir, `apple-touch-icon-${size}x${size}.png`), APPLE_TOUCH_SAFE_RATIO);
+    await makeAppleTouchIcon(size, path.join(appleDir, `apple-touch-icon-${size}x${size}.png`), appleTouchMarkRatio);
   }
-  await makeAppleTouchIcon(180, path.join(PUBLIC, "apple-touch-icon.png"), APPLE_TOUCH_SAFE_RATIO);
+  await makeAppleTouchIcon(180, path.join(PUBLIC, "apple-touch-icon.png"), appleTouchMarkRatio);
 
   await makePwaIcon(192, path.join(pwaDir, "icon-192.png"));
   await makePwaIcon(512, path.join(pwaDir, "icon-512.png"));
