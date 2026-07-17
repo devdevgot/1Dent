@@ -22,6 +22,7 @@ import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect"
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
 import { clearChunkReloadFlag, lazyWithChunkRecovery } from "@/lib/chunk-reload";
+import { isPwaStandalone } from "@/lib/pwa";
 import {
   PatientsPageSkeleton,
   ToothDetailPageSkeleton,
@@ -248,6 +249,12 @@ function Router() {
       setLocation(roleDashboard);
     }
   }, [isAuthenticated, location, setLocation, roleDashboard]);
+
+  useEffect(() => {
+    if (!isAuthenticated && location === "/" && isPwaStandalone()) {
+      setLocation("/login", { replace: true });
+    }
+  }, [isAuthenticated, location, setLocation]);
 
   return (
     <>
