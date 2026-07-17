@@ -123,6 +123,8 @@ export default function DoctorSchedulePage() {
 
   const prev = () => { if (month === 0) { setMonth(11); setYear(y => y-1); } else setMonth(m => m-1); };
   const next = () => { if (month === 11) { setMonth(0);  setYear(y => y+1); } else setMonth(m => m+1); };
+  const goToday = () => { const n = new Date(); setYear(n.getFullYear()); setMonth(n.getMonth()); };
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
 
   return (
     <PageShell className="pb-8" animate={false}>
@@ -130,6 +132,15 @@ export default function DoctorSchedulePage() {
         title={`${MONTHS[month]} ${year}`}
         right={
           <>
+            {!isCurrentMonth && (
+              <button
+                type="button"
+                onClick={goToday}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#1f75fe] bg-[var(--primary-light)] hover:bg-[#1f75fe]/15 transition-colors"
+              >
+                Сегодня
+              </button>
+            )}
             <PageHeaderIconButton onClick={prev} title="Предыдущий месяц">
               <ChevronLeft className="w-4 h-4" />
             </PageHeaderIconButton>
@@ -199,7 +210,7 @@ export default function DoctorSchedulePage() {
 
                     {/* Event pills */}
                     <div className="space-y-0.5 px-0.5">
-                      {procs.slice(0, 2).map(p => (
+                      {procs.slice(0, 3).map(p => (
                         <div
                           key={p.id}
                           className={`
@@ -211,9 +222,9 @@ export default function DoctorSchedulePage() {
                           <span className="truncate">{p.name}</span>
                         </div>
                       ))}
-                      {procs.length > 2 && (
+                      {procs.length > 3 && (
                         <p className="text-[9px] text-[#1f75fe] font-semibold pl-1">
-                          +{procs.length - 2} ещё
+                          +{procs.length - 3} ещё
                         </p>
                       )}
                     </div>

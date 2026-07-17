@@ -6,8 +6,9 @@ import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 const MONTHS_RU = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
   "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 const DAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-const SCHEDULE_TIME_SLOTS = Array.from({ length: 28 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 8;
+/* Full day — no working-hours restriction (00:00–23:30). */
+const SCHEDULE_TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
+  const hour = Math.floor(i / 2);
   const min = i % 2 === 0 ? "00" : "30";
   return `${String(hour).padStart(2, "0")}:${min}`;
 });

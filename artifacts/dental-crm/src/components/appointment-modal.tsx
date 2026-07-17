@@ -95,8 +95,9 @@ const MONTHS_SHORT = ["янв","фев","мар","апр","май","июн",
                       "июл","авг","сен","окт","ноя","дек"];
 const DAYS_RU = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 
-const TIME_SLOTS = Array.from({ length: 28 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 8;
+/* Full day — no working-hours restriction (00:00–23:30). */
+const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
+  const hour = Math.floor(i / 2);
   const min  = i % 2 === 0 ? "00" : "30";
   return `${String(hour).padStart(2, "0")}:${min}`;
 });
@@ -294,9 +295,12 @@ export function AppointmentModal({
   isSaving,
 }: AppointmentModalProps) {
   const defaultDate = format(date, "yyyy-MM-dd");
+  const dateTime = format(date, "HH:mm");
   const defaultTime = procedure?.scheduledAt
     ? format(parseISO(procedure.scheduledAt), "HH:mm")
-    : "09:00";
+    : dateTime !== "00:00"
+      ? dateTime
+      : "09:00";
 
   /* patient form */
   const [iin, setIin]                   = useState("");
