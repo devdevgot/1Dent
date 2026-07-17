@@ -1192,7 +1192,7 @@
     "themeSystem": "Жүйелік"
   },
   "appLock": {
-    "title": "1Dent құлыпталған",
+    "title": "Қош келдіңіз!",
     "subtitle": "Қол жеткізу кодын енгізіңіз немесе Face ID / Touch ID қолданыңыз",
     "wrongPin": "Қате код",
     "tooManyAttempts": "Тым көп әрекет. Күтіп, қайта көріңіз.",
