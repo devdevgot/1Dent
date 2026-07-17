@@ -159,11 +159,17 @@ export function registerServiceWorker(): void {
   if (!("serviceWorker" in navigator)) return;
   if (!import.meta.env.PROD) return;
 
-  window.addEventListener("load", () => {
+  const register = () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {
       // Registration failures must never break the app.
     });
-  });
+  };
+
+  if (document.readyState === "complete") {
+    register();
+  } else {
+    window.addEventListener("load", register, { once: true });
+  }
 }
 
 export type UsePwaInstall = PwaState & {

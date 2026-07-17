@@ -6,9 +6,7 @@ import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
-  fetchPushStatus,
-  getNotificationPermission,
-  isPushSupported,
+  getPushSettingsState,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
 } from "@/lib/push-notifications";
@@ -38,20 +36,30 @@ export function PushNotificationSettings() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [enabled, setEnabled] = useState(false);
-  const [serverEnabled, setServerEnabled] = useState(false);
-  const supported = isPushSupported();
-  const permission = getNotificationPermission();
+  const [supported, setSupported] = useState(true);
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [hint, setHint] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const status = await fetchPushStatus();
-      setServerEnabled(status.enabled);
-      setEnabled(supported && permission === "granted" && status.enabled);
+      const state = await getPushSettingsState();
+      setSupported(state.supported);
+      setPermission(state.permission);
+      setEnabled(state.subscribed);
+      setHint(
+        !state.supported
+          ? t("push.unsupported")
+          : state.permission === "denied"
+            ? t("push.deniedHint")
+            : !state.serverEnabled
+              ? t("push.serverDisabledHint")
+              : null,
+      );
     } finally {
       setLoading(false);
     }
-  }, [permission, supported]);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -59,18 +67,7 @@ export function PushNotificationSettings() {
 
   const handleToggle = async (checked: boolean) => {
     if (!supported) {
-      toast({
-        title: t("push.unsupported"),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!serverEnabled) {
-      toast({
-        title: t("push.serverDisabled"),
-        variant: "destructive",
-      });
+      toast({ title: t("push.unsupported"), variant: "destructive" });
       return;
     }
 
@@ -80,21 +77,32 @@ export function PushNotificationSettings() {
         const result = await subscribeToPushNotifications();
         if (result === "granted") {
           setEnabled(true);
+          setPermission("granted");
+          setHint(null);
           toast({ title: t("push.enabled") });
         } else if (result === "denied") {
+          setPermission("denied");
+          setHint(t("push.deniedHint"));
           toast({ title: t("push.denied"), variant: "destructive" });
+        } else if (result === "sw_unavailable") {
+          toast({
+            title: t("common.error", { defaultValue: "Ошибка" }),
+            description: t("push.swNotReady"),
+            variant: "destructive",
+          });
         } else {
           toast({ title: t("push.serverDisabled"), variant: "destructive" });
         }
       } else {
         await unsubscribeFromPushNotifications();
         setEnabled(false);
+        setHint(null);
         toast({ title: t("push.disabled") });
       }
-    } catch {
+    } catch (err) {
       toast({
         title: t("common.error", { defaultValue: "Ошибка" }),
-        description: t("push.subscribeError"),
+        description: err instanceof Error ? err.message : t("push.subscribeError"),
         variant: "destructive",
       });
     } finally {
@@ -108,18 +116,24 @@ export function PushNotificationSettings() {
   return (
     <IosSection title={t("push.sectionTitle")}>
       <IosGroup>
-        <IosGroupRow className="gap-3">
+        <IosGroupRow className="gap-3 items-start">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <SettingsRowIcon icon={BellRing} className="bg-[#ec4899] text-white" />
             <div className="min-w-0">
               <p className="text-sm text-[#0f172a]">{t("push.settingsTitle")}</p>
               <p className="text-xs text-[#64748b]">{t("push.settingsDesc")}</p>
+              {hint && (
+                <p className="text-xs text-[#d97706] mt-1 leading-relaxed">{hint}</p>
+              )}
+              {permission === "denied" && (
+                <p className="text-xs text-[#64748b] mt-1 leading-relaxed">{t("push.deniedIosHint")}</p>
+              )}
             </div>
           </div>
           <Switch
             checked={enabled}
             onCheckedChange={(v) => void handleToggle(v)}
-            disabled={loading || busy || !serverEnabled}
+            disabled={loading || busy || permission === "denied"}
           />
         </IosGroupRow>
       </IosGroup>

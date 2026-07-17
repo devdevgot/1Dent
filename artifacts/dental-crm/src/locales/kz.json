@@ -1212,7 +1212,11 @@
     "denied": "Браузер параметрлерінде хабарландыруға рұқсат беріңіз",
     "unsupported": "Бұл браузер push қолдамайды",
     "serverDisabled": "Push серверде бапталмаған",
-    "subscribeError": "Push жазылу сәтсіз аяқталды"
+    "subscribeError": "Push жазылу сәтсіз аяқталды",
+    "deniedHint": "Хабарландырулар браузерде бұғатталған",
+    "deniedIosHint": "iPhone: Параметрлер → Хабарландырулар → 1Dent → Рұқсат",
+    "serverDisabledHint": "Сервер push кілттерін дайындауда — бірнеше секундтан кейін қайта көріңіз",
+    "swNotReady": "Service worker дайын емес. Бетті жаңартыңыз немесе PWA-ны қайта ашыңыз"
   },
   "channels": {
     "sectionTitle": "Тарту арналары",

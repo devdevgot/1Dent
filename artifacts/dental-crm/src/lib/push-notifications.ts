@@ -31,38 +31,62 @@ export function getNotificationPermission(): NotificationPermission | "unsupport
   return Notification.permission;
 }
 
-export async function fetchPushStatus(): Promise<{ enabled: boolean; publicKey: string | null }> {
-  const res = await fetch(`${getBaseUrl()}/api/push/status`, {
-    headers: getAuthHeaders(),
-    credentials: "include",
-  });
-  if (!res.ok) return { enabled: false, publicKey: null };
-  const json = (await res.json()) as { data?: { enabled?: boolean; publicKey?: string | null } };
-  return {
-    enabled: Boolean(json.data?.enabled),
-    publicKey: json.data?.publicKey ?? null,
-  };
+async function parseApiError(res: Response): Promise<string> {
+  try {
+    const json = (await res.json()) as { error?: string };
+    return json.error ?? `HTTP ${res.status}`;
+  } catch {
+    return `HTTP ${res.status}`;
+  }
 }
 
-export async function subscribeToPushNotifications(): Promise<"granted" | "denied" | "unsupported" | "server_disabled"> {
-  if (!isPushSupported()) return "unsupported";
+export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (!("serviceWorker" in navigator)) return null;
 
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") return "denied";
+  try {
+    let registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+      registration = await navigator.serviceWorker.register("/sw.js");
+    }
 
-  const status = await fetchPushStatus();
-  if (!status.enabled || !status.publicKey) return "server_disabled";
+    await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<void>((_, reject) => {
+        setTimeout(() => reject(new Error("Service worker timeout")), 20_000);
+      }),
+    ]);
 
-  const registration = await navigator.serviceWorker.ready;
-  const existing = await registration.pushManager.getSubscription();
+    return registration;
+  } catch {
+    return null;
+  }
+}
 
-  const subscription =
-    existing ??
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(status.publicKey),
-    }));
+export async function hasActivePushSubscription(): Promise<boolean> {
+  const registration = await getServiceWorkerRegistration();
+  if (!registration) return false;
+  const subscription = await registration.pushManager.getSubscription();
+  return subscription !== null;
+}
 
+export async function fetchPushStatus(): Promise<{ enabled: boolean; publicKey: string | null }> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/api/push/status`, {
+      headers: getAuthHeaders(),
+      credentials: "include",
+    });
+    if (!res.ok) return { enabled: false, publicKey: null };
+    const json = (await res.json()) as { data?: { enabled?: boolean; publicKey?: string | null } };
+    return {
+      enabled: Boolean(json.data?.enabled),
+      publicKey: json.data?.publicKey ?? null,
+    };
+  } catch {
+    return { enabled: false, publicKey: null };
+  }
+}
+
+async function registerSubscriptionOnServer(subscription: PushSubscription): Promise<void> {
   const body = subscription.toJSON();
   if (!body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
     throw new Error("Invalid push subscription");
@@ -79,27 +103,71 @@ export async function subscribeToPushNotifications(): Promise<"granted" | "denie
   });
 
   if (!res.ok) {
-    throw new Error(`Subscribe failed: ${res.status}`);
+    throw new Error(await parseApiError(res));
+  }
+}
+
+export async function subscribeToPushNotifications(): Promise<
+  "granted" | "denied" | "unsupported" | "server_disabled" | "sw_unavailable"
+> {
+  if (!isPushSupported()) return "unsupported";
+
+  const registration = await getServiceWorkerRegistration();
+  if (!registration) return "sw_unavailable";
+
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return "denied";
+
+  const status = await fetchPushStatus();
+  if (!status.publicKey) return "server_disabled";
+
+  let subscription = await registration.pushManager.getSubscription();
+
+  if (subscription) {
+    try {
+      await registerSubscriptionOnServer(subscription);
+      return "granted";
+    } catch {
+      await subscription.unsubscribe().catch(() => {});
+      subscription = null;
+    }
   }
 
+  try {
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(status.publicKey),
+    });
+  } catch {
+    await registration.pushManager.getSubscription().then((sub) => sub?.unsubscribe()).catch(() => {});
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(status.publicKey),
+    });
+  }
+
+  await registerSubscriptionOnServer(subscription);
   return "granted";
 }
 
 export async function unsubscribeFromPushNotifications(): Promise<void> {
   if (!isPushSupported()) return;
 
-  const registration = await navigator.serviceWorker.ready;
-  const subscription = await registration.pushManager.getSubscription();
-  if (!subscription) return;
+  const registration = await getServiceWorkerRegistration();
+  const subscription = registration
+    ? await registration.pushManager.getSubscription()
+    : null;
 
-  await fetch(`${getBaseUrl()}/api/push/subscribe`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-    credentials: "include",
-    body: JSON.stringify({ endpoint: subscription.endpoint }),
-  }).catch(() => {});
+  if (subscription) {
+    await fetch(`${getBaseUrl()}/api/push/subscribe`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+      credentials: "include",
+      body: JSON.stringify({ endpoint: subscription.endpoint }),
+    }).catch(() => {});
 
-  await subscription.unsubscribe().catch(() => {});
+    await subscription.unsubscribe().catch(() => {});
+  }
 }
 
 export async function syncPushSubscriptionIfGranted(): Promise<boolean> {
@@ -123,7 +191,25 @@ export async function sendTestPush(kind: "tracking" | "notification" = "tracking
   });
 
   if (!res.ok) {
-    const json = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(json?.error ?? `HTTP ${res.status}`);
+    throw new Error(await parseApiError(res));
   }
+}
+
+export async function getPushSettingsState(): Promise<{
+  supported: boolean;
+  permission: NotificationPermission | "unsupported";
+  subscribed: boolean;
+  serverEnabled: boolean;
+}> {
+  const supported = isPushSupported();
+  const permission = getNotificationPermission();
+  const status = supported ? await fetchPushStatus() : { enabled: false, publicKey: null };
+  const subscribed = supported && permission === "granted" ? await hasActivePushSubscription() : false;
+
+  return {
+    supported,
+    permission,
+    subscribed,
+    serverEnabled: Boolean(status.enabled && status.publicKey),
+  };
 }

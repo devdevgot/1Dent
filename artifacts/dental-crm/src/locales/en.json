@@ -1212,7 +1212,11 @@
     "denied": "Allow notifications in browser settings",
     "unsupported": "Push is not supported in this browser",
     "serverDisabled": "Push is not configured on the server",
-    "subscribeError": "Could not subscribe to push notifications"
+    "subscribeError": "Could not subscribe to push notifications",
+    "deniedHint": "Notifications are blocked in browser settings",
+    "deniedIosHint": "On iPhone: Settings → Notifications → 1Dent → Allow",
+    "serverDisabledHint": "Server is preparing push keys — try again in a few seconds",
+    "swNotReady": "Service worker is not ready. Reload the page or reopen the installed PWA"
   },
   "channels": {
     "sectionTitle": "Acquisition Channels",
