@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Delete } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -6,45 +7,89 @@ interface PinKeypadProps {
   onDelete: () => void;
   disabled?: boolean;
   className?: string;
+  /** Rendered in the bottom-left slot (e.g. Face ID button). */
+  cornerSlot?: ReactNode;
+  /** Fade the delete key when there is nothing to delete. */
+  deleteVisible?: boolean;
 }
 
-const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'] as const;
+const DIGIT_ROWS = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+] as const;
 
-export function PinKeypad({ onDigit, onDelete, disabled, className }: PinKeypadProps) {
+function Key({
+  children,
+  onClick,
+  disabled,
+  ariaLabel,
+  ghost,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  ariaLabel?: string;
+  ghost?: boolean;
+}) {
   return (
-    <div className={cn('grid grid-cols-3 gap-3 max-w-[280px] mx-auto', className)}>
-      {DIGITS.map((key, index) => {
-        if (key === '') {
-          return <div key={`empty-${index}`} />;
-        }
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={cn(
+        'flex h-[68px] w-[68px] items-center justify-center rounded-full select-none',
+        'text-[26px] font-normal text-white tabular-nums',
+        'transition-[background-color,transform] duration-150 active:scale-90 disabled:opacity-35',
+        ghost
+          ? 'bg-transparent active:bg-white/15'
+          : 'bg-white/[0.08] border border-white/[0.06] backdrop-blur-xl active:bg-white/25',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
-        if (key === 'del') {
-          return (
-            <button
-              key="del"
-              type="button"
-              disabled={disabled}
-              onClick={onDelete}
-              className="h-16 rounded-2xl flex items-center justify-center text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] active:scale-95 transition-all disabled:opacity-40"
-              aria-label="Delete"
-            >
-              <Delete className="w-6 h-6" />
-            </button>
-          );
-        }
+export function PinKeypad({
+  onDigit,
+  onDelete,
+  disabled,
+  className,
+  cornerSlot,
+  deleteVisible = true,
+}: PinKeypadProps) {
+  return (
+    <div className={cn('flex flex-col items-center gap-3.5', className)}>
+      {DIGIT_ROWS.map((row) => (
+        <div key={row[0]} className="flex gap-6">
+          {row.map((d) => (
+            <Key key={d} onClick={() => onDigit(d)} disabled={disabled}>
+              {d}
+            </Key>
+          ))}
+        </div>
+      ))}
 
-        return (
-          <button
-            key={key}
-            type="button"
-            disabled={disabled}
-            onClick={() => onDigit(key)}
-            className="h-16 rounded-2xl text-2xl font-semibold text-[var(--color-text-primary)] bg-[var(--color-bg-subtle)] hover:bg-[var(--color-border)] active:scale-95 transition-all disabled:opacity-40"
-          >
-            {key}
-          </button>
-        );
-      })}
+      <div className="flex gap-6">
+        <div className="flex h-[68px] w-[68px] items-center justify-center">
+          {cornerSlot}
+        </div>
+        <Key onClick={() => onDigit('0')} disabled={disabled}>
+          0
+        </Key>
+        <div
+          className={cn(
+            'transition-opacity duration-200',
+            deleteVisible ? 'opacity-100' : 'pointer-events-none opacity-0',
+          )}
+        >
+          <Key onClick={onDelete} disabled={disabled} ariaLabel="Delete" ghost>
+            <Delete className="h-7 w-7 text-white/80" strokeWidth={1.75} />
+          </Key>
+        </div>
+      </div>
     </div>
   );
 }
