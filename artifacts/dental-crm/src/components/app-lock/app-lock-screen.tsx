@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Lock, ScanFace } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader2, Lock, ScanFace } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PinKeypad } from "./pin-keypad";
 import { useAppLockStore } from "@/lib/app-lock/store";
@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 
 const PIN_LENGTH = 4;
 const MAX_ATTEMPTS = 5;
+/** Avoid hammering Safari's WebAuthn rate limiter on rapid visibility toggles. */
+const BIOMETRIC_RETRY_COOLDOWN_MS = 1200;
 
 export function AppLockScreen() {
   const { t } = useTranslation();
@@ -17,13 +19,20 @@ export function AppLockScreen() {
   const [shaking, setShaking] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [biometricPrompting, setBiometricPrompting] = useState(false);
+  const [showPinFallback, setShowPinFallback] = useState(false);
 
   const config = loadAppLockConfig();
   const failedAttempts = useAppLockStore((s) => s.failedAttempts);
   const unlockWithPin = useAppLockStore((s) => s.unlockWithPin);
   const unlockWithBiometric = useAppLockStore((s) => s.unlockWithBiometric);
 
+  const biometricInFlightRef = useRef(false);
+  const lastBiometricAttemptRef = useRef(0);
+
   const lockedOut = failedAttempts >= MAX_ATTEMPTS;
+  const showBiometric = Boolean(config?.biometricEnabled && biometricAvailable);
+  const biometricFirst = showBiometric && !showPinFallback && !lockedOut;
 
   const flashError = useCallback((message: string) => {
     setError(message);
@@ -32,15 +41,30 @@ export function AppLockScreen() {
   }, []);
 
   const tryBiometric = useCallback(async () => {
-    if (!config?.biometricEnabled) return;
+    if (!config?.biometricEnabled || biometricInFlightRef.current) return;
+
+    const now = Date.now();
+    if (now - lastBiometricAttemptRef.current < BIOMETRIC_RETRY_COOLDOWN_MS) return;
+
+    biometricInFlightRef.current = true;
+    lastBiometricAttemptRef.current = now;
     setSubmitting(true);
+    setBiometricPrompting(true);
     setError("");
+
     const ok = await unlockWithBiometric();
-    if (!ok) {
-      setError(t("appLock.biometricFailed"));
+    if (ok) {
+      setBiometricPrompting(false);
+      setSubmitting(false);
+      biometricInFlightRef.current = false;
+      return;
     }
+
+    setBiometricPrompting(false);
+    setShowPinFallback(true);
     setSubmitting(false);
-  }, [config?.biometricEnabled, unlockWithBiometric, t]);
+    biometricInFlightRef.current = false;
+  }, [config?.biometricEnabled, unlockWithBiometric]);
 
   useEffect(() => {
     void canUseBiometricUnlock().then(setBiometricAvailable);
@@ -49,8 +73,21 @@ export function AppLockScreen() {
   useEffect(() => {
     if (config?.biometricEnabled && biometricAvailable) {
       void tryBiometric();
+    } else {
+      setShowPinFallback(true);
     }
   }, [config?.biometricEnabled, biometricAvailable, tryBiometric]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!config?.biometricEnabled || !biometricAvailable || lockedOut) return;
+      void tryBiometric();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [config?.biometricEnabled, biometricAvailable, lockedOut, tryBiometric]);
 
   const submitPin = useCallback(
     async (value: string) => {
@@ -93,6 +130,8 @@ export function AppLockScreen() {
   }, [submitting]);
 
   useEffect(() => {
+    if (biometricFirst) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (/^[0-9]$/.test(e.key)) {
         e.preventDefault();
@@ -104,9 +143,7 @@ export function AppLockScreen() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleDigit, handleDelete]);
-
-  const showBiometric = Boolean(config?.biometricEnabled && biometricAvailable);
+  }, [biometricFirst, handleDigit, handleDelete]);
 
   return (
     <div className="fixed inset-0 z-[200] overflow-hidden bg-[#faf8f4] safe-area-top safe-area-bottom">
@@ -139,65 +176,91 @@ export function AppLockScreen() {
             {t("appLock.title")}
           </h1>
           <p className="mb-9 flex items-center gap-1.5 text-[13px] text-[#64748b]">
-            <Lock className="h-3.5 w-3.5" />
-            {t("appLock.subtitle")}
+            {biometricFirst ? (
+              <>
+                <ScanFace className="h-3.5 w-3.5" />
+                {t("appLock.biometricPrompting")}
+              </>
+            ) : (
+              <>
+                <Lock className="h-3.5 w-3.5" />
+                {t("appLock.subtitle")}
+              </>
+            )}
           </p>
 
-          {/* PIN dots */}
-          <div
-            className={cn("mb-4 flex gap-5", shaking && "animate-shake")}
-            aria-hidden
-          >
-            {Array.from({ length: PIN_LENGTH }).map((_, i) => {
-              const filled = i < pin.length;
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    "h-[13px] w-[13px] rounded-full border-2 transition-all duration-200",
-                    error
-                      ? "border-[#dc2626]"
-                      : filled
-                        ? "border-[#1f75fe] bg-[#1f75fe] scale-110 shadow-[0_0_10px_rgba(31,117,254,0.35)]"
-                        : "border-[#d4cfc6] bg-transparent",
-                    error && filled && "bg-[#dc2626] border-[#dc2626]",
-                  )}
-                />
-              );
-            })}
-          </div>
+          {biometricFirst ? (
+            <div className="flex flex-col items-center gap-4 py-10">
+              <Loader2 className="h-10 w-10 animate-spin text-[#1f75fe]" aria-hidden />
+              <button
+                type="button"
+                onClick={() => setShowPinFallback(true)}
+                className="text-[13px] font-medium text-[#64748b] underline-offset-2 hover:text-[#0f172a] hover:underline"
+              >
+                {t("appLock.usePinInstead")}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* PIN dots */}
+              <div
+                className={cn("mb-4 flex gap-5", shaking && "animate-shake")}
+                aria-hidden
+              >
+                {Array.from({ length: PIN_LENGTH }).map((_, i) => {
+                  const filled = i < pin.length;
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "h-[13px] w-[13px] rounded-full border-2 transition-all duration-200",
+                        error
+                          ? "border-[#dc2626]"
+                          : filled
+                            ? "border-[#1f75fe] bg-[#1f75fe] scale-110 shadow-[0_0_10px_rgba(31,117,254,0.35)]"
+                            : "border-[#d4cfc6] bg-transparent",
+                        error && filled && "bg-[#dc2626] border-[#dc2626]",
+                      )}
+                    />
+                  );
+                })}
+              </div>
 
-          <div className="mb-6 flex h-5 items-center">
-            {error ? (
-              <p className="text-[13px] font-medium text-[#dc2626]" role="alert">
-                {error}
-              </p>
-            ) : failedAttempts > 0 && !lockedOut ? (
-              <p className="text-[13px] text-[#94a3b8]">
-                {failedAttempts}/{MAX_ATTEMPTS}
-              </p>
-            ) : null}
-          </div>
+              <div className="mb-6 flex h-5 items-center">
+                {error ? (
+                  <p className="text-[13px] font-medium text-[#dc2626]" role="alert">
+                    {error}
+                  </p>
+                ) : failedAttempts > 0 && !lockedOut ? (
+                  <p className="text-[13px] text-[#94a3b8]">
+                    {failedAttempts}/{MAX_ATTEMPTS}
+                  </p>
+                ) : biometricPrompting ? (
+                  <p className="text-[13px] text-[#64748b]">{t("appLock.biometricPrompting")}</p>
+                ) : null}
+              </div>
 
-          <PinKeypad
-            onDigit={handleDigit}
-            onDelete={handleDelete}
-            disabled={submitting || lockedOut}
-            deleteVisible={pin.length > 0}
-            cornerSlot={
-              showBiometric ? (
-                <button
-                  type="button"
-                  onClick={() => void tryBiometric()}
-                  disabled={submitting}
-                  aria-label={t("appLock.useBiometric")}
-                  className="flex h-[68px] w-[68px] items-center justify-center rounded-full transition-[background-color,transform] duration-150 active:scale-90 active:bg-[#f1ede4] disabled:opacity-35"
-                >
-                  <ScanFace className="h-8 w-8 text-[#1f75fe]" strokeWidth={1.5} />
-                </button>
-              ) : null
-            }
-          />
+              <PinKeypad
+                onDigit={handleDigit}
+                onDelete={handleDelete}
+                disabled={submitting || lockedOut}
+                deleteVisible={pin.length > 0}
+                cornerSlot={
+                  showBiometric ? (
+                    <button
+                      type="button"
+                      onClick={() => void tryBiometric()}
+                      disabled={submitting || biometricPrompting}
+                      aria-label={t("appLock.useBiometric")}
+                      className="flex h-[68px] w-[68px] items-center justify-center rounded-full transition-[background-color,transform] duration-150 active:scale-90 active:bg-[#f1ede4] disabled:opacity-35"
+                    >
+                      <ScanFace className="h-8 w-8 text-[#1f75fe]" strokeWidth={1.5} />
+                    </button>
+                  ) : null
+                }
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
