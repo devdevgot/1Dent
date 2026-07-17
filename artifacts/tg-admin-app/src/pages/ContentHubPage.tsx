@@ -9,6 +9,7 @@ const items: { path: string; icon: SectionIconName; title: string; desc: string 
   { path: "/platform/plans", icon: "plans", title: "Тарифы", desc: "Цены, лимиты и условия подписок" },
   { path: "/platform/contracts", icon: "contracts", title: "Шаблоны договоров", desc: "Системные шаблоны и пересев по клиникам" },
   { path: "/platform/chatbot", icon: "chatbot", title: "Чатбот (глобально)", desc: "Приветствие, ИИ Рассылка и follow-up" },
+  { path: "/platform/push", icon: "notifications", title: "Push-рассылка PWA", desc: "Сообщения всем с включённым push в приложении" },
   { path: "/platform/whatsapp", icon: "whatsapp", title: "WhatsApp 1Dent", desc: "Системные инстансы для OTP и приглашений" },
 ];
 

@@ -6,6 +6,7 @@ import { SectionIconBox, type SectionIconName } from "@/components/section-icons
 
 const links: { path: string; icon: SectionIconName; title: string; desc: string }[] = [
   { path: "/activity", icon: "activity", title: "Активность чатботов", desc: "Сессии и сообщения по клиникам" },
+  { path: "/platform/push", icon: "notifications", title: "Push-рассылка PWA", desc: "Push всем пользователям с приложением" },
   { path: "/settings", icon: "settings", title: "Настройки платформы", desc: "Админы, бот, интеграции" },
   { path: "/errors", icon: "errors", title: "Ошибки системы", desc: "Инциденты API и CRM" },
   { path: "/logs", icon: "logs", title: "Журнал действий", desc: "Логи по всем клиникам" },

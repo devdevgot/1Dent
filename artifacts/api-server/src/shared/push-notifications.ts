@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { randomUUID } from "crypto";
-import { db, platformSettingsTable, pushSubscriptionsTable, usersTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { db, platformPushBroadcastsTable, platformSettingsTable, pushSubscriptionsTable, usersTable } from "@workspace/db";
+import { eq, and, inArray, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 export type WebPushPayload = {
@@ -320,4 +320,83 @@ export async function deletePushSubscription(userId: string, endpoint: string): 
 
 export async function deleteAllPushSubscriptions(userId: string): Promise<void> {
   await db.delete(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.userId, userId));
+}
+
+export async function getPushBroadcastStats(clinicId?: string): Promise<{
+  devices: number;
+  users: number;
+  clinics: number;
+}> {
+  const rows = await db
+    .select({
+      userId: pushSubscriptionsTable.userId,
+      clinicId: pushSubscriptionsTable.clinicId,
+    })
+    .from(pushSubscriptionsTable)
+    .where(clinicId ? eq(pushSubscriptionsTable.clinicId, clinicId) : undefined);
+
+  return {
+    devices: rows.length,
+    users: new Set(rows.map((r) => r.userId)).size,
+    clinics: new Set(rows.map((r) => r.clinicId)).size,
+  };
+}
+
+export async function executePushBroadcast(input: {
+  title: string;
+  body: string;
+  url?: string;
+  clinicId?: string;
+  createdByTgId?: string;
+  createdByName?: string;
+}): Promise<{ id: string; sent: number; failed: number; total: number }> {
+  if (!(await resolveVapidConfig())) {
+    throw new Error("Push-уведомления не настроены на сервере (VAPID ключи)");
+  }
+
+  const subs = await db
+    .select()
+    .from(pushSubscriptionsTable)
+    .where(input.clinicId ? eq(pushSubscriptionsTable.clinicId, input.clinicId) : undefined);
+
+  const payload: WebPushPayload = {
+    title: input.title,
+    body: input.body,
+    url: input.url || "/",
+    tag: `1dent-broadcast-${Date.now()}`,
+  };
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const sub of subs) {
+    const ok = await sendWebPushToSubscription(sub, payload);
+    if (ok) sent += 1;
+    else failed += 1;
+  }
+
+  const id = randomUUID();
+  await db.insert(platformPushBroadcastsTable).values({
+    id,
+    title: input.title,
+    body: input.body,
+    url: input.url || "/",
+    clinicId: input.clinicId ?? null,
+    status: subs.length === 0 ? "empty" : failed === subs.length ? "failed" : "sent",
+    recipientCount: subs.length,
+    sentCount: sent,
+    failedCount: failed,
+    createdByTgId: input.createdByTgId ?? null,
+    createdByName: input.createdByName ?? null,
+  });
+
+  return { id, sent, failed, total: subs.length };
+}
+
+export async function listPushBroadcasts(limit = 30) {
+  return db
+    .select()
+    .from(platformPushBroadcastsTable)
+    .orderBy(desc(platformPushBroadcastsTable.createdAt))
+    .limit(limit);
 }

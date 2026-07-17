@@ -20,6 +20,7 @@ import PlatformPlansPage from "./pages/PlatformPlansPage";
 import PlatformContractsPage from "./pages/PlatformContractsPage";
 import PlatformChatbotPage from "./pages/PlatformChatbotPage";
 import PlatformWhatsappPage from "./pages/PlatformWhatsappPage";
+import PlatformPushPage from "./pages/PlatformPushPage";
 import MorePage from "./pages/MorePage";
 import { ErrorBoundary } from "./components/error-boundary";
 import { clearChunkReloadFlag } from "./lib/chunk-reload";
@@ -134,6 +135,7 @@ function Inner() {
             <Route path="/platform/contracts" element={<PlatformContractsPage />} />
             <Route path="/platform/chatbot" element={<PlatformChatbotPage />} />
             <Route path="/platform/whatsapp" element={<PlatformWhatsappPage />} />
+            <Route path="/platform/push" element={<PlatformPushPage />} />
             <Route path="/more" element={<MorePage />} />
             <Route path="/activity" element={<ActivityPage />} />
             <Route path="/logs" element={<LogsPage />} />
