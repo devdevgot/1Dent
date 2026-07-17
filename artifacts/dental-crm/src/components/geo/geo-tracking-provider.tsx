@@ -2,10 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuthStore } from "@/hooks/use-auth";
 import { getBaseUrl } from "@/lib/base-url";
 import {
-  isDevicePermissionGranted,
+  clearPermissionPromptDismissed,
   markPermissionGranted,
-  queryDevicePermission,
+  markPermissionPromptDismissed,
+  refreshGeolocationSilently,
   requestGeolocationAccess,
+  resolveDevicePermissionPhase,
+  wasPermissionGrantedBefore,
+  wasPermissionPromptDismissed,
   warmMediaPermissions,
 } from "@/lib/device-permissions";
 import { isPwaStandalone } from "@/lib/pwa";
@@ -141,7 +145,9 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
   const [branches, setBranches] = useState<ClinicBranch[]>([]);
   const [activeBranch, setActiveBranch] = useState<ClinicBranch | null>(null);
   const [permissionPhase, setPermissionPhase] = useState<GeoPermissionPhase>("checking");
-  const [promptDismissed, setPromptDismissed] = useState(false);
+  const [promptDismissed, setPromptDismissed] = useState(() =>
+    userId ? wasPermissionPromptDismissed(userId) : false,
+  );
 
   const prevInsideRef = useRef<boolean | null>(null);
   const prevBranchIdRef = useRef<string | null>(null);
@@ -186,21 +192,25 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
   }, [isOwner, userId]);
 
   useEffect(() => {
+    setPromptDismissed(userId ? wasPermissionPromptDismissed(userId) : false);
+  }, [userId]);
+
+  useEffect(() => {
     if (!trackingEnabled) return;
 
     let cancelled = false;
 
     void (async () => {
-      const state = await queryDevicePermission("geolocation");
+      const phase = await resolveDevicePermissionPhase("geolocation");
       if (cancelled) return;
 
-      if (state === "granted" || (state === "unknown" && (await isDevicePermissionGranted("geolocation")))) {
+      if (phase === "granted") {
         markPermissionGranted("geolocation");
         setPermissionPhase("granted");
         return;
       }
 
-      if (state === "denied") {
+      if (phase === "denied") {
         setPermissionPhase("denied");
         setStatus("denied");
         return;
@@ -217,6 +227,8 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
 
   const handlePosition = useCallback(
     (pos: GeolocationPosition) => {
+      markPermissionGranted("geolocation");
+      setPermissionPhase("granted");
       const { latitude, longitude } = pos.coords;
       const list = branchesRef.current;
       if (!list.length) {
@@ -261,11 +273,26 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
 
   const handleError = useCallback((err: GeolocationPositionError) => {
     if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
-      setPermissionPhase("denied");
-      setStatus("denied");
-    } else {
-      setStatus("unavailable");
+      void resolveDevicePermissionPhase("geolocation").then((phase) => {
+        if (phase === "denied") {
+          setPermissionPhase("denied");
+          setStatus("denied");
+          return;
+        }
+
+        if (phase === "granted" || wasPermissionGrantedBefore("geolocation")) {
+          setPermissionPhase("granted");
+          setStatus("unavailable");
+          return;
+        }
+
+        setPermissionPhase("prompt");
+        setStatus("loading");
+      });
+      return;
     }
+
+    setStatus("unavailable");
   }, []);
 
   const stopWatching = useCallback(() => {
@@ -302,8 +329,10 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
       try {
         const position = await requestGeolocationAccess();
         markPermissionGranted("geolocation");
+        clearPermissionPromptDismissed(userId);
         setPermissionPhase("granted");
         setPromptDismissed(false);
+        setStatus("loading");
         handlePosition(position);
 
         if (options?.warmMedia && isPwaStandalone()) {
@@ -312,17 +341,19 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
 
         return true;
       } catch {
-        const state = await queryDevicePermission("geolocation");
-        if (state === "denied") {
+        const phase = await resolveDevicePermissionPhase("geolocation");
+        if (phase === "denied") {
           setPermissionPhase("denied");
           setStatus("denied");
+        } else if (phase === "granted") {
+          setPermissionPhase("granted");
         } else {
           setPermissionPhase("prompt");
         }
         return false;
       }
     },
-    [handlePosition, trackingEnabled],
+    [handlePosition, trackingEnabled, userId],
   );
 
   useEffect(() => {
@@ -343,9 +374,9 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
     }
 
     const handleVisibilityChange = () => {
-      if (permissionPhaseRef.current !== "granted") return;
-
       if (document.visibilityState === "hidden") {
+        if (permissionPhaseRef.current !== "granted") return;
+
         if (prevInsideRef.current && prevBranchIdRef.current) {
           sessionStorage.setItem(
             pendingKey,
@@ -354,18 +385,37 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
           savePersistedState(userId, false, prevBranchIdRef.current);
           prevInsideRef.current = false;
         }
-      } else if (document.visibilityState === "visible") {
-        sessionStorage.removeItem(pendingKey);
-        const saved = loadPersistedState(userId);
-        if (saved?.inside) {
-          prevInsideRef.current = true;
-        }
+        return;
       }
+
+      if (document.visibilityState !== "visible") return;
+
+      sessionStorage.removeItem(pendingKey);
+      const saved = loadPersistedState(userId);
+      if (saved?.inside) {
+        prevInsideRef.current = true;
+      }
+
+      if (
+        permissionPhaseRef.current !== "granted" &&
+        wasPermissionGrantedBefore("geolocation")
+      ) {
+        setPermissionPhase("granted");
+        permissionPhaseRef.current = "granted";
+      }
+
+      if (permissionPhaseRef.current !== "granted") return;
+
+      stopWatching();
+      startWatching();
+      void refreshGeolocationSilently().then((position) => {
+        if (position) handlePosition(position);
+      });
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [isOwner, userId]);
+  }, [isOwner, userId, stopWatching, startWatching, handlePosition]);
 
   useEffect(() => {
     if (!userId) {
@@ -407,7 +457,10 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
       {needsPermissionPrompt && (
         <GeoPermissionsPrompt
           onAllow={(warmMedia) => requestGeolocationPermission({ warmMedia })}
-          onDismiss={() => setPromptDismissed(true)}
+          onDismiss={() => {
+            markPermissionPromptDismissed(userId);
+            setPromptDismissed(true);
+          }}
         />
       )}
     </GeoTrackingContext.Provider>
