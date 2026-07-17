@@ -11,8 +11,9 @@ import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler, setBaseUrl } from "
 import { clearAuthToken, restoreAuthToken } from "@/lib/auth-token";
 import { restoreBranchContext, clearBranchContext } from "@/lib/branch-context";
 import type { User, Clinic } from "@workspace/api-client-react";
-import { useAuthStore } from "@/hooks/use-auth";
-import { ProtectedRoute } from "@/components/auth/protected-route";
+import { clearAppLockSessionMarkers } from "@/lib/app-lock/storage";
+import { useAppLockStore } from "@/lib/app-lock/store";
+import { AppLockProvider } from "@/components/app-lock/app-lock-provider";
 import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
@@ -194,6 +195,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
       clearPersistedQueryCache();
       clearBranchContext();
+      clearAppLockSessionMarkers();
+      useAppLockStore.getState().reset();
       clearAuth();
       clearAuthToken();
       setLocation("/login");
@@ -451,7 +454,9 @@ function App() {
         <ErrorBoundary>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <AuthProvider>
-              <Router />
+              <AppLockProvider>
+                <Router />
+              </AppLockProvider>
             </AuthProvider>
           </WouterRouter>
         </ErrorBoundary>

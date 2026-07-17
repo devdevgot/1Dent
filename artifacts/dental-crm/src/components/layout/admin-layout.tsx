@@ -20,7 +20,8 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { clearAuthToken } from "@/lib/auth-token";
+import { clearAppLockSessionMarkers } from "@/lib/app-lock/storage";
+import { useAppLockStore } from "@/lib/app-lock/store";
 import { clearPersistedQueryCache } from "@/lib/query-persist";
 import { clearBranchContext } from "@/lib/branch-context";
 import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
@@ -70,6 +71,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   function handleLogout() {
     clearPersistedQueryCache();
     clearBranchContext();
+    clearAppLockSessionMarkers();
+    useAppLockStore.getState().reset();
     clearAuthToken();
     clearAuth();
   }
