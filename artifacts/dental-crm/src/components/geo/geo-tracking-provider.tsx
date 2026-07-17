@@ -141,6 +141,9 @@ const GeoTrackingContext = createContext<GeoTrackingContextValue | null>(null);
 
 export function GeoTrackingProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
+  const isOwner = user?.role === "owner";
+  const userId = user?.id ?? "";
+
   const [status, setStatus] = useState<GeoStatus>("loading");
   const [branches, setBranches] = useState<ClinicBranch[]>([]);
   const [activeBranch, setActiveBranch] = useState<ClinicBranch | null>(null);
@@ -156,8 +159,6 @@ export function GeoTrackingProvider({ children }: { children: ReactNode }) {
   const restoredRef = useRef(false);
   const permissionPhaseRef = useRef<GeoPermissionPhase>("checking");
 
-  const isOwner = user?.role === "owner";
-  const userId = user?.id ?? "";
   const trackingEnabled = !isOwner && branches.length > 0;
 
   permissionPhaseRef.current = permissionPhase;
