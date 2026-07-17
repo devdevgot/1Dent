@@ -40,11 +40,11 @@ function Key({
       aria-label={ariaLabel}
       className={cn(
         'flex h-[68px] w-[68px] items-center justify-center rounded-full select-none',
-        'text-[26px] font-normal text-white tabular-nums',
-        'transition-[background-color,transform] duration-150 active:scale-90 disabled:opacity-35',
+        'text-[26px] font-normal text-[#0f172a] tabular-nums',
+        'transition-[background-color,transform,box-shadow] duration-150 active:scale-90 disabled:opacity-35',
         ghost
-          ? 'bg-transparent active:bg-white/15'
-          : 'bg-white/[0.08] border border-white/[0.06] backdrop-blur-xl active:bg-white/25',
+          ? 'bg-transparent active:bg-[#e8e4dc]'
+          : 'bg-white border border-[#e8e4dc] shadow-[0_2px_12px_rgba(15,23,42,0.06)] active:bg-[#f1ede4] active:shadow-none',
       )}
     >
       {children}
@@ -86,7 +86,7 @@ export function PinKeypad({
           )}
         >
           <Key onClick={onDelete} disabled={disabled} ariaLabel="Delete" ghost>
-            <Delete className="h-7 w-7 text-white/80" strokeWidth={1.75} />
+            <Delete className="h-7 w-7 text-[#64748b]" strokeWidth={1.75} />
           </Key>
         </div>
       </div>
