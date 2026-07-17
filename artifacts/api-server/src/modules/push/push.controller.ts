@@ -31,28 +31,37 @@ const testSchema = z.object({
   kind: z.enum(["tracking", "notification"]).optional().default("notification"),
 });
 
-router.get("/push/vapid-public-key", authMiddleware, (_req: Request, res: Response) => {
-  const publicKey = getVapidPublicKey();
-  if (!publicKey) {
-    res.json({ success: true, data: { publicKey: null, enabled: false } });
-    return;
+router.get("/push/vapid-public-key", authMiddleware, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const publicKey = await getVapidPublicKey();
+    if (!publicKey) {
+      res.json({ success: true, data: { publicKey: null, enabled: false } });
+      return;
+    }
+    res.json({ success: true, data: { publicKey, enabled: true } });
+  } catch (err) {
+    next(err);
   }
-  res.json({ success: true, data: { publicKey, enabled: true } });
 });
 
-router.get("/push/status", authMiddleware, (_req: Request, res: Response) => {
-  res.json({
-    success: true,
-    data: {
-      enabled: isWebPushConfigured(),
-      publicKey: getVapidPublicKey(),
-    },
-  });
+router.get("/push/status", authMiddleware, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [enabled, publicKey] = await Promise.all([isWebPushConfigured(), getVapidPublicKey()]);
+    res.json({
+      success: true,
+      data: {
+        enabled,
+        publicKey,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/push/subscribe", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!isWebPushConfigured()) {
+    if (!(await isWebPushConfigured())) {
       return next(new ValidationError("Push-уведомления не настроены на сервере"));
     }
 
@@ -102,7 +111,7 @@ router.delete("/push/subscribe/all", authMiddleware, async (req: Request, res: R
 
 router.post("/push/test", authMiddleware, roleGuard("owner"), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!isWebPushConfigured()) {
+    if (!(await isWebPushConfigured())) {
       return next(new ValidationError("Push-уведомления не настроены на сервере (VAPID ключи)"));
     }
 

@@ -1,6 +1,6 @@
 import webpush from "web-push";
 import { randomUUID } from "crypto";
-import { db, pushSubscriptionsTable, usersTable } from "@workspace/db";
+import { db, platformSettingsTable, pushSubscriptionsTable, usersTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
@@ -12,32 +12,120 @@ export type WebPushPayload = {
   notificationId?: string;
 };
 
-function getVapidConfig(): { publicKey: string; privateKey: string; subject: string } | null {
+type VapidConfig = {
+  publicKey: string;
+  privateKey: string;
+  subject: string;
+};
+
+const VAPID_SETTINGS_KEY = "vapid_keys";
+const DEFAULT_VAPID_SUBJECT = "mailto:support@1dent.kz";
+
+let cachedConfig: VapidConfig | null = null;
+let resolveInFlight: Promise<VapidConfig | null> | null = null;
+
+function getEnvVapidConfig(): VapidConfig | null {
   const publicKey = process.env["VAPID_PUBLIC_KEY"];
   const privateKey = process.env["VAPID_PRIVATE_KEY"];
-  const subject = process.env["VAPID_SUBJECT"] ?? "mailto:support@1dent.kz";
+  const subject = process.env["VAPID_SUBJECT"] ?? DEFAULT_VAPID_SUBJECT;
   if (!publicKey || !privateKey) return null;
   return { publicKey, privateKey, subject };
 }
 
-let vapidConfigured = false;
+function parseStoredVapid(value: unknown): VapidConfig | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const publicKey = typeof record.publicKey === "string" ? record.publicKey : null;
+  const privateKey = typeof record.privateKey === "string" ? record.privateKey : null;
+  if (!publicKey || !privateKey) return null;
+  const subject =
+    typeof record.subject === "string" && record.subject.length > 0
+      ? record.subject
+      : DEFAULT_VAPID_SUBJECT;
+  return { publicKey, privateKey, subject };
+}
 
-function ensureVapidConfigured(): boolean {
-  const config = getVapidConfig();
-  if (!config) return false;
-  if (!vapidConfigured) {
-    webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
-    vapidConfigured = true;
+function applyVapidConfig(config: VapidConfig): void {
+  webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+  cachedConfig = config;
+}
+
+async function loadStoredVapidConfig(): Promise<VapidConfig | null> {
+  const [row] = await db
+    .select()
+    .from(platformSettingsTable)
+    .where(eq(platformSettingsTable.key, VAPID_SETTINGS_KEY))
+    .limit(1);
+  return parseStoredVapid(row?.value);
+}
+
+async function persistVapidConfig(config: VapidConfig): Promise<VapidConfig> {
+  await db
+    .insert(platformSettingsTable)
+    .values({
+      key: VAPID_SETTINGS_KEY,
+      value: config,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.key,
+      set: { value: config, updatedAt: new Date() },
+    });
+
+  const stored = await loadStoredVapidConfig();
+  return stored ?? config;
+}
+
+export async function resolveVapidConfig(): Promise<VapidConfig | null> {
+  const envConfig = getEnvVapidConfig();
+  if (envConfig) {
+    applyVapidConfig(envConfig);
+    return envConfig;
   }
-  return true;
+
+  if (cachedConfig) return cachedConfig;
+  if (resolveInFlight) return resolveInFlight;
+
+  resolveInFlight = (async () => {
+    try {
+      const stored = await loadStoredVapidConfig();
+      if (stored) {
+        applyVapidConfig(stored);
+        return stored;
+      }
+
+      const generated = webpush.generateVAPIDKeys();
+      const config: VapidConfig = {
+        publicKey: generated.publicKey,
+        privateKey: generated.privateKey,
+        subject: process.env["VAPID_SUBJECT"] ?? DEFAULT_VAPID_SUBJECT,
+      };
+
+      const persisted = await persistVapidConfig(config);
+      applyVapidConfig(persisted);
+      logger.info("Web Push: auto-generated and persisted VAPID keys");
+      return persisted;
+    } catch (err) {
+      logger.error({ err }, "Web Push: failed to resolve VAPID config");
+      return null;
+    } finally {
+      resolveInFlight = null;
+    }
+  })();
+
+  return resolveInFlight;
 }
 
-export function getVapidPublicKey(): string | null {
-  return getVapidConfig()?.publicKey ?? null;
+async function ensureVapidConfigured(): Promise<boolean> {
+  return (await resolveVapidConfig()) !== null;
 }
 
-export function isWebPushConfigured(): boolean {
-  return getVapidConfig() !== null;
+export async function getVapidPublicKey(): Promise<string | null> {
+  return (await resolveVapidConfig())?.publicKey ?? null;
+}
+
+export async function isWebPushConfigured(): Promise<boolean> {
+  return (await resolveVapidConfig()) !== null;
 }
 
 async function removeStaleSubscription(id: string): Promise<void> {
@@ -48,7 +136,7 @@ export async function sendWebPushToSubscription(
   subscription: { endpoint: string; p256dh: string; auth: string; id: string },
   payload: WebPushPayload,
 ): Promise<boolean> {
-  if (!ensureVapidConfigured()) return false;
+  if (!(await ensureVapidConfigured())) return false;
 
   try {
     await webpush.sendNotification(
