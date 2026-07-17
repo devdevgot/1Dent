@@ -110,6 +110,7 @@ interface DayAppointmentsModalProps {
   day: Date;
   groups: AppointmentGroup[];
   onEditAppointment: (proc: ProcedureItem) => void;
+  onCreate: () => void;
   onClose: () => void;
 }
 
@@ -118,6 +119,7 @@ function DayAppointmentsModal({
   day,
   groups,
   onEditAppointment,
+  onCreate,
   onClose,
 }: DayAppointmentsModalProps) {
   const dayLabel = format(day, "d MMMM yyyy, EEEE", { locale: ru });
@@ -137,13 +139,23 @@ function DayAppointmentsModal({
       className="max-h-[85vh]"
       bodyClassName="!px-4 !py-3 max-h-[50vh]"
       footer={
-        <button
-          type="button"
-          onClick={onClose}
-          className="dash-btn dash-btn-secondary"
-        >
-          Закрыть
-        </button>
+        <div className="flex gap-2 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            className="dash-btn dash-btn-secondary flex-1"
+          >
+            Закрыть
+          </button>
+          <button
+            type="button"
+            onClick={onCreate}
+            className="dash-btn dash-btn-primary flex-1 flex items-center justify-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Новая запись
+          </button>
+        </div>
       }
     >
       <div className="space-y-2">
@@ -325,6 +337,7 @@ export default function AdminCalendar() {
   const isSaving = apptSave.isSaving;
 
   const DOW_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  const isCurrentMonth = isSameMonth(currentDate, new Date());
 
   return (
     <PageShell className="flex flex-col h-full overflow-hidden" animate={false}>
@@ -333,6 +346,14 @@ export default function AdminCalendar() {
         sticky
         right={
           <>
+            {!isCurrentMonth && (
+              <button
+                onClick={() => setCurrentDate(new Date())}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#1f75fe] bg-[var(--primary-light)] hover:bg-[#1f75fe]/15 transition-colors"
+              >
+                Сегодня
+              </button>
+            )}
             <div className="flex items-center gap-1">
               <PageHeaderIconButton onClick={() => setCurrentDate((d) => subMonths(d, 1))} title="Предыдущий месяц">
                 <ChevronLeft className="w-4 h-4" />
@@ -341,7 +362,7 @@ export default function AdminCalendar() {
                 onClick={() => setCurrentDate(new Date())}
                 className="px-3 py-1.5 text-sm font-medium text-[#0f172a] rounded-xl border border-[#e8e3d9] hover:bg-[#f1ede4] transition-colors min-w-[90px] capitalize"
               >
-                {format(currentDate, "LLLL", { locale: ru })}
+                {format(currentDate, "LLLL yyyy", { locale: ru })}
               </button>
               <PageHeaderIconButton onClick={() => setCurrentDate((d) => addMonths(d, 1))} title="Следующий месяц">
                 <ChevronRight className="w-4 h-4" />
@@ -531,6 +552,7 @@ export default function AdminCalendar() {
           day={dayViewDate}
           groups={getGroupsForDay(dayViewDate)}
           onEditAppointment={(proc) => openEditModal(proc)}
+          onCreate={() => openCreateModal(dayViewDate)}
           onClose={() => setDayViewDate(null)}
         />
       )}

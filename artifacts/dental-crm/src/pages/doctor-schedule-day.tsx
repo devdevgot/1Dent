@@ -24,8 +24,9 @@ import { usePageBack } from "@/hooks/use-page-back";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
-const START_H = 8;
-const END_H   = 21;
+const START_H = 0;    // full day — no working-hours restriction
+const END_H   = 24;
+const DEFAULT_SCROLL_HOUR = 8; // where to land when the day has no appointments
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_COLORS: Record<ProcedureStatus, {
@@ -66,11 +67,6 @@ function parseDateParam(dateStr: string): Date | null {
   return d;
 }
 
-function isVisibleOnTimeline(scheduledAt: string) {
-  const startMin = timeMins(scheduledAt);
-  return startMin >= START_H * 60 && startMin < END_H * 60;
-}
-
 function getWeek(date: Date): Date[] {
   // Mon-first week
   const dow  = (date.getDay() + 6) % 7; // 0=Mon
@@ -84,6 +80,45 @@ function minToPx(min: number) { return (min / 60) * HOUR_H; }
 function timeMins(iso: string) {
   const d = new Date(iso);
   return d.getHours() * 60 + d.getMinutes();
+}
+
+/** iPhone-calendar-style overlap layout: column index + column count per event. */
+function layoutOverlaps(procs: Procedure[]): Map<string, { col: number; cols: number }> {
+  const result = new Map<string, { col: number; cols: number }>();
+  const events = procs
+    .filter((p) => p.scheduledAt)
+    .map((p) => ({ id: p.id, start: timeMins(p.scheduledAt!), end: timeMins(p.scheduledAt!) + 60 }))
+    .sort((a, b) => a.start - b.start);
+
+  let cluster: typeof events = [];
+  let clusterEnd = -1;
+
+  const flush = () => {
+    if (!cluster.length) return;
+    const colEnds: number[] = [];
+    const assigned = cluster.map((ev) => {
+      let col = colEnds.findIndex((end) => end <= ev.start);
+      if (col === -1) {
+        col = colEnds.length;
+        colEnds.push(0);
+      }
+      colEnds[col] = ev.end;
+      return { ev, col };
+    });
+    for (const { ev, col } of assigned) {
+      result.set(ev.id, { col, cols: colEnds.length });
+    }
+    cluster = [];
+  };
+
+  for (const ev of events) {
+    if (cluster.length && ev.start >= clusterEnd) flush();
+    cluster.push(ev);
+    clusterEnd = Math.max(clusterEnd, ev.end);
+  }
+  flush();
+
+  return result;
 }
 
 function fmtTime(iso: string) {
@@ -130,6 +165,8 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
 
   /* Modal state: undefined = closed, null = create, Procedure = edit */
   const [editingProcedure, setEditingProcedure] = useState<Procedure | null | undefined>(undefined);
+  /* Prefilled create time from a timeline tap (iPhone-calendar style) */
+  const [createDate, setCreateDate] = useState<Date | null>(null);
 
   /* Live clock */
   const [nowDate, setNowDate] = useState(new Date());
@@ -141,15 +178,10 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const nowMins   = nowDate.getHours() * 60 + nowDate.getMinutes();
   const nowPx     = minToPx(nowMins - START_H * 60);
   const isToday   = dateStr === todayStr;
-  const showNow   = isToday && nowMins >= START_H * 60 && nowMins < END_H * 60;
+  const showNow   = isToday;
 
-  /* Scroll to now */
+  /* Timeline container */
   const tlRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!tlRef.current) return;
-    const top = isToday ? Math.max(0, nowPx - 100) : 0;
-    tlRef.current.scrollTo({ top, behavior: "smooth" });
-  }, [dateStr]);
 
   /* Data */
   const { data: pData, isLoading: proceduresLoading } = useListProcedures();
@@ -171,10 +203,22 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
   }, [pData, user?.id, dateStr, clinicWideSchedule]);
 
-  const visibleProcs = useMemo(
-    () => dayProcs.filter((p) => p.scheduledAt && isVisibleOnTimeline(p.scheduledAt)),
-    [dayProcs],
-  );
+  const visibleProcs = dayProcs;
+  const overlapLayout = useMemo(() => layoutOverlaps(dayProcs), [dayProcs]);
+
+  /* Scroll to now / first appointment / working-day start */
+  const firstProcMins = dayProcs.length && dayProcs[0].scheduledAt
+    ? timeMins(dayProcs[0].scheduledAt)
+    : null;
+  useEffect(() => {
+    if (!tlRef.current) return;
+    const anchorMins = isToday
+      ? nowMins
+      : firstProcMins ?? DEFAULT_SCROLL_HOUR * 60;
+    const top = Math.max(0, minToPx(anchorMins - START_H * 60) - 120);
+    tlRef.current.scrollTo({ top, behavior: "smooth" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateStr, proceduresLoading]);
 
   /* Modal data */
   const patientsForModal = useMemo(
@@ -220,11 +264,9 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   };
 
   const appointmentSubtitle =
-    visibleProcs.length > 0
-      ? `${visibleProcs.length} ${visibleProcs.length === 1 ? "приём" : visibleProcs.length < 5 ? "приёма" : "приёмов"}`
-      : dayProcs.length > 0
-        ? `${dayProcs.length} вне рабочих часов`
-        : "Нет приёмов";
+    dayProcs.length > 0
+      ? `${dayProcs.length} ${dayProcs.length === 1 ? "приём" : dayProcs.length < 5 ? "приёма" : "приёмов"}`
+      : "Нет приёмов";
 
   return (
     <PageShell className="flex flex-col h-full overflow-hidden" animate={false}>
@@ -234,14 +276,25 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
         onBack={goBack}
         backLabel={MONTH_FULL[selDate.getMonth()]}
         right={
-          <button
-            type="button"
-            onClick={() => setEditingProcedure(null)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-xs font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Новая запись
-          </button>
+          <>
+            {!isToday && (
+              <button
+                type="button"
+                onClick={() => goToDate(new Date(), true)}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#1f75fe] bg-[var(--primary-light)] hover:bg-[#1f75fe]/15 transition-colors"
+              >
+                Сегодня
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditingProcedure(null)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--ds-primary)] text-white text-xs font-semibold hover:bg-[#1a65e8] hover:scale-105 transition-all shadow-sm"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Новая запись
+            </button>
+          </>
         }
         bottom={
           <div className="flex items-center">
@@ -287,7 +340,21 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
 
       {/* ── Timeline ── */}
       <div ref={tlRef} className="flex-1 overflow-y-auto bg-white border-t border-[#e8e3d9]">
-        <div className="relative" style={{ height: totalH + HOUR_H }}>
+        <div
+          className="relative"
+          style={{ height: totalH + HOUR_H }}
+          onClick={(e) => {
+            // Tap on empty space → create appointment at that half-hour (iPhone style)
+            if (e.target !== e.currentTarget) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            const mins = Math.floor((y / HOUR_H) * 60 / 30) * 30 + START_H * 60;
+            const d = new Date(selDate);
+            d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+            setCreateDate(d);
+            setEditingProcedure(null);
+          }}
+        >
 
           {/* Hour grid */}
           {hours.map(h => (
@@ -314,11 +381,14 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                   {nowDate.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-              <div className="flex-1 h-px bg-[var(--ds-primary)] shadow-sm" />
+              <div className="flex-1 relative">
+                <div className="h-[2px] bg-[var(--ds-primary)] shadow-sm rounded-full" />
+                <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[var(--ds-primary)]" />
+              </div>
             </div>
           )}
 
-          {/* Events — only scheduled / in-progress appointments */}
+          {/* Events — side-by-side columns when overlapping (iPhone style) */}
           {visibleProcs.map(proc => {
             if (!proc.scheduledAt) return null;
             const startMin = timeMins(proc.scheduledAt);
@@ -327,14 +397,21 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
             const sc     = STATUS_COLORS[proc.status as ProcedureStatus];
             const Icon   = STATUS_ICONS[proc.status as ProcedureStatus];
             const patient = patients.get(proc.patientId);
+            const layout = overlapLayout.get(proc.id) ?? { col: 0, cols: 1 };
+            const widthPct = 100 / layout.cols;
 
             return (
               <button
                 key={proc.id}
                 type="button"
                 onClick={() => setEditingProcedure(proc)}
-                className={`absolute left-14 right-3 rounded-xl overflow-hidden flex text-left cursor-pointer hover:ring-2 hover:ring-[var(--ds-primary)]/30 transition-shadow ${sc.bg}`}
-                style={{ top: top + 2, height: height - 4 }}
+                className={`absolute rounded-xl overflow-hidden flex text-left cursor-pointer hover:ring-2 hover:ring-[var(--ds-primary)]/30 hover:z-10 transition-shadow ${sc.bg}`}
+                style={{
+                  top: top + 2,
+                  height: height - 4,
+                  left: `calc(3.5rem + (100% - 3.5rem - 0.75rem) * ${(layout.col * widthPct) / 100})`,
+                  width: `calc((100% - 3.5rem - 0.75rem) * ${widthPct / 100} - ${layout.cols > 1 ? 3 : 0}px)`,
+                }}
               >
                 {/* Left accent bar */}
                 <div className={`w-1 shrink-0 ${sc.bar}`} />
@@ -344,25 +421,31 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                     <p className={`text-[12px] font-bold leading-snug ${sc.text} truncate flex-1`}>
                       {proc.name}
                     </p>
-                    <span className={`inline-flex items-center gap-0.5 shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${sc.badge}`}>
-                      <Icon className="w-2.5 h-2.5" />
-                      {t(`procedure.status.${proc.status}`)}
-                    </span>
+                    {layout.cols === 1 && (
+                      <span className={`inline-flex items-center gap-0.5 shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${sc.badge}`}>
+                        <Icon className="w-2.5 h-2.5" />
+                        {t(`procedure.status.${proc.status}`)}
+                      </span>
+                    )}
                   </div>
 
                   <div className={`flex items-center gap-2 mt-0.5 text-[11px] ${sc.text} opacity-80`}>
                     <span className="flex items-center gap-0.5">
                       <Clock className="w-3 h-3" />
                       {fmtTime(proc.scheduledAt)}
-                      {" — "}
-                      {fmtTime(new Date(new Date(proc.scheduledAt).getTime() + 3600_000).toISOString())}
+                      {layout.cols === 1 && (
+                        <>
+                          {" — "}
+                          {fmtTime(new Date(new Date(proc.scheduledAt).getTime() + 3600_000).toISOString())}
+                        </>
+                      )}
                     </span>
                     {patient && (
                       <span className="truncate opacity-70">· {patient}</span>
                     )}
                   </div>
 
-                  {proc.notes && height > 60 && (
+                  {proc.notes && height > 60 && layout.cols === 1 && (
                     <p className={`text-[10px] ${sc.text} opacity-60 mt-0.5 truncate`}>
                       {proc.notes}
                     </p>
@@ -375,19 +458,23 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
           {/* Loading: appointment-block silhouettes over the hour grid */}
           {proceduresLoading && (
             <div className="absolute left-14 right-3 top-0 pointer-events-none">
-              <Bone className="absolute w-3/4 h-14 rounded-xl" style={{ top: HOUR_H + 2 }} />
-              <Bone className="absolute w-2/3 h-14 rounded-xl" style={{ top: HOUR_H * 3 + 2 }} />
-              <Bone className="absolute w-3/4 h-14 rounded-xl" style={{ top: HOUR_H * 5 + 2 }} />
+              <Bone className="absolute w-3/4 h-14 rounded-xl" style={{ top: HOUR_H * 9 + 2 }} />
+              <Bone className="absolute w-2/3 h-14 rounded-xl" style={{ top: HOUR_H * 11 + 2 }} />
+              <Bone className="absolute w-3/4 h-14 rounded-xl" style={{ top: HOUR_H * 13 + 2 }} />
             </div>
           )}
 
           {/* Empty state */}
           {!proceduresLoading && dayProcs.length === 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
+            <div
+              className="absolute left-0 right-0 flex flex-col items-center justify-center gap-3 pointer-events-none"
+              style={{ top: DEFAULT_SCROLL_HOUR * HOUR_H, height: HOUR_H * 5 }}
+            >
               <div className="w-14 h-14 rounded-2xl bg-[#f1ede4] flex items-center justify-center">
                 <Calendar className="w-7 h-7 text-[#94a3b8]" />
               </div>
               <p className="text-sm font-semibold text-[#64748b]">Нет приёмов на этот день</p>
+              <p className="text-xs text-[#94a3b8]">Нажмите на свободное время, чтобы записать</p>
             </div>
           )}
         </div>
@@ -396,7 +483,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       {/* ── Appointment modal ── */}
       {editingProcedure !== undefined && (
         <AppointmentModal
-          date={selDate}
+          date={editingProcedure ? selDate : (createDate ?? selDate)}
           procedure={editingProcedure}
           patients={patientsForModal}
           doctors={doctorsForModal}
@@ -404,7 +491,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
           defaultDoctorId={user?.id}
           onSave={(data) => apptSave.save(data, editingProcedure)}
           onDelete={editingProcedure ? () => apptSave.remove(editingProcedure.id) : undefined}
-          onClose={() => setEditingProcedure(undefined)}
+          onClose={() => { setEditingProcedure(undefined); setCreateDate(null); }}
           isSaving={apptSave.isSaving}
         />
       )}
