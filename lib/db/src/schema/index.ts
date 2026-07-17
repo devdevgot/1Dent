@@ -20,3 +20,4 @@ export * from "./tablet";
 export * from "./tablet-videos";
 export * from "./reviews";
 export * from "./landing-leads";
+export * from "./push-subscriptions";

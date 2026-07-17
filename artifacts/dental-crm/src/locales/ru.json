@@ -1211,6 +1211,17 @@
     "biometricUnavailable": "Биометрия недоступна на этом устройстве",
     "setupError": "Не удалось сохранить код доступа"
   },
+  "push": {
+    "sectionTitle": "Push-уведомления",
+    "settingsTitle": "Push в PWA",
+    "settingsDesc": "Red Alert, оплаты, напоминания и трекинг на экран",
+    "enabled": "Push-уведомления включены",
+    "disabled": "Push-уведомления отключены",
+    "denied": "Разрешите уведомления в настройках браузера",
+    "unsupported": "Push не поддерживается в этом браузере",
+    "serverDisabled": "Push не настроен на сервере",
+    "subscribeError": "Не удалось подписаться на push-уведомления"
+  },
   "channels": {
     "sectionTitle": "Каналы привлечения",
     "sectionDesc": "Уникальные ссылки для отслеживания источников пациентов",

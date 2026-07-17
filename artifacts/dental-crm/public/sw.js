@@ -13,7 +13,7 @@
  *  - API requests (/api/*) and cross-origin requests: never handled by the SW.
  */
 
-const VERSION = "1dent-pwa-v3";
+const VERSION = "1dent-pwa-v4";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -142,4 +142,53 @@ self.addEventListener("fetch", (event) => {
   if (isCacheableStatic(url)) {
     event.respondWith(staleWhileRevalidate(request, STATIC_CACHE));
   }
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "1Dent",
+    body: "",
+    url: "/",
+    tag: "1dent",
+  };
+
+  try {
+    if (event.data) {
+      payload = { ...payload, ...event.data.json() };
+    }
+  } catch {
+    if (event.data) {
+      payload.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/pwa/icon-192.png",
+      badge: "/icons/pwa/icon-192.png",
+      tag: payload.tag || "1dent",
+      data: { url: payload.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      const urlToOpen = new URL(targetUrl, self.location.origin).href;
+      for (const client of windowClients) {
+        if ("focus" in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+      return undefined;
+    }),
+  );
 });

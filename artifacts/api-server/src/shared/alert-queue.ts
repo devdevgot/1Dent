@@ -1,6 +1,6 @@
 import { Queue, Worker } from "bullmq";
-import { db } from "@workspace/db";
-import { notificationsTable, usersTable } from "@workspace/db";
+import { db, usersTable } from "@workspace/db";
+import { insertNotifications } from "./notifications-dispatch";
 import { randomUUID } from "crypto";
 import { eq, and, inArray } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -85,7 +85,7 @@ export function startAlertWorker(): Worker | null {
       const notifMsg = `🚨 Red Alert от пациента ${patientName}: "${content.slice(0, 80)}${content.length > 80 ? "…" : ""}"`;
 
       if (recipients.length > 0) {
-        await db.insert(notificationsTable).values(
+        await insertNotifications(
           recipients.map((r) => ({
             id: randomUUID(),
             clinicId,

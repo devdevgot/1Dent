@@ -1,12 +1,13 @@
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
-import { notificationsTable, usersTable } from "@workspace/db";
+import { usersTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { MessagesRepository } from "./messages.repository";
 import { isRedAlert } from "../../shared/whatsapp";
 import { sendFileToPatient, sendToPatient } from "../../shared/messaging";
 import { encodeAttachmentContent } from "../../shared/attachment-content";
 import { getAlertQueue } from "../../shared/alert-queue";
+import { insertNotifications } from "../../shared/notifications-dispatch";
 import { NotFoundError, ValidationError } from "../../shared/errors";
 import { ObjectStorageService } from "../../lib/objectStorage";
 import { getObjectAclPolicy } from "../../lib/objectAcl";
@@ -164,7 +165,7 @@ export class MessagesService {
     if (recipients.length === 0) return;
 
     const notifMsg = `🚨 Red Alert от пациента ${patientName}: "${content.slice(0, 80)}${content.length > 80 ? "…" : ""}"`;
-    await db.insert(notificationsTable).values(
+    await insertNotifications(
       recipients.map((r) => ({
         id: randomUUID(),
         clinicId,

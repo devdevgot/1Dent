@@ -5,10 +5,10 @@ import {
   appointmentRemindersTable,
   patientsTable,
   usersTable,
-  notificationsTable,
   proceduresTable,
   clinicsTable,
 } from "@workspace/db";
+import { insertNotifications } from "../../shared/notifications-dispatch";
 import { eq, and, lte, inArray } from "drizzle-orm";
 import { sendWhatsAppMessage } from "../../shared/whatsapp";
 import { logger } from "../../lib/logger";
@@ -108,7 +108,7 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
         ? `Завтра приём: ${patientName} — «${procedureName}» в ${timeStr}${doctorName ? ` (${doctorName})` : ""}`
         : `Через 1 час приём: ${patientName} — «${procedureName}» в ${timeStr}${doctorName ? ` (${doctorName})` : ""}`;
 
-    await db.insert(notificationsTable).values(
+    await insertNotifications(
       recipients.map((r) => ({
         id: randomUUID(),
         clinicId,

@@ -1,10 +1,11 @@
-import { db, messagesTable, notificationsTable, patientsTable } from "@workspace/db";
+import { db, messagesTable, patientsTable } from "@workspace/db";
 import type {
   Message,
   InsertMessage,
   Notification,
   InsertNotification,
 } from "@workspace/db";
+import { insertNotification } from "../../shared/notifications-dispatch";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { normalizePhoneDigits } from "../../shared/phone";
 import { resolvePatientByPhone } from "../../shared/patient-phone-resolver";
@@ -125,7 +126,6 @@ export class MessagesRepository {
   }
 
   async createNotification(data: InsertNotification): Promise<Notification> {
-    const [n] = await db.insert(notificationsTable).values(data).returning();
-    return n!;
+    return insertNotification(data);
   }
 }

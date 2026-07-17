@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { db, pool, clinicsTable, aiCreditUsageTable, notificationsTable, usersTable } from "@workspace/db";
+import { insertNotification } from "./notifications-dispatch";
 import { eq, and, gte, lte, desc, sql, like } from "drizzle-orm";
 import type { ClinicPlan } from "@workspace/db";
 import { InsufficientAiCreditsError } from "./errors/index";
@@ -263,7 +264,7 @@ export class AiCreditsService {
 
       if (existing) continue;
 
-      await db.insert(notificationsTable).values({
+      await insertNotification({
         id: randomUUID(),
         clinicId,
         userId: owner.id,

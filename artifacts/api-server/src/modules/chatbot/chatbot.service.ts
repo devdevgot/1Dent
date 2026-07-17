@@ -9,7 +9,6 @@ import {
   chatbotManagerExamplesTable,
   messagesTable,
   patientsTable,
-  notificationsTable,
   usersTable,
   proceduresTable,
   toothRecordsTable,
@@ -32,6 +31,7 @@ import { isRedAlert } from "../../shared/whatsapp";
 import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.service";
 import { sendToPatient, sendTypingToPatient, startTypingKeepalive } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
+import { insertNotifications } from "../../shared/notifications-dispatch";
 import { logger } from "../../lib/logger";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
@@ -731,7 +731,7 @@ async function triggerRedAlert(
     if (recipients.length === 0) return;
 
     const msg = `🚨 Red Alert (чатбот) от ${phone}: "${text.slice(0, 80)}${text.length > 80 ? "…" : ""}"`;
-    await db.insert(notificationsTable).values(
+    await insertNotifications(
       recipients.map((r) => ({
         id: randomUUID(),
         clinicId,
@@ -1660,9 +1660,7 @@ async function finalizeBookingAppointment(params: {
         if (staffRecipients.length > 0) {
           const apptDateStr = formatAlmatyDateTimeShort(preferredDate);
           const notifMsg = `📅 Новая запись: ${data.patientName ?? phone} → ${data.suggestedDoctorName ?? "врач"} (${serviceLabel}), ${apptDateStr}. Филиал: ${branchToSave}`;
-          await db
-            .insert(notificationsTable)
-            .values(
+          await insertNotifications(
               staffRecipients.map((r) => ({
                 id: randomUUID(),
                 clinicId,
@@ -1673,8 +1671,7 @@ async function finalizeBookingAppointment(params: {
                 patientId: patientId ?? null,
                 messageId: null,
               })),
-            )
-            .catch((err) => logger.warn({ err }, "ChatbotService: failed to insert notification"));
+            ).catch((err) => logger.warn({ err }, "ChatbotService: failed to insert notification"));
         }
       }
     }
@@ -4322,7 +4319,7 @@ export class ChatbotService {
       ? `${handoffSummary}\n\n👤 Пациент ${name} (${phone}) ждёт ответа оператора.`
       : `👤 Пациент ${name} (${phone}) запросил переключение на оператора в чат-боте.`;
 
-    await db.insert(notificationsTable).values(
+    await insertNotifications(
       recipients.map((r) => ({
         id: randomUUID(),
         clinicId,

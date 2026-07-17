@@ -4,6 +4,10 @@ import { randomBytes } from "crypto";
 import { authMiddleware, roleGuard, selfOrRoleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { BranchesRepository } from "./branches.repository";
+import {
+  buildTrackingPushPayload,
+  sendWebPushToClinicRoles,
+} from "../../shared/push-notifications";
 
 const router: IRouter = Router();
 const repo = new BranchesRepository();
@@ -120,6 +124,17 @@ router.post("/geo/event", allStaff, async (req: Request, res: Response, next: Ne
         void sendTelegramMessage(trackingToken, tg.telegramPlatformChatId, text);
       }
     }
+
+    void sendWebPushToClinicRoles(
+      clinicId,
+      ["owner", "admin"],
+      buildTrackingPushPayload({
+        userName,
+        branchName: branch.name,
+        eventType,
+        timeStr,
+      }),
+    );
 
     res.json({ success: true, data: { event } });
   } catch (err) { next(err); }

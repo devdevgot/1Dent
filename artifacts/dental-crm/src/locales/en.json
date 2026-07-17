@@ -1203,6 +1203,17 @@
     "biometricUnavailable": "Biometrics are not available on this device",
     "setupError": "Could not save access code"
   },
+  "push": {
+    "sectionTitle": "Push notifications",
+    "settingsTitle": "PWA push",
+    "settingsDesc": "Red alerts, payments, reminders, and tracking on screen",
+    "enabled": "Push notifications enabled",
+    "disabled": "Push notifications disabled",
+    "denied": "Allow notifications in browser settings",
+    "unsupported": "Push is not supported in this browser",
+    "serverDisabled": "Push is not configured on the server",
+    "subscribeError": "Could not subscribe to push notifications"
+  },
   "channels": {
     "sectionTitle": "Acquisition Channels",
     "sectionDesc": "Unique tracking links for patient source attribution",

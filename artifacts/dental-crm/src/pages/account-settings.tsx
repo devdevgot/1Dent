@@ -12,7 +12,6 @@ import {
   CheckCircle,
   Clock,
   LogOut,
-  Bell,
   Globe,
   Sparkles,
   ScrollText,
@@ -36,6 +35,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { RootTabHeader } from "@/components/layout/root-tab-header";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
 import { AppLockSettingsSection } from "@/components/app-lock/app-lock-settings";
+import { PushNotificationSettings } from "@/components/push/push-notification-settings";
 import { clearAppLockSessionMarkers } from "@/lib/app-lock/storage";
 import { useAppLockStore } from "@/lib/app-lock/store";
 
@@ -267,6 +267,8 @@ export default function AccountSettings() {
 
         <AppLockSettingsSection userName={user?.name ?? "User"} />
 
+        <PushNotificationSettings />
+
         {/* Payroll for staff roles */}
         {(user?.role === "admin" || user?.role === "accountant" || user?.role === "warehouse") && (
           <IosSection title={t("payroll.mySalary")}>
@@ -373,13 +375,7 @@ export default function AccountSettings() {
                 </IosGroupRow>
               )}
 
-              <IosGroupRow>
-                <div className="flex items-center gap-3 min-w-0">
-                  <SettingsRowIcon icon={Bell} className="bg-[#ec4899] text-white" />
-                  <span className="text-sm">{t("menuPage.notifications")}</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
-              </IosGroupRow>
+              {/* Push notifications moved to dedicated section below app lock */}
             </IosGroup>
           </IosSection>
         )}

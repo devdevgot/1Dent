@@ -1203,6 +1203,17 @@
     "biometricUnavailable": "Биометрия осы құрылғыда қолжетімсіз",
     "setupError": "Код сақталмады"
   },
+  "push": {
+    "sectionTitle": "Push-хабарландырулар",
+    "settingsTitle": "PWA push",
+    "settingsDesc": "Red Alert, төлемдер, еске салулар және трекинг",
+    "enabled": "Push қосылды",
+    "disabled": "Push өшірілді",
+    "denied": "Браузер параметрлерінде хабарландыруға рұқсат беріңіз",
+    "unsupported": "Бұл браузер push қолдамайды",
+    "serverDisabled": "Push серверде бапталмаған",
+    "subscribeError": "Push жазылу сәтсіз аяқталды"
+  },
   "channels": {
     "sectionTitle": "Тарту арналары",
     "sectionDesc": "Науқас көздерін бақылауға арналған бірегей сілтемелер",

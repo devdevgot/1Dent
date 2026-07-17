@@ -20,7 +20,8 @@ import { logger } from "../../lib/logger";
 import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../followups/appointment-reminders.queue";
 import { PatientsRepository } from "../patients/patients.repository";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
-import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable, proceduresTable, notificationsTable } from "@workspace/db";
+import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable, proceduresTable } from "@workspace/db";
+import { insertNotifications } from "../../shared/notifications-dispatch";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -429,7 +430,7 @@ router.patch(
 
           const doctorDisplayName = procedure.doctorName ? ` (${procedure.doctorName})` : "";
           const notifMsg = `💳 Ожидает оплаты: ${procedure.name} — ${patientName}${doctorDisplayName}`;
-          await db.insert(notificationsTable).values(
+          await insertNotifications(
             recipients.map((r) => ({
               id: randomUUID(),
               clinicId,
