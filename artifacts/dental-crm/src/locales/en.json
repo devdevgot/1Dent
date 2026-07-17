@@ -1192,7 +1192,7 @@
     "themeSystem": "System"
   },
   "appLock": {
-    "title": "1Dent is locked",
+    "title": "Welcome!",
     "subtitle": "Enter your access code or use Face ID / Touch ID",
     "wrongPin": "Wrong access code",
     "tooManyAttempts": "Too many attempts. Wait and try again.",
