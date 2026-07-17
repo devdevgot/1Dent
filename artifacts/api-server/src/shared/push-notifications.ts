@@ -239,7 +239,7 @@ export function buildTrackingPushPayload(input: {
   const emoji = input.eventType === "checkin" ? "✅" : "🚪";
   const verb = input.eventType === "checkin" ? "пришёл в" : "ушёл из";
   return {
-    title: "1Dent · Трекинг",
+    title: "Трекинг",
     body: `${emoji} ${input.userName} ${verb} ${input.branchName} — ${input.timeStr}`,
     url: "/branches",
     tag: "1dent-tracking",
@@ -248,7 +248,7 @@ export function buildTrackingPushPayload(input: {
 
 export function buildTestTrackingPushPayload(): WebPushPayload {
   return {
-    title: "1Dent · Трекинг",
+    title: "Трекинг",
     body: "✅ Тестовое push-уведомление: трекинг сотрудников работает",
     url: "/branches",
     tag: "1dent-tracking-test",
@@ -257,8 +257,8 @@ export function buildTestTrackingPushPayload(): WebPushPayload {
 
 export function buildTestNotificationPushPayload(): WebPushPayload {
   return {
-    title: "1Dent",
-    body: "Тестовое push-уведомление: оповещения CRM работают",
+    title: "Тестовое уведомление",
+    body: "Push-оповещения CRM работают",
     url: "/",
     tag: "1dent-notification-test",
   };
