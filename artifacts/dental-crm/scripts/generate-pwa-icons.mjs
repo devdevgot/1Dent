@@ -4,11 +4,9 @@
  * Requires: npm install sharp (one-off or devDependency)
  * Run from artifacts/dental-crm: node scripts/generate-pwa-icons.mjs
  *
- * iOS 26 (Liquid Glass) rules for apple-touch-icon:
- *  - square, fully opaque (RGB — no alpha channel)
- *  - solid brand-blue background to all four edges
- *  - logo scaled to fit inside ~80–82% safe zone — never cropped
- *  - squircle fill is flattened onto the same blue so only the white "1D" shows
+ * iOS 26 (Liquid Glass): ~88% safe zone — room for system glass/refraction.
+ * iOS 18 and below: logo fills ~94% of the canvas so the mark reads full-size
+ * inside Apple's squircle mask (no "tiny logo in a big icon" look).
  */
 import sharp from "sharp";
 import path from "path";
@@ -19,27 +17,74 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.resolve(__dirname, "../public");
 const SRC = path.join(PUBLIC, "logo_clean.png");
 
-/** Sampled from logo_clean squircle fill — matches the brand mark. */
+/** Apple home-screen — larger mark for pre–iOS 26 squircle display. */
+const APPLE_TOUCH_SAFE_RATIO = 0.94;
+
 const BRAND_BLUE = { r: 21, g: 123, b: 251 };
 
 async function trimmedLogo() {
   return sharp(SRC).trim({ threshold: 1 }).toBuffer();
 }
 
+/** Crop to the white 1D mark only — ignores blue squircle padding in logo_clean. */
+async function whiteMarkBuffer() {
+  const trimmed = await trimmedLogo();
+  const { data, info } = await sharp(trimmed)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { width, height, channels } = info;
+  let minX = width;
+  let minY = height;
+  let maxX = 0;
+  let maxY = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * channels;
+      const r = data[i] ?? 0;
+      const g = data[i + 1] ?? 0;
+      const b = data[i + 2] ?? 0;
+      if (r > 210 && g > 210 && b > 210) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  if (maxX <= minX || maxY <= minY) {
+    return trimmed;
+  }
+
+  const pad = Math.max(2, Math.round(Math.min(width, height) * 0.02));
+  const left = Math.max(0, minX - pad);
+  const top = Math.max(0, minY - pad);
+  const extractWidth = Math.min(width - left, maxX - minX + 1 + pad * 2);
+  const extractHeight = Math.min(height - top, maxY - minY + 1 + pad * 2);
+
+  return sharp(trimmed)
+    .extract({ left, top, width: extractWidth, height: extractHeight })
+    .png()
+    .toBuffer();
+}
+
 /**
  * Opaque home-screen icon: white 1D on full-bleed brand blue.
- * Flattening merges the squircle fill with the canvas so iOS sees one layer.
+ * Uses white-mark crop so pre–iOS 26 icons show a full-size logo, not a tiny mark.
  */
-async function makeAppleTouchIcon(size, outPath, safeRatio = 0.82) {
-  const trimmed = await trimmedLogo();
-  const safe = Math.round(size * safeRatio);
-  const logo = await sharp(trimmed)
-    .resize(safe, safe, { fit: "inside", background: BRAND_BLUE })
-    .flatten({ background: BRAND_BLUE })
+async function makeAppleTouchIcon(size, outPath, safeRatio = APPLE_TOUCH_SAFE_RATIO) {
+  const mark = await whiteMarkBuffer();
+  const target = Math.round(size * safeRatio);
+  const logo = await sharp(mark)
+    .resize(target, target, { fit: "inside", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
     .toBuffer();
   const meta = await sharp(logo).metadata();
-  const left = Math.round((size - meta.width) / 2);
-  const top = Math.round((size - meta.height) / 2);
+  const left = Math.round((size - (meta.width ?? target)) / 2);
+  const top = Math.round((size - (meta.height ?? target)) / 2);
 
   await sharp({
     create: { width: size, height: size, channels: 3, background: BRAND_BLUE },
@@ -49,7 +94,7 @@ async function makeAppleTouchIcon(size, outPath, safeRatio = 0.82) {
     .png()
     .toFile(outPath);
 
-  console.log(`✓ ${path.relative(PUBLIC, outPath)} (${size}×${size})`);
+  console.log(`✓ ${path.relative(PUBLIC, outPath)} (${size}×${size}, mark ${safeRatio * 100}%)`);
 }
 
 /** Standard PWA icon (any) — logo on white canvas for install UI contrast. */
@@ -71,9 +116,27 @@ async function makePwaIcon(size, outPath, logoRatio = 0.72) {
   console.log(`✓ ${path.relative(PUBLIC, outPath)}`);
 }
 
-/** Maskable icon — full-bleed brand blue, logo within the 80% safe zone. */
+/** Maskable icon — Android adaptive; keep 80% safe zone per spec. */
 async function makeMaskableIcon(size, outPath, safeRatio = 0.8) {
-  await makeAppleTouchIcon(size, outPath, safeRatio);
+  const mark = await whiteMarkBuffer();
+  const target = Math.round(size * safeRatio);
+  const logo = await sharp(mark)
+    .resize(target, target, { fit: "inside", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+  const meta = await sharp(logo).metadata();
+  const left = Math.round((size - (meta.width ?? target)) / 2);
+  const top = Math.round((size - (meta.height ?? target)) / 2);
+
+  await sharp({
+    create: { width: size, height: size, channels: 3, background: BRAND_BLUE },
+  })
+    .composite([{ input: logo, left, top }])
+    .removeAlpha()
+    .png()
+    .toFile(outPath);
+
+  console.log(`✓ ${path.relative(PUBLIC, outPath)} (maskable ${size}×${size})`);
 }
 
 async function main() {
@@ -90,9 +153,9 @@ async function main() {
   console.log("Generating from", SRC);
 
   for (const size of [152, 167, 180]) {
-    await makeAppleTouchIcon(size, path.join(appleDir, `apple-touch-icon-${size}x${size}.png`));
+    await makeAppleTouchIcon(size, path.join(appleDir, `apple-touch-icon-${size}x${size}.png`), APPLE_TOUCH_SAFE_RATIO);
   }
-  await makeAppleTouchIcon(180, path.join(PUBLIC, "apple-touch-icon.png"));
+  await makeAppleTouchIcon(180, path.join(PUBLIC, "apple-touch-icon.png"), APPLE_TOUCH_SAFE_RATIO);
 
   await makePwaIcon(192, path.join(pwaDir, "icon-192.png"));
   await makePwaIcon(512, path.join(pwaDir, "icon-512.png"));
