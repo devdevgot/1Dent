@@ -6,6 +6,7 @@ import {
   Camera, FlipHorizontal, CircleDot, Send, Lock, FileSignature, Check,
   CalendarDays,
 } from "lucide-react";
+import { requestCameraAccess } from "@/lib/device-permissions";
 import { cn } from "@/lib/utils";
 import {
   useCompleteTreatmentPlanItem,
@@ -552,10 +553,11 @@ export function PlanItemDetailModal({
       streamRef.current = null;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing },
-        audio: false,
-      });
+      const stream = await requestCameraAccess({ facingMode: facing, keepStream: true });
+      if (!stream) {
+        setCameraError("Нет доступа к камере");
+        return;
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;

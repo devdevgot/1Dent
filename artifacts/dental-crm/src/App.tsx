@@ -17,6 +17,7 @@ import { clearAppLockSessionMarkers } from "@/lib/app-lock/storage";
 import { useAppLockStore } from "@/lib/app-lock/store";
 import { AppLockProvider } from "@/components/app-lock/app-lock-provider";
 import { PushNotificationsProvider } from "@/components/push/push-notifications-provider";
+import { GeoTrackingProvider } from "@/components/geo/geo-tracking-provider";
 import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
@@ -459,7 +460,9 @@ function App() {
             <AuthProvider>
               <AppLockProvider>
                 <PushNotificationsProvider>
-                  <Router />
+                  <GeoTrackingProvider>
+                    <Router />
+                  </GeoTrackingProvider>
                 </PushNotificationsProvider>
               </AppLockProvider>
             </AuthProvider>
