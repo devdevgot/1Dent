@@ -9,6 +9,13 @@ import type { AppLockIdleMinutes } from "@/lib/app-lock/types";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { AppLockSetupModal } from "./app-lock-setup-modal";
+import { PwaExclusiveGate } from "@/components/pwa/pwa-exclusive-gate";
+
+const APP_LOCK_PWA_FEATURES = [
+  "pwa.exclusive.appLockFeature1",
+  "pwa.exclusive.appLockFeature2",
+  "pwa.exclusive.appLockFeature3",
+] as const;
 
 const IDLE_OPTIONS: AppLockIdleMinutes[] = [0, 1, 5, 15, 30];
 
@@ -113,6 +120,14 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
 
   return (
     <>
+      <PwaExclusiveGate
+        sectionTitle={t("settingsPage.security")}
+        icon={ShieldCheck}
+        iconClassName="bg-[#1f75fe] text-white"
+        titleKey="pwa.exclusive.appLockTitle"
+        descriptionKey="pwa.exclusive.appLockDesc"
+        featureKeys={[...APP_LOCK_PWA_FEATURES]}
+      >
       <IosSection title={t("settingsPage.security")}>
         <IosGroup>
           <IosGroupRow className="gap-3">
@@ -185,6 +200,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
           )}
         </IosGroup>
       </IosSection>
+      </PwaExclusiveGate>
 
       <AppLockSetupModal
         open={setupOpen}

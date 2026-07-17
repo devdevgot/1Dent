@@ -210,7 +210,23 @@
     "genericSubtitle": "Браузер мәзірі арқылы бірнеше қадам",
     "genericStep1": "Браузер мәзірін ашыңыз",
     "genericStep2": "«Қосымшаны орнату» немесе «Негізгі экранға қосу» таңдаңыз",
-    "genericStep3": "Орнатуды растаңыз"
+    "genericStep3": "Орнатуды растаңыз",
+    "exclusive": {
+      "badge": "Тек қолданбада",
+      "installCta": "1Dent орнату",
+      "appLockTitle": "Блокировка — қолданбада",
+      "appLockDesc": "Код және Face ID тек басты экраннан ашылатын PWA-да жұмыс істейді.",
+      "appLockFeature1": "Қолданбаға оралғанда 4 таңбалы код",
+      "appLockFeature2": "Face ID / Touch ID жылдам ашу үшін",
+      "appLockFeature3": "Бос тұру немесе жиырылудан кейін автоблок",
+      "pushTitle": "Push-хабарландырулар — қолданбада",
+      "pushDesc": "Экран хабарландырулары тек орнатылған PWA-да қолжетімді.",
+      "pushFeature1": "Red Alert, төлемдер және қабылдау еске салулары",
+      "pushFeature2": "Қызметкерлердің келуі / кетуі трекингі",
+      "pushFeature3": "CRM ашпай-ақ лезде хабарландырулар",
+      "trackingPushTitle": "Push тесті — қолданбада",
+      "trackingPushDesc": "1Dent-ті басты экранға орнатыңыз, профильде push қосыңыз, содан кейін тестілеңіз."
+    }
   },
   "role": {
     "owner": "Иесі",
@@ -1216,7 +1232,14 @@
     "deniedHint": "Хабарландырулар браузерде бұғатталған",
     "deniedIosHint": "iPhone: Параметрлер → Хабарландырулар → 1Dent → Рұқсат",
     "serverDisabledHint": "Сервер push кілттерін дайындауда — бірнеше секундтан кейін қайта көріңіз",
-    "swNotReady": "Service worker дайын емес. Бетті жаңартыңыз немесе PWA-ны қайта ашыңыз"
+    "swNotReady": "Service worker дайын емес. Бетті жаңартыңыз немесе PWA-ны қайта ашыңыз",
+    "trackingSectionTitle": "PWA push-хабарландырулар",
+    "trackingSectionDesc": "Қызметкерлер трекингі және CRM хабарландырулары телефон экранында",
+    "trackingEnableHint": "Аккаунт → Push-хабарландырулар бөлімінен push қосып, тест жіберіңіз.",
+    "trackingTestButton": "Push-хабарландыруды тестілеу",
+    "trackingTestSent": "Push жіберілді!",
+    "trackingTestSentDesc": "Осы құрылғыда хабарландыруды тексеріңіз",
+    "trackingTestFailed": "Push жіберу сәтсіз аяқталды"
   },
   "channels": {
     "sectionTitle": "Тарту арналары",

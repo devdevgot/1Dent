@@ -89,7 +89,7 @@ export function InstallInstructionsDialog({
 }
 
 /** Shared click handler: native prompt when available, otherwise manual steps. */
-function useInstallAction() {
+export function useInstallAction() {
   const { canPrompt, isIos, promptInstall } = usePwaInstall();
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const { toast } = useToast();

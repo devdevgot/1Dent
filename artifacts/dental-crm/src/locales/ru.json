@@ -210,7 +210,23 @@
     "genericSubtitle": "Через меню браузера за пару шагов",
     "genericStep1": "Откройте меню браузера",
     "genericStep2": "Выберите «Установить приложение» или «Добавить на главный экран»",
-    "genericStep3": "Подтвердите установку"
+    "genericStep3": "Подтвердите установку",
+    "exclusive": {
+      "badge": "Только в приложении",
+      "installCta": "Установить 1Dent",
+      "appLockTitle": "Блокировка — в приложении",
+      "appLockDesc": "Код доступа и Face ID работают только в установленной PWA с домашнего экрана.",
+      "appLockFeature1": "Код из 4 цифр при возврате в приложение",
+      "appLockFeature2": "Face ID / Touch ID для быстрой разблокировки",
+      "appLockFeature3": "Автоблокировка после бездействия или сворачивания",
+      "pushTitle": "Push-уведомления — в приложении",
+      "pushDesc": "Оповещения на экран телефона доступны только в установленной PWA.",
+      "pushFeature1": "Red Alert, оплаты и напоминания о приёме",
+      "pushFeature2": "Трекинг прихода и ухода сотрудников",
+      "pushFeature3": "Мгновенные уведомления без открытия CRM",
+      "trackingPushTitle": "Тест push — в приложении",
+      "trackingPushDesc": "Установите 1Dent на домашний экран, включите push в профиле и проверьте уведомления."
+    }
   },
   "role": {
     "owner": "Владелец",
@@ -1224,7 +1240,14 @@
     "deniedHint": "Уведомления запрещены в настройках браузера",
     "deniedIosHint": "На iPhone: Настройки → Уведомления → 1Dent → Разрешить",
     "serverDisabledHint": "Сервер готовит push-ключи — попробуйте ещё раз через несколько секунд",
-    "swNotReady": "Service Worker не готов. Обновите страницу или переоткройте PWA с домашнего экрана"
+    "swNotReady": "Service Worker не готов. Обновите страницу или переоткройте PWA с домашнего экрана",
+    "trackingSectionTitle": "Push-уведомления PWA",
+    "trackingSectionDesc": "Трекинг сотрудников и CRM-оповещения на экран телефона",
+    "trackingEnableHint": "Включите push в Аккаунт → Push-уведомления, затем отправьте тест.",
+    "trackingTestButton": "Тест push-уведомления",
+    "trackingTestSent": "Push отправлен!",
+    "trackingTestSentDesc": "Проверьте уведомление на этом устройстве",
+    "trackingTestFailed": "Не удалось отправить push"
   },
   "channels": {
     "sectionTitle": "Каналы привлечения",

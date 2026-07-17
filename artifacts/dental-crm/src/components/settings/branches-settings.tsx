@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil, ExternalLink, Unlink, Download, LogIn, LogOut, ChevronLeft, ChevronRight, ClipboardList, FileSpreadsheet, FileText, Users, Filter, BellRing } from "lucide-react";
-import { sendTestPush, isPushSupported } from "@/lib/push-notifications";
+import { MapPin, Plus, Trash2, Loader2, Send, CheckCircle2, Bot, Navigation, Search, X, Pencil, ExternalLink, Unlink, Download, LogIn, LogOut, ChevronLeft, ChevronRight, ClipboardList, FileSpreadsheet, FileText, Users, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TrackingPushTestSection } from "@/components/push/tracking-push-test-section";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AppDialog } from "@/components/layout/app-dialog";
@@ -112,7 +112,6 @@ export function BranchesSettings() {
   const [tgPlatformChatId, setTgPlatformChatId] = useState<string | null>(null);
   const [connectingPlatform, setConnectingPlatform] = useState(false);
   const [testingPlatform, setTestingPlatform] = useState(false);
-  const [testingPush, setTestingPush] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(false);
 
   // ── Tracking table state ──────────────────────────────────────────────────
@@ -367,25 +366,6 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
       toast({ title: "Ошибка", description: String(err), variant: "destructive" });
     } finally {
       setTestingPlatform(false);
-    }
-  };
-
-  const handleTestPush = async () => {
-    setTestingPush(true);
-    try {
-      await sendTestPush("tracking");
-      toast({
-        title: "Push отправлен!",
-        description: "Проверьте уведомление на этом устройстве",
-      });
-    } catch (err) {
-      toast({
-        title: "Не удалось отправить push",
-        description: String(err),
-        variant: "destructive",
-      });
-    } finally {
-      setTestingPush(false);
     }
   };
 
@@ -1283,33 +1263,7 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
           </div>
       </AppDialog>
 
-      {/* ── PWA push notifications ───────────────────────────────────────── */}
-      {isPushSupported() && (
-        <div className="bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-[#e8e3d9]">
-            <div className="flex-1">
-              <h2 className="font-semibold text-base text-[#0f172a]">Push-уведомления PWA</h2>
-              <p className="text-xs text-[#64748b] mt-0.5">
-                Трекинг сотрудников и CRM-оповещения на экран телефона (Red Alert, оплаты, напоминания)
-              </p>
-            </div>
-          </div>
-          <div className="p-5 space-y-3">
-            <p className="text-xs text-[#64748b] leading-relaxed">
-              Включите push в <b>Аккаунт → Push-уведомления</b>, затем отправьте тест. Работает в установленной PWA по HTTPS.
-            </p>
-            <button
-              type="button"
-              onClick={() => void handleTestPush()}
-              disabled={testingPush}
-              className="w-full h-10 rounded-xl border border-[#e8e3d9] text-sm text-[#64748b] hover:border-[var(--ds-primary)]/40 hover:text-[#1f75fe] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              {testingPush ? <Loader2 className="w-4 h-4 animate-spin" /> : <BellRing className="w-4 h-4" />}
-              Тест push-уведомления
-            </button>
-          </div>
-        </div>
-      )}
+      <TrackingPushTestSection />
 
       {/* ── Telegram notifications ─────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-[#e8e3d9] overflow-hidden">

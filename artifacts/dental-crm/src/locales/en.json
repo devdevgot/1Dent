@@ -210,7 +210,23 @@
     "genericSubtitle": "A couple of steps in the browser menu",
     "genericStep1": "Open the browser menu",
     "genericStep2": "Choose \"Install app\" or \"Add to Home screen\"",
-    "genericStep3": "Confirm the installation"
+    "genericStep3": "Confirm the installation",
+    "exclusive": {
+      "badge": "App only",
+      "installCta": "Install 1Dent",
+      "appLockTitle": "App lock — in the installed app",
+      "appLockDesc": "PIN and Face ID work only in the PWA opened from your home screen.",
+      "appLockFeature1": "4-digit PIN when returning to the app",
+      "appLockFeature2": "Face ID / Touch ID for quick unlock",
+      "appLockFeature3": "Auto-lock after idle or when switching apps",
+      "pushTitle": "Push notifications — in the app",
+      "pushDesc": "On-screen alerts are available only in the installed PWA.",
+      "pushFeature1": "Red Alert, payments, and appointment reminders",
+      "pushFeature2": "Employee check-in / check-out tracking",
+      "pushFeature3": "Instant alerts without opening the CRM",
+      "trackingPushTitle": "Push test — in the app",
+      "trackingPushDesc": "Install 1Dent on your home screen, enable push in profile, then test."
+    }
   },
   "role": {
     "owner": "Owner",
@@ -1216,7 +1232,14 @@
     "deniedHint": "Notifications are blocked in browser settings",
     "deniedIosHint": "On iPhone: Settings → Notifications → 1Dent → Allow",
     "serverDisabledHint": "Server is preparing push keys — try again in a few seconds",
-    "swNotReady": "Service worker is not ready. Reload the page or reopen the installed PWA"
+    "swNotReady": "Service worker is not ready. Reload the page or reopen the installed PWA",
+    "trackingSectionTitle": "PWA push notifications",
+    "trackingSectionDesc": "Employee tracking and CRM alerts on your phone screen",
+    "trackingEnableHint": "Enable push in Account → Push notifications, then send a test.",
+    "trackingTestButton": "Test push notification",
+    "trackingTestSent": "Push sent!",
+    "trackingTestSentDesc": "Check the notification on this device",
+    "trackingTestFailed": "Failed to send push"
   },
   "channels": {
     "sectionTitle": "Acquisition Channels",
