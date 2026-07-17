@@ -35,6 +35,9 @@ import PhotoCropModal from "@/components/account/photo-crop-modal";
 import { PageShell } from "@/components/layout/page-shell";
 import { RootTabHeader } from "@/components/layout/root-tab-header";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
+import { AppLockSettingsSection } from "@/components/app-lock/app-lock-settings";
+import { clearAppLockSessionMarkers } from "@/lib/app-lock/storage";
+import { useAppLockStore } from "@/lib/app-lock/store";
 
 const SUPPORTED_LANGS = ["ru", "kz", "en"] as const;
 type Lang = (typeof SUPPORTED_LANGS)[number];
@@ -116,6 +119,8 @@ export default function AccountSettings() {
       onSuccess: () => {
         clearPersistedQueryCache();
         clearBranchContext();
+        clearAppLockSessionMarkers();
+        useAppLockStore.getState().reset();
         clearAuthToken();
         clearAuth();
         setLocation("/login");
@@ -259,6 +264,8 @@ export default function AccountSettings() {
             ))}
           </IosGroup>
         </IosSection>
+
+        <AppLockSettingsSection userName={user?.name ?? "User"} />
 
         {/* Payroll for staff roles */}
         {(user?.role === "admin" || user?.role === "accountant" || user?.role === "warehouse") && (

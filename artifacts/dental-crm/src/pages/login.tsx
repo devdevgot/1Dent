@@ -7,6 +7,7 @@ import { createLoginSchema, createResetPasswordSchema, type LoginFormValues } fr
 import { customFetch, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { persistAuthSession } from "@/lib/auth-session";
+import { markAppUnlocked } from "@/lib/app-lock/storage";
 import { clearPersistedQueryCache } from "@/lib/query-persist";
 import { clearBranchContext } from "@/lib/branch-context";
 import { getPostLoginRedirectPath } from "@/lib/auth-redirect";
@@ -83,6 +84,7 @@ export default function Login() {
     }
 
     persistAuthSession({ user: data.user, clinic: data.clinic, token: data.token });
+    markAppUnlocked();
     setAuth(data.user, data.clinic);
     queryClient.setQueryData(getGetMeQueryKey(), {
       success: true,
