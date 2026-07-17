@@ -3,7 +3,7 @@
   "short_name": "1Dent",
   "description": "1Dent — CRM для стоматологических клиник: пациенты, расписание, зубная карта, финансы и AI-ассистент.",
   "id": "/",
-  "start_url": "/?source=pwa",
+  "start_url": "/login?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
