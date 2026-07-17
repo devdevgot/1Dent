@@ -2,7 +2,6 @@
 export const GEO_RESTRICTED_PREFIXES = [
   "/patients",
   "/calendar",
-  "/chat",
   "/analytics",
   "/doctor-analytics",
   "/financials",
@@ -17,7 +16,18 @@ export const GEO_RESTRICTED_PREFIXES = [
   "/contract-templates",
 ] as const;
 
+/** Accessible outside the clinic geo-zone (schedule + WhatsApp chat). */
+export const GEO_ALLOWED_OUTSIDE_PREFIXES = ["/schedule", "/chat"] as const;
+
 export function isGeoRestrictedPath(path: string): boolean {
+  if (
+    GEO_ALLOWED_OUTSIDE_PREFIXES.some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    )
+  ) {
+    return false;
+  }
+
   return GEO_RESTRICTED_PREFIXES.some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );

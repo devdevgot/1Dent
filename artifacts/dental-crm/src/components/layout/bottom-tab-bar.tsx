@@ -135,6 +135,19 @@ function buildTabs(
   return tabs;
 }
 
+function isTabGeoBlocked(
+  tab: ResolvedTab,
+  role: string,
+  isRestricted: boolean,
+  hasBranches: boolean,
+): boolean {
+  if (!isRestricted || !hasBranches || !tab.geoRestricted) return false;
+  // Clinical staff keep schedule + WhatsApp chat when outside the clinic.
+  if (tab.id === "work" && isClinicalStaff(role)) return false;
+  if (tab.id === "chat") return false;
+  return true;
+}
+
 export function BottomTabBar({
   roleDashboardHref,
   role,
@@ -164,7 +177,7 @@ export function BottomTabBar({
     <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 pb-[env(safe-area-inset-bottom,0px)]">
       <div className="flex items-stretch h-16">
         {tabs.map((tab) => {
-          const blocked = isRestricted && hasBranches && tab.geoRestricted;
+          const blocked = isTabGeoBlocked(tab, role, isRestricted, hasBranches);
           const Icon = tab.icon;
           const label = t(tab.labelKey);
 
