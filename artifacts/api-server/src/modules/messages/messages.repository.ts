@@ -1,4 +1,4 @@
-import { db, messagesTable, patientsTable } from "@workspace/db";
+import { db, messagesTable, notificationsTable, patientsTable } from "@workspace/db";
 import type {
   Message,
   InsertMessage,
