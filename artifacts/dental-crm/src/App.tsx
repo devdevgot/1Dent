@@ -11,6 +11,8 @@ import { useGetMe, getGetMeQueryKey, setUnauthorizedHandler, setBaseUrl } from "
 import { clearAuthToken, restoreAuthToken } from "@/lib/auth-token";
 import { restoreBranchContext, clearBranchContext } from "@/lib/branch-context";
 import type { User, Clinic } from "@workspace/api-client-react";
+import { useAuthStore } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/components/auth/protected-route";
 import { clearAppLockSessionMarkers } from "@/lib/app-lock/storage";
 import { useAppLockStore } from "@/lib/app-lock/store";
 import { AppLockProvider } from "@/components/app-lock/app-lock-provider";
