@@ -8,17 +8,17 @@ import {
 function titleForType(type: NotificationType): string {
   switch (type) {
     case "red_alert":
-      return "1Dent · Red Alert";
+      return "Red Alert";
     case "pending_payment":
-      return "1Dent · Ожидает оплаты";
+      return "Ожидает оплаты";
     case "appointment_reminder":
-      return "1Dent · Напоминание о приёме";
+      return "Напоминание о приёме";
     case "new_message":
-      return "1Dent · Новое сообщение";
+      return "Новое сообщение";
     case "system":
-      return "1Dent";
+      return "Уведомление";
     default:
-      return "1Dent";
+      return "Уведомление";
   }
 }
 

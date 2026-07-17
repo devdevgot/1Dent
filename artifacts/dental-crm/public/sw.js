@@ -13,7 +13,7 @@
  *  - API requests (/api/*) and cross-origin requests: never handled by the SW.
  */
 
-const VERSION = "1dent-pwa-v4";
+const VERSION = "1dent-pwa-v5";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -146,7 +146,7 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   let payload = {
-    title: "1Dent",
+    title: "Уведомление",
     body: "",
     url: "/",
     tag: "1dent",
