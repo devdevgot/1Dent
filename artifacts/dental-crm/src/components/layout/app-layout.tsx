@@ -72,7 +72,7 @@ function useAfterFirstPaint() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const [location] = useLocation();
-  const { status, activeBranch, isRestricted, hasBranches, permissionPhase, requestGeolocationPermission } =
+  const { status, activeBranch, isRestricted, hasBranches, permissionPhase, needsPermissionPrompt, requestGeolocationPermission } =
     useGeoRestriction();
   const queryClient = useQueryClient();
   const { branches, selectedBranchId, setSelectedBranchId, fetchBranches, hasFetched } = useBranchStore();
@@ -210,7 +210,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Status indicator when geo is loading or denied (only if branches exist) */}
-      {hasBranches && (status === "denied" || permissionPhase === "prompt") && (
+      {hasBranches && (status === "denied" || needsPermissionPrompt) && (
         <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[#faf8f4] border-b border-[#e8e3d9] z-10">
           <AlertTriangle className="w-4 h-4 text-[#d97706] shrink-0" />
           <p className="flex-1 text-xs text-[#64748b]">

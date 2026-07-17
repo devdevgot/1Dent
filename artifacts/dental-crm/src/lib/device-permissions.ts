@@ -2,10 +2,17 @@ export type DevicePermissionName = "geolocation" | "camera" | "microphone";
 
 export type DevicePermissionState = PermissionState | "unknown";
 
+export type DevicePermissionPhase = "granted" | "denied" | "prompt";
+
 const GRANT_KEY_PREFIX = "1dent:perm-granted:";
+const DISMISS_KEY_PREFIX = "1dent:perm-prompt-dismissed:";
 
 function permissionStorageKey(name: DevicePermissionName): string {
   return `${GRANT_KEY_PREFIX}${name}`;
+}
+
+function promptDismissStorageKey(userId: string): string {
+  return `${DISMISS_KEY_PREFIX}${userId}`;
 }
 
 /** Best-effort read of browser permission state (Safari may return unknown). */
@@ -40,6 +47,33 @@ export function wasPermissionGrantedBefore(name: DevicePermissionName): boolean 
   }
 }
 
+export function markPermissionPromptDismissed(userId: string): void {
+  if (!userId) return;
+  try {
+    localStorage.setItem(promptDismissStorageKey(userId), String(Date.now()));
+  } catch {
+    // non-critical
+  }
+}
+
+export function wasPermissionPromptDismissed(userId: string): boolean {
+  if (!userId) return false;
+  try {
+    return localStorage.getItem(promptDismissStorageKey(userId)) !== null;
+  } catch {
+    return false;
+  }
+}
+
+export function clearPermissionPromptDismissed(userId: string): void {
+  if (!userId) return;
+  try {
+    localStorage.removeItem(promptDismissStorageKey(userId));
+  } catch {
+    // non-critical
+  }
+}
+
 export async function isDevicePermissionGranted(
   name: DevicePermissionName,
 ): Promise<boolean> {
@@ -47,6 +81,20 @@ export async function isDevicePermissionGranted(
   if (state === "granted") return true;
   if (state === "denied") return false;
   return wasPermissionGrantedBefore(name);
+}
+
+/**
+ * Resolve whether we should treat a permission as granted, denied, or still need
+ * the in-app prompt. Safari often returns "prompt" even after the user allowed
+ * access — we trust local one-time consent in that case.
+ */
+export async function resolveDevicePermissionPhase(
+  name: DevicePermissionName,
+): Promise<DevicePermissionPhase> {
+  const state = await queryDevicePermission(name);
+  if (state === "denied") return "denied";
+  if (state === "granted" || wasPermissionGrantedBefore(name)) return "granted";
+  return "prompt";
 }
 
 /** One-shot geolocation request — must be called from a user gesture on iOS PWA. */
@@ -62,6 +110,29 @@ export function requestGeolocationAccess(): Promise<GeolocationPosition> {
       maximumAge: 60_000,
       timeout: 20_000,
     });
+  });
+}
+
+/** Silent refresh when consent was already granted — never shows our in-app prompt. */
+export function refreshGeolocationSilently(): Promise<GeolocationPosition | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation || !wasPermissionGrantedBefore("geolocation")) {
+      resolve(null);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        markPermissionGranted("geolocation");
+        resolve(position);
+      },
+      () => resolve(null),
+      {
+        enableHighAccuracy: true,
+        maximumAge: 120_000,
+        timeout: 12_000,
+      },
+    );
   });
 }
 
@@ -115,9 +186,14 @@ export async function requestMicrophoneAccess(options?: {
 
 /**
  * Pre-warm camera + microphone in PWA after geolocation (optional, user gesture).
- * Ignores individual failures so one denial doesn't block the rest.
+ * Skips permissions that were already granted so iOS does not re-prompt.
  */
 export async function warmMediaPermissions(): Promise<void> {
-  await requestCameraAccess().catch(() => {});
-  await requestMicrophoneAccess().catch(() => {});
+  if (!(await isDevicePermissionGranted("camera"))) {
+    await requestCameraAccess().catch(() => {});
+  }
+
+  if (!(await isDevicePermissionGranted("microphone"))) {
+    await requestMicrophoneAccess().catch(() => {});
+  }
 }
