@@ -1205,6 +1205,8 @@
     "wrongPin": "Неверный код доступа",
     "tooManyAttempts": "Слишком много попыток. Подождите и попробуйте снова.",
     "biometricFailed": "Не удалось подтвердить биометрию",
+    "biometricPrompting": "Подтвердите Face ID или Touch ID",
+    "usePinInstead": "Ввести код доступа",
     "useBiometric": "Face ID / Touch ID",
     "setupTitle": "Код доступа",
     "setupEnter": "Придумайте код из 4 цифр",

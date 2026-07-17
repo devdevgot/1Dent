@@ -1197,6 +1197,8 @@
     "wrongPin": "Қате код",
     "tooManyAttempts": "Тым көп әрекет. Күтіп, қайта көріңіз.",
     "biometricFailed": "Биометрия расталмады",
+    "biometricPrompting": "Face ID немесе Touch ID растаңыз",
+    "usePinInstead": "Қол жеткізу кодын енгізу",
     "useBiometric": "Face ID / Touch ID",
     "setupTitle": "Қол жеткізу коды",
     "setupEnter": "4 саннан код ойлап табыңыз",

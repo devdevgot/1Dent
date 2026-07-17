@@ -1197,6 +1197,8 @@
     "wrongPin": "Wrong access code",
     "tooManyAttempts": "Too many attempts. Wait and try again.",
     "biometricFailed": "Biometric verification failed",
+    "biometricPrompting": "Confirm with Face ID or Touch ID",
+    "usePinInstead": "Use access code instead",
     "useBiometric": "Face ID / Touch ID",
     "setupTitle": "Access code",
     "setupEnter": "Create a 4-digit code",
