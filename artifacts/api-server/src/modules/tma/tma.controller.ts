@@ -42,6 +42,7 @@ import { errorEventsService } from "../error-events/error-events.service";
 import type { ErrorEventSeverity, ErrorEventSource } from "@workspace/db";
 import { createTabletVideosTmaRouter } from "../tablet-videos/tablet-videos.routes";
 import { createPlatformConfigTmaRouter } from "../platform-config/platform-config.routes";
+import pushBroadcastTmaRouter from "./push-broadcast.routes";
 import { getPlatformWebhookUrl, getTmaUrl } from "../../shared/platform-bot";
 import { getPlatformAdminTelegramIds, sendPlatformAdminTelegramMessage } from "../../shared/platform-admin-notify";
 import { processKnowledgeSource, scrapeUrl } from "../knowledge/knowledge.service";
@@ -2103,5 +2104,6 @@ router.patch("/errors/:id/resolve", async (req: Request, res: Response, next: Ne
 
 router.use(createTabletVideosTmaRouter());
 router.use(createPlatformConfigTmaRouter());
+router.use(pushBroadcastTmaRouter);
 
 export default router;
