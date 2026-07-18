@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Link } from "wouter";
 import { SITE } from "@/config/site";
@@ -7,14 +7,17 @@ import { SITE } from "@/config/site";
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
+
+  const { scrollYProgress } = useScroll();
+  const progressScaleX = useSpring(scrollYProgress, {
+    stiffness: 140,
+    damping: 30,
+    mass: 0.4,
+    restDelta: 0.0005,
+  });
 
   useEffect(() => {
-    const handler = () => {
-      setScrolled(window.scrollY > 20);
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      setScrollProgress(docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0);
-    };
+    const handler = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handler, { passive: true });
     handler();
     return () => window.removeEventListener("scroll", handler);
@@ -36,9 +39,9 @@ export function Navbar() {
         scrolled ? "landing-nav-scrolled" : "bg-transparent"
       }`}
     >
-      <div
+      <motion.div
         className="landing-scroll-progress"
-        style={{ width: `${scrollProgress}%` }}
+        style={{ scaleX: progressScaleX }}
         aria-hidden
       />
 

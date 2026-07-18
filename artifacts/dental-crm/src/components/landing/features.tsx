@@ -6,7 +6,7 @@ import { ChatPageMockup } from "./mockups/chat-page-mockup";
 import { FinancialsPageMockup } from "./mockups/financials-page-mockup";
 import { DentalChartPageMockup } from "./mockups/dental-chart-page-mockup";
 import { CalendarPageMockup } from "./mockups/calendar-page-mockup";
-import { TabletPageMockup } from "./mockups/tablet-page-mockup";
+import { EmployeeTrackingMockup } from "./mockups/employee-tracking-mockup";
 import { BroadcastPageMockup } from "./mockups/broadcast-page-mockup";
 import { ContractsPageMockup } from "./mockups/contracts-page-mockup";
 import { AnalyticsPageMockup } from "./mockups/analytics-page-mockup";
@@ -38,9 +38,9 @@ const features = [
     mockup: CalendarPageMockup,
   },
   {
-    label: "Slash Tablet",
-    desc: "Планшет в кабинете — покажите план лечения пациенту на экране.",
-    mockup: TabletPageMockup,
+    label: "Трекинг сотрудников",
+    desc: "Карта с геозоной клиники и радиусом — оповещения, когда сотрудник выходит из зоны.",
+    mockup: EmployeeTrackingMockup,
   },
   {
     label: "ИИ Рассылка",
