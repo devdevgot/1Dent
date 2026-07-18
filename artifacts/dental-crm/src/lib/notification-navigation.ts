@@ -31,15 +31,12 @@ function resolvePatientId(notification: Notification): string | undefined {
 }
 
 function scheduleHref(role: string, scheduledAt?: string): string {
-  if (["doctor", "assistant", "nurse"].includes(role)) {
+  if (["owner", "doctor", "assistant", "nurse"].includes(role)) {
     if (scheduledAt) {
       const day = scheduledAt.slice(0, 10);
       return `/schedule/${day}`;
     }
     return "/schedule";
-  }
-  if (role === "owner") {
-    return "/calendar";
   }
   return "/admin/calendar";
 }

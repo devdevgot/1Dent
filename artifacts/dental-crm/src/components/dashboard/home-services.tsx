@@ -167,6 +167,19 @@ function OwnerPromoBanners() {
   return (
     <HomeScrollRow snap>
       <PromoBanner
+        slug="schedule"
+        variant="gradient"
+        title={
+          <>
+            Расписание
+            <br />
+            клиники
+          </>
+        }
+        subtitle="Записи и процедуры на сегодня"
+        img="/icons/menu/schedule.png"
+      />
+      <PromoBanner
         slug="chatbot"
         variant="gradient"
         title={

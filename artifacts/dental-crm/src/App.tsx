@@ -232,6 +232,13 @@ function ProceduresRedirect() {
   return null;
 }
 
+/** Legacy /calendar bookmark → unified /schedule calendar. */
+function CalendarRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/schedule", { replace: true }); }, [setLocation]);
+  return null;
+}
+
 function Router() {
   const { isAuthenticated, user } = useAuthStore();
   const [location, setLocation] = useLocation();
@@ -308,9 +315,9 @@ function Router() {
         <ProtectedRoute component={AdminCalendarPage} allowedRoles={['admin']} />
       </Route>
 
-      {/* Shared calendar — owner sees all appointments in AppLayout */}
+      {/* Legacy owner URL → doctor-style schedule calendar */}
       <Route path="/calendar">
-        <ProtectedRoute component={AdminCalendarPage} allowedRoles={['owner', 'admin']} />
+        <ProtectedRoute component={CalendarRedirect} allowedRoles={['owner']} />
       </Route>
       <Route path="/admin/appointments/new">
         <ProtectedRoute component={AdminAppointmentNewPage} allowedRoles={['admin']} />
@@ -339,12 +346,12 @@ function Router() {
         <ProtectedRoute component={ServicesPage} allowedRoles={['owner', 'admin', ...CLINICAL_STAFF_ROLES, 'accountant']} />
       </Route>
 
-      {/* Clinical schedule (read-only calendar) */}
+      {/* Schedule calendar — owner + clinical staff (month + day timeline) */}
       <Route path="/schedule">
-        <ProtectedRoute component={DoctorSchedulePage} allowedRoles={[...CLINICAL_STAFF_ROLES]} />
+        <ProtectedRoute component={DoctorSchedulePage} allowedRoles={['owner', ...CLINICAL_STAFF_ROLES]} />
       </Route>
       <Route path="/schedule/:date">
-        <ProtectedRoute component={DoctorScheduleDayPage} allowedRoles={[...CLINICAL_STAFF_ROLES]} />
+        <ProtectedRoute component={DoctorScheduleDayPage} allowedRoles={['owner', ...CLINICAL_STAFF_ROLES]} />
       </Route>
       <Route path="/payroll/my">
         <ProtectedRoute component={PayrollMyPage} allowedRoles={[...CLINICAL_STAFF_ROLES]} />

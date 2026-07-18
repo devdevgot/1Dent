@@ -15,5 +15,10 @@ export function isDoctorRole(role: string | undefined | null): boolean {
 
 /** Roles that see clinic-wide procedures instead of only their own doctorId. */
 export function seesClinicSchedule(role: string | undefined | null): boolean {
-  return role === "assistant" || role === "nurse" || role === "admin";
+  return role === "owner" || role === "assistant" || role === "nurse" || role === "admin";
+}
+
+/** Owner + clinical staff share the /schedule calendar (month + day timeline). */
+export function usesScheduleCalendar(role: string | undefined | null): boolean {
+  return role === "owner" || isClinicalStaff(role);
 }
