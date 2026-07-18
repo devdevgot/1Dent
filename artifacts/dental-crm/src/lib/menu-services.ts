@@ -68,7 +68,7 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     nameKey: "nav.schedule",
     href: "/schedule",
     img: "/icons/menu/schedule.png",
-    roles: CLINICAL,
+    roles: ["owner", ...CLINICAL],
     category: "clinic",
     component: lazyWithChunkRecovery(() => import("@/pages/doctor-schedule")),
     skeletonVariant: "schedule",
@@ -223,6 +223,7 @@ export function hrefToServiceSlug(href: string): string | null {
 
 /** Dashboard home quick-access tiles (subset of menu services). */
 export const HOME_SERVICE_SLUGS = [
+  "schedule",
   "patients",
   "users",
   "services",

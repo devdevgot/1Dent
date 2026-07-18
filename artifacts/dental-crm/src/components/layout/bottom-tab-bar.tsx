@@ -13,7 +13,7 @@ import {
   TabServicesIcon,
   TAB_ACTIVE,
 } from "./bottom-tab-icons";
-import { isClinicalStaff } from "@/lib/role-groups";
+import { usesScheduleCalendar } from "@/lib/role-groups";
 import { hrefToServiceSlug } from "@/lib/menu-services";
 
 type BottomTabBarProps = {
@@ -44,12 +44,10 @@ const ACCOUNT_SETTINGS_PREFIXES = [
 ];
 
 function getWorkTab(role: string): { labelKey: string; icon: TabIcon; href: string } {
-  if (isClinicalStaff(role)) {
+  if (usesScheduleCalendar(role)) {
     return { labelKey: "nav.schedule", icon: TabCalendarIcon, href: "/schedule" };
   }
   switch (role) {
-    case "owner":
-      return { labelKey: "nav.calendar", icon: TabCalendarIcon, href: "/calendar" };
     case "accountant":
       return { labelKey: "nav.financials", icon: TabFinanceIcon, href: "/financials" };
     case "warehouse":
@@ -142,8 +140,8 @@ function isTabGeoBlocked(
   hasBranches: boolean,
 ): boolean {
   if (!isRestricted || !hasBranches || !tab.geoRestricted) return false;
-  // Clinical staff keep schedule + WhatsApp chat when outside the clinic.
-  if (tab.id === "work" && isClinicalStaff(role)) return false;
+  // Owner + clinical staff keep schedule + WhatsApp chat when outside the clinic.
+  if (tab.id === "work" && usesScheduleCalendar(role)) return false;
   if (tab.id === "chat") return false;
   return true;
 }
