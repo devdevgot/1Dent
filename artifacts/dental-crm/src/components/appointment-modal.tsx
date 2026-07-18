@@ -95,11 +95,11 @@ const MONTHS_SHORT = ["янв","фев","мар","апр","май","июн",
                       "июл","авг","сен","окт","ноя","дек"];
 const DAYS_RU = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 
-/* Full day — no working-hours restriction (00:00–23:30). */
-const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
-  const hour = Math.floor(i / 2);
-  const min  = i % 2 === 0 ? "00" : "30";
-  return `${String(hour).padStart(2, "0")}:${min}`;
+/* Full day, 15-minute steps — matches drag-to-create snapping (00:00–23:45). */
+const TIME_SLOTS = Array.from({ length: 96 }, (_, i) => {
+  const hour = Math.floor(i / 4);
+  const min  = (i % 4) * 15;
+  return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 });
 
 function buildCalendarWeeks(year: number, month: number): (number | null)[][] {
