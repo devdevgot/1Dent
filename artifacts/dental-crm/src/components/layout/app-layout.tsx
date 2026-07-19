@@ -1,6 +1,6 @@
-import { ReactNode, Suspense, useEffect, useState } from "react";
+import { ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useBranchStore } from "@/hooks/use-branch-store";
@@ -19,6 +19,10 @@ import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
 import { MenuServiceOverlay } from "./menu-service-overlay";
 import { isGeoRestrictedPath } from "@/lib/geo-restriction";
 import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
+import { usePwaPullToRefresh } from "@/hooks/use-pwa-pull-to-refresh";
+import { PullToRefreshIndicator } from "@/components/pwa/pull-to-refresh-indicator";
+import { refreshAppData } from "@/lib/pwa-refresh";
+import { isPwaStandalone } from "@/lib/pwa";
 
 const GlobalSearch = lazyWithChunkRecovery(() =>
   import("./global-search").then((m) => ({ default: m.GlobalSearch })),
@@ -72,6 +76,21 @@ function useAfterFirstPaint() {
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const [location] = useLocation();
+  const search = useSearch();
+  const overlayOpen = (() => {
+    const raw = search.startsWith("?") ? search.slice(1) : search;
+    return new URLSearchParams(raw).get("service") != null;
+  })();
+  const mainRef = useRef<HTMLElement>(null);
+  const handlePullRefresh = useCallback(
+    () => refreshAppData(queryClient),
+    [queryClient],
+  );
+  const pullRefresh = usePwaPullToRefresh({
+    scrollRef: mainRef,
+    onRefresh: handlePullRefresh,
+    enabled: isPwaStandalone() && !overlayOpen,
+  });
   const { status, activeBranch, isRestricted, hasBranches, permissionPhase, needsPermissionPrompt, requestGeolocationPermission } =
     useGeoRestriction();
   const queryClient = useQueryClient();
@@ -231,7 +250,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative">
+      <main
+        ref={mainRef}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain relative"
+      >
+        <PullToRefreshIndicator {...pullRefresh} />
         {pageBlocked ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
             <div className="w-16 h-16 rounded-full bg-[var(--warning-light)] flex items-center justify-center">
