@@ -1,6 +1,6 @@
-import { ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocation, useSearch } from "wouter";
+import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { useBranchStore } from "@/hooks/use-branch-store";
@@ -75,25 +75,18 @@ function useAfterFirstPaint() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [location] = useLocation();
-  const search = useSearch();
-  const overlayOpen = (() => {
-    const raw = search.startsWith("?") ? search.slice(1) : search;
-    return new URLSearchParams(raw).get("service") != null;
-  })();
-  const mainRef = useRef<HTMLElement>(null);
   const handlePullRefresh = useCallback(
     () => refreshAppData(queryClient),
     [queryClient],
   );
   const pullRefresh = usePwaPullToRefresh({
-    scrollRef: mainRef,
     onRefresh: handlePullRefresh,
-    enabled: isPwaStandalone() && !overlayOpen,
+    enabled: isPwaStandalone(),
   });
   const { status, activeBranch, isRestricted, hasBranches, permissionPhase, needsPermissionPrompt, requestGeolocationPermission } =
     useGeoRestriction();
-  const queryClient = useQueryClient();
   const { branches, selectedBranchId, setSelectedBranchId, fetchBranches, hasFetched } = useBranchStore();
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
   const afterFirstPaint = useAfterFirstPaint();
@@ -134,6 +127,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <OverlayNavigationProvider>
+      <PullToRefreshIndicator {...pullRefresh} />
       <div className="flex flex-col h-app bg-[#faf8f4] overflow-hidden font-manrope">
       {afterFirstPaint && (
         <Suspense fallback={null}>
@@ -250,11 +244,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main content */}
-      <main
-        ref={mainRef}
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain relative"
-      >
-        <PullToRefreshIndicator {...pullRefresh} />
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain relative">
         {pageBlocked ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 px-6 text-center">
             <div className="w-16 h-16 rounded-full bg-[var(--warning-light)] flex items-center justify-center">

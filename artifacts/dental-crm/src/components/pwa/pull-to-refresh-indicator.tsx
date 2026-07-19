@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ export function PullToRefreshIndicator({
 }: PullToRefreshIndicatorProps) {
   const { t } = useTranslation();
 
-  if (!visible) return null;
+  if (!visible || typeof document === "undefined") return null;
 
   const progress = Math.min(pullY / threshold, 1);
   const label =
@@ -30,11 +31,12 @@ export function PullToRefreshIndicator({
 
   const offsetY = phase === "refreshing" ? threshold : pullY;
 
-  return (
+  return createPortal(
     <div
-      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex justify-center"
+      className="pointer-events-none fixed inset-x-0 z-[120] flex justify-center"
       style={{
-        transform: `translateY(${Math.max(0, offsetY - 36)}px)`,
+        top: "calc(env(safe-area-inset-top, 0px) + 6px)",
+        transform: `translateY(${Math.max(0, offsetY - 28)}px)`,
         opacity: Math.max(0.35, progress),
         transition: phase === "refreshing" ? "transform 150ms ease-out" : "opacity 120ms ease-out",
       }}
@@ -55,6 +57,7 @@ export function PullToRefreshIndicator({
         />
         <span className="text-[11px] font-medium text-[#64748b]">{label}</span>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

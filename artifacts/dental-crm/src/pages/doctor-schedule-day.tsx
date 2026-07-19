@@ -1,6 +1,5 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProcedures, useListPatients,
   useListUsers, useListProcedureTemplates,
@@ -22,10 +21,6 @@ import { Bone } from "@/components/skeletons";
 import { seesClinicSchedule } from "@/lib/role-groups";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { usePageBack } from "@/hooks/use-page-back";
-import { usePwaPullToRefresh } from "@/hooks/use-pwa-pull-to-refresh";
-import { PullToRefreshIndicator } from "@/components/pwa/pull-to-refresh-indicator";
-import { refreshAppData } from "@/lib/pwa-refresh";
-import { isPwaStandalone } from "@/lib/pwa";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -171,7 +166,6 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const [, navigate] = useLocation();
   const { isOverlay, pushDate } = useOverlayNavigation();
   const goBack = usePageBack();
-  const queryClient = useQueryClient();
 
   const weekDays = getWeek(selDate);
   const todayStr = toStr(new Date());
@@ -216,15 +210,6 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
 
   /* Timeline container */
   const tlRef = useRef<HTMLDivElement>(null);
-  const handlePullRefresh = useCallback(
-    () => refreshAppData(queryClient),
-    [queryClient],
-  );
-  const pullRefresh = usePwaPullToRefresh({
-    scrollRef: tlRef,
-    onRefresh: handlePullRefresh,
-    enabled: isPwaStandalone() && !isOverlay,
-  });
   const contentRef = useRef<HTMLDivElement>(null);
 
   /* ── Long-press drag-to-create (Apple Calendar style) ──
@@ -504,7 +489,6 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
         ref={tlRef}
         className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white border-t border-[#e8e3d9] relative"
       >
-        <PullToRefreshIndicator {...pullRefresh} />
         <div
           ref={contentRef}
           key={dateStr}
