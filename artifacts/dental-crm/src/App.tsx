@@ -18,6 +18,7 @@ import { useAppLockStore } from "@/lib/app-lock/store";
 import { AppLockProvider } from "@/components/app-lock/app-lock-provider";
 import { PushNotificationsProvider } from "@/components/push/push-notifications-provider";
 import { GeoTrackingProvider } from "@/components/geo/geo-tracking-provider";
+import { PwaPullToRefreshProvider } from "@/components/pwa/pwa-pull-to-refresh-provider";
 import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
@@ -475,6 +476,7 @@ function App() {
               <AppLockProvider>
                 <PushNotificationsProvider>
                   <GeoTrackingProvider>
+                    <PwaPullToRefreshProvider />
                     <Router />
                   </GeoTrackingProvider>
                 </PushNotificationsProvider>
