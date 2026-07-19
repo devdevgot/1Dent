@@ -3,16 +3,13 @@
 # Branch flow: feature/* → dev (staging) → master (production)
 # See docs/BRANCHING.md
 #
-# Railway deploy — два режима (см. docs/RAILWAY_DEPLOY.md):
+# Railway production deploy mode: Auto-deploy (вариант A)
+#   Railway Settings → Source → repo `devdevgot/1Dent`, branch `master`, Autodeploy ON.
+#   This workflow only verifies the build. Railway itself deploys on push to master.
+#   Секрет RAILWAY_DEPLOY_HOOK не нужен (вариант B — опциональный fallback).
 #
-#   A) Auto-deploy (проще): Railway Settings → Source → branch master, auto-deploy ON.
-#      GitHub Actions только проверяет сборку. Секрет RAILWAY_DEPLOY_HOOK не нужен.
-#
-#   B) Deploy hook: Railway auto-deploy OFF, в GitHub Secrets добавить RAILWAY_DEPLOY_HOOK.
-#      Деплой запускается после успешного job Checks.
-#
-# Flow (вариант B):
-#   push master → GitHub Actions (checks) → POST deploy hook → Railway
+# Flow:
+#   push master → GitHub Actions (checks) + Railway auto-deploy (параллельно)
 #   push dev    → только Checks (без деплоя в production)
 
 name: CI/CD
@@ -23,7 +20,7 @@ on:
   pull_request:
     branches: [master, dev]
 
-# Не отменять прогоны на master — иначе deploy hook не успевает сработать
+# Не отменять прогоны на master
 concurrency:
   group: ci-cd-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -51,8 +48,10 @@ jobs:
       - name: Install and build (same as Railway)
         run: bash ./scripts/deploy-build.sh
 
+  # Optional fallback: only fires if RAILWAY_DEPLOY_HOOK is set.
+  # Primary path is Railway GitHub Auto-deploy on master.
   deploy:
-    name: Deploy to Railway
+    name: Deploy to Railway (hook fallback)
     needs: checks
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
@@ -61,13 +60,13 @@ jobs:
       name: production
       url: https://1dent.kz
     steps:
-      - name: Trigger Railway deploy (optional — via deploy hook)
+      - name: Trigger Railway deploy hook (optional)
         env:
           RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
         run: |
           if [ -z "$RAILWAY_DEPLOY_HOOK" ]; then
-            echo "::notice::RAILWAY_DEPLOY_HOOK не задан — деплой через hook пропущен."
-            echo "Включите auto-deploy в Railway (ветка master) или добавьте секрет RAILWAY_DEPLOY_HOOK."
+            echo "::notice::Auto-deploy mode: Railway деплоит сам с ветки master. Hook не нужен."
+            echo "Проверьте: Railway → 1dent → Settings → Source → Autodeploy = Enabled, branch = master"
             echo "Инструкция: docs/RAILWAY_DEPLOY.md"
             exit 0
           fi
