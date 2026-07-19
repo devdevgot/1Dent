@@ -485,13 +485,16 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       />
 
       {/* ── Timeline ── */}
+      {/* data-ptr-ignore: long-press drag-to-create must not trigger page pull-to-refresh */}
       <div
         ref={tlRef}
+        data-ptr-ignore
         className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white border-t border-[#e8e3d9] relative"
       >
         <div
           ref={contentRef}
           key={dateStr}
+          data-ptr-ignore
           className={`relative select-none ${slideClass}`}
           style={{ height: totalH + HOUR_H, touchAction: "pan-y" }}
           onPointerDown={onTimelinePointerDown}

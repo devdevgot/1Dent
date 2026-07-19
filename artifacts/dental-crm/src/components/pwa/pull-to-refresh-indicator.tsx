@@ -11,6 +11,9 @@ type PullToRefreshIndicatorProps = {
   visible: boolean;
 };
 
+/**
+ * Spinner that sits in the empty gap created when the page is pulled down.
+ */
 export function PullToRefreshIndicator({
   pullY,
   phase,
@@ -21,7 +24,8 @@ export function PullToRefreshIndicator({
 
   if (!visible || typeof document === "undefined") return null;
 
-  const progress = Math.min(pullY / threshold, 1);
+  const gap = phase === "refreshing" ? threshold : pullY;
+  const progress = Math.min(gap / threshold, 1);
   const label =
     phase === "refreshing"
       ? t("pwa.pullRefreshing")
@@ -29,33 +33,35 @@ export function PullToRefreshIndicator({
         ? t("pwa.pullRelease")
         : t("pwa.pullHint");
 
-  const offsetY = phase === "refreshing" ? threshold : pullY;
-
   return createPortal(
     <div
-      className="pointer-events-none fixed inset-x-0 z-[120] flex justify-center"
+      className="pointer-events-none fixed inset-x-0 z-[120] flex items-center justify-center"
       style={{
-        top: "calc(env(safe-area-inset-top, 0px) + 6px)",
-        transform: `translateY(${Math.max(0, offsetY - 28)}px)`,
-        opacity: Math.max(0.35, progress),
-        transition: phase === "refreshing" ? "transform 150ms ease-out" : "opacity 120ms ease-out",
+        top: "env(safe-area-inset-top, 0px)",
+        height: Math.max(gap, 0),
+        opacity: progress < 0.15 ? 0 : Math.min(1, progress),
+        transition: phase === "refreshing" ? "height 150ms ease-out, opacity 120ms ease-out" : "opacity 80ms linear",
       }}
       aria-live="polite"
       aria-busy={phase === "refreshing"}
     >
-      <div className="flex items-center gap-2 rounded-full border border-[#e8e3d9] bg-white/95 px-3 py-1.5 shadow-md backdrop-blur-sm">
-        <Loader2
-          className={cn(
-            "h-4 w-4 text-[#1f75fe]",
-            phase === "refreshing" && "animate-spin",
-          )}
-          style={
-            phase !== "refreshing"
-              ? { transform: `rotate(${progress * 300}deg)` }
-              : undefined
-          }
-        />
-        <span className="text-[11px] font-medium text-[#64748b]">{label}</span>
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e8e3d9] bg-white/95 shadow-md backdrop-blur-sm">
+          <Loader2
+            className={cn(
+              "h-4 w-4 text-[#1f75fe]",
+              phase === "refreshing" && "animate-spin",
+            )}
+            style={
+              phase !== "refreshing"
+                ? { transform: `rotate(${progress * 300}deg)` }
+                : undefined
+            }
+          />
+        </div>
+        {progress > 0.55 && (
+          <span className="text-[10px] font-medium text-[#64748b]">{label}</span>
+        )}
       </div>
     </div>,
     document.body,
