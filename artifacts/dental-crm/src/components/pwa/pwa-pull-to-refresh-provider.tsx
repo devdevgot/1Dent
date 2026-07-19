@@ -8,9 +8,9 @@ import { isPwaStandalone } from "@/lib/pwa";
 /**
  * App-wide pull-to-refresh for the standalone PWA.
  *
- * Mounted once at the root: document-level touch listeners find the
- * scroll container under the finger, so the gesture works on every page —
- * dashboards, lists, overlays, timelines, auth screens.
+ * Mounted once at the root. Pulls the page down from the top (rubber-band),
+ * shows a spinner in the revealed gap, then refreshes. Surfaces marked with
+ * `data-ptr-ignore` (e.g. schedule timeline drag-to-create) are skipped.
  */
 export function PwaPullToRefreshProvider() {
   const queryClient = useQueryClient();

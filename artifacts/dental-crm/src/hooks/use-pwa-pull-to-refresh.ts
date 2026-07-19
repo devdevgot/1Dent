@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isPwaStandalone } from "@/lib/pwa";
 
-const THRESHOLD = 64;
-const MAX_PULL = 96;
-const RUBBER = 0.42;
+const THRESHOLD = 72;
+const MAX_PULL = 120;
+const RUBBER = 0.38;
+/** Ignore tiny finger jitter before deciding this is a page pull. */
+const ARM_DY = 14;
+/** Abort if the gesture is mostly horizontal (day swipe, etc.). */
+const VERTICAL_RATIO = 1.35;
 
 export type PullToRefreshPhase = "idle" | "pulling" | "release" | "refreshing";
 
@@ -34,6 +38,31 @@ function getScrollParent(start: EventTarget | null): HTMLElement | null {
   return root instanceof HTMLElement ? root : null;
 }
 
+function isPtrIgnored(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest("[data-ptr-ignore]"));
+}
+
+function clearPullVisual(el: HTMLElement | null) {
+  if (!el) return;
+  el.style.transform = "";
+  el.style.transition = "";
+  el.style.willChange = "";
+}
+
+function applyPullVisual(el: HTMLElement, pullY: number, animated: boolean) {
+  el.style.willChange = "transform";
+  el.style.transition = animated ? "transform 180ms ease-out" : "none";
+  el.style.transform = pullY > 0 ? `translate3d(0, ${pullY}px, 0)` : "";
+}
+
+/**
+ * Native-style page pull-to-refresh.
+ *
+ * - Only engages when the scroll container is at the very top
+ * - Only after a clear vertical pull (not horizontal swipes / drag gestures)
+ * - Skips surfaces marked with `data-ptr-ignore` (e.g. schedule timeline drag)
+ * - Moves the page down so empty space appears at the top for the spinner
+ */
 export function usePwaPullToRefresh({
   onRefresh,
   enabled = isPwaStandalone(),
@@ -41,16 +70,28 @@ export function usePwaPullToRefresh({
   const [pullY, setPullY] = useState(0);
   const [phase, setPhase] = useState<PullToRefreshPhase>("idle");
 
-  const trackingRef = useRef(false);
+  const armedRef = useRef(false);
+  const engagedRef = useRef(false);
   const scrollElRef = useRef<HTMLElement | null>(null);
+  const startXRef = useRef(0);
   const startYRef = useRef(0);
   const refreshingRef = useRef(false);
   const pullYRef = useRef(0);
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
 
-  const reset = useCallback(() => {
-    trackingRef.current = false;
+  const reset = useCallback((animated = false) => {
+    const el = scrollElRef.current;
+    if (el) {
+      if (animated && pullYRef.current > 0) {
+        applyPullVisual(el, 0, true);
+        window.setTimeout(() => clearPullVisual(el), 200);
+      } else {
+        clearPullVisual(el);
+      }
+    }
+    armedRef.current = false;
+    engagedRef.current = false;
     scrollElRef.current = null;
     pullYRef.current = 0;
     setPullY(0);
@@ -60,14 +101,17 @@ export function usePwaPullToRefresh({
   const runRefresh = useCallback(async () => {
     if (refreshingRef.current) return;
     refreshingRef.current = true;
+    const el = scrollElRef.current;
     setPhase("refreshing");
     setPullY(THRESHOLD);
     pullYRef.current = THRESHOLD;
+    if (el) applyPullVisual(el, THRESHOLD, true);
+
     try {
       await onRefreshRef.current();
     } finally {
       refreshingRef.current = false;
-      reset();
+      reset(true);
     }
   }, [reset]);
 
@@ -76,51 +120,85 @@ export function usePwaPullToRefresh({
 
     const onTouchStart = (e: TouchEvent) => {
       if (refreshingRef.current || e.touches.length !== 1) return;
+      if (isPtrIgnored(e.target)) return;
 
       const scrollEl = getScrollParent(e.target);
-      if (!scrollEl || scrollEl.scrollTop > 1) return;
+      if (!scrollEl || scrollEl.scrollTop > 0.5) return;
 
+      // Arm only — do not engage yet (avoids fighting long-press / day swipe).
+      armedRef.current = true;
+      engagedRef.current = false;
       scrollElRef.current = scrollEl;
-      trackingRef.current = true;
+      startXRef.current = e.touches[0].clientX;
       startYRef.current = e.touches[0].clientY;
-      setPhase("pulling");
+      pullYRef.current = 0;
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      if (!trackingRef.current || refreshingRef.current) return;
+      if (!armedRef.current || refreshingRef.current) return;
       const scrollEl = scrollElRef.current;
       if (!scrollEl) return;
 
-      const dy = e.touches[0].clientY - startYRef.current;
+      // If the gesture moved onto an ignored surface and we never engaged, abort.
+      if (!engagedRef.current && isPtrIgnored(e.target)) {
+        reset();
+        return;
+      }
 
-      if (dy <= 0) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - startXRef.current;
+      const dy = touch.clientY - startYRef.current;
+
+      if (!engagedRef.current) {
+        // Still deciding whether this is a page pull.
+        if (Math.abs(dx) > ARM_DY && Math.abs(dx) > Math.abs(dy) * VERTICAL_RATIO) {
+          // Horizontal swipe (e.g. change day) — leave it alone.
+          reset();
+          return;
+        }
+        if (dy < ARM_DY) {
+          if (dy < -4) reset(); // scrolling up / content starts moving
+          return;
+        }
+        if (scrollEl.scrollTop > 0.5) {
+          reset();
+          return;
+        }
+        // Clear vertical pull from the top → engage page PTR.
+        engagedRef.current = true;
+        setPhase("pulling");
+      }
+
+      if (dy <= 0 || scrollEl.scrollTop > 0.5) {
+        applyPullVisual(scrollEl, 0, false);
         pullYRef.current = 0;
         setPullY(0);
         setPhase("pulling");
         return;
       }
 
-      if (scrollEl.scrollTop > 1) {
-        reset();
-        return;
-      }
-
+      // Own the gesture so the page rubber-bands instead of overscrolling.
       e.preventDefault();
       const next = Math.min(dy * RUBBER, MAX_PULL);
       pullYRef.current = next;
       setPullY(next);
       setPhase(next >= THRESHOLD ? "release" : "pulling");
+      applyPullVisual(scrollEl, next, false);
     };
 
     const onTouchEnd = () => {
-      if (!trackingRef.current || refreshingRef.current) return;
-      trackingRef.current = false;
-      scrollElRef.current = null;
+      if (!armedRef.current || refreshingRef.current) return;
+      if (!engagedRef.current) {
+        reset();
+        return;
+      }
+      armedRef.current = false;
+      engagedRef.current = false;
       if (pullYRef.current >= THRESHOLD) {
         void runRefresh();
         return;
       }
-      reset();
+      reset(true);
     };
 
     document.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
@@ -133,6 +211,7 @@ export function usePwaPullToRefresh({
       document.removeEventListener("touchmove", onTouchMove, true);
       document.removeEventListener("touchend", onTouchEnd, true);
       document.removeEventListener("touchcancel", onTouchEnd, true);
+      clearPullVisual(scrollElRef.current);
     };
   }, [enabled, reset, runRefresh]);
 
