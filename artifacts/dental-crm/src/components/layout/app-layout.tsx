@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, useCallback, useEffect, useState } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -19,10 +19,6 @@ import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
 import { MenuServiceOverlay } from "./menu-service-overlay";
 import { isGeoRestrictedPath } from "@/lib/geo-restriction";
 import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
-import { usePwaPullToRefresh } from "@/hooks/use-pwa-pull-to-refresh";
-import { PullToRefreshIndicator } from "@/components/pwa/pull-to-refresh-indicator";
-import { refreshAppData } from "@/lib/pwa-refresh";
-import { isPwaStandalone } from "@/lib/pwa";
 
 const GlobalSearch = lazyWithChunkRecovery(() =>
   import("./global-search").then((m) => ({ default: m.GlobalSearch })),
@@ -77,14 +73,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [location] = useLocation();
-  const handlePullRefresh = useCallback(
-    () => refreshAppData(queryClient),
-    [queryClient],
-  );
-  const pullRefresh = usePwaPullToRefresh({
-    onRefresh: handlePullRefresh,
-    enabled: isPwaStandalone(),
-  });
   const { status, activeBranch, isRestricted, hasBranches, permissionPhase, needsPermissionPrompt, requestGeolocationPermission } =
     useGeoRestriction();
   const { branches, selectedBranchId, setSelectedBranchId, fetchBranches, hasFetched } = useBranchStore();
@@ -127,7 +115,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <OverlayNavigationProvider>
-      <PullToRefreshIndicator {...pullRefresh} />
       <div className="flex flex-col h-app bg-[#faf8f4] overflow-hidden font-manrope">
       {afterFirstPaint && (
         <Suspense fallback={null}>
