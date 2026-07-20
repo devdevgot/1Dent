@@ -505,7 +505,10 @@ router.post("/p/contract/:token/request-otp", async (req: Request, res: Response
     const code = generateOtpCode();
     await repo.saveOtpForToken(token, code, otpExpiry());
 
-    const message = `🔐 Код подтверждения для подписания договора «${result.templateName}»:\n\n*${code}*\n\nКод действителен 5 минут. Не передавайте его третьим лицам.`;
+    const message =
+      `${code} — Ваш код для подписания договоров.\n\n` +
+      `Договор «${result.templateName}» клиники ${result.clinicName}.\n` +
+      `Код действителен 5 минут. Не передавайте его третьим лицам.`;
     // OTP via platform 1Dent WhatsApp (same channel as login OTP / staff invites)
     sendPlatformWhatsApp(result.patientPhone, message).catch((err: unknown) => {
       logger.warn({ err }, "[contract] Failed to send OTP WhatsApp");
@@ -988,7 +991,10 @@ router.post("/p/bundle/:bundleToken/request-otp", async (req: Request, res: Resp
     await repo.saveOtpForBundle(bundleToken, code, otpExpiry());
 
     const first = results[0]!;
-    const message = `🔐 Код подтверждения для подписания пакета документов:\n\n*${code}*\n\nПодпишите ${results.length} документа клиники ${first.clinicName}.\nКод действителен 5 минут. Не передавайте его третьим лицам.`;
+    const message =
+      `${code} — Ваш код для подписания договоров.\n\n` +
+      `Подпишите ${results.length} документа клиники ${first.clinicName}.\n` +
+      `Код действителен 5 минут. Не передавайте его третьим лицам.`;
     sendPlatformWhatsApp(first.patientPhone, message).catch((err: unknown) => {
       logger.warn({ err }, "[bundle] Failed to send OTP WhatsApp");
     });
