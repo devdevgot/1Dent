@@ -30,6 +30,10 @@ const DEFAULT_SCROLL_HOUR = 8; // where to land when the day has no appointments
 const LONG_PRESS_MS = 320;     // hold duration before drag-to-create kicks in
 const SNAP_MIN = 15;           // drag-to-create snaps to 15-minute steps
 const NEW_SLOT_DURATION = 60;  // drag-to-create block height = 1 hour
+/** Distance from viewport edge that starts auto-scroll while dragging. */
+const DRAG_EDGE_PX = 64;
+/** Peak auto-scroll speed (px/sec) when finger is hard against the edge. */
+const DRAG_SCROLL_MAX_PX_S = 920;
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_COLORS: Record<ProcedureStatus, {
@@ -214,8 +218,10 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
 
   /* ── Long-press drag-to-create (Apple Calendar style) ──
      Hold on empty space → a rounded 1-hour block appears and follows the
-     finger with 15-minute snapping; release → create appointment. */
-  const [dragMins, setDragMins] = useState<number | null>(null);
+     finger smoothly; times snap to 15 minutes. Near the viewport edges the
+     timeline auto-scrolls so the block can travel the full day. */
+  const [dragVisualMins, setDragVisualMins] = useState<number | null>(null);
+  const [dragSnapMins, setDragSnapMins] = useState<number | null>(null);
   const pressRef = useRef<{
     pointerId: number;
     startX: number;
@@ -226,18 +232,86 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     active: boolean;
   } | null>(null);
   const suppressClickRef = useRef(false);
+  const autoScrollRafRef = useRef<number | null>(null);
+  const autoScrollLastTsRef = useRef(0);
+  const dragClientYRef = useRef(0);
 
   const blockTouchScroll = useCallback((e: TouchEvent) => { e.preventDefault(); }, []);
 
-  const yToSnappedMins = useCallback((clientY: number) => {
+  const clampSlotStart = useCallback((mins: number) => {
+    return Math.min(Math.max(mins, 0), 24 * 60 - NEW_SLOT_DURATION);
+  }, []);
+
+  /** Continuous minutes under the finger (block centered on touch). */
+  const yToRawMins = useCallback((clientY: number) => {
     const el = contentRef.current;
     if (!el) return 0;
     const y = clientY - el.getBoundingClientRect().top;
-    const raw = (y / HOUR_H) * 60 + START_H * 60;
-    // Snap the block so the touch point sits inside it, start on 15-min grid
-    const snapped = Math.round((raw - NEW_SLOT_DURATION / 2) / SNAP_MIN) * SNAP_MIN;
-    return Math.min(Math.max(snapped, 0), 24 * 60 - NEW_SLOT_DURATION);
+    const raw = (y / HOUR_H) * 60 + START_H * 60 - NEW_SLOT_DURATION / 2;
+    return clampSlotStart(raw);
+  }, [clampSlotStart]);
+
+  const snapMins = useCallback((raw: number) => {
+    return clampSlotStart(Math.round(raw / SNAP_MIN) * SNAP_MIN);
+  }, [clampSlotStart]);
+
+  const applyDragFromClientY = useCallback((clientY: number) => {
+    const raw = yToRawMins(clientY);
+    setDragVisualMins(raw);
+    setDragSnapMins(snapMins(raw));
+  }, [yToRawMins, snapMins]);
+
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRafRef.current != null) {
+      cancelAnimationFrame(autoScrollRafRef.current);
+      autoScrollRafRef.current = null;
+    }
+    autoScrollLastTsRef.current = 0;
   }, []);
+
+  const tickAutoScroll = useCallback((ts: number) => {
+    const tl = tlRef.current;
+    const p = pressRef.current;
+    if (!tl || !p?.active) {
+      stopAutoScroll();
+      return;
+    }
+
+    const last = autoScrollLastTsRef.current || ts;
+    const dt = Math.min(0.048, Math.max(0, (ts - last) / 1000));
+    autoScrollLastTsRef.current = ts;
+
+    const rect = tl.getBoundingClientRect();
+    const y = dragClientYRef.current;
+    let speed = 0; // px/sec
+
+    if (y < rect.top + DRAG_EDGE_PX) {
+      const t = Math.min(1, Math.max(0, (rect.top + DRAG_EDGE_PX - y) / DRAG_EDGE_PX));
+      // Ease-in so scrolling ramps gently instead of jumping.
+      speed = -DRAG_SCROLL_MAX_PX_S * t * t;
+    } else if (y > rect.bottom - DRAG_EDGE_PX) {
+      const t = Math.min(1, Math.max(0, (y - (rect.bottom - DRAG_EDGE_PX)) / DRAG_EDGE_PX));
+      speed = DRAG_SCROLL_MAX_PX_S * t * t;
+    }
+
+    if (speed !== 0 && dt > 0) {
+      const maxScroll = Math.max(0, tl.scrollHeight - tl.clientHeight);
+      const next = Math.min(maxScroll, Math.max(0, tl.scrollTop + speed * dt));
+      if (next !== tl.scrollTop) {
+        tl.scrollTop = next;
+        // Content moved under the finger — keep the ghost aligned.
+        applyDragFromClientY(y);
+      }
+    }
+
+    autoScrollRafRef.current = requestAnimationFrame(tickAutoScroll);
+  }, [applyDragFromClientY, stopAutoScroll]);
+
+  const ensureAutoScroll = useCallback(() => {
+    if (autoScrollRafRef.current != null) return;
+    autoScrollLastTsRef.current = 0;
+    autoScrollRafRef.current = requestAnimationFrame(tickAutoScroll);
+  }, [tickAutoScroll]);
 
   const openCreateAt = useCallback((mins: number) => {
     const d = new Date(selDate);
@@ -254,14 +328,17 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       contentRef.current?.removeEventListener("touchmove", blockTouchScroll);
       suppressClickRef.current = true;
     }
+    stopAutoScroll();
     pressRef.current = null;
-    setDragMins(null);
-  }, [blockTouchScroll]);
+    setDragVisualMins(null);
+    setDragSnapMins(null);
+  }, [blockTouchScroll, stopAutoScroll]);
 
   const onTimelinePointerDown = useCallback((e: React.PointerEvent) => {
     if (!e.isPrimary) return;
     if ((e.target as HTMLElement).closest("button")) return; // presses on events
     const { clientX, clientY, pointerId } = e;
+    dragClientYRef.current = clientY;
     const timer = setTimeout(() => {
       const p = pressRef.current;
       if (!p || p.active) return;
@@ -269,16 +346,18 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       try { navigator.vibrate?.(10); } catch { /* unsupported */ }
       // From now on the finger moves the block, not the page
       contentRef.current?.addEventListener("touchmove", blockTouchScroll, { passive: false });
-      setDragMins(yToSnappedMins(p.lastY));
+      applyDragFromClientY(p.lastY);
+      ensureAutoScroll();
     }, LONG_PRESS_MS);
     pressRef.current = { pointerId, startX: clientX, startY: clientY, lastX: clientX, lastY: clientY, timer, active: false };
-  }, [blockTouchScroll, yToSnappedMins]);
+  }, [blockTouchScroll, applyDragFromClientY, ensureAutoScroll]);
 
   const onTimelinePointerMove = useCallback((e: React.PointerEvent) => {
     const p = pressRef.current;
     if (!p || e.pointerId !== p.pointerId) return;
     p.lastX = e.clientX;
     p.lastY = e.clientY;
+    dragClientYRef.current = e.clientY;
     if (!p.active) {
       // Finger moved before long-press fired → it's a scroll, not a hold
       if (p.timer && (Math.abs(e.clientX - p.startX) > 8 || Math.abs(e.clientY - p.startY) > 8)) {
@@ -287,17 +366,19 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       }
       return;
     }
-    setDragMins(yToSnappedMins(e.clientY));
-  }, [yToSnappedMins]);
+    applyDragFromClientY(e.clientY);
+    ensureAutoScroll();
+  }, [applyDragFromClientY, ensureAutoScroll]);
 
   const onTimelinePointerUp = useCallback((e: React.PointerEvent) => {
     const p = pressRef.current;
     if (!p || e.pointerId !== p.pointerId) return;
     if (p.timer) clearTimeout(p.timer);
+    stopAutoScroll();
     if (p.active) {
       contentRef.current?.removeEventListener("touchmove", blockTouchScroll);
       suppressClickRef.current = true;
-      openCreateAt(yToSnappedMins(p.lastY));
+      openCreateAt(snapMins(yToRawMins(p.lastY)));
     } else {
       // Horizontal swipe → previous / next day (Apple Calendar style)
       const dx = e.clientX - p.startX;
@@ -310,8 +391,9 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       }
     }
     pressRef.current = null;
-    setDragMins(null);
-  }, [blockTouchScroll, openCreateAt, yToSnappedMins, selDate, goToDate]);
+    setDragVisualMins(null);
+    setDragSnapMins(null);
+  }, [blockTouchScroll, openCreateAt, snapMins, yToRawMins, selDate, goToDate, stopAutoScroll]);
 
   useEffect(() => cancelPress, [cancelPress]);
 
@@ -611,22 +693,24 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
             );
           })}
 
-          {/* Drag-to-create ghost block (long press) */}
-          {/* Drag-to-create ghost block (long press) */}
-          {dragMins != null && (
+          {/* Drag-to-create ghost block (long press) — visual follows finger, labels snap */}
+          {dragVisualMins != null && dragSnapMins != null && (
             <div
-              className="absolute left-0 right-0 z-40 pointer-events-none"
-              style={{ top: minToPx(dragMins - START_H * 60), height: minToPx(NEW_SLOT_DURATION) }}
+              className="absolute left-0 right-0 z-40 pointer-events-none will-change-[top]"
+              style={{
+                top: minToPx(dragVisualMins - START_H * 60),
+                height: minToPx(NEW_SLOT_DURATION),
+              }}
             >
               {/* Gutter time badges — solid blue so they fully cover black hour labels */}
               <div className="absolute left-0 top-0 z-50 w-14 -translate-y-1/2 pr-2 text-right">
-                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm">
-                  {fmtMins(dragMins)}
+                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm tabular-nums">
+                  {fmtMins(dragSnapMins)}
                 </span>
               </div>
               <div className="absolute left-0 bottom-0 z-50 w-14 translate-y-1/2 pr-2 text-right">
-                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm">
-                  {fmtMins(dragMins + NEW_SLOT_DURATION)}
+                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm tabular-nums">
+                  {fmtMins(dragSnapMins + NEW_SLOT_DURATION)}
                 </span>
               </div>
               {/* Rounded block, 1 hour tall */}
