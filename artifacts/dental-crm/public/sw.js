@@ -11,9 +11,11 @@
  *    and immutable, so cached copies are always correct and enable offline reloads.
  *  - Same-origin static files (icons, images, manifest): stale-while-revalidate.
  *  - API requests (/api/*) and cross-origin requests: never handled by the SW.
+ *  - On activate after a version bump, tell open clients to reload once so lazy
+ *    chunks match the fresh shell (avoids blank Schedule / other lazy routes).
  */
 
-const VERSION = "1dent-pwa-v8";
+const VERSION = "1dent-pwa-v9";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -29,6 +31,8 @@ self.addEventListener("install", (event) => {
       } catch {
         // Offline during install — shell will be cached on first successful navigation.
       }
+      // Take over ASAP after deploy so clients don't keep an old module graph.
+      await self.skipWaiting();
     })(),
   );
 });
@@ -43,6 +47,13 @@ self.addEventListener("activate", (event) => {
           .map((key) => caches.delete(key)),
       );
       await self.clients.claim();
+      const windowClients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of windowClients) {
+        client.postMessage({ type: "SW_UPDATED", version: VERSION });
+      }
     })(),
   );
 });

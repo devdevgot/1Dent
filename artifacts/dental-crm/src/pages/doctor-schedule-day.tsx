@@ -550,8 +550,8 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
             const startMin = timeMins(proc.scheduledAt);
             const top    = minToPx(startMin - START_H * 60);
             const height = Math.max(minToPx(60), 44);
-            const sc     = STATUS_COLORS[proc.status as ProcedureStatus];
-            const Icon   = STATUS_ICONS[proc.status as ProcedureStatus];
+            const sc     = STATUS_COLORS[proc.status as ProcedureStatus] ?? STATUS_COLORS.scheduled;
+            const Icon   = STATUS_ICONS[proc.status as ProcedureStatus] ?? Clock;
             const patient = patients.get(proc.patientId);
             const layout = overlapLayout.get(proc.id) ?? { col: 0, cols: 1 };
             const widthPct = 100 / layout.cols;

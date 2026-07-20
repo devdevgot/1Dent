@@ -37,7 +37,22 @@ export class ErrorBoundary extends Component<Props, State> {
 
   reset = () => {
     if (this.state.error && isChunkLoadError(this.state.error)) {
-      window.location.reload();
+      // Same path as lazy chunk recovery — drop stale asset caches then reload.
+      void (async () => {
+        try {
+          if ("caches" in window) {
+            const keys = await caches.keys();
+            await Promise.all(
+              keys
+                .filter((key) => key.includes("1dent-pwa"))
+                .map((key) => caches.delete(key)),
+            );
+          }
+        } catch {
+          // ignore
+        }
+        window.location.reload();
+      })();
       return;
     }
     this.setState({ hasError: false, error: null });

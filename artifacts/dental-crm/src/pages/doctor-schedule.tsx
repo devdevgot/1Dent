@@ -171,7 +171,8 @@ export default function DoctorSchedulePage() {
       {isLoading ? (
         <ScheduleMonthSkeleton />
       ) : (
-        <div className="bg-white border-b border-[#e8e3d9]">
+        // data-ptr-ignore: day-cell taps must not be stolen by page pull-to-refresh
+        <div data-ptr-ignore className="bg-white border-b border-[#e8e3d9]">
           {weeks.map((week, wi) => (
             <div key={wi} className="border-b border-[#e8e3d9] grid grid-cols-7">
               {week.map((day, di) => {
@@ -187,6 +188,7 @@ export default function DoctorSchedulePage() {
                 return (
                   <div
                     key={di}
+                    data-ptr-ignore
                     onClick={() => (isOverlay ? pushDate(ds) : navigate(`/schedule/${ds}`))}
                     className={`
                       min-h-[80px] border-r border-[#e8e3d9] last:border-r-0 p-1.5 cursor-pointer
