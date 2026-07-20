@@ -169,7 +169,13 @@ export function BottomTabBar({
 
   useEffect(() => {
     void import("@/pages/account-settings");
-  }, []);
+    // Prefetch schedule chunks for roles that use the calendar tab — avoids a
+    // blank sheet when a stale PWA shell races a fresh deploy.
+    if (usesScheduleCalendar(role)) {
+      void import("@/pages/doctor-schedule");
+      void import("@/pages/doctor-schedule-day");
+    }
+  }, [role]);
 
   return (
     <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 pb-[env(safe-area-inset-bottom,0px)]">

@@ -24,9 +24,29 @@ export function isChunkLoadError(err: unknown): boolean {
     msg.includes("failed to fetch dynamically imported module") ||
     msg.includes("importing a module script failed") ||
     msg.includes("error loading dynamically imported module") ||
+    msg.includes("failed to load module script") ||
+    msg.includes("error loading module script") ||
     msg.includes("missing default export") ||
+    // Safari often surfaces a bare "Load failed" / "Cancelled" on 404 chunks.
+    msg === "load failed" ||
+    msg === "cancelled" ||
+    msg.includes("loading css chunk") ||
     isMissingLazyExportError(err)
   );
+}
+
+async function clearStaleDeployCaches(): Promise<void> {
+  if (!("caches" in window)) return;
+  try {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((key) => key.includes("1dent-pwa") || key.includes("assets") || key.includes("shell"))
+        .map((key) => caches.delete(key)),
+    );
+  } catch {
+    // Cache API unavailable — still reload.
+  }
 }
 
 /** Reload once after deploy when a stale tab requests a removed lazy chunk. */
@@ -34,7 +54,9 @@ export function reloadOnceOnChunkError(err: unknown): void {
   if (!isChunkLoadError(err)) throw err;
   if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) throw err;
   sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
-  window.location.reload();
+  void clearStaleDeployCaches().finally(() => {
+    window.location.reload();
+  });
 }
 
 function loadWithChunkRecovery<T extends ComponentType<any>>(
@@ -62,11 +84,32 @@ export function lazyWithChunkRecovery<T extends ComponentType<any>>(
   return lazy(() => loadWithChunkRecovery(load));
 }
 
+/** Prefetch a lazy page so the first open after deploy doesn't race a stale shell. */
+export function prefetchLazyPage(load: () => Promise<unknown>): void {
+  void load().catch(() => {
+    // Prefetch failures are non-fatal; navigation recovery handles them.
+  });
+}
+
 export function installChunkReloadHandlers(): void {
   window.addEventListener("vite:preloadError", (event) => {
     event.preventDefault();
     if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
     sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
-    window.location.reload();
+    void clearStaleDeployCaches().finally(() => {
+      window.location.reload();
+    });
   });
+
+  // New service worker after deploy — refresh once so lazy chunk hashes match.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data?.type !== "SW_UPDATED") return;
+      if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+      void clearStaleDeployCaches().finally(() => {
+        window.location.reload();
+      });
+    });
+  }
 }
