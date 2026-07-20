@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { getBaseUrl } from "@/lib/base-url";
+import { useConfirm } from "@/hooks/use-confirm";
 import { ListRowsSkeleton } from "@/components/skeletons";
 
 interface Branch {
@@ -97,11 +98,11 @@ const RADIUS_PRESETS = [
 
 export function BranchesSettings() {
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [branchSearch, setBranchSearch] = useState("");
 
   const [tgToken, setTgToken] = useState("");
@@ -533,7 +534,6 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
     setMapQuery("");
     setMapGeoResults([]);
     setSearchDone(false);
-    setConfirmingDelete(false);
     setIsModalOpen(true);
   }, []);
 
@@ -565,7 +565,6 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
     setMyLocation(null);
     setMapQuery("");
     setMapGeoResults([]);
-    setConfirmingDelete(false);
     if (pendingMarkerRef.current && ymapRef.current) {
       try { ymapRef.current.geoObjects.remove(pendingMarkerRef.current); } catch { /* ignore */ }
       pendingMarkerRef.current = null;
@@ -615,12 +614,23 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
   };
 
   // ── Delete branch ────────────────────────────────────────────────────────
-  const handleDeleteBranch = async (id: string) => {
-    setDeletingId(id);
+  const handleDeleteBranch = async (branch: Branch) => {
+    // Critical: deleting a geo branch also removes all its tracking data.
+    const ok = await confirm({
+      tone: "critical",
+      requirePhrase: branch.name,
+      title: `Удалить филиал «${branch.name}»?`,
+      description:
+        "Все данные трекинга по этому филиалу тоже будут удалены. Действие нельзя отменить. Для подтверждения введите название филиала.",
+      confirmLabel: "Удалить",
+    });
+    if (!ok) return;
+    setDeletingId(branch.id);
     try {
-      await apiFetch(`/api/branches/${id}`, { method: "DELETE" });
+      await apiFetch(`/api/branches/${branch.id}`, { method: "DELETE" });
       await loadBranches();
       toast({ title: "Филиал удалён" });
+      closeModal();
     } catch {
       toast({ title: "Ошибка при удалении", variant: "destructive" });
     } finally {
@@ -1031,48 +1041,16 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
             {/* Delete section — only for existing branches */}
             {editingBranch && (
               <div className="mx-4 mb-4 mt-1">
-                {!confirmingDelete ? (
-                  <button
-                    onClick={() => setConfirmingDelete(true)}
-                    className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-[var(--danger)]/30 text-sm text-[#dc2626] hover:bg-[var(--danger-light)] transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Удалить филиал
-                  </button>
-                ) : (
-                  <div className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger-light)] p-3.5 space-y-3">
-                    <div className="flex items-start gap-2.5">
-                      <Trash2 className="w-4 h-4 text-[#dc2626] shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-semibold text-[#dc2626]">Удалить филиал?</p>
-                        <p className="text-xs text-[#dc2626] mt-0.5 leading-relaxed">
-                          Все данные трекинга по этому филиалу тоже будут удалены. Это действие нельзя отменить.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          void handleDeleteBranch(editingBranch.id).then(() => closeModal());
-                        }}
-                        disabled={deletingId === editingBranch.id}
-                        className="flex-1 h-9 rounded-xl bg-[var(--danger)] text-white text-sm font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-colors disabled:opacity-60"
-                      >
-                        {deletingId === editingBranch.id
-                          ? <Loader2 className="w-4 h-4 animate-spin" />
-                          : <Trash2 className="w-3.5 h-3.5" />}
-                        Да, удалить
-                      </button>
-                      <button
-                        onClick={() => setConfirmingDelete(false)}
-                        disabled={deletingId === editingBranch.id}
-                        className="px-4 h-9 rounded-xl border border-[var(--danger)]/30 text-sm text-[#dc2626] bg-white hover:bg-[var(--danger-light)] transition-colors disabled:opacity-60"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <button
+                  onClick={() => { void handleDeleteBranch(editingBranch); }}
+                  disabled={deletingId === editingBranch.id}
+                  className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-[var(--danger)]/30 text-sm text-[#dc2626] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-60"
+                >
+                  {deletingId === editingBranch.id
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Trash2 className="w-3.5 h-3.5" />}
+                  Удалить филиал
+                </button>
               </div>
             )}
           </div>

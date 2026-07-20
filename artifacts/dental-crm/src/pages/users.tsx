@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { usePageBack } from "@/hooks/use-page-back";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
-import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -195,7 +195,7 @@ export default function StaffPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const confirm = useConfirm();
   const hasActiveFilter = !!(search || roleFilter !== "all" || showInactive);
 
   const { data, isLoading } = useListUsersAll(
@@ -265,7 +265,6 @@ export default function StaffPage() {
     mutation: {
       onSuccess: () => {
         invalidate();
-        setDeleteConfirmId(null);
         toast.success(t("users.deleteSuccess"));
       },
       onError: () => toast.error(t("users.deleteError")),
@@ -274,8 +273,60 @@ export default function StaffPage() {
 
   const isOwnerOrAdmin = currentUser?.role === "owner" || currentUser?.role === "admin";
 
+  // Critical: deleting a staff account is irreversible — require the user to
+  // type the employee name to confirm.
+  const handleDeleteUser = async (u: User) => {
+    const ok = await confirm({
+      tone: "critical",
+      requirePhrase: u.name,
+      title: `Удалить сотрудника «${u.name}»?`,
+      description:
+        "Аккаунт и доступ к системе будут удалены безвозвратно. Для подтверждения введите имя сотрудника.",
+      confirmLabel: t("common.delete"),
+    });
+    if (ok) deleteMutation.mutate({ id: u.id });
+  };
+
+  // Danger: deactivation revokes login access. Activation is safe → no prompt.
+  const handleToggleActive = async (u: User) => {
+    if (u.isActive) {
+      const ok = await confirm({
+        tone: "danger",
+        title: `Деактивировать сотрудника «${u.name}»?`,
+        description:
+          "Сотрудник потеряет доступ к системе. Вы сможете активировать его снова в любой момент.",
+        confirmLabel: t("employees.deactivate", "Деактивировать"),
+      });
+      if (!ok) return;
+    }
+    statusMutation.mutate({ id: u.id, isActive: !u.isActive });
+  };
+
   const handleEditSave = async (formData: EmployeeFormData) => {
     if (!editingUser) return;
+
+    // Danger: warn before changing sensitive access-related fields.
+    const roleChanged =
+      editingUser.role !== "owner" && formData.role !== editingUser.role;
+    const passwordChanged = !!formData.password;
+    const deactivating =
+      formData.isActive === false &&
+      editingUser.isActive !== false &&
+      editingUser.role !== "owner";
+    if (roleChanged || passwordChanged || deactivating) {
+      const parts: string[] = [];
+      if (roleChanged) parts.push("роль");
+      if (passwordChanged) parts.push("пароль");
+      if (deactivating) parts.push("статус доступа");
+      const ok = await confirm({
+        tone: "danger",
+        title: "Сохранить изменения?",
+        description: `Вы изменяете: ${parts.join(", ")}. Это повлияет на доступ сотрудника к системе.`,
+        confirmLabel: t("common.save"),
+      });
+      if (!ok) return;
+    }
+
     try {
       await updateMutation.mutateAsync({
         id: editingUser.id,
@@ -583,8 +634,8 @@ export default function StaffPage() {
                               currentUserId={currentUser?.id ?? ""}
                               currentRole={currentUser?.role ?? ""}
                               onEdit={() => { setEditingUser(u); setEditDialogOpen(true); }}
-                              onDelete={() => setDeleteConfirmId(u.id)}
-                              onToggleActive={() => statusMutation.mutate({ id: u.id, isActive: !u.isActive })}
+                              onDelete={() => { void handleDeleteUser(u); }}
+                              onToggleActive={() => { void handleToggleActive(u); }}
                               onNavigate={() => openStaffDetail(u.id)}
                             />
                           </td>
@@ -614,12 +665,6 @@ export default function StaffPage() {
         onSave={handleEditSave}
         isSaving={isSaving}
         editUser={editingUser}
-      />
-
-      <ConfirmDeleteDialog
-        open={!!deleteConfirmId}
-        onConfirm={() => { if (deleteConfirmId) deleteMutation.mutate({ id: deleteConfirmId }); }}
-        onCancel={() => setDeleteConfirmId(null)}
       />
     </PageShell>
   );

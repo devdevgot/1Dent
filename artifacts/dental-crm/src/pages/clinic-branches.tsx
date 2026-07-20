@@ -7,6 +7,7 @@ import { ListRowsSkeleton } from "@/components/skeletons";
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
 import { useBranchStore } from "@/hooks/use-branch-store";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface ClinicBranch {
   id: string;
@@ -41,6 +42,7 @@ export default function ClinicBranchesPage() {
   const goBack = usePageBack({ menuFallback: true });
   const { toast } = useToast();
   const { fetchBranches: refreshBranchStore } = useBranchStore();
+  const confirm = useConfirm();
 
   const [branches, setBranches] = useState<ClinicBranch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,6 @@ export default function ClinicBranchesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const fetchBranches = useCallback(async () => {
     try {
@@ -108,12 +109,21 @@ export default function ClinicBranchesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id);
+  const handleDelete = async (branch: ClinicBranch) => {
+    // Critical: deleting a branch wipes all of its data. Require typing the name.
+    const ok = await confirm({
+      tone: "critical",
+      requirePhrase: branch.name,
+      title: `Удалить филиал «${branch.name}»?`,
+      description:
+        "Все данные филиала (сотрудники, пациенты, аналитика, настройки) будут удалены безвозвратно. Для подтверждения введите название филиала.",
+      confirmLabel: "Удалить",
+    });
+    if (!ok) return;
+    setDeletingId(branch.id);
     try {
-      await apiFetch(`/api/clinic-branches/${id}`, { method: "DELETE" });
+      await apiFetch(`/api/clinic-branches/${branch.id}`, { method: "DELETE" });
       toast({ title: "Филиал удалён" });
-      setConfirmDelete(null);
       await fetchBranches();
       void refreshBranchStore();
     } catch (err) {
@@ -217,23 +227,6 @@ export default function ClinicBranchesPage() {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                ) : confirmDelete === b.id ? (
-                  <div className="space-y-2">
-                    <p className="text-[13px] text-[#dc2626] font-medium">Удалить филиал «{b.name}»? Все данные филиала будут удалены.</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 rounded-full border border-[#e8e3d9] text-[12px] font-semibold text-[#64748b] hover:bg-[#f1ede4]">
-                        Нет
-                      </button>
-                      <button
-                        onClick={() => void handleDelete(b.id)}
-                        disabled={deletingId === b.id}
-                        className="flex-1 py-2 rounded-full bg-[var(--danger)] text-white text-[12px] font-semibold disabled:opacity-50 flex items-center justify-center gap-1 hover:opacity-90"
-                      >
-                        {deletingId === b.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        Удалить
-                      </button>
-                    </div>
-                  </div>
                 ) : (
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center shrink-0">
@@ -253,10 +246,11 @@ export default function ClinicBranchesPage() {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => setConfirmDelete(b.id)}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-[#94a3b8] hover:bg-[var(--danger-light)] hover:text-[#dc2626] transition-colors"
+                        onClick={() => void handleDelete(b)}
+                        disabled={deletingId === b.id}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-[#94a3b8] hover:bg-[var(--danger-light)] hover:text-[#dc2626] transition-colors disabled:opacity-50"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {deletingId === b.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   </div>

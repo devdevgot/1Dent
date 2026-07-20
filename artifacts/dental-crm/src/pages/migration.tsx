@@ -18,7 +18,6 @@ import {
   RotateCcw,
   Download,
   Trash2,
-  ShieldAlert,
 } from "lucide-react";
 import {
   useListMigrationJobs,
@@ -30,7 +29,7 @@ import type { MigrationJob, AiDetectedCategory } from "@workspace/api-client-rea
 import { getBaseUrl } from "@/lib/base-url";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
-import { AppDialog } from "@/components/layout/app-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
 import { ListRowsSkeleton } from "@/components/skeletons";
 
 const AI_FIELD_LABELS: Record<string, string> = {
@@ -268,6 +267,7 @@ function AiImportTab() {
 
   const analyzeMutation = useAnalyzeFileWithAi();
   const confirmMutation = useConfirmAiImport();
+  const confirm = useConfirm();
 
   const reset = () => { setStep("upload"); setAnalysis(null); setFile(null); setFileType(null); setJobId(null); setError(null); };
 
@@ -295,6 +295,15 @@ function AiImportTab() {
 
   const handleImport = async () => {
     if (!analysis || !file || !fileType) return;
+    // Danger: mass import writes many records into the clinic database.
+    const ok = await confirm({
+      tone: "danger",
+      title: `Импортировать ${analysis.totalRows} строк?`,
+      description:
+        "Будет создано большое количество записей (пациенты, процедуры, шаблоны) в базе данных клиники. Отмена импорта может потребовать ручной очистки.",
+      confirmLabel: "Импортировать",
+    });
+    if (!ok) return;
     setError(null);
     try {
       const base64 = await fileToBase64(file);
@@ -567,9 +576,9 @@ function AiImportTab() {
 function ExportSection() {
   const [exporting, setExporting] = useState(false);
   const [wiping, setWiping] = useState(false);
-  const [confirmWipe, setConfirmWipe] = useState(false);
   const [done, setDone] = useState<"export" | "wipe" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
@@ -631,6 +640,16 @@ function ExportSection() {
   };
 
   const handleWipe = async () => {
+    // Critical: irreversibly wipes ALL clinic data. Require typing "УДАЛИТЬ".
+    const ok = await confirm({
+      tone: "critical",
+      requirePhrase: "УДАЛИТЬ",
+      title: "Удалить все данные клиники?",
+      description:
+        "Сначала будет скачан XLSX-файл со всеми данными, затем из системы удалятся ВСЕ пациенты, карты зубов, планы лечения и процедуры. Действие необратимо. Для подтверждения введите слово УДАЛИТЬ.",
+      confirmLabel: "Скачать и удалить",
+    });
+    if (!ok) return;
     setWiping(true);
     setError(null);
     setDone(null);
@@ -649,7 +668,6 @@ function ExportSection() {
         `1dent_export_${new Date().toISOString().split("T")[0]}.xlsx`,
       );
       setDone("wipe");
-      setConfirmWipe(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка при удалении данных");
     } finally {
@@ -695,53 +713,14 @@ function ExportSection() {
           Экспортировать XLSX
         </button>
         <button
-          onClick={() => { setConfirmWipe(true); setError(null); }}
+          onClick={() => { setError(null); void handleWipe(); }}
           disabled={exporting || wiping}
           className="flex-1 flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-[#dc2626]/30 bg-[#fef2f2] hover:bg-[#fee2e2] text-sm font-medium text-[#dc2626] disabled:opacity-50 transition-colors"
         >
-          <Trash2 className="w-4 h-4" />
+          {wiping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
           Экспорт и очистить все данные
         </button>
       </div>
-
-      <AppDialog
-        open={confirmWipe}
-        onOpenChange={(open) => { if (!wiping) setConfirmWipe(open); }}
-        title="Удалить все данные клиники?"
-        description="Это действие необратимо"
-        size="sm"
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setConfirmWipe(false)}
-              disabled={wiping}
-              className="flex-1 h-10 rounded-xl border border-[#e8e3d9] text-sm text-[#64748b] hover:bg-[#f1ede4] transition-colors disabled:opacity-40"
-            >
-              Отмена
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleWipe()}
-              disabled={wiping}
-              className="flex-1 h-10 rounded-full bg-[var(--danger)] text-white text-sm font-semibold hover:opacity-90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {wiping ? <><Loader2 className="w-4 h-4 animate-spin" /> Удаление…</> : <>Скачать и удалить</>}
-            </button>
-          </>
-        }
-      >
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--danger-light)] flex items-center justify-center shrink-0">
-            <ShieldAlert className="w-5 h-5 text-[#dc2626]" />
-          </div>
-        </div>
-        <p className="text-sm text-[#64748b] leading-relaxed">
-          Сначала будет скачан XLSX-файл со всеми данными. Затем из системы удалятся все пациенты, карты зубов, планы лечения и процедуры.
-          <br /><br />
-          Для восстановления используйте этот файл через импорт.
-        </p>
-      </AppDialog>
     </div>
   );
 }
