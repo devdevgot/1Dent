@@ -215,6 +215,25 @@ function isNo(text: string): boolean {
   return CONFIRM_NO.some((kw) => lower === kw || lower.startsWith(kw + " "));
 }
 
+/** Patient confirms he will come to the appointment («да», «буду», «приду»...). */
+function isVisitConfirmYes(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  // «не приду», «не буду», «не успею» — this is a refusal, not a confirmation.
+  if (/не\s+(буду|приду|придем|придём|подойду|подъеду|успею|смогу|получится)/i.test(lower)) return false;
+  if (isYes(lower)) return true;
+  return /(^|[\s,])(буду|приду|придем|придём|подойду|подъеду|успею|в силе|барамын|келемін|келем)(?=$|[\s.,!?)»"']|👍)/i.test(
+    lower,
+  );
+}
+
+/** Patient says he will not make it to the appointment. */
+function isVisitConfirmNo(text: string): boolean {
+  if (isNo(text)) return true;
+  const lower = text.toLowerCase().trim();
+  if (/не\s+(смогу|приду|придем|придём|успею|успеваю|получится|подойду|подъеду)/i.test(lower)) return true;
+  return RESCHEDULE_KEYWORDS.some((kw) => lower.includes(kw)) || CANCEL_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 function symptomsAnswered(data: ChatbotSessionData, messageText: string): boolean {
   const desc = data.problemDescription?.trim() ?? "";
   if (desc.length > 12) return true;
@@ -2248,6 +2267,47 @@ export class ChatbotService {
       }
       const takoverReply = "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
       return finishTurn(session, takoverReply);
+    }
+
+    // Patient answers the 1-hour pre-appointment reminder («всё в силе — вы придёте?»)
+    if (data.pendingVisitConfirmation) {
+      const confirmation = data.pendingVisitConfirmation;
+      const apptMs = Date.parse(confirmation.scheduledAt);
+      const staleAfterMs = 3 * 60 * 60 * 1000;
+      if (Number.isFinite(apptMs) && Date.now() - apptMs > staleAfterMs) {
+        // Appointment is long past — the question is no longer relevant.
+        delete data.pendingVisitConfirmation;
+        session.data = data;
+      } else if (isVisitConfirmYes(messageText)) {
+        delete data.pendingVisitConfirmation;
+        session.data = data;
+        const timeStr = Number.isFinite(apptMs)
+          ? new Date(apptMs).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" })
+          : null;
+        const confirmReply =
+          `Отлично, ждём вас${timeStr ? ` в ${timeStr}` : ""}! 🤍 ` +
+          `Уже готовим всё к вашему приёму${confirmation.doctorName ? ` у врача ${confirmation.doctorName}` : ""} — до скорой встречи! 😊`;
+        noteAction("Пациент подтвердил визит за час до приёма");
+        return finishTurn(session, confirmReply);
+      } else if (isVisitConfirmNo(messageText)) {
+        delete data.pendingVisitConfirmation;
+        data.existingProcedureId = confirmation.procedureId;
+        data.existingProcedureDate = Number.isFinite(apptMs)
+          ? formatAlmatyDateTimeLong(new Date(apptMs))
+          : confirmation.scheduledAt;
+        data.existingProcedureDoctorName = confirmation.doctorName;
+        session.state = "manage_appointment";
+        session.data = data;
+        state = session.state;
+        const rescheduleReply =
+          "Ничего страшного 😊 Хотите перенести запись на другое время или отменить?\n• Перенести\n• Отменить";
+        noteAction("Пациент не сможет прийти — предложен перенос записи");
+        return finishTurn(session, rescheduleReply);
+      } else {
+        // Patient replied with something else — answer it normally, don't re-ask.
+        delete data.pendingVisitConfirmation;
+        session.data = data;
+      }
     }
 
     if (patientDb) {
@@ -4891,6 +4951,50 @@ export class ChatbotService {
       }
     }
   }
+}
+
+export interface ArmVisitConfirmationInput {
+  clinicId: string;
+  phone: string;
+  procedureId: string;
+  scheduledAt: Date;
+  doctorName?: string;
+  procedureName?: string;
+}
+
+/**
+ * Arm the chatbot session after the 1-hour pre-appointment reminder is sent,
+ * so the patient's reply («да» / «не смогу») gets a warm deterministic answer.
+ */
+export async function armVisitConfirmation(input: ArmVisitConfirmationInput): Promise<void> {
+  const phone = canonicalChatbotPhone(input.phone);
+  const existing = await loadSession(input.clinicId, phone);
+  // Operator owns the dialog — don't intercept the patient's replies.
+  if (existing?.humanTakeover) return;
+
+  const session: SessionRecord = existing ?? {
+    id: randomUUID(),
+    clinicId: input.clinicId,
+    phone,
+    state: "done",
+    data: {},
+    humanTakeover: false,
+  };
+  session.data = {
+    ...session.data,
+    pendingVisitConfirmation: {
+      procedureId: input.procedureId,
+      scheduledAt: input.scheduledAt.toISOString(),
+      doctorName: input.doctorName || undefined,
+      procedureName: input.procedureName || undefined,
+      armedAt: new Date().toISOString(),
+    },
+  };
+  await saveSession(session);
+  logger.info(
+    { clinicId: input.clinicId, phone, procedureId: input.procedureId },
+    "[ChatbotService] Visit confirmation armed for 1h pre-appointment reminder",
+  );
 }
 
 export async function loadChatbotPromptComposeInputs(

@@ -84,4 +84,17 @@ export interface ChatbotSessionData {
   pendingReviewDoctorId?: string;
   /** ISO timestamp when humanTakeover was activated (for auto-resume). */
   takeoverAt?: string;
+  /**
+   * Set when the 1-hour pre-appointment reminder asked the patient to confirm the visit.
+   * The next patient reply is checked: «да» → warm "we are waiting" reply, «нет» → reschedule flow.
+   */
+  pendingVisitConfirmation?: {
+    procedureId: string;
+    /** ISO timestamp of the appointment. */
+    scheduledAt: string;
+    doctorName?: string;
+    procedureName?: string;
+    /** ISO timestamp when the reminder was sent. */
+    armedAt: string;
+  };
 }
