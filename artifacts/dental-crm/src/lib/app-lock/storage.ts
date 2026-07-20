@@ -53,6 +53,10 @@ export function clearAppLockSessionMarkers(): void {
 
 export function markAppUnlocked(): void {
   sessionStorage.setItem(APP_LOCK_LAST_UNLOCK_KEY, String(Date.now()));
+  // Clear any prior background marker so resume-lock cannot immediately
+  // re-lock after a successful Face ID / PIN unlock (common on iOS when the
+  // biometric sheet toggles document.visibilityState).
+  sessionStorage.removeItem(APP_LOCK_LAST_HIDDEN_KEY);
 }
 
 export function markAppHidden(): void {
@@ -86,6 +90,11 @@ export function configMatchesUser(
 export function shouldLockOnResume(config: AppLockConfig): boolean {
   const hiddenAt = getLastHiddenAt();
   if (!hiddenAt) return false;
+
+  // Ignore stale background markers from before the latest unlock (e.g. the
+  // Face ID system sheet briefly hiding the document while still locked).
+  const unlockedAt = getLastUnlockAt();
+  if (unlockedAt && hiddenAt < unlockedAt) return false;
 
   const idleMs = idleMsForConfig(config.idleMinutes);
   if (idleMs === 0) return true;

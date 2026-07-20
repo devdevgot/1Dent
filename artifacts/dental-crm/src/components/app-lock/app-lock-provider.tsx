@@ -68,11 +68,13 @@ export function AppLockProvider({ children }: AppLockProviderProps) {
 
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
-        markAppHidden();
+        // While the lock screen is up, Face ID / system sheets can flip
+        // visibility — do not treat that as a background idle interval.
+        if (!isLocked) markAppHidden();
         clearIdleTimer();
       } else {
         checkResumeLock();
-        if (!isLocked) scheduleIdleLock();
+        if (!useAppLockStore.getState().isLocked) scheduleIdleLock();
       }
     };
 
