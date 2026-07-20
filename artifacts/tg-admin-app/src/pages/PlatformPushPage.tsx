@@ -6,6 +6,12 @@ import { api } from "../lib/api";
 import { haptic, hapticNotify, tgAlert, tgConfirm, useTgBackButton } from "../hooks/useTgBackButton";
 import { TmaPage } from "@/components/layout/tma-page";
 import { IosSection } from "@/components/layout/ios-group";
+import {
+  CUSTOM_PUSH_DESTINATION,
+  isKnownPushDestination,
+  PUSH_DESTINATION_GROUPS,
+  PUSH_DESTINATIONS,
+} from "@/lib/push-destinations";
 
 interface PushStats {
   devices: number;
@@ -47,8 +53,12 @@ export default function PlatformPushPage() {
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [url, setUrl] = useState("/");
+  const [destination, setDestination] = useState("/");
+  const [customUrl, setCustomUrl] = useState("");
   const [clinicId, setClinicId] = useState("");
+
+  const resolvedUrl =
+    destination === CUSTOM_PUSH_DESTINATION ? customUrl.trim() || "/" : destination;
   const qc = useQueryClient();
 
   const statsQueryKey = ["tma-push-stats", clinicId || "all"];
@@ -78,7 +88,7 @@ export default function PlatformPushPage() {
         {
           title: title.trim(),
           body: body.trim(),
-          url: url.trim() || "/",
+          url: resolvedUrl,
           ...(clinicId ? { clinicId } : {}),
         },
       ),
@@ -163,12 +173,43 @@ export default function PlatformPushPage() {
               maxLength={500}
               className="w-full bg-card border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary resize-none"
             />
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="Ссылка при нажатии (например / или /branches)"
-              className="w-full bg-card border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">Страница при нажатии</label>
+              <select
+                value={isKnownPushDestination(destination) ? destination : CUSTOM_PUSH_DESTINATION}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setDestination(next);
+                  if (next !== CUSTOM_PUSH_DESTINATION) setCustomUrl("");
+                }}
+                className="w-full bg-card border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+              >
+                {PUSH_DESTINATION_GROUPS.map((group) => (
+                  <optgroup key={group} label={group}>
+                    {PUSH_DESTINATIONS.filter((d) => d.group === group).map((d) => (
+                      <option key={d.path} value={d.path}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+                <option value={CUSTOM_PUSH_DESTINATION}>Другая ссылка...</option>
+              </select>
+              {(destination === CUSTOM_PUSH_DESTINATION || !isKnownPushDestination(destination)) && (
+                <input
+                  value={customUrl}
+                  onChange={(e) => {
+                    setCustomUrl(e.target.value);
+                    setDestination(CUSTOM_PUSH_DESTINATION);
+                  }}
+                  placeholder="Своя ссылка (например /branches)"
+                  className="w-full bg-card border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+                />
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                Откроется: <span className="font-mono">{resolvedUrl}</span>
+              </p>
+            </div>
           </div>
           <button
             type="button"
