@@ -116,7 +116,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <OverlayNavigationProvider>
       {/* Canvas behind rubber-banded surface — PTR spinner draws in this top gap */}
-      <div className="flex flex-col h-app bg-[#faf8f4] overflow-hidden font-manrope">
+      <div className="flex flex-col h-app bg-canvas overflow-hidden font-manrope">
       {afterFirstPaint && (
         <Suspense fallback={null}>
           <AppointmentReminderModal />
@@ -125,34 +125,34 @@ export function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* data-ptr-surface: home search + main move together → spinner above the page, like Services */}
-      <div data-ptr-surface className="flex flex-1 min-h-0 flex-col overflow-hidden bg-[#faf8f4]">
+      <div data-ptr-surface className="flex flex-1 min-h-0 flex-col overflow-hidden bg-canvas">
       {/* Home page header */}
       {isHomePage && (
-        <header className="flex-none bg-white border-b border-[#e8e3d9] z-20 safe-area-top">
+        <header className="flex-none bg-surface border-b border-border z-20 safe-area-top">
           {/* Branch selector — owner only, only when branches exist */}
           {showBranchSelector && (
             <div className="px-4 pt-2.5 pb-1.5">
               <div className="relative">
                 <button
                   onClick={() => setBranchPickerOpen(!branchPickerOpen)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-[#e8e3d9] bg-[#faf8f4] hover:bg-[#f1ede4] transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border border-border bg-canvas hover:bg-accent transition-colors"
                 >
                   <Building2 className="w-4 h-4 text-[#1f75fe] shrink-0" />
-                  <span className="flex-1 text-left text-xs font-medium text-[#0f172a] truncate">
+                  <span className="flex-1 text-left text-xs font-medium text-foreground truncate">
                     {selectedBranch ? selectedBranch.name : mainClinicName}
                   </span>
-                  <ChevronDown className={cn("w-4 h-4 text-[#94a3b8] transition-transform", branchPickerOpen && "rotate-180")} />
+                  <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", branchPickerOpen && "rotate-180")} />
                 </button>
 
                 {branchPickerOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setBranchPickerOpen(false)} />
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e8e3d9] rounded-xl shadow-lg z-20 overflow-hidden max-h-[240px] overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-xl shadow-lg z-20 overflow-hidden max-h-[240px] overflow-y-auto">
                       <button
                         onClick={() => handleBranchSelect(null)}
                         className={cn(
                           "w-full flex items-center gap-2.5 px-3 py-2.5 text-xs transition-colors",
-                          !selectedBranchId ? "bg-[var(--primary-light)] text-[#1f75fe] font-semibold" : "text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a]",
+                          !selectedBranchId ? "bg-[var(--primary-light)] text-[#1f75fe] font-semibold" : "text-muted-foreground hover:bg-accent hover:text-foreground",
                         )}
                       >
                         <Building2 className="w-4 h-4 shrink-0" />
@@ -165,7 +165,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                           onClick={() => handleBranchSelect(branch.id)}
                           className={cn(
                             "w-full flex items-center gap-2.5 px-3 py-2.5 text-xs transition-colors",
-                            selectedBranchId === branch.id ? "bg-[var(--primary-light)] text-[#1f75fe] font-semibold" : "text-[#64748b] hover:bg-[#f1ede4] hover:text-[#0f172a]",
+                            selectedBranchId === branch.id ? "bg-[var(--primary-light)] text-[#1f75fe] font-semibold" : "text-muted-foreground hover:bg-accent hover:text-foreground",
                           )}
                         >
                           <MapPin className="w-4 h-4 shrink-0" />
@@ -204,7 +204,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Geo restriction banner — shown when outside zone */}
       {isRestricted && hasBranches && (
-        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[var(--warning-light)] border-b border-[#e8e3d9] z-10">
+        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[var(--warning-light)] border-b border-border z-10">
           <MapPin className="w-4 h-4 text-[#d97706] shrink-0" />
           <p className="text-xs text-[#d97706] font-medium">
             Вы вне клиники — часть функций недоступна
@@ -214,9 +214,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Status indicator when geo is loading or denied (only if branches exist) */}
       {hasBranches && (status === "denied" || needsPermissionPrompt) && (
-        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-[#faf8f4] border-b border-[#e8e3d9] z-10">
+        <div className="flex-none flex items-center gap-2 px-4 py-2 bg-canvas border-b border-border z-10">
           <AlertTriangle className="w-4 h-4 text-[#d97706] shrink-0" />
-          <p className="flex-1 text-xs text-[#64748b]">
+          <p className="flex-1 text-xs text-muted-foreground">
             {status === "denied"
               ? "Геолокация запрещена — включите в настройках телефона для автотрекинга"
               : "Разрешите геолокацию для автоматического трекинга прихода и ухода"}
@@ -241,8 +241,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <MapPin className="w-8 h-8 text-[#d97706]" />
             </div>
             <div>
-              <h2 className="text-[17px] font-semibold text-[#0f172a] mb-1">Вы вне клиники</h2>
-              <p className="text-xs text-[#64748b] leading-relaxed">
+              <h2 className="text-[17px] font-semibold text-foreground mb-1">Вы вне клиники</h2>
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Этот раздел доступен только когда вы находитесь в клинике.
                 {activeBranch && ` Ближайший филиал: ${activeBranch.name}`}
               </p>

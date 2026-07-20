@@ -153,7 +153,7 @@ export function DonutChart({
   return (
     <div style={{ width: SIZE, height: SIZE, position: "relative" }}>
       <svg width={SIZE} height={SIZE}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e8e3d9" strokeWidth={SW} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--ds-border)" strokeWidth={SW} />
         {!isEmpty &&
           segs.map((s, i) => (
             <circle
@@ -181,10 +181,10 @@ export function DonutChart({
         }}
       >
         {isEmpty ? (
-          <span style={{ fontSize: 12, color: "#94a3b8" }}>Нет данных</span>
+          <span style={{ fontSize: 12, color: "var(--text-subtle)" }}>Нет данных</span>
         ) : (
           <>
-            <span style={{ fontWeight: 700, fontSize: 24, lineHeight: "30px", color: "#0f172a" }}>
+            <span style={{ fontWeight: 700, fontSize: 24, lineHeight: "30px", color: "var(--text)" }}>
               {realIncome.toLocaleString("ru-KZ")} ₸
             </span>
             <button
