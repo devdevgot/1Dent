@@ -1763,7 +1763,34 @@ export function PatientDetailPanel() {
     { id: "treatment" as const, label: "Лечение" },
   ];
 
-  const doctorUser = patient?.doctorId ? allUsers.find((u) => u.id === patient.doctorId) : null;
+  const doctorUser = useMemo(() => {
+    if (!patient?.doctorId) return null;
+    const fromList = allUsers.find((u) => u.id === patient.doctorId);
+    if (fromList) return fromList;
+    // Owner/doctor viewing their own assigned patient when /users is unavailable.
+    if (user?.id === patient.doctorId) {
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        clinicId: user.clinicId,
+        createdAt: user.createdAt,
+      };
+    }
+    const apiName = (patient as { doctorName?: string | null }).doctorName;
+    if (apiName) {
+      return {
+        id: patient.doctorId,
+        name: apiName,
+        email: "",
+        role: "doctor" as const,
+        clinicId: patient.clinicId,
+        createdAt: patient.createdAt,
+      };
+    }
+    return null;
+  }, [patient, allUsers, user]);
 
   const PAYMENT_LABELS: Record<string, string> = {
     cash: "Наличные", kaspi_qr: "Kaspi QR",
