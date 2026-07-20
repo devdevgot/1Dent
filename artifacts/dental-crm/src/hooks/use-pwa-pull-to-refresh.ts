@@ -42,10 +42,33 @@ function getScrollParent(start: EventTarget | null): HTMLElement | null {
  * Element that rubber-bands during PTR. Prefer a layout surface that includes
  * sticky headers (search chrome / overlay title), so the spinner gap opens
  * above the whole page — not over the chrome.
+ *
+ * Resolved from the touch target first: when a page fits the viewport (home
+ * dashboard) or scrolls in a nested container (overlay pages), the scroll
+ * parent falls back to the document root, which is outside every
+ * `data-ptr-surface`. The target is always inside the page/overlay surface.
  */
-function getPullSurface(scrollEl: HTMLElement): HTMLElement {
-  const surface = scrollEl.closest("[data-ptr-surface]");
-  return surface instanceof HTMLElement ? surface : scrollEl;
+function getPullSurface(
+  target: EventTarget | null,
+  scrollEl: HTMLElement,
+): HTMLElement | null {
+  const fromTarget =
+    target instanceof Element ? target.closest("[data-ptr-surface]") : null;
+  if (fromTarget instanceof HTMLElement) return fromTarget;
+  const fromScroll = scrollEl.closest("[data-ptr-surface]");
+  if (fromScroll instanceof HTMLElement) return fromScroll;
+  if (scrollEl === document.documentElement || scrollEl === document.body) {
+    // Never translate the root: a transform there becomes the containing
+    // block of the fixed spinner, dragging it down with the page instead of
+    // leaving it in the revealed gap.
+    const appRoot = document.getElementById("root");
+    if (appRoot && target instanceof Node && appRoot.contains(target)) {
+      return appRoot;
+    }
+    // Body-level portal (dialog/sheet) with nothing scrollable — leave alone.
+    return null;
+  }
+  return scrollEl;
 }
 
 function isPtrIgnored(target: EventTarget | null): boolean {
@@ -159,11 +182,14 @@ export function usePwaPullToRefresh({
       const scrollEl = getScrollParent(e.target);
       if (!scrollEl || scrollEl.scrollTop > 0.5) return;
 
+      const surfaceEl = getPullSurface(e.target, scrollEl);
+      if (!surfaceEl) return;
+
       // Arm only — do not engage yet (avoids fighting long-press / day swipe).
       armedRef.current = true;
       engagedRef.current = false;
       scrollElRef.current = scrollEl;
-      surfaceElRef.current = getPullSurface(scrollEl);
+      surfaceElRef.current = surfaceEl;
       startXRef.current = e.touches[0].clientX;
       startYRef.current = e.touches[0].clientY;
       pullYRef.current = 0;
