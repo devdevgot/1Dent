@@ -1,4 +1,11 @@
+export interface TmaUser {
+  telegramUserId: string;
+  name: string;
+  isAdmin: boolean;
+}
+
 let _initData = "";
+let _sessionToken = "";
 
 export function setInitData(data: string) {
   _initData = data;
@@ -6,6 +13,18 @@ export function setInitData(data: string) {
 
 export function getInitData(): string {
   return _initData;
+}
+
+export function setSessionToken(token: string) {
+  _sessionToken = token;
+}
+
+export function getSessionToken(): string {
+  return _sessionToken;
+}
+
+export function clearSessionToken() {
+  _sessionToken = "";
 }
 
 const BASE = "/api/tma";
@@ -51,15 +70,21 @@ function reportHttpError(
   });
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-Telegram-Init-Data": _initData || "dev",
-  };
+function authHeaders(includeJson = true): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (includeJson) headers["Content-Type"] = "application/json";
+  if (_sessionToken) {
+    headers["Authorization"] = `Bearer ${_sessionToken}`;
+  } else {
+    headers["X-Telegram-Init-Data"] = _initData || "dev";
+  }
+  return headers;
+}
 
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers,
+    headers: authHeaders(true),
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -71,6 +96,36 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   return res.json() as Promise<T>;
+}
+
+/** Exchange Telegram initData for a 6h session token (call once on app open). */
+export async function createTmaSession(): Promise<{
+  token: string;
+  expiresIn: number;
+  user: TmaUser;
+}> {
+  clearSessionToken();
+  const res = await fetch(`${BASE}/session`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Telegram-Init-Data": _initData || "dev",
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    const message = (err as { error?: string }).error ?? `HTTP ${res.status}`;
+    reportHttpError(res.status, message, `${BASE}/session`, "POST", { body: err });
+    throw new Error(message);
+  }
+
+  const json = (await res.json()) as {
+    success: boolean;
+    data: { token: string; expiresIn: number; user: TmaUser };
+  };
+  setSessionToken(json.data.token);
+  return json.data;
 }
 
 if (typeof window !== "undefined") {
@@ -106,9 +161,7 @@ export const api = {
 export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
-    headers: {
-      "X-Telegram-Init-Data": _initData || "dev",
-    },
+    headers: authHeaders(false),
     body: formData,
   });
 
@@ -143,12 +196,6 @@ export interface TabletVideo {
   videoUrl: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface TmaUser {
-  telegramUserId: string;
-  name: string;
-  isAdmin: boolean;
 }
 
 export interface Clinic {

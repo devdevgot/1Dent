@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import WebApp from "@twa-dev/sdk";
 import { AlertTriangle, Lock } from "lucide-react";
-import { api, setInitData, type TmaUser } from "./lib/api";
+import { createTmaSession, setInitData, type TmaUser } from "./lib/api";
 import BottomNav from "./components/BottomNav";
 import Dashboard from "./pages/Dashboard";
 import ClinicsPage from "./pages/ClinicsPage";
@@ -63,9 +63,16 @@ function Inner() {
   }, []);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["tma-me"],
-    queryFn: () => api.get<{ success: boolean; data: { user: TmaUser } }>("/me"),
+    queryKey: ["tma-session"],
+    queryFn: async () => {
+      const session = await createTmaSession();
+      return { success: true as const, data: { user: session.user } };
+    },
     enabled: initDataReady,
+    retry: 1,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   if (!initDataReady || isLoading) {
@@ -81,18 +88,29 @@ function Inner() {
 
   if (isError) {
     const msg = error instanceof Error ? error.message : "Ошибка";
-    const isAccess = msg.toLowerCase().includes("access") || msg.toLowerCase().includes("denied") || msg.toLowerCase().includes("401");
+    const lower = msg.toLowerCase();
+    const isExpired = lower.includes("expired") || lower.includes("session");
+    const isAccess =
+      lower.includes("access") || lower.includes("denied") || lower.includes("401");
     return (
       <div className="flex items-center justify-center min-h-screen bg-background px-6">
         <div className="text-center space-y-4 max-w-xs">
           <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-            {isAccess ? <Lock className="w-8 h-8 text-destructive" /> : <AlertTriangle className="w-8 h-8 text-destructive" />}
+            {isAccess || isExpired ? (
+              <Lock className="w-8 h-8 text-destructive" />
+            ) : (
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            )}
           </div>
           <h2 className="text-lg font-semibold text-foreground">
-            {isAccess ? "Доступ запрещён" : "Ошибка"}
+            {isExpired ? "Сессия истекла" : isAccess ? "Доступ запрещён" : "Ошибка"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {isAccess ? "Вы не являетесь администратором платформы." : msg}
+            {isExpired
+              ? "Закройте мини-приложение и откройте снова."
+              : isAccess
+                ? "Вы не являетесь администратором платформы."
+                : msg}
           </p>
         </div>
       </div>
