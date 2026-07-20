@@ -3,6 +3,7 @@ import { z } from "zod";
 import { registrationUseCaseIds } from "@workspace/db";
 import { AuthService } from "./auth.service";
 import { authMiddleware } from "../../middlewares/auth.middleware";
+import { authRateLimit } from "../../middlewares/rate-limit.middleware";
 import { ValidationError } from "../../shared/errors";
 import { whatsappOtpService } from "./whatsapp-otp.service";
 
@@ -53,7 +54,7 @@ const loginSchema = z
     }
   });
 
-router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/register", authRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -69,7 +70,7 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
   });
 });
 
-router.post("/login", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/login", authRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -90,7 +91,7 @@ const whatsappRequestOtpSchema = z.object({
   purpose: z.enum(["login", "register", "reset_password"]),
 });
 
-router.post("/whatsapp/request-otp", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/whatsapp/request-otp", authRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = whatsappRequestOtpSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -122,7 +123,7 @@ const whatsappVerifyOtpSchema = z.object({
   purpose: z.enum(["login", "register", "reset_password"]),
 });
 
-router.post("/whatsapp/verify-otp", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/whatsapp/verify-otp", authRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = whatsappVerifyOtpSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -164,7 +165,7 @@ const whatsappResetPasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
-router.post("/whatsapp/reset-password", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/whatsapp/reset-password", authRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = whatsappResetPasswordSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -192,7 +193,7 @@ const resetPasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
-router.post("/forgot-password", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/forgot-password", authRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = forgotPasswordSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
@@ -209,7 +210,7 @@ router.post("/forgot-password", async (req: Request, res: Response, next: NextFu
   res.json(response);
 });
 
-router.post("/reset-password", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/reset-password", authRateLimit, async (req: Request, res: Response, next: NextFunction) => {
   const parsed = resetPasswordSchema.safeParse(req.body);
   if (!parsed.success) {
     return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));

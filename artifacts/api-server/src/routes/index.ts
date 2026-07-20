@@ -36,7 +36,6 @@ import pushRouter from "../modules/push/push.controller";
 import tabletPublicRouter from "../modules/tablet/tablet-public.controller";
 import tabletRouter from "../modules/tablet/tablet.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
-import { authRateLimit } from "../middlewares/rate-limit.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
 import { clinicalReadRoles } from "../lib/clinical-roles";
 import { planGateMiddleware } from "../middlewares/plan-gate.middleware";
@@ -51,7 +50,9 @@ const _dentalRepo = new DentalRepository();
 const _patientsRepo = new PatientsRepository();
 
 router.use(healthRouter);
-router.use("/auth", authRateLimit, authRouter);
+// Auth rate limits are applied per-route inside authRouter (login/OTP only),
+// so session checks like GET /auth/me are not starved by pull-to-refresh.
+router.use("/auth", authRouter);
 router.use(geoRouter);
 router.use("/errors", errorEventsRouter);
 

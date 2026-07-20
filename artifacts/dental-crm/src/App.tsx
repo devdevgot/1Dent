@@ -187,6 +187,15 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
     } else if (data?.success && data.data) {
       setAuth(data.data.user, data.data.clinic);
+    } else if (error) {
+      // Keep an existing session on transient failures (rate limit / network).
+      // Only treat a definitive empty /me response as logged-out.
+      const status = (error as { status?: number } | null)?.status;
+      if (status === 429 || status === undefined || status >= 500) {
+        setLoading(false);
+        return;
+      }
+      clearAuth();
     } else {
       clearAuth();
     }

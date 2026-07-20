@@ -453,6 +453,8 @@ export async function customFetch<T = unknown>(
 
     if (
       response.status >= 400 &&
+      // 429 is expected under burst traffic (PTR) — don't spam the error pipeline.
+      response.status !== 429 &&
       !requestInfo.url.includes("/api/errors/report")
     ) {
       const skipAuthNoise =
