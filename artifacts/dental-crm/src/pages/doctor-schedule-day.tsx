@@ -1,8 +1,11 @@
 import { useMemo, useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProcedures, useListPatients,
   useListUsers, useListProcedureTemplates,
+  useUpdateProcedure,
+  getListProceduresQueryKey,
 } from "@workspace/api-client-react";
 import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -21,7 +24,8 @@ import { Bone } from "@/components/skeletons";
 import { seesClinicSchedule } from "@/lib/role-groups";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { usePageBack } from "@/hooks/use-page-back";
-import { haptic } from "@/lib/haptics";
+import { haptic, hapticNotify } from "@/lib/haptics";
+import { useToast } from "@/hooks/use-toast";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -29,12 +33,32 @@ const START_H = 0;    // full day — no working-hours restriction
 const END_H   = 24;
 const DEFAULT_SCROLL_HOUR = 8; // where to land when the day has no appointments
 const LONG_PRESS_MS = 320;     // hold duration before drag-to-create kicks in
-const SNAP_MIN = 15;           // drag-to-create snaps to 15-minute steps
-const NEW_SLOT_DURATION = 60;  // drag-to-create block height = 1 hour
+const MOVE_ACTIVATE_PX = 8;    // finger travel before drag-to-move activates
+const SNAP_MIN = 15;           // drag snaps to 15-minute steps
+const NEW_SLOT_DURATION = 60;  // appointment / create block height = 1 hour
 /** Distance from viewport edge that starts auto-scroll while dragging. */
 const DRAG_EDGE_PX = 64;
 /** Peak auto-scroll speed (px/sec) when finger is hard against the edge. */
 const DRAG_SCROLL_MAX_PX_S = 920;
+
+type TimelineDragMode = "create" | "move";
+
+type TimelinePress = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+  timer: ReturnType<typeof setTimeout> | null;
+  active: boolean;
+  mode: TimelineDragMode;
+  /** Appointment being moved (mode === "move"). */
+  procId?: string;
+  /** Snapshot used to persist the new scheduledAt on drop. */
+  proc?: Procedure;
+  /** Minutes from block start to the grab point (mode === "move"). */
+  grabOffsetMins?: number;
+};
 
 /* ─── Status colours ────────────────────────────────────────────────────────── */
 const STATUS_COLORS: Record<ProcedureStatus, {
@@ -129,10 +153,6 @@ function layoutOverlaps(procs: Procedure[]): Map<string, { col: number; cols: nu
   return result;
 }
 
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
-}
-
 function fmtMins(mins: number) {
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
@@ -217,21 +237,18 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const tlRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  /* ── Long-press drag-to-create (Apple Calendar style) ──
-     Hold on empty space → a rounded 1-hour block appears and follows the
-     finger smoothly; times snap to 15 minutes. Near the viewport edges the
-     timeline auto-scrolls so the block can travel the full day. */
+  /* ── Drag interactions (Apple Calendar style) ──
+     • Empty space long-press → create a 1-hour slot that follows the finger
+     • Drag an existing appointment block → reschedule (snap 15 min)
+     Near the viewport edges the timeline auto-scrolls. */
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [dragVisualMins, setDragVisualMins] = useState<number | null>(null);
   const [dragSnapMins, setDragSnapMins] = useState<number | null>(null);
-  const pressRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-    lastX: number;
-    lastY: number;
-    timer: ReturnType<typeof setTimeout> | null;
-    active: boolean;
-  } | null>(null);
+  const [movingProcId, setMovingProcId] = useState<string | null>(null);
+  /** Keep the block at the dropped time until the list refetch catches up. */
+  const [optimisticScheduledAt, setOptimisticScheduledAt] = useState<Record<string, string>>({});
+  const pressRef = useRef<TimelinePress | null>(null);
   const suppressClickRef = useRef(false);
   const autoScrollRafRef = useRef<number | null>(null);
   const autoScrollLastTsRef = useRef(0);
@@ -243,24 +260,34 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     return Math.min(Math.max(mins, 0), 24 * 60 - NEW_SLOT_DURATION);
   }, []);
 
-  /** Continuous minutes under the finger (block centered on touch). */
-  const yToRawMins = useCallback((clientY: number) => {
+  /** Absolute minutes of day under a clientY on the timeline content. */
+  const clientYToMins = useCallback((clientY: number) => {
     const el = contentRef.current;
     if (!el) return 0;
     const y = clientY - el.getBoundingClientRect().top;
-    const raw = (y / HOUR_H) * 60 + START_H * 60 - NEW_SLOT_DURATION / 2;
-    return clampSlotStart(raw);
-  }, [clampSlotStart]);
+    return (y / HOUR_H) * 60 + START_H * 60;
+  }, []);
+
+  /** Continuous start minutes for create (block centered on touch). */
+  const yToCreateRawMins = useCallback((clientY: number) => {
+    return clampSlotStart(clientYToMins(clientY) - NEW_SLOT_DURATION / 2);
+  }, [clampSlotStart, clientYToMins]);
 
   const snapMins = useCallback((raw: number) => {
     return clampSlotStart(Math.round(raw / SNAP_MIN) * SNAP_MIN);
   }, [clampSlotStart]);
 
   const applyDragFromClientY = useCallback((clientY: number) => {
-    const raw = yToRawMins(clientY);
+    const p = pressRef.current;
+    let raw: number;
+    if (p?.mode === "move" && p.grabOffsetMins != null) {
+      raw = clampSlotStart(clientYToMins(clientY) - p.grabOffsetMins);
+    } else {
+      raw = yToCreateRawMins(clientY);
+    }
     setDragVisualMins(raw);
     setDragSnapMins(snapMins(raw));
-  }, [yToRawMins, snapMins]);
+  }, [clampSlotStart, clientYToMins, yToCreateRawMins, snapMins]);
 
   const stopAutoScroll = useCallback(() => {
     if (autoScrollRafRef.current != null) {
@@ -300,7 +327,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       const next = Math.min(maxScroll, Math.max(0, tl.scrollTop + speed * dt));
       if (next !== tl.scrollTop) {
         tl.scrollTop = next;
-        // Content moved under the finger — keep the ghost aligned.
+        // Content moved under the finger — keep the ghost / block aligned.
         applyDragFromClientY(y);
       }
     }
@@ -321,6 +348,12 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     setEditingProcedure(null);
   }, [selDate]);
 
+  const clearDragVisual = useCallback(() => {
+    setDragVisualMins(null);
+    setDragSnapMins(null);
+    setMovingProcId(null);
+  }, []);
+
   const cancelPress = useCallback(() => {
     const p = pressRef.current;
     if (!p) return;
@@ -331,27 +364,65 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     }
     stopAutoScroll();
     pressRef.current = null;
-    setDragVisualMins(null);
-    setDragSnapMins(null);
-  }, [blockTouchScroll, stopAutoScroll]);
+    clearDragVisual();
+  }, [blockTouchScroll, stopAutoScroll, clearDragVisual]);
+
+  const activateDrag = useCallback((p: TimelinePress) => {
+    if (p.active) return;
+    p.active = true;
+    haptic("light");
+    contentRef.current?.addEventListener("touchmove", blockTouchScroll, { passive: false });
+    if (p.mode === "move" && p.procId) setMovingProcId(p.procId);
+    applyDragFromClientY(p.lastY);
+    ensureAutoScroll();
+  }, [blockTouchScroll, applyDragFromClientY, ensureAutoScroll]);
 
   const onTimelinePointerDown = useCallback((e: React.PointerEvent) => {
     if (!e.isPrimary) return;
-    if ((e.target as HTMLElement).closest("button")) return; // presses on events
+    if ((e.target as HTMLElement).closest("button")) return; // events use their own handler
     const { clientX, clientY, pointerId } = e;
     dragClientYRef.current = clientY;
     const timer = setTimeout(() => {
       const p = pressRef.current;
-      if (!p || p.active) return;
-      p.active = true;
-      haptic("light");
-      // From now on the finger moves the block, not the page
-      contentRef.current?.addEventListener("touchmove", blockTouchScroll, { passive: false });
-      applyDragFromClientY(p.lastY);
-      ensureAutoScroll();
+      if (!p || p.active || p.mode !== "create") return;
+      activateDrag(p);
     }, LONG_PRESS_MS);
-    pressRef.current = { pointerId, startX: clientX, startY: clientY, lastX: clientX, lastY: clientY, timer, active: false };
-  }, [blockTouchScroll, applyDragFromClientY, ensureAutoScroll]);
+    pressRef.current = {
+      pointerId,
+      startX: clientX,
+      startY: clientY,
+      lastX: clientX,
+      lastY: clientY,
+      timer,
+      active: false,
+      mode: "create",
+    };
+  }, [activateDrag]);
+
+  const onEventPointerDown = useCallback((e: React.PointerEvent, proc: Procedure) => {
+    if (!e.isPrimary || !proc.scheduledAt) return;
+    e.stopPropagation();
+    const { clientX, clientY, pointerId } = e;
+    dragClientYRef.current = clientY;
+    const startMin = timeMins(proc.scheduledAt);
+    const grabOffsetMins = Math.min(
+      NEW_SLOT_DURATION - SNAP_MIN,
+      Math.max(0, clientYToMins(clientY) - startMin),
+    );
+    pressRef.current = {
+      pointerId,
+      startX: clientX,
+      startY: clientY,
+      lastX: clientX,
+      lastY: clientY,
+      timer: null,
+      active: false,
+      mode: "move",
+      procId: proc.id,
+      proc,
+      grabOffsetMins,
+    };
+  }, [clientYToMins]);
 
   const onTimelinePointerMove = useCallback((e: React.PointerEvent) => {
     const p = pressRef.current;
@@ -360,8 +431,17 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     p.lastY = e.clientY;
     dragClientYRef.current = e.clientY;
     if (!p.active) {
-      // Finger moved before long-press fired → it's a scroll, not a hold
-      if (p.timer && (Math.abs(e.clientX - p.startX) > 8 || Math.abs(e.clientY - p.startY) > 8)) {
+      const dx = Math.abs(e.clientX - p.startX);
+      const dy = Math.abs(e.clientY - p.startY);
+      if (p.mode === "move") {
+        // Drag appointment as soon as the finger travels a few pixels.
+        if (dx > MOVE_ACTIVATE_PX || dy > MOVE_ACTIVATE_PX) {
+          activateDrag(p);
+        }
+        return;
+      }
+      // Create: finger moved before long-press fired → scroll, not a hold
+      if (p.timer && (dx > MOVE_ACTIVATE_PX || dy > MOVE_ACTIVATE_PX)) {
         clearTimeout(p.timer);
         p.timer = null;
       }
@@ -369,18 +449,66 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     }
     applyDragFromClientY(e.clientY);
     ensureAutoScroll();
-  }, [applyDragFromClientY, ensureAutoScroll]);
+  }, [activateDrag, applyDragFromClientY, ensureAutoScroll]);
+
+  const rescheduleMutation = useUpdateProcedure({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListProceduresQueryKey() });
+      },
+    },
+  });
+
+  const rescheduleProcedure = useCallback(async (proc: Procedure, mins: number) => {
+    if (!proc.scheduledAt) return;
+    const prevMins = timeMins(optimisticScheduledAt[proc.id] ?? proc.scheduledAt);
+    if (mins === prevMins) return;
+
+    const d = new Date(selDate);
+    d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    const iso = d.toISOString();
+    setOptimisticScheduledAt((prev) => ({ ...prev, [proc.id]: iso }));
+    try {
+      await rescheduleMutation.mutateAsync({
+        id: proc.id,
+        data: { scheduledAt: iso },
+      });
+      hapticNotify("success");
+    } catch {
+      setOptimisticScheduledAt((prev) => {
+        const next = { ...prev };
+        delete next[proc.id];
+        return next;
+      });
+      hapticNotify("error");
+      toast({
+        title: t("common.error", { defaultValue: "Ошибка" }),
+        description: t("schedule.rescheduleError", { defaultValue: "Не удалось перенести запись" }),
+        variant: "destructive",
+      });
+    }
+  }, [optimisticScheduledAt, selDate, rescheduleMutation, toast, t]);
 
   const onTimelinePointerUp = useCallback((e: React.PointerEvent) => {
     const p = pressRef.current;
     if (!p || e.pointerId !== p.pointerId) return;
     if (p.timer) clearTimeout(p.timer);
     stopAutoScroll();
+
     if (p.active) {
       contentRef.current?.removeEventListener("touchmove", blockTouchScroll);
       suppressClickRef.current = true;
-      openCreateAt(snapMins(yToRawMins(p.lastY)));
-    } else {
+      const droppedMins = snapMins(
+        p.mode === "move" && p.grabOffsetMins != null
+          ? clampSlotStart(clientYToMins(p.lastY) - p.grabOffsetMins)
+          : yToCreateRawMins(p.lastY),
+      );
+      if (p.mode === "create") {
+        openCreateAt(droppedMins);
+      } else if (p.mode === "move" && p.proc) {
+        void rescheduleProcedure(p.proc, droppedMins);
+      }
+    } else if (p.mode === "create") {
       // Horizontal swipe → previous / next day (Apple Calendar style)
       const dx = e.clientX - p.startX;
       const dy = e.clientY - p.startY;
@@ -391,10 +519,22 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
         goToDate(d, true);
       }
     }
+
     pressRef.current = null;
-    setDragVisualMins(null);
-    setDragSnapMins(null);
-  }, [blockTouchScroll, openCreateAt, snapMins, yToRawMins, selDate, goToDate, stopAutoScroll]);
+    clearDragVisual();
+  }, [
+    blockTouchScroll,
+    openCreateAt,
+    snapMins,
+    yToCreateRawMins,
+    clampSlotStart,
+    clientYToMins,
+    selDate,
+    goToDate,
+    stopAutoScroll,
+    clearDragVisual,
+    rescheduleProcedure,
+  ]);
 
   useEffect(() => cancelPress, [cancelPress]);
 
@@ -415,8 +555,33 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     const mine = clinicWideSchedule || !user?.id ? all : all.filter(p => p.doctorId === user.id);
     return mine
       .filter(p => isCalendarProcedure(p) && toStr(new Date(p.scheduledAt!)) === dateStr)
+      .map((p) => {
+        const optimistic = optimisticScheduledAt[p.id];
+        return optimistic ? { ...p, scheduledAt: optimistic } : p;
+      })
       .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
-  }, [pData, user?.id, dateStr, clinicWideSchedule]);
+  }, [pData, user?.id, dateStr, clinicWideSchedule, optimisticScheduledAt]);
+
+  // Drop optimistic overrides once the server list matches the new time.
+  useEffect(() => {
+    if (!Object.keys(optimisticScheduledAt).length) return;
+    const all = (pData?.data?.procedures ?? []) as Procedure[];
+    setOptimisticScheduledAt((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [id, iso] of Object.entries(prev)) {
+        const server = all.find((p) => p.id === id);
+        if (
+          server?.scheduledAt &&
+          Math.abs(new Date(server.scheduledAt).getTime() - new Date(iso).getTime()) < 2000
+        ) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [pData, optimisticScheduledAt]);
 
   const visibleProcs = dayProcs;
   const overlapLayout = useMemo(() => layoutOverlaps(dayProcs), [dayProcs]);
@@ -627,10 +792,13 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
             </div>
           )}
 
-          {/* Events — side-by-side columns when overlapping (iPhone style) */}
+          {/* Events — side-by-side columns when overlapping (iPhone style).
+              Drag vertically to reschedule; tap opens the edit modal. */}
           {visibleProcs.map(proc => {
             if (!proc.scheduledAt) return null;
-            const startMin = timeMins(proc.scheduledAt);
+            const isMoving = movingProcId === proc.id && dragVisualMins != null;
+            const startMin = isMoving ? dragVisualMins! : timeMins(proc.scheduledAt);
+            const labelMins = isMoving && dragSnapMins != null ? dragSnapMins : timeMins(proc.scheduledAt);
             const top    = minToPx(startMin - START_H * 60);
             const height = Math.max(minToPx(60), 44);
             const sc     = STATUS_COLORS[proc.status as ProcedureStatus] ?? STATUS_COLORS.scheduled;
@@ -638,18 +806,30 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
             const patient = patients.get(proc.patientId);
             const layout = overlapLayout.get(proc.id) ?? { col: 0, cols: 1 };
             const widthPct = 100 / layout.cols;
-
             return (
               <button
                 key={proc.id}
                 type="button"
-                onClick={() => setEditingProcedure(proc)}
-                className={`absolute rounded-xl overflow-hidden flex text-left cursor-pointer hover:ring-2 hover:ring-[var(--ds-primary)]/30 hover:z-10 transition-shadow ${sc.bg}`}
+                onPointerDown={(e) => onEventPointerDown(e, proc)}
+                onClick={() => {
+                  if (suppressClickRef.current) {
+                    suppressClickRef.current = false;
+                    return;
+                  }
+                  setEditingProcedure(proc);
+                }}
+                className={`absolute rounded-xl overflow-hidden flex text-left cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-[var(--ds-primary)]/30 transition-shadow ${sc.bg} ${
+                  isMoving
+                    ? "z-40 shadow-lg shadow-[#1f75fe]/25 ring-2 ring-[#1f75fe]/40"
+                    : "hover:z-10"
+                }`}
                 style={{
                   top: top + 2,
                   height: height - 4,
                   left: `calc(3.5rem + (100% - 3.5rem - 0.75rem) * ${(layout.col * widthPct) / 100})`,
                   width: `calc((100% - 3.5rem - 0.75rem) * ${widthPct / 100} - ${layout.cols > 1 ? 3 : 0}px)`,
+                  willChange: isMoving ? "top" : undefined,
+                  touchAction: isMoving ? "none" : undefined,
                 }}
               >
                 {/* Left accent bar */}
@@ -660,7 +840,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                     <p className={`text-[12px] font-bold leading-snug ${sc.text} truncate flex-1`}>
                       {proc.name}
                     </p>
-                    {layout.cols === 1 && (
+                    {layout.cols === 1 && !isMoving && (
                       <span className={`inline-flex items-center gap-0.5 shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${sc.badge}`}>
                         <Icon className="w-2.5 h-2.5" />
                         {t(`procedure.status.${proc.status}`)}
@@ -669,13 +849,13 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                   </div>
 
                   <div className={`flex items-center gap-2 mt-0.5 text-[11px] ${sc.text} opacity-80`}>
-                    <span className="flex items-center gap-0.5">
+                    <span className="flex items-center gap-0.5 tabular-nums">
                       <Clock className="w-3 h-3" />
-                      {fmtTime(proc.scheduledAt)}
+                      {fmtMins(labelMins)}
                       {layout.cols === 1 && (
                         <>
                           {" — "}
-                          {fmtTime(new Date(new Date(proc.scheduledAt).getTime() + 3600_000).toISOString())}
+                          {fmtMins(labelMins + NEW_SLOT_DURATION)}
                         </>
                       )}
                     </span>
@@ -684,7 +864,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                     )}
                   </div>
 
-                  {proc.notes && height > 60 && layout.cols === 1 && (
+                  {proc.notes && height > 60 && layout.cols === 1 && !isMoving && (
                     <p className={`text-[10px] ${sc.text} opacity-60 mt-0.5 truncate`}>
                       {proc.notes}
                     </p>
@@ -694,8 +874,30 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
             );
           })}
 
+          {/* Snap time badges while moving an appointment */}
+          {movingProcId != null && dragVisualMins != null && dragSnapMins != null && (
+            <div
+              className="absolute left-0 right-0 z-50 pointer-events-none"
+              style={{
+                top: minToPx(dragVisualMins - START_H * 60),
+                height: minToPx(NEW_SLOT_DURATION),
+              }}
+            >
+              <div className="absolute left-0 top-0 z-50 w-14 -translate-y-1/2 pr-2 text-right">
+                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm tabular-nums">
+                  {fmtMins(dragSnapMins)}
+                </span>
+              </div>
+              <div className="absolute left-0 bottom-0 z-50 w-14 translate-y-1/2 pr-2 text-right">
+                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm tabular-nums">
+                  {fmtMins(dragSnapMins + NEW_SLOT_DURATION)}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Drag-to-create ghost block (long press) — visual follows finger, labels snap */}
-          {dragVisualMins != null && dragSnapMins != null && (
+          {movingProcId == null && dragVisualMins != null && dragSnapMins != null && (
             <div
               className="absolute left-0 right-0 z-40 pointer-events-none will-change-[top]"
               style={{
