@@ -133,7 +133,8 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
   if (reminderType === "5m") {
     const recipientIds = await resolveStaffRecipientIds(clinicId, effectiveDoctorId);
     if (recipientIds.length > 0) {
-      const notifMessage = `Через 5 минут приём: ${patientName} — «${procedureName}» в ${timeStr}`;
+      // Title already says «Приём через 5 минут» — body starts with patient FIO.
+      const notifMessage = `${patientName} — «${procedureName}» в ${timeStr}`;
       await insertNotifications(
         recipientIds.map((userId) => ({
           id: randomUUID(),
