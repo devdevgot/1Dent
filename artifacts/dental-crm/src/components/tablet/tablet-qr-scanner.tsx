@@ -4,6 +4,7 @@ import { ScanLine, X } from "lucide-react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { Button } from "@/components/ui/button";
 import { parseTabletLinkToken } from "@/lib/tablet-api";
+import { hapticNotify } from "@/lib/haptics";
 
 export function TabletQrScanner({
   open,
@@ -53,6 +54,7 @@ export function TabletQrScanner({
           (decoded) => {
             const token = parseTabletLinkToken(decoded);
             if (!token) return;
+            hapticNotify("success");
             void scanner?.stop().catch(() => {});
             scannerRef.current = null;
             onScanRef.current(token);

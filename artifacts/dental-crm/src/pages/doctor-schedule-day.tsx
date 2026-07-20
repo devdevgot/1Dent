@@ -21,6 +21,7 @@ import { Bone } from "@/components/skeletons";
 import { seesClinicSchedule } from "@/lib/role-groups";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { usePageBack } from "@/hooks/use-page-back";
+import { haptic } from "@/lib/haptics";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const HOUR_H  = 64;   // px per hour
@@ -343,7 +344,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       const p = pressRef.current;
       if (!p || p.active) return;
       p.active = true;
-      try { navigator.vibrate?.(10); } catch { /* unsupported */ }
+      haptic("light");
       // From now on the finger moves the block, not the page
       contentRef.current?.addEventListener("touchmove", blockTouchScroll, { passive: false });
       applyDragFromClientY(p.lastY);

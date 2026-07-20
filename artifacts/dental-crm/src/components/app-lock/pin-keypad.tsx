@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Delete } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { haptic } from '@/lib/haptics';
 
 interface PinKeypadProps {
   onDigit: (digit: string) => void;
@@ -36,7 +37,10 @@ function Key({
     <button
       type="button"
       disabled={disabled}
-      onClick={onClick}
+      onClick={() => {
+        haptic('light');
+        onClick();
+      }}
       aria-label={ariaLabel}
       className={cn(
         'flex h-[68px] w-[68px] items-center justify-center rounded-full select-none',

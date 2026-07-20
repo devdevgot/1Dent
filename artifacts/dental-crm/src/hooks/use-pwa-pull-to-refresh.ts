@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isPwaStandalone } from "@/lib/pwa";
+import { haptic } from "@/lib/haptics";
 
 const THRESHOLD = 72;
 const MAX_PULL = 120;
@@ -152,6 +153,7 @@ export function usePwaPullToRefresh({
   const runRefresh = useCallback(async () => {
     if (refreshingRef.current) return;
     refreshingRef.current = true;
+    haptic("medium");
     const el = surfaceElRef.current;
     setPhase("refreshing");
     setPullY(THRESHOLD);
