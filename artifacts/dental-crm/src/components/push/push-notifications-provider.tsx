@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
+import { AppBadgeSync } from "@/components/push/app-badge-sync";
 import { syncPushSubscriptionIfGranted } from "@/lib/push-notifications";
 import { isPwaStandalone } from "@/lib/pwa";
 
@@ -12,5 +13,10 @@ export function PushNotificationsProvider({ children }: { children: React.ReactN
     void syncPushSubscriptionIfGranted();
   }, [isAuthenticated, user?.id]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <AppBadgeSync />
+      {children}
+    </>
+  );
 }

@@ -10,6 +10,8 @@ export type WebPushPayload = {
   url?: string;
   tag?: string;
   notificationId?: string;
+  /** Unread CRM notifications — used by the PWA service worker for home-screen badge. */
+  unreadCount?: number;
 };
 
 type VapidConfig = {
@@ -252,6 +254,7 @@ export function buildTestTrackingPushPayload(): WebPushPayload {
     body: "✅ Тестовое push-уведомление: трекинг сотрудников работает",
     url: "/branches",
     tag: "1dent-tracking-test",
+    unreadCount: 1,
   };
 }
 
@@ -261,6 +264,7 @@ export function buildTestNotificationPushPayload(): WebPushPayload {
     body: "Push-оповещения CRM работают",
     url: "/",
     tag: "1dent-notification-test",
+    unreadCount: 1,
   };
 }
 
