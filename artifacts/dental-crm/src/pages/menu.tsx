@@ -5,9 +5,10 @@ import { prefetchStaffList } from "@workspace/api-client-react";
 import { useTranslation } from "react-i18next";
 import { PageShell } from "@/components/layout/page-shell";
 import { RootTabHeader } from "@/components/layout/root-tab-header";
-import { MENU_CATEGORIES, MENU_SERVICES } from "@/lib/menu-services";
+import { MENU_CATEGORIES, MENU_SERVICES, prefetchMenuIcons } from "@/lib/menu-services";
 import { useOpenMenuService } from "@/components/layout/menu-service-overlay";
 import { InstallAppCard } from "@/components/pwa/install-app";
+import { AppIcon } from "@/components/ui/app-icon";
 
 function CategoryCard({
   title,
@@ -31,13 +32,7 @@ function CategoryCard({
             onClick={() => onOpen(item.slug)}
             className="flex flex-col items-center gap-2 pt-3 pb-3.5 px-1 rounded-2xl hover:bg-[#f1ede4] active:bg-[#f1ede4] active:scale-[0.97] transition-all"
           >
-            <img
-              src={item.img}
-              alt=""
-              aria-hidden
-              className="w-14 h-14 shrink-0 object-contain drop-shadow-sm"
-              draggable={false}
-            />
+            <AppIcon src={item.img} size="lg" eager />
             <span className="w-full min-h-[26px] text-xs font-semibold text-[#0f172a] text-center leading-[1.2] line-clamp-2 break-words">
               {item.name}
             </span>
@@ -53,6 +48,10 @@ export default function MenuPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const openService = useOpenMenuService();
+
+  useEffect(() => {
+    prefetchMenuIcons();
+  }, []);
 
   useEffect(() => {
     if (user?.role !== "owner" && user?.role !== "admin") return;

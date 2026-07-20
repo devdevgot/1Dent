@@ -251,3 +251,16 @@ export function getHomeServiceSlugsForRole(role: string | undefined | null): rea
     return service?.roles.includes(role);
   });
 }
+
+/** Prefetch unique menu 3D icons so Services/Home tiles don't flash empty. */
+export function prefetchMenuIcons() {
+  if (typeof window === "undefined") return;
+  const seen = new Set<string>();
+  for (const service of MENU_SERVICES) {
+    if (seen.has(service.img)) continue;
+    seen.add(service.img);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = service.img;
+  }
+}

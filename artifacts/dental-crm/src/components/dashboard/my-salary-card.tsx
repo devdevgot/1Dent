@@ -17,6 +17,7 @@ import {
   salarySummaryHint,
   toSalaryDateParams,
 } from "@/lib/payroll-period";
+import { AppIcon } from "@/components/ui/app-icon";
 
 const SALARY_ICON = "/icons/menu/financials.png";
 
@@ -99,13 +100,7 @@ export function MySalaryCard({ listPreset, onListPresetChange }: MySalaryCardPro
             className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
             style={{ backgroundColor: "#EDFBF2" }}
           >
-            <img
-              src={SALARY_ICON}
-              alt=""
-              aria-hidden
-              className="w-[44px] h-[44px] object-contain drop-shadow-sm"
-              draggable={false}
-            />
+            <AppIcon src={SALARY_ICON} size="md" eager className="w-[44px] h-[44px]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm text-[#0f172a] truncate">{displayName}</p>

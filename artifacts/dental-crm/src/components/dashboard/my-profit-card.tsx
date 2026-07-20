@@ -12,6 +12,7 @@ import {
   type FilterPreset,
 } from "@/components/dashboard/owner-dashboard-shared";
 import { format } from "date-fns";
+import { AppIcon } from "@/components/ui/app-icon";
 
 const BRANCH_ICON = "/icons/menu/clinic-branches.png";
 const MAIN_ICON = "/icons/menu/dashboard.png";
@@ -147,12 +148,11 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
               className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
               style={{ backgroundColor: row.iconBg }}
             >
-              <img
+              <AppIcon
                 src={row.iconSrc}
-                alt=""
-                aria-hidden
-                className="w-[44px] h-[44px] object-contain drop-shadow-sm"
-                draggable={false}
+                size="md"
+                eager
+                className="w-[44px] h-[44px]"
               />
             </div>
             <div className="flex-1 min-w-0">

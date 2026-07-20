@@ -143,27 +143,29 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
                 <p className="text-xs text-[#64748b]">{t("appLock.settingsDesc")}</p>
               </div>
             </div>
-            <Switch
-              checked={config.enabled}
-              onCheckedChange={(v) => void handleToggle(v)}
-              disabled={setupLoading}
-            />
+            <div className="flex shrink-0 items-center gap-2 self-center">
+              {config.enabled && hasPin && (
+                <button
+                  type="button"
+                  onClick={handleChangePin}
+                  aria-label={t("appLock.changePin")}
+                  title={t("appLock.changePin")}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#64748b] transition-colors hover:bg-[#f1ede4] hover:text-[#0f172a] active:scale-95"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              )}
+              <Switch
+                className="self-center"
+                checked={config.enabled}
+                onCheckedChange={(v) => void handleToggle(v)}
+                disabled={setupLoading}
+              />
+            </div>
           </IosGroupRow>
 
           {config.enabled && (
             <>
-              <IosGroupRow
-                as="button"
-                onClick={handleChangePin}
-                className="cursor-pointer hover:bg-[#faf8f4]"
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <SettingsRowIcon img={PROFILE_ICONS.password} />
-                  <span className="text-sm text-[#0f172a]">{t("appLock.changePin")}</span>
-                </div>
-                <span className="text-xs text-[#64748b]">••••</span>
-              </IosGroupRow>
-
               {biometricAvailable && (
                 <IosGroupRow className="gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -173,7 +175,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
                       <p className="text-xs text-[#64748b]">{t("appLock.biometricDesc")}</p>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2 self-center">
                     <button
                       type="button"
                       onClick={() => setIdleOpen(true)}
@@ -184,6 +186,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
                       <Settings className="h-4 w-4" />
                     </button>
                     <Switch
+                      className="self-center"
                       checked={config.biometricEnabled}
                       onCheckedChange={(v) => void handleBiometricToggle(v)}
                       disabled={biometricLoading}
