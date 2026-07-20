@@ -227,7 +227,7 @@ router.post("/knowledge/compose-prompt", ownerAdmin, async (req: Request, res: R
 
     await aiCreditsService.consumeCredits({
       clinicId,
-      userId: req.user!.id,
+      userId: req.user!.userId,
       feature: "knowledge_parse",
       description: "Создание промпта чатбота (Opus)",
     });
@@ -276,7 +276,7 @@ router.post("/knowledge/refine-prompt", ownerAdmin, async (req: Request, res: Re
 
     await aiCreditsService.consumeCredits({
       clinicId,
-      userId: req.user!.id,
+      userId: req.user!.userId,
       feature: "knowledge_parse",
       description: "Доработка промпта чатбота (добавление условия)",
     });
@@ -348,7 +348,7 @@ router.post("/knowledge/generate", ownerAdmin, async (req: Request, res: Respons
 
     await aiCreditsService.consumeCredits({
       clinicId,
-      userId: req.user!.id,
+      userId: req.user!.userId,
       feature: "knowledge_parse",
       description: "Генерация скрипта из базы знаний",
     });

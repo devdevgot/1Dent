@@ -17,7 +17,7 @@ import { PatientsRepository } from "../patients/patients.repository";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
 import { ProceduresRepository } from "../procedures/procedures.repository";
-import { triggerDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAnalysis } from "./dental-ai";
+import { triggerDentalAiAnalysis, scheduleDentalAiAnalysis, getLatestDentalAnalysis, deleteLatestDentalAnalysis } from "./dental-ai";
 import { logger } from "../../lib/logger";
 import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
 import { matchVoiceServices } from "./voice-service-matching";
@@ -210,10 +210,8 @@ router.put("/:toothFdi", writeRoles, async (req: Request, res: Response, next: N
   if (!tooth) return;
   res.json({ success: true, data: { tooth } });
 
-  // Fire-and-forget AI analysis after every tooth update
-  triggerDentalAiAnalysis(req.user!.clinicId, patientId).catch((err) =>
-    logger.warn({ err }, "[DentalAI] Background analysis error"),
-  );
+  // Debounced AI analysis: bulk saves (voice diagnosis) collapse into one run
+  scheduleDentalAiAnalysis(req.user!.clinicId, patientId);
 });
 
 // GET /patients/:id/teeth/ai-analysis
@@ -396,14 +394,8 @@ router.post(
     }
 
     try {
-      await aiCreditsService.consumeCredits({
-        clinicId: req.user!.clinicId,
-        userId: req.user!.id,
-        feature: "voice_transcribe",
-        description: "Голосовая диагностика зубов",
-      });
+      await aiCreditsService.assertCreditsAvailable(req.user!.clinicId, "voice_transcribe");
     } catch (err) {
-      if (err instanceof InsufficientAiCreditsError) return next(err);
       return next(err);
     }
 
@@ -419,6 +411,17 @@ router.post(
           "Не удалось распознать речь. Говорите чётко на русском, казахском, узбекском, кыргызском или английском.",
         ));
       }
+      // Charge only after a successful transcription — failed long recordings
+      // (timeouts, provider errors) shouldn't burn the clinic's credits.
+      await aiCreditsService.consumeCredits({
+        clinicId: req.user!.clinicId,
+        userId: req.user!.userId,
+        feature: "voice_transcribe",
+        description: "Голосовая диагностика зубов",
+      }).catch((err) => {
+        if (err instanceof InsufficientAiCreditsError) throw err;
+        logger.warn({ err }, "[VoiceDiagnose] Failed to record credit usage");
+      });
       logger.info(
         {
           patientId,
@@ -481,11 +484,16 @@ router.post(
           parseMs: parsed.ms,
           totalMs: Date.now() - started,
           transcriptChars: transcript.length,
+          failedChunks: parsed.failedChunks,
         },
         "[VoiceDiagnose] Parse ok",
       );
 
-      res.json({ success: true, data: { transcript, diagnoses: enriched } });
+      const parseWarning = parsed.failedChunks > 0
+        ? `Часть записи (${parsed.failedChunks} из ${parsed.chunkCount} фрагментов) не удалось разобрать. Проверьте список и добавьте недостающие зубы вручную или запишите их отдельно.`
+        : undefined;
+
+      res.json({ success: true, data: { transcript, diagnoses: enriched, parseWarning } });
     } catch (err) {
       logger.error({ err }, "[VoiceDiagnose] LLM parse error");
       const timeoutMsg = voiceParseTimeoutMessage(err);
@@ -518,14 +526,8 @@ router.post(
     const started = Date.now();
 
     try {
-      await aiCreditsService.consumeCredits({
-        clinicId: req.user!.clinicId,
-        userId: req.user!.id,
-        feature: "voice_transcribe",
-        description: "Голосовая диагностика зубов",
-      });
+      await aiCreditsService.assertCreditsAvailable(req.user!.clinicId, "voice_transcribe");
     } catch (err) {
-      if (err instanceof InsufficientAiCreditsError) return next(err);
       return next(err);
     }
 
@@ -559,12 +561,29 @@ router.post(
       ));
     }
 
+    // Charge only after a successful transcription
+    try {
+      await aiCreditsService.consumeCredits({
+        clinicId: req.user!.clinicId,
+        userId: req.user!.userId,
+        feature: "voice_transcribe",
+        description: "Голосовая диагностика зубов",
+      });
+    } catch (err) {
+      if (err instanceof InsufficientAiCreditsError) return next(err);
+      logger.warn({ err }, "[VoiceDiagnose] Failed to record credit usage");
+    }
+
     let diagnoses: Awaited<ReturnType<typeof parseVoiceDiagnoses>>["diagnoses"] = [];
+    let parseWarning: string | undefined;
     try {
       const parsed = await parseVoiceDiagnoses(transcript);
       diagnoses = parsed.diagnoses;
       parseMs = parsed.ms;
       parseModel = parsed.model;
+      if (parsed.failedChunks > 0) {
+        parseWarning = `Часть записи (${parsed.failedChunks} из ${parsed.chunkCount} фрагментов) не удалось разобрать. Проверьте список и добавьте недостающие зубы вручную или запишите их отдельно.`;
+      }
     } catch (err) {
       logger.error({ err }, "[VoiceDiagnose] LLM parse error");
       const timeoutMsg = voiceParseTimeoutMessage(err);
@@ -595,7 +614,7 @@ router.post(
       "[VoiceDiagnose] Completed",
     );
 
-    res.json({ success: true, data: { transcript, diagnoses: enriched } });
+    res.json({ success: true, data: { transcript, diagnoses: enriched, parseWarning } });
   },
 );
 

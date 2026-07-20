@@ -24,6 +24,28 @@ const CONDITION_LABELS: Record<string, string> = {
 // Lost on server restart — that's acceptable (at most 1 extra call after restart).
 const analysisDeupCache = new Map<string, { hash: string; triggeredAt: number }>();
 
+// ── Debounced trigger ────────────────────────────────────────────────────────
+// Bulk saves (voice diagnosis applies 20-30 tooth updates in quick succession)
+// used to fire one analysis per tooth: every PUT changes the teeth hash, so the
+// dedup cache never kicked in — burning 5 credits per tooth and hammering the
+// AI provider. Debouncing collapses a burst of updates into a single analysis.
+const ANALYSIS_DEBOUNCE_MS = 8_000;
+const pendingAnalysisTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+export function scheduleDentalAiAnalysis(clinicId: string, patientId: string): void {
+  const key = `${clinicId}:${patientId}`;
+  const existing = pendingAnalysisTimers.get(key);
+  if (existing) clearTimeout(existing);
+  const timer = setTimeout(() => {
+    pendingAnalysisTimers.delete(key);
+    triggerDentalAiAnalysis(clinicId, patientId).catch((err) =>
+      logger.warn({ err, clinicId, patientId }, "[DentalAI] Debounced analysis error"),
+    );
+  }, ANALYSIS_DEBOUNCE_MS);
+  timer.unref?.();
+  pendingAnalysisTimers.set(key, timer);
+}
+
 function computeTeethHash(
   teeth: Array<{ toothFdi: number; condition: string; notes: string | null }>,
 ): string {
