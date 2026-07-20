@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Fingerprint, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
+import { SettingsRowIcon } from "@/components/account/settings-row-icon";
+import { PROFILE_ICONS, PROFILE_CARD_CLASS } from "@/lib/profile-icons";
 import { useAppLockStore } from "@/lib/app-lock/store";
 import { canUseBiometricUnlock } from "@/lib/app-lock/webauthn";
 import type { AppLockIdleMinutes } from "@/lib/app-lock/types";
@@ -18,25 +20,6 @@ const APP_LOCK_PWA_FEATURES = [
 ] as const;
 
 const IDLE_OPTIONS: AppLockIdleMinutes[] = [0, 1, 5, 15, 30];
-
-function SettingsRowIcon({
-  icon: Icon,
-  className,
-}: {
-  icon: typeof ShieldCheck;
-  className: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-[30px] h-[30px] rounded-[9px] flex items-center justify-center shrink-0",
-        className,
-      )}
-    >
-      <Icon className="w-[17px] h-[17px]" strokeWidth={2.2} />
-    </div>
-  );
-}
 
 export function AppLockSettingsSection({ userName }: { userName: string }) {
   const { t } = useTranslation();
@@ -129,10 +112,10 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
         featureKeys={[...APP_LOCK_PWA_FEATURES]}
       >
       <IosSection title={t("settingsPage.security")}>
-        <IosGroup>
+        <IosGroup className={PROFILE_CARD_CLASS}>
           <IosGroupRow className="gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <SettingsRowIcon icon={ShieldCheck} className="bg-[#1f75fe] text-white" />
+              <SettingsRowIcon img={PROFILE_ICONS.security} />
               <div className="min-w-0">
                 <p className="text-sm text-[#0f172a]">{t("appLock.settingsTitle")}</p>
                 <p className="text-xs text-[#64748b]">{t("appLock.settingsDesc")}</p>
@@ -153,7 +136,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
                 className="cursor-pointer hover:bg-[#faf8f4]"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <SettingsRowIcon icon={ShieldCheck} className="bg-[var(--text-secondary)] text-white" />
+                  <SettingsRowIcon img={PROFILE_ICONS.password} />
                   <span className="text-sm text-[#0f172a]">{t("appLock.changePin")}</span>
                 </div>
                 <span className="text-xs text-[#64748b]">••••</span>
@@ -162,7 +145,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
               {biometricAvailable && (
                 <IosGroupRow className="gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <SettingsRowIcon icon={Fingerprint} className="bg-[#8b5cf6] text-white" />
+                    <SettingsRowIcon img={PROFILE_ICONS.fingerprint} />
                     <div className="min-w-0">
                       <p className="text-sm text-[#0f172a]">{t("appLock.biometricTitle")}</p>
                       <p className="text-xs text-[#64748b]">{t("appLock.biometricDesc")}</p>
