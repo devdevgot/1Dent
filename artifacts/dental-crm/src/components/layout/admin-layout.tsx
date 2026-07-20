@@ -210,8 +210,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
       )}
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Main content — data-ptr-surface moves chrome + page for PTR top gap */}
+      <div data-ptr-surface className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar — minimal chrome; pages own their PageHeader */}
         <header className="flex-none h-12 bg-white border-b border-[#e8e3d9] flex items-center gap-3 px-4 z-10">
           {isMobile ? (

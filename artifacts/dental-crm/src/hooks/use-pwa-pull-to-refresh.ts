@@ -38,6 +38,15 @@ function getScrollParent(start: EventTarget | null): HTMLElement | null {
   return root instanceof HTMLElement ? root : null;
 }
 
+/**
+ * Element that rubber-bands during PTR. Prefer a layout surface that includes
+ * sticky headers (search chrome), so the spinner gap opens above the whole page.
+ */
+function getPullSurface(scrollEl: HTMLElement): HTMLElement {
+  const surface = scrollEl.closest("[data-ptr-surface]");
+  return surface instanceof HTMLElement ? surface : scrollEl;
+}
+
 function isPtrIgnored(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest("[data-ptr-ignore]"));
 }
@@ -61,7 +70,7 @@ function applyPullVisual(el: HTMLElement, pullY: number, animated: boolean) {
  * - Only engages when the scroll container is at the very top
  * - Only after a clear vertical pull (not horizontal swipes / drag gestures)
  * - Skips surfaces marked with `data-ptr-ignore` (e.g. schedule timeline drag)
- * - Moves the page down so empty space appears at the top for the spinner
+ * - Moves the page surface (header + content) so empty space appears at the top for the spinner
  */
 export function usePwaPullToRefresh({
   onRefresh,
@@ -73,6 +82,7 @@ export function usePwaPullToRefresh({
   const armedRef = useRef(false);
   const engagedRef = useRef(false);
   const scrollElRef = useRef<HTMLElement | null>(null);
+  const surfaceElRef = useRef<HTMLElement | null>(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
   const refreshingRef = useRef(false);
@@ -81,7 +91,7 @@ export function usePwaPullToRefresh({
   onRefreshRef.current = onRefresh;
 
   const reset = useCallback((animated = false) => {
-    const el = scrollElRef.current;
+    const el = surfaceElRef.current;
     if (el) {
       if (animated && pullYRef.current > 0) {
         applyPullVisual(el, 0, true);
@@ -93,6 +103,7 @@ export function usePwaPullToRefresh({
     armedRef.current = false;
     engagedRef.current = false;
     scrollElRef.current = null;
+    surfaceElRef.current = null;
     pullYRef.current = 0;
     setPullY(0);
     setPhase("idle");
@@ -101,7 +112,7 @@ export function usePwaPullToRefresh({
   const runRefresh = useCallback(async () => {
     if (refreshingRef.current) return;
     refreshingRef.current = true;
-    const el = scrollElRef.current;
+    const el = surfaceElRef.current;
     setPhase("refreshing");
     setPullY(THRESHOLD);
     pullYRef.current = THRESHOLD;
@@ -129,6 +140,7 @@ export function usePwaPullToRefresh({
       armedRef.current = true;
       engagedRef.current = false;
       scrollElRef.current = scrollEl;
+      surfaceElRef.current = getPullSurface(scrollEl);
       startXRef.current = e.touches[0].clientX;
       startYRef.current = e.touches[0].clientY;
       pullYRef.current = 0;
@@ -137,7 +149,8 @@ export function usePwaPullToRefresh({
     const onTouchMove = (e: TouchEvent) => {
       if (!armedRef.current || refreshingRef.current) return;
       const scrollEl = scrollElRef.current;
-      if (!scrollEl) return;
+      const surfaceEl = surfaceElRef.current;
+      if (!scrollEl || !surfaceEl) return;
 
       // If the gesture moved onto an ignored surface and we never engaged, abort.
       if (!engagedRef.current && isPtrIgnored(e.target)) {
@@ -170,7 +183,7 @@ export function usePwaPullToRefresh({
       }
 
       if (dy <= 0 || scrollEl.scrollTop > 0.5) {
-        applyPullVisual(scrollEl, 0, false);
+        applyPullVisual(surfaceEl, 0, false);
         pullYRef.current = 0;
         setPullY(0);
         setPhase("pulling");
@@ -183,7 +196,7 @@ export function usePwaPullToRefresh({
       pullYRef.current = next;
       setPullY(next);
       setPhase(next >= THRESHOLD ? "release" : "pulling");
-      applyPullVisual(scrollEl, next, false);
+      applyPullVisual(surfaceEl, next, false);
     };
 
     const onTouchEnd = () => {
@@ -211,7 +224,7 @@ export function usePwaPullToRefresh({
       document.removeEventListener("touchmove", onTouchMove, true);
       document.removeEventListener("touchend", onTouchEnd, true);
       document.removeEventListener("touchcancel", onTouchEnd, true);
-      clearPullVisual(scrollElRef.current);
+      clearPullVisual(surfaceElRef.current);
     };
   }, [enabled, reset, runRefresh]);
 
