@@ -1,0 +1,4 @@
+# Runtime outputs — regenerate via scripts/run-all.sh
+*
+!.gitignore
+!LOAD_TEST_REPORT.md
