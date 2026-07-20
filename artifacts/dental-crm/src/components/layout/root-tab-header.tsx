@@ -12,7 +12,7 @@ export function RootTabHeader({ title, right, className }: RootTabHeaderProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 bg-[#faf8f4]/95 backdrop-blur-sm safe-area-top font-manrope",
+        "sticky top-0 z-20 bg-canvas/95 backdrop-blur-sm safe-area-top font-manrope",
         className,
       )}
     >

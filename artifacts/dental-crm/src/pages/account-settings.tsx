@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/hooks/use-auth";
-import { ChevronRight, Camera, CheckCircle, Clock } from "lucide-react";
+import { ChevronRight, Camera, CheckCircle, Clock, Moon } from "lucide-react";
 import {
   useGetMyPayrollRecords,
   useUpdateProfile,
@@ -26,6 +26,7 @@ import { RootTabHeader } from "@/components/layout/root-tab-header";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
 import { AppLockSettingsSection } from "@/components/app-lock/app-lock-settings";
 import { PushNotificationSettings } from "@/components/push/push-notification-settings";
+import { ThemePicker } from "@/components/theme/theme-picker";
 import { clearAppLockSessionMarkers } from "@/lib/app-lock/storage";
 import { useAppLockStore } from "@/lib/app-lock/store";
 
@@ -329,6 +330,21 @@ export default function AccountSettings() {
             </IosGroup>
           </IosSection>
         )}
+
+        {/* Appearance — available to all roles; "System" follows phone dark/light */}
+        <IosSection title={t("settingsPage.appearance")}>
+          <IosGroup className={PROFILE_CARD_CLASS}>
+            <IosGroupRow className="gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="inline-flex w-7 h-7 items-center justify-center rounded-[9px] bg-[#f1ede4] shrink-0">
+                  <Moon className="w-3.5 h-3.5 text-[#1f75fe]" strokeWidth={2.25} />
+                </span>
+                <span className="text-sm shrink-0">{t("settingsPage.appearance")}</span>
+              </div>
+              <ThemePicker compact />
+            </IosGroupRow>
+          </IosGroup>
+        </IosSection>
 
         {/* App settings */}
         {user?.role !== "admin" && (

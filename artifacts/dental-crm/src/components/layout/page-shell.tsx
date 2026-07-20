@@ -22,8 +22,8 @@ export function PageShell({
   const body = (
     <div
       className={cn(
-        isOverlay ? "min-h-0 flex flex-col flex-1" : "min-h-full bg-[#faf8f4]",
-        "text-[#0f172a] font-manrope",
+        isOverlay ? "min-h-0 flex flex-col flex-1" : "min-h-full bg-canvas",
+        "text-foreground font-manrope",
         withTabBarOffset && !isOverlay && "pb-24",
         className,
       )}

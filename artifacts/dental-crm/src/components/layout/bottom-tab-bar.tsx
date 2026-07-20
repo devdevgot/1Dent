@@ -181,7 +181,7 @@ export function BottomTabBar({
   }, [role]);
 
   return (
-    <nav className="flex-none bg-white border-t border-[#e8e3d9] z-20 pb-[env(safe-area-inset-bottom,0px)]">
+    <nav className="flex-none bg-surface border-t border-border z-20 pb-[env(safe-area-inset-bottom,0px)]">
       <div className="flex items-stretch h-16">
         {tabs.map((tab) => {
           const blocked = isTabGeoBlocked(tab, role, isRestricted, hasBranches);

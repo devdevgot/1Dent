@@ -39,7 +39,7 @@ export function PageHeader({
     return (
       <header
         className={cn(
-          "bg-white border-b border-[#e8e3d9] font-manrope shrink-0",
+          "bg-surface border-b border-border font-manrope shrink-0",
           sticky && "sticky top-0 z-20",
           className,
         )}
@@ -48,9 +48,9 @@ export function PageHeader({
           <div className="flex items-center gap-2 px-4 py-2.5 min-h-[48px]">
             <div className="flex-1 min-w-0 flex items-center gap-2">
               {subtitle ? (
-                <p className="text-xs text-[#64748b] truncate">{subtitle}</p>
+                <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
               ) : !badge && title && right ? (
-                <p className="text-sm font-semibold text-[#0f172a] truncate">{title}</p>
+                <p className="text-sm font-semibold text-foreground truncate">{title}</p>
               ) : null}
               {badge}
             </div>
@@ -67,7 +67,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "bg-white border-b border-[#e8e3d9] safe-area-top font-manrope shrink-0",
+        "bg-surface border-b border-border safe-area-top font-manrope shrink-0",
         sticky && "sticky top-0 z-20",
         shadow && "shadow-sm",
         className,

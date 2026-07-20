@@ -34,6 +34,29 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
+
+  /* PWA / browser chrome */
+  --theme-color: #faf8f4;
+}
+
+.dark {
+  --bg: #0f172a;
+  --ds-surface: #1e293b;
+  --surface-2: #334155;
+  --ds-border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --text: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-subtle: #64748b;
+
+  --primary-light: rgba(31, 117, 254, 0.18);
+
+  --success-light: rgba(22, 163, 74, 0.18);
+  --warning-light: rgba(217, 119, 6, 0.2);
+  --danger-light: rgba(220, 38, 38, 0.2);
+  --info-light: rgba(2, 132, 199, 0.2);
+
+  --theme-color: #0f172a;
 }
 
 .font-manrope {

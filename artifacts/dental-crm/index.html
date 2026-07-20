@@ -9,6 +9,27 @@
     <meta name="apple-mobile-web-app-title" content="1Dent" />
     <meta name="application-name" content="1Dent" />
     <meta name="theme-color" content="#faf8f4" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("theme");
+          var theme = stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+          var dark =
+            theme === "dark" ||
+            (theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          var resolved = dark ? "dark" : "light";
+          var root = document.documentElement;
+          root.classList.add(resolved);
+          root.style.colorScheme = resolved;
+          var color = dark ? "#0f172a" : "#faf8f4";
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", color);
+          var status = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+          if (status) status.setAttribute("content", dark ? "black" : "default");
+        } catch (e) {}
+      })();
+    </script>
     <title>1Dent</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
