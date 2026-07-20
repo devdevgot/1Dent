@@ -225,6 +225,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
         title={t("appLock.idleTimeout")}
         description={t("appLock.idleTimeoutSettings")}
         size="sm"
+        className="max-sm:!bottom-10 max-sm:!rounded-3xl max-sm:mx-3 max-sm:!w-[calc(100%-1.5rem)] max-sm:!max-w-none"
       >
         <div className="flex flex-wrap gap-2">
           {IDLE_OPTIONS.map((minutes) => (
