@@ -30,7 +30,9 @@ import { VoiceRecordingIndicator } from "./voice-recording-indicator";
 const AUTH_TOKEN_KEY = "auth_token";
 const MIN_RECORDING_MS = 1_500;
 const MIN_AUDIO_BYTES = 2_000;
-const UPLOAD_TIMEOUT_MS = 120_000;
+// Long exams (20-30 teeth) can take up to ~110s on the server (two STT model
+// attempts at 55s each) plus upload time — keep the client budget above that.
+const UPLOAD_TIMEOUT_MS = 150_000;
 const APPLY_CONCURRENCY = 6;
 
 const CONDITION_VALUES: ToothCondition[] = [
@@ -84,6 +86,10 @@ interface Props {
   onClose: () => void;
   onApplied?: (result: VoiceDiagnosisApplyResult) => void;
   initialRestoreDraft?: boolean;
+}
+
+function formatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 }
 
 function plural(n: number, one: string, few: string, many: string) {
@@ -207,6 +213,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const [transcript, setTranscript] = useState("");
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [entries, setEntries] = useState<VoiceDiagnosisEntry[]>([]);
+  const [parseWarning, setParseWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
@@ -327,6 +334,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
   const startRecording = useCallback(async () => {
     setError(null);
+    setParseWarning(null);
     try {
       const stream = await requestMicrophoneAccess({ keepStream: true });
       if (!stream) {
@@ -435,7 +443,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
       const parseJson = await voiceApiFetch<{
         success: boolean;
-        data: { transcript: string; diagnoses: VoiceDiagnosisEntry[] };
+        data: { transcript: string; diagnoses: VoiceDiagnosisEntry[]; parseWarning?: string };
       }>(`${baseUrl}/api/patients/${patientId}/teeth/voice-diagnose/parse`, {
         method: "POST",
         headers: { ...authHeaders, "Content-Type": "application/json" },
@@ -445,6 +453,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       const diagEntries = parseJson.data?.diagnoses ?? [];
       setTranscript(parseJson.data?.transcript ?? nextTranscript);
       setEntries(diagEntries);
+      setParseWarning(parseJson.data?.parseWarning ?? null);
       const autoSelected: Record<number, string> = {};
       for (const d of diagEntries) {
         if (d.bestMatchId) autoSelected[d.fdi] = d.bestMatchId;
@@ -522,23 +531,40 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       let appliedTeeth = 0;
       const appliedFdis: number[] = [];
       const toothErrors: string[] = [];
+      const failedEntries: VoiceDiagnosisEntry[] = [];
+
+      const saveTooth = async (entry: VoiceDiagnosisEntry) => {
+        await updateToothMutation.mutateAsync({
+          id: patientId,
+          toothFdi: entry.fdi,
+          data: {
+            condition: entry.condition as ToothCondition,
+            notes: entry.notes || undefined,
+          },
+        });
+        appliedTeeth += 1;
+        appliedFdis.push(entry.fdi);
+      };
 
       await runWithConcurrency(entries, APPLY_CONCURRENCY, async (entry) => {
         try {
-          await updateToothMutation.mutateAsync({
-            id: patientId,
-            toothFdi: entry.fdi,
-            data: {
-              condition: entry.condition as ToothCondition,
-              notes: entry.notes || undefined,
-            },
-          });
-          appliedTeeth += 1;
-          appliedFdis.push(entry.fdi);
+          await saveTooth(entry);
         } catch {
-          toothErrors.push(`Зуб ${entry.fdi}`);
+          failedEntries.push(entry);
         }
       });
+
+      // With 20-30 parallel saves a couple of requests may fail transiently —
+      // retry the failed teeth once, slower, before reporting errors.
+      if (failedEntries.length > 0) {
+        await runWithConcurrency(failedEntries, 2, async (entry) => {
+          try {
+            await saveTooth(entry);
+          } catch {
+            toothErrors.push(`Зуб ${entry.fdi}`);
+          }
+        });
+      }
 
       await qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
 
@@ -599,15 +625,17 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         }
       }
 
-      clearDraft();
-
       const parts: string[] = [];
       if (appliedTeeth > 0) parts.push(`${appliedTeeth} ${plural(appliedTeeth, "зуб", "зуба", "зубов")}`);
       if (appliedServices > 0) parts.push(`${appliedServices} ${plural(appliedServices, "услуга", "услуги", "услуг")} добавлено`);
 
       if (toothErrors.length === 0 && serviceErrors.length === 0) {
+        clearDraft();
         toast({ title: `Диагностика применена: ${parts.join(", ")}` });
       } else {
+        // Keep the draft so the doctor can reopen the modal and re-apply
+        // (tooth saves are idempotent upserts).
+        saveDraft();
         const errParts = [...toothErrors, ...serviceErrors].join(", ");
         toast({
           title: `Применено частично: ${parts.join(", ")}`,
@@ -806,6 +834,11 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
           {/* Review */}
           {phase === "review" && (
             <div className="p-4 space-y-3 min-w-0">
+              {parseWarning && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 leading-relaxed">
+                  {parseWarning}
+                </div>
+              )}
               {/* Transcript */}
               {transcript && (
                 <>

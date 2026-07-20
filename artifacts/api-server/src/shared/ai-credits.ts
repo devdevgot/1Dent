@@ -206,6 +206,17 @@ export class AiCreditsService {
     }));
   }
 
+  /** Pre-flight check without charging — used when the charge happens after a successful AI call. */
+  async assertCreditsAvailable(clinicId: string, feature: AiCreditFeature, credits?: number): Promise<void> {
+    await ensureAiCreditsSchema();
+    const cost = credits ?? AI_CREDIT_COSTS[feature] ?? 1;
+    const summary = await this.getSummary(clinicId);
+    if (summary.remaining < cost) {
+      await this.notifyExhausted(clinicId);
+      throw new InsufficientAiCreditsError();
+    }
+  }
+
   async consumeCredits(params: {
     clinicId: string;
     userId?: string | null;

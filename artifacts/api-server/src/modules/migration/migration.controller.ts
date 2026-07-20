@@ -129,7 +129,7 @@ router.post(
         req.user!.clinicId,
         parsed.data.fileBase64,
         parsed.data.fileType,
-        req.user!.id,
+        req.user!.userId,
       );
       res.json({ success: true, data: result });
     } catch (err) {

@@ -18,13 +18,18 @@ const STT_TIMEOUT_SHORT_MS = 28_000;
 const PARSE_TIMEOUT_MS = 45_000;
 const PARSE_FALLBACK_TIMEOUT_MS = 60_000;
 const PARSE_CHUNK_TIMEOUT_MS = 28_000;
+const PARSE_CHUNK_FALLBACK_TIMEOUT_MS = 45_000;
 const PARSE_CHUNK_MAX_CHARS = 2_200;
+const PARSE_MAX_TOKENS_CAP = 16_000;
 function sttMaxTokens(bufferBytes: number): number {
   return Math.min(8_000, Math.max(2_000, Math.ceil(bufferBytes / 6)));
 }
 
 function parseMaxTokens(transcript: string): number {
-  return Math.min(8_000, Math.max(1_200, Math.ceil(transcript.length * 0.9)));
+  // The JSON output echoes the doctor's words (diagnosisText/spokenProcedure/notes)
+  // plus structural overhead per tooth. Cyrillic is token-dense (~2 chars/token),
+  // so a 20-30 tooth exam needs a generous budget — truncated JSON loses everything.
+  return Math.min(12_000, Math.max(3_000, Math.ceil(transcript.length * 1.5)));
 }
 
 /** Split long transcripts near FDI tooth boundaries for parallel LLM parse. */
@@ -319,61 +324,87 @@ export async function transcribeVoiceAudio(
     : new Error("Speech transcription failed");
 }
 
-async function parseTranscriptChunks(
-  transcript: string,
-  model: string,
-  timeoutMs: number,
+/** Parses one chunk, falling back to the next model on failure (timeout, truncation, bad JSON). */
+async function parseChunkWithFallback(
+  chunk: string,
+  models: string[],
+  fullTranscript: string,
+  chunkMeta?: { chunkIndex: number; chunkCount: number },
 ): Promise<VoiceDiagnosisRow[]> {
-  const chunks = splitTranscriptForParsing(transcript);
-  if (chunks.length === 1) {
-    return callParseModel(chunks[0]!, model, timeoutMs, transcript);
+  const isChunked = Boolean(chunkMeta && chunkMeta.chunkCount > 1);
+  let lastErr: unknown;
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i]!;
+    const timeoutMs = isChunked
+      ? (i === 0 ? PARSE_CHUNK_TIMEOUT_MS : PARSE_CHUNK_FALLBACK_TIMEOUT_MS)
+      : (i === 0 ? PARSE_TIMEOUT_MS : PARSE_FALLBACK_TIMEOUT_MS);
+    try {
+      return await callParseModel(chunk, model, timeoutMs, fullTranscript, chunkMeta);
+    } catch (err) {
+      lastErr = err;
+      logger.warn(
+        { err, model, hasNext: i < models.length - 1, chunkIndex: chunkMeta?.chunkIndex },
+        "[VoiceDiagnose] Parse model failed for chunk",
+      );
+    }
   }
-
-  const results = await Promise.all(
-    chunks.map((chunk, index) =>
-      callParseModel(chunk, model, timeoutMs, transcript, {
-        chunkIndex: index,
-        chunkCount: chunks.length,
-      }),
-    ),
-  );
-  return mergeDiagnosisRows(results.flat());
+  throw lastErr instanceof Error ? lastErr : new Error("Voice diagnosis parse failed");
 }
 
 export async function parseVoiceDiagnoses(transcript: string): Promise<{
   diagnoses: VoiceDiagnosisRow[];
   ms: number;
   model: string;
+  chunkCount: number;
+  failedChunks: number;
 }> {
   const started = Date.now();
   const models = [VOICE_PARSE_MODEL, VOICE_PARSE_FALLBACK_MODEL].filter(
     (m, i, arr) => arr.indexOf(m) === i,
   );
   const chunks = splitTranscriptForParsing(transcript);
-  const timeouts = chunks.length > 1
-    ? [PARSE_CHUNK_TIMEOUT_MS, PARSE_CHUNK_TIMEOUT_MS + 8_000]
-    : [PARSE_TIMEOUT_MS, PARSE_FALLBACK_TIMEOUT_MS];
 
-  let lastErr: unknown;
-  for (let i = 0; i < models.length; i++) {
-    const model = models[i]!;
-    const timeoutMs = timeouts[i] ?? PARSE_FALLBACK_TIMEOUT_MS;
-    try {
-      const diagnoses = await parseTranscriptChunks(transcript, model, timeoutMs);
-      const ms = Date.now() - started;
-      logger.info({ model, ms, count: diagnoses.length, chunks: chunks.length }, "[VoiceDiagnose] Parse ok");
-      return { diagnoses, ms, model };
-    } catch (err) {
-      lastErr = err;
-      const hasNext = i < models.length - 1;
-      logger.warn({ err, model, hasNext, chunks: chunks.length }, "[VoiceDiagnose] Parse model failed");
-      if (!hasNext) break;
+  if (chunks.length === 1) {
+    const diagnoses = await parseChunkWithFallback(chunks[0]!, models, transcript);
+    const ms = Date.now() - started;
+    logger.info({ ms, count: diagnoses.length, chunks: 1 }, "[VoiceDiagnose] Parse ok");
+    return { diagnoses, ms, model: models[0]!, chunkCount: 1, failedChunks: 0 };
+  }
+
+  // Long exams (20-30 teeth): parse chunks in parallel, but let each chunk fall back
+  // independently — one slow/failed chunk must not discard the teeth that parsed fine.
+  const settled = await Promise.allSettled(
+    chunks.map((chunk, index) =>
+      parseChunkWithFallback(chunk, models, transcript, {
+        chunkIndex: index,
+        chunkCount: chunks.length,
+      }),
+    ),
+  );
+
+  const rows: VoiceDiagnosisRow[] = [];
+  let failedChunks = 0;
+  let firstErr: unknown;
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      rows.push(...result.value);
+    } else {
+      failedChunks += 1;
+      firstErr = firstErr ?? result.reason;
     }
   }
 
-  throw lastErr instanceof Error
-    ? lastErr
-    : new Error("Voice diagnosis parse failed");
+  if (failedChunks === chunks.length) {
+    throw firstErr instanceof Error ? firstErr : new Error("Voice diagnosis parse failed");
+  }
+
+  const diagnoses = mergeDiagnosisRows(rows);
+  const ms = Date.now() - started;
+  logger.info(
+    { ms, count: diagnoses.length, chunks: chunks.length, failedChunks },
+    "[VoiceDiagnose] Parse ok",
+  );
+  return { diagnoses, ms, model: models[0]!, chunkCount: chunks.length, failedChunks };
 }
 
 async function callParseModel(
@@ -387,28 +418,56 @@ async function callParseModel(
     ? `Фрагмент ${chunk.chunkIndex + 1} из ${chunk.chunkCount} полной расшифровки осмотра. Извлеки диагнозы только для зубов, упомянутых в этом фрагменте:\n"""\n${transcript}\n"""`
     : `Расшифровка осмотра (многоязычная, как сказал врач):\n"""\n${transcript}\n"""`;
 
-  const chatRes = await createChatCompletion(
-    {
-      model,
-      messages: [
-        { role: "system", content: VOICE_PARSE_SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: userContent,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: parseMaxTokens(fullTranscript ?? transcript),
-      response_format: { type: "json_object" },
-    },
-    { timeoutMs, label: `voice-diagnose-parse:${model}`, disableReasoning: true },
-  );
+  let maxTokens = parseMaxTokens(fullTranscript ?? transcript);
+  let rows: unknown[] | null = null;
 
-  const raw = chatRes.choices[0]?.message?.content?.trim() ?? "{}";
-  const parsed = parseLlmJson<{ diagnoses?: unknown[] }>(raw);
-  const rows = Array.isArray(parsed?.diagnoses) ? parsed!.diagnoses! : [];
+  // Up to 2 attempts: truncated output (finish_reason=length) or unparseable JSON
+  // gets one retry with a doubled token budget before we give up and let the
+  // caller fall back to the next model. Silently returning [] here used to drop
+  // entire chunks of a long (20-30 teeth) exam.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const chatRes = await createChatCompletion(
+      {
+        model,
+        messages: [
+          { role: "system", content: VOICE_PARSE_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: userContent,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: maxTokens,
+        response_format: { type: "json_object" },
+      },
+      { timeoutMs, label: `voice-diagnose-parse:${model}`, disableReasoning: true },
+    );
 
-  return rows
+    const choice = chatRes.choices[0];
+    const raw = choice?.message?.content?.trim() ?? "";
+    const truncated = choice?.finish_reason === "length";
+    const parsed = raw ? parseLlmJson<{ diagnoses?: unknown[] }>(raw) : null;
+
+    if (parsed && !truncated) {
+      rows = Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [];
+      break;
+    }
+
+    if (attempt === 0) {
+      logger.warn(
+        { model, truncated, rawChars: raw.length, maxTokens, chunkIndex: chunk?.chunkIndex },
+        "[VoiceDiagnose] Parse output truncated or invalid, retrying with larger budget",
+      );
+      maxTokens = Math.min(PARSE_MAX_TOKENS_CAP, maxTokens * 2);
+      continue;
+    }
+
+    throw new Error(
+      `Voice parse ${model} returned ${truncated ? "truncated" : "invalid"} JSON output`,
+    );
+  }
+
+  return (rows ?? [])
     .filter(
       (d): d is Record<string, unknown> =>
         typeof d === "object" && d !== null,
