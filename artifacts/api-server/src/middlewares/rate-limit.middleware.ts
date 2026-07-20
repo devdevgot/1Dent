@@ -30,22 +30,22 @@ export function rateLimit(options: RateLimitOptions) {
     const redisKey = `${keyPrefix}:${clientKey}`;
 
     try {
-      const pipeline = redis.pipeline();
-      pipeline.incr(redisKey);
-      pipeline.expire(redisKey, windowSeconds);
-      const results = await pipeline.exec();
+      const count = await redis.incr(redisKey);
+      // Fixed window: set TTL only when the key is first created.
+      // Refreshing expire on every hit would keep a busy client locked out forever.
+      if (count === 1) {
+        await redis.expire(redisKey, windowSeconds);
+      }
 
-      const incrResult = results?.[0];
-      const count: number = Array.isArray(incrResult) && typeof incrResult[1] === "number"
-        ? incrResult[1]
-        : 1;
+      const ttl = await redis.ttl(redisKey);
+      const resetIn = ttl > 0 ? ttl : windowSeconds;
 
       res.setHeader("X-RateLimit-Limit", maxRequests);
       res.setHeader("X-RateLimit-Remaining", Math.max(0, maxRequests - count));
-      res.setHeader("X-RateLimit-Reset", Math.floor(Date.now() / 1000) + windowSeconds);
+      res.setHeader("X-RateLimit-Reset", Math.floor(Date.now() / 1000) + resetIn);
 
       if (count > maxRequests) {
-        res.setHeader("Retry-After", windowSeconds);
+        res.setHeader("Retry-After", resetIn);
         return next(
           new AppError("Too many requests. Please try again later.", 429, "RATE_LIMIT_EXCEEDED"),
         );
