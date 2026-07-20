@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import {
   useListProcedures,
   useListPatients,
   useListUsers,
   useListProcedureTemplates,
 } from "@workspace/api-client-react";
-import type { Procedure, ProcedureStatus } from "@workspace/api-client-react";
+import type { Procedure } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
@@ -20,20 +19,8 @@ import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-heade
 import { ScheduleMonthSkeleton } from "@/components/skeletons";
 import { seesClinicSchedule } from "@/lib/role-groups";
 
-/* ─── Status colours ────────────────────────────────────────────────────────── */
-const STATUS_PILL: Record<ProcedureStatus, string> = {
-  scheduled:   "bg-[#e0f2fe] text-[#0284c7]",
-  in_progress: "bg-[#fef3c7] text-[#d97706]",
-  completed:   "bg-[#f0fdf4] text-[#16a34a]",
-  cancelled:   "bg-[#f1f5f9] text-[#94a3b8]",
-};
-
-const STATUS_DOT: Record<ProcedureStatus, string> = {
-  scheduled:   "bg-[#0284c7]",
-  in_progress: "bg-[var(--warning)]",
-  completed:   "bg-[var(--success)]",
-  cancelled:   "bg-[#94a3b8]",
-};
+/** Solid blue used for day markers (dot / multi-line) — no per-status colors. */
+const MARKER_BLUE = "bg-[#1f75fe]";
 
 /* ─── Locale ────────────────────────────────────────────────────────────────── */
 const MONTHS = [
@@ -50,7 +37,6 @@ function toStr(d: Date) {
 
 /* ─── Component ─────────────────────────────────────────────────────────────── */
 export default function DoctorSchedulePage() {
-  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [, navigate] = useLocation();
   const { isOverlay, pushDate } = useOverlayNavigation();
@@ -177,27 +163,35 @@ export default function DoctorSchedulePage() {
             <div key={wi} className="border-b border-[#e8e3d9] grid grid-cols-7">
               {week.map((day, di) => {
                 if (!day) return (
-                  <div key={di} className="min-h-[80px] bg-[#f1ede4]/30" />
+                  <div key={di} className="min-h-[64px] bg-[#f1ede4]/30" />
                 );
 
                 const ds     = toStr(day);
                 const isToday = ds === todayStr;
                 const procs   = byDate.get(ds) ?? [];
                 const isOther = day.getMonth() !== month;
+                const count   = procs.length;
 
                 return (
                   <div
                     key={di}
                     data-ptr-ignore
                     onClick={() => (isOverlay ? pushDate(ds) : navigate(`/schedule/${ds}`))}
+                    title={
+                      count === 0
+                        ? undefined
+                        : count === 1
+                          ? "1 запись"
+                          : `${count} записей`
+                    }
                     className={`
-                      min-h-[80px] border-r border-[#e8e3d9] last:border-r-0 p-1.5 cursor-pointer
+                      min-h-[64px] border-r border-[#e8e3d9] last:border-r-0 p-1.5 cursor-pointer
                       transition-colors select-none
                       ${isOther ? "bg-[#f1ede4]/20" : "hover:bg-[#faf8f4]"}
                     `}
                   >
                     {/* Day number */}
-                    <div className="flex justify-center mb-1.5">
+                    <div className="flex justify-center">
                       <span className={`
                         w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold leading-none
                         ${isToday
@@ -210,24 +204,13 @@ export default function DoctorSchedulePage() {
                       </span>
                     </div>
 
-                    {/* Event pills */}
-                    <div className="space-y-0.5 px-0.5">
-                      {procs.slice(0, 3).map(p => (
-                        <div
-                          key={p.id}
-                          className={`
-                            flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-semibold leading-tight truncate
-                            ${STATUS_PILL[p.status as ProcedureStatus]}
-                          `}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[p.status as ProcedureStatus]}`} />
-                          <span className="truncate">{p.name}</span>
-                        </div>
-                      ))}
-                      {procs.length > 3 && (
-                        <p className="text-[9px] text-[#1f75fe] font-semibold pl-1">
-                          +{procs.length - 3} ещё
-                        </p>
+                    {/* Entry markers: 1 → blue dot, 2+ → blue horizontal pill */}
+                    <div className="flex justify-center items-center h-3 mt-0.5" aria-hidden={count === 0}>
+                      {count === 1 && (
+                        <span className={`w-1.5 h-1.5 rounded-full ${MARKER_BLUE}`} />
+                      )}
+                      {count > 1 && (
+                        <span className={`w-3.5 h-1 rounded-full ${MARKER_BLUE}`} />
                       )}
                     </div>
                   </div>
@@ -240,14 +223,16 @@ export default function DoctorSchedulePage() {
 
       {/* ── Legend ── */}
       <div className="mx-4 mt-4 p-3 bg-white rounded-2xl border border-[#e8e3d9] shadow-md">
-        <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">Статусы</p>
-        <div className="grid grid-cols-2 gap-1.5">
-          {(["scheduled","in_progress","completed","cancelled"] as ProcedureStatus[]).map(s => (
-            <div key={s} className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[s]}`} />
-              <span className="text-[11px] text-[#64748b]">{t(`procedure.status.${s}`)}</span>
-            </div>
-          ))}
+        <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-wider mb-2">Записи</p>
+        <div className="flex items-center gap-5">
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${MARKER_BLUE}`} />
+            <span className="text-[11px] text-[#64748b]">1 запись</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-3.5 h-1 rounded-full shrink-0 ${MARKER_BLUE}`} />
+            <span className="text-[11px] text-[#64748b]">Несколько записей</span>
+          </div>
         </div>
       </div>
 
