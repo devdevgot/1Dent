@@ -3,8 +3,9 @@ import { BellRing } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
+import { SettingsRowIcon } from "@/components/account/settings-row-icon";
+import { PROFILE_ICONS, PROFILE_CARD_CLASS } from "@/lib/profile-icons";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import { PwaExclusiveGate } from "@/components/pwa/pwa-exclusive-gate";
 import {
   getPushSettingsState,
@@ -18,25 +19,6 @@ const PUSH_PWA_FEATURES = [
   "pwa.exclusive.pushFeature2",
   "pwa.exclusive.pushFeature3",
 ] as const;
-
-function SettingsRowIcon({
-  icon: Icon,
-  className,
-}: {
-  icon: typeof BellRing;
-  className: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-[30px] h-[30px] rounded-[9px] flex items-center justify-center shrink-0",
-        className,
-      )}
-    >
-      <Icon className="w-[17px] h-[17px]" strokeWidth={2.2} />
-    </div>
-  );
-}
 
 function PushNotificationSettingsInner() {
   const { t } = useTranslation();
@@ -119,10 +101,10 @@ function PushNotificationSettingsInner() {
 
   return (
     <IosSection title={t("push.sectionTitle")}>
-      <IosGroup>
+      <IosGroup className={PROFILE_CARD_CLASS}>
         <IosGroupRow className="gap-3 items-start">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <SettingsRowIcon icon={BellRing} className="bg-[#ec4899] text-white" />
+            <SettingsRowIcon img={PROFILE_ICONS.notifications} />
             <div className="min-w-0">
               <p className="text-sm text-[#0f172a]">{t("push.settingsTitle")}</p>
               <p className="text-xs text-[#64748b]">{t("push.settingsDesc")}</p>
