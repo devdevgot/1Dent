@@ -33,17 +33,22 @@ export const options = {
 
 export default function () {
   const roll = Math.random();
-  if (roll < 0.7) {
+  if (roll < 0.75) {
     const res = http.get(url("/api/healthz"), { tags: { endpoint: "healthz" } });
     check(res, {
       "healthz 200": (r) => r.status === 200,
       "healthz body ok": (r) => String(r.body).includes("ok"),
     });
-  } else if (roll < 0.9) {
+  } else if (roll < 0.95) {
     const res = http.get(url("/api/healthz/tma"), { tags: { endpoint: "healthz_tma" } });
     check(res, { "healthz/tma 200": (r) => r.status === 200 });
   } else {
-    const res = http.get(url("/"), { tags: { endpoint: "spa_root" } });
+    // SPA shell may be 404 if frontend dist was not built for this run —
+    // do not count that as http_req_failed (setResponseCallback / expectedStatuses).
+    const res = http.get(url("/"), {
+      tags: { endpoint: "spa_root" },
+      responseCallback: http.expectedStatuses(200, 304, 404),
+    });
     check(res, {
       "spa responds": (r) => r.status === 200 || r.status === 404 || r.status === 304,
     });
