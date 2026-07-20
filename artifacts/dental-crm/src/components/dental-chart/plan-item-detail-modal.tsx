@@ -27,6 +27,7 @@ import { getBaseUrl } from "@/lib/base-url";
 import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import { overlayPanelClass, overlayShellClass } from "@/lib/tablet-overlay-classes";
 import { TreatmentSchedulePicker } from "@/components/shared/treatment-schedule-picker";
+import { filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 
 type User = { id: string; name: string; role?: string };
 
@@ -960,7 +961,7 @@ export function PlanItemDetailModal({
                       >
                         Не назначен
                       </button>
-                      {allUsers.filter((u) => u.role === "doctor" || u.role === "admin" || u.role === "owner").map((u) => (
+                      {filterTreatingDoctors(allUsers).map((u) => (
                         <button
                           key={u.id}
                           onClick={() => void handleAssignDoctor(u.id)}
@@ -972,7 +973,7 @@ export function PlanItemDetailModal({
                           <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                             {u.name.charAt(0)}
                           </div>
-                          {u.name}
+                          {treatingDoctorLabel(u)}
                         </button>
                       ))}
                     </div>

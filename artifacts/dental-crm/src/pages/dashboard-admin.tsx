@@ -25,6 +25,7 @@ import { format, parseISO, startOfDay, endOfDay, isYesterday } from "date-fns";
 import { AppointmentModal, type ProcedureItem } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import { AdminScheduleListSkeleton, Bone } from "@/components/skeletons";
+import { filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   kaspi_transfer: "Kaspi Transfer",
@@ -80,9 +81,8 @@ export default function AdminDashboard() {
   );
   const modalDoctors = useMemo(
     () =>
-      (usersData?.data?.users ?? [])
-        .filter((u) => u.role === "doctor")
-        .map((u) => ({ id: u.id, name: u.name })),
+      filterTreatingDoctors(usersData?.data?.users ?? [])
+        .map((u) => ({ id: u.id, name: treatingDoctorLabel(u) })),
     [usersData],
   );
   const modalTemplates = useMemo(

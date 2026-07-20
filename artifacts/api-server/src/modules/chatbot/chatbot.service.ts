@@ -23,6 +23,7 @@ import {
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
 import { phonesMatch } from "../../shared/phone";
+import { TREATING_DOCTOR_ROLES } from "../../lib/clinical-roles";
 import { resolvePatientByPhone, setMarketingOptOut, ensureWhatsAppContactPatient, updatePatientNameByPhone, normalizedPhoneForStorage } from "../../shared/patient-phone-resolver";
 import { mirrorChatbotMessageToPatient, syncChatbotMessagesToPatient } from "../../shared/whatsapp-message-sync";
 import { withSessionLock } from "../../shared/session-lock";
@@ -538,7 +539,7 @@ async function loadDoctorsContext(clinicId: string): Promise<string> {
       .from(usersTable)
       .where(and(
         eq(usersTable.clinicId, clinicId),
-        eq(usersTable.role, "doctor"),
+        inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
         eq(usersTable.isActive, true),
       ));
 

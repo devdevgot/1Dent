@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { parseIIN, isIINError } from "@workspace/api-zod";
 import { AppDialog } from "@/components/layout/app-dialog";
+import { filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 
 interface CreatePatientDialogProps {
   open: boolean;
@@ -55,7 +56,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
       enabled: user?.role === "owner" || user?.role === "admin",
     },
   });
-  const doctors = usersData?.data?.users?.filter((u) => u.role === "doctor") ?? [];
+  const doctors = filterTreatingDoctors(usersData?.data?.users ?? []);
 
   const { data: channelsData } = useListChannels({
     query: {
@@ -315,7 +316,7 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
                 >
                   <option value="">{t("createPatient.noDoctor")}</option>
                   {doctors.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
+                    <option key={d.id} value={d.id}>{treatingDoctorLabel(d)}</option>
                   ))}
                 </select>
               </div>

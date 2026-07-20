@@ -101,7 +101,7 @@ function PatientsListView({
   const doctorMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const u of usersData?.data?.users ?? []) {
-      if (u.role === "doctor") m[u.id] = u.name;
+      if (u.role === "doctor" || u.role === "owner") m[u.id] = u.name;
     }
     return m;
   }, [usersData]);

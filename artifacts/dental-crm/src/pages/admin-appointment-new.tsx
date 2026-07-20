@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isCalendarProcedure } from "@/lib/calendar-procedures";
+import { filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 import { Button } from "@/components/ui/button";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -297,7 +298,7 @@ export default function AdminAppointmentNewPage() {
   );
   const allUsers     = usersData?.data?.users ?? [];
   const allProcedures = proceduresData?.data?.procedures ?? [];
-  const doctors      = allUsers.filter((u) => u.role === "doctor");
+  const doctors      = filterTreatingDoctors(allUsers);
   const templates: ProcedureTemplate[] = (templateData?.data?.templates ?? []) as ProcedureTemplate[];
 
   /* Determine if this is a new patient:
@@ -565,7 +566,7 @@ export default function AdminAppointmentNewPage() {
                   )}>
                     {d.name[0]?.toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium truncate">{d.name}</span>
+                  <span className="text-sm font-medium truncate">{treatingDoctorLabel(d)}</span>
                   {doctorId === d.id && <CheckCircle2 className="w-3.5 h-3.5 ml-auto shrink-0" />}
                 </button>
               ))}

@@ -24,6 +24,7 @@ import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-heade
 import { PeriodPills } from "@/components/layout/period-pills";
 import { FinancialsContentSkeleton, ListRowsSkeleton } from "@/components/skeletons";
 import { usePageBack } from "@/hooks/use-page-back";
+import { filterTreatingDoctors } from "@/lib/role-groups";
 
 const CATEGORY_COLORS: Record<string, string> = {
   salary:    "#4B7BEC",
@@ -131,7 +132,7 @@ export default function FinancialsPage() {
     revenueByDoctor[doctorId]!.count += 1;
   }
 
-  const doctors = users.filter((u) => u.role === "doctor");
+  const doctors = filterTreatingDoctors(users);
 
   function fmtDate(d: string | null | undefined) {
     if (!d) return "—";

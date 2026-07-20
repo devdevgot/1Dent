@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 import { Button } from "@/components/ui/button";
 import { AppDialog } from "@/components/layout/app-dialog";
 import {
@@ -252,9 +253,8 @@ export default function AdminCalendar() {
   );
   const doctors = useMemo(
     () =>
-      (userData?.data?.users ?? [])
-        .filter((u) => u.role === "doctor")
-        .map((u) => ({ id: u.id, name: u.name })),
+      filterTreatingDoctors(userData?.data?.users ?? [])
+        .map((u) => ({ id: u.id, name: treatingDoctorLabel(u) })),
     [userData],
   );
   const templates: ProcedureTemplate[] = useMemo(
