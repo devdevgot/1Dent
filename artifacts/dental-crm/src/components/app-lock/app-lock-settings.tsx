@@ -9,6 +9,7 @@ import { useAppLockStore } from "@/lib/app-lock/store";
 import { canUseBiometricUnlock } from "@/lib/app-lock/webauthn";
 import type { AppLockIdleMinutes } from "@/lib/app-lock/types";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
 import { cn } from "@/lib/utils";
 import { AppLockSetupModal } from "./app-lock-setup-modal";
 import { PwaExclusiveGate } from "@/components/pwa/pwa-exclusive-gate";
@@ -24,6 +25,7 @@ const IDLE_OPTIONS: AppLockIdleMinutes[] = [0, 1, 5, 15, 30];
 export function AppLockSettingsSection({ userName }: { userName: string }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const config = useAppLockStore((s) => s.config);
   const setupPin = useAppLockStore((s) => s.setupPin);
   const setEnabled = useAppLockStore((s) => s.setEnabled);
@@ -45,10 +47,23 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
 
   const hasPin = Boolean(config.pinHash && config.pinSalt);
 
-  const handleToggle = (checked: boolean) => {
+  const handleToggle = async (checked: boolean) => {
     if (checked && !hasPin) {
       setSetupOpen(true);
       return;
+    }
+    if (!checked) {
+      // Danger: disabling the lock clears the PIN and biometric credentials.
+      const ok = await confirm({
+        tone: "danger",
+        title: t("appLock.confirmDisableTitle", "Отключить блокировку?"),
+        description: t(
+          "appLock.confirmDisableDesc",
+          "Защита приложения будет отключена, а PIN-код и биометрия сброшены. Приложение перестанет требовать код при входе.",
+        ),
+        confirmLabel: t("confirm.disable", "Отключить"),
+      });
+      if (!ok) return;
     }
     setEnabled(checked);
     if (!checked) {
@@ -123,7 +138,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
             </div>
             <Switch
               checked={config.enabled}
-              onCheckedChange={handleToggle}
+              onCheckedChange={(v) => void handleToggle(v)}
               disabled={setupLoading}
             />
           </IosGroupRow>

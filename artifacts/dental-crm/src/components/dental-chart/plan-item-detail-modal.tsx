@@ -22,6 +22,7 @@ import type { TreatmentPlanItem } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useConfirm } from "@/hooks/use-confirm";
 import { getBaseUrl } from "@/lib/base-url";
 import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import { overlayPanelClass, overlayShellClass } from "@/lib/tablet-overlay-classes";
@@ -225,6 +226,7 @@ export function PlanItemDetailModal({
   const isAdmin = user?.role === "admin";
   const qc = useQueryClient();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [tab, setTab] = useState<"info" | "ai" | "files">("info");
   const [notes, setNotes] = useState(item.notes ?? "");
   const [previewPath, setPreviewPath] = useState<string | null>(null);
@@ -537,6 +539,14 @@ export function PlanItemDetailModal({
   }, [attachments, patientId, planId, item.id, updateMutation, toast]);
 
   const handleRemoveAttachment = useCallback(async (path: string) => {
+    // Danger: attachments are clinical media (photos, documents) — deletion is permanent.
+    const ok = await confirm({
+      tone: "danger",
+      title: "Удалить файл?",
+      description: "Прикреплённый файл будет удалён из карточки процедуры безвозвратно.",
+      confirmLabel: "Удалить",
+    });
+    if (!ok) return;
     const newAttachments = attachments.filter((a) => a !== path);
     setAttachments(newAttachments);
     await updateMutation.mutateAsync({
@@ -544,7 +554,7 @@ export function PlanItemDetailModal({
       data: { attachments: newAttachments },
     });
     toast({ title: "Файл удалён" });
-  }, [attachments, patientId, planId, item.id, updateMutation, toast]);
+  }, [attachments, patientId, planId, item.id, updateMutation, toast, confirm]);
 
   const startCamera = useCallback(async (facing: "environment" | "user") => {
     setCameraError(null);
@@ -621,6 +631,23 @@ export function PlanItemDetailModal({
     onCancel(item.id);
     onClose();
   }, [item.id, onCancel, onClose]);
+
+  const isExtraction = /удал/i.test(item.title);
+
+  // Danger: starting an extraction is a serious clinical action. Regular
+  // treatment starts stay one-click (frequent, low-risk).
+  const handleStart = useCallback(async () => {
+    if (isExtraction) {
+      const ok = await confirm({
+        tone: "danger",
+        title: "Начать удаление зуба?",
+        description: `Будет начата процедура удаления: «${item.title}». Убедитесь, что выбран правильный зуб и пациент.`,
+        confirmLabel: "Начать удаление",
+      });
+      if (!ok) return;
+    }
+    onStart(item.id, null);
+  }, [isExtraction, item.id, item.title, onStart, confirm]);
 
   const assignedUser = allUsers.find((u) => u.id === selectedDoctor);
 
@@ -887,7 +914,7 @@ export function PlanItemDetailModal({
                       </div>
                     ) : (
                       <button
-                        onClick={() => onStart(item.id, null)}
+                        onClick={() => { void handleStart(); }}
                         disabled={!allSigned}
                         className={cn(
                           "w-full h-11 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-2 transition-all shadow-sm",
@@ -897,7 +924,7 @@ export function PlanItemDetailModal({
                         )}
                       >
                         {allSigned ? <Play className="w-4 h-4" /> : <Lock className="w-3.5 h-3.5" />}
-                        {/удал/i.test(item.title) ? "Начать удаление" : "Начать лечение"}
+                        {isExtraction ? "Начать удаление" : "Начать лечение"}
                       </button>
                     )}
                   </div>

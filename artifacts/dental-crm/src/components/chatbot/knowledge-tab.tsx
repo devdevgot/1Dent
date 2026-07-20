@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
 import { getBaseUrl } from "@/lib/base-url";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,7 @@ interface KnowledgeSource {
 // ── Main KnowledgeTab component ───────────────────────────────────────────────
 export function KnowledgeTab() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [sources, setSources] = useState<KnowledgeSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [urlInput, setUrlInput] = useState("");
@@ -236,6 +238,14 @@ export function KnowledgeTab() {
   };
 
   const handleDeleteSource = async (id: string) => {
+    // Danger: removing a knowledge source degrades the chatbot's answers.
+    const ok = await confirm({
+      tone: "danger",
+      title: "Удалить источник знаний?",
+      description: "Источник будет удалён из базы знаний бота. Это может ухудшить качество ответов, пока вы не пересоберёте промпт.",
+      confirmLabel: "Удалить",
+    });
+    if (!ok) return;
     try {
       await apiFetch(`/api/knowledge/${id}`, { method: "DELETE" });
       setSources((prev) => prev.filter((s) => s.id !== id));
@@ -314,6 +324,16 @@ export function KnowledgeTab() {
   };
 
   const handleComposePrompt = async () => {
+    // Danger: regenerating overwrites the current chatbot system prompt.
+    if (promptStatus.exists) {
+      const ok = await confirm({
+        tone: "danger",
+        title: "Пересоздать промпт?",
+        description: "Текущий system prompt бота будет перезаписан новым, собранным заново из источников. Внесённые вручную доработки будут потеряны.",
+        confirmLabel: "Пересоздать",
+      });
+      if (!ok) return;
+    }
     setComposing(true);
     try {
       await postPromptAction("/api/knowledge/compose-prompt", 100_000);

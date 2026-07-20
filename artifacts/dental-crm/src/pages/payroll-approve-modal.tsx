@@ -10,6 +10,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from "@/components/ui/table";
 import { AppDialog } from "@/components/layout/app-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface PayrollApproveModalProps {
   onClose: () => void;
@@ -23,6 +24,7 @@ const YEARS = [currentYear - 1, currentYear, currentYear + 1];
 
 export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }: PayrollApproveModalProps) {
   const { t } = useTranslation();
+  const confirm = useConfirm();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -70,6 +72,17 @@ export default function PayrollApproveModal({ onClose, onSuccess, filterUserId }
 
   const handleApprove = async () => {
     if (rows.length === 0) return;
+    // Danger: approving payroll fixes amounts and records a salary expense.
+    const ok = await confirm({
+      tone: "danger",
+      title: t("payroll.confirmApproveTitle", "Утвердить ФОТ?"),
+      description: t(
+        "payroll.confirmApproveDesc",
+        `Будет зафиксирован ФОТ за ${MONTH_NAMES[month - 1]} ${year} на сумму ₸${totalFot.toLocaleString("ru-KZ")} и создан расход по зарплате. Отменить будет нельзя.`,
+      ),
+      confirmLabel: t("payroll.approveAndRecord", "Утвердить ФОТ"),
+    });
+    if (!ok) return;
     try {
       await approvePeriod({
         year,

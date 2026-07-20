@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
 import ExpenseDialog from "@/components/expense-dialog";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -86,6 +87,7 @@ export default function AdminFinancePage() {
   const [editingExpense, setEditingExpense] = useState<ClinicExpense | null>(null);
 
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { user } = useAuthStore();
   const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "accountant";
   const canWrite  = user?.role === "owner" || user?.role === "admin";
@@ -150,7 +152,13 @@ export default function AdminFinancePage() {
   const consumption = consumptionData?.data?.consumption ?? [];
 
   async function handleDeleteExpense(id: string) {
-    if (!confirm(t("expenses.confirmDelete"))) return;
+    const ok = await confirm({
+      tone: "danger",
+      title: t("expenses.confirmDelete", "Удалить расход?"),
+      description: t("expenses.confirmDeleteDesc", "Запись о расходе будет удалена из финансового учёта."),
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     try {
       await doDelete(id);
       toast({ title: t("expenses.deleted") });
@@ -586,7 +594,17 @@ export default function AdminFinancePage() {
                             <button
                               key={method}
                               disabled={isSaving}
-                              onClick={() => updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } })}
+                              onClick={async () => {
+                                // Warning: confirm payment classification (e.g. "Долг" vs "Наличные").
+                                const ok = await confirm({
+                                  tone: "warning",
+                                  title: "Подтвердить способ оплаты?",
+                                  description: `Оплата процедуры «${proc.name}» будет отмечена как: ${PAYMENT_METHOD_LABELS[method]}.`,
+                                  confirmLabel: "Подтвердить",
+                                });
+                                if (!ok) return;
+                                updatePayment.mutate({ id: proc.id, data: { paymentMethod: method } });
+                              }}
                               className="px-2 py-1 text-xs rounded-xl border border-[#e8e3d9] hover:border-[#1f75fe] hover:bg-[#1f75fe]/10 hover:text-[#1f75fe] transition-colors disabled:opacity-50"
                             >
                               {PAYMENT_METHOD_LABELS[method]}

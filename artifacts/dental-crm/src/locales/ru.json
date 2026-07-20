@@ -169,6 +169,15 @@
     "edit": "Редактировать",
     "back": "Назад"
   },
+  "confirm": {
+    "cancel": "Отмена",
+    "confirm": "Подтвердить",
+    "delete": "Удалить",
+    "disable": "Отключить",
+    "areYouSure": "Вы уверены?",
+    "irreversible": "Это действие нельзя отменить.",
+    "typeToConfirmHint": "Для подтверждения введите:"
+  },
   "account": {
     "title": "Аккаунт",
     "signOut": "Выйти",

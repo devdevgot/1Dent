@@ -21,6 +21,7 @@ import { GeoTrackingProvider } from "@/components/geo/geo-tracking-provider";
 import { PwaPullToRefreshProvider } from "@/components/pwa/pwa-pull-to-refresh-provider";
 import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { ConfirmProvider } from "@/hooks/use-confirm";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
 import { clearChunkReloadFlag, lazyWithChunkRecovery } from "@/lib/chunk-reload";
 import { isPwaStandalone } from "@/lib/pwa";
@@ -481,16 +482,18 @@ function App() {
       <TooltipProvider>
         <ErrorBoundary>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <AuthProvider>
-              <AppLockProvider>
-                <PushNotificationsProvider>
-                  <GeoTrackingProvider>
-                    <PwaPullToRefreshProvider />
-                    <Router />
-                  </GeoTrackingProvider>
-                </PushNotificationsProvider>
-              </AppLockProvider>
-            </AuthProvider>
+            <ConfirmProvider>
+              <AuthProvider>
+                <AppLockProvider>
+                  <PushNotificationsProvider>
+                    <GeoTrackingProvider>
+                      <PwaPullToRefreshProvider />
+                      <Router />
+                    </GeoTrackingProvider>
+                  </PushNotificationsProvider>
+                </AppLockProvider>
+              </AuthProvider>
+            </ConfirmProvider>
           </WouterRouter>
         </ErrorBoundary>
         <Toaster />

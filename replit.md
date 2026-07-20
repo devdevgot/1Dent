@@ -135,6 +135,25 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 - Inventory page: mobile-first card list, category filters, inline stock editor, low-stock alerts, role-gated create/edit/delete
 - OpenAPI spec updated, codegen run, TypeScript passes cleanly
 
+### Foolproofing — unified confirmations for dangerous actions
+- Purpose: "защита от дурака" — prevent accidental destructive/irreversible actions across web + PWA (including `/tablet`).
+- Infrastructure (`artifacts/dental-crm`):
+  - `hooks/use-confirm.tsx` — `ConfirmProvider` + imperative `useConfirm()` hook returning `confirm(options): Promise<boolean>`. Provider is mounted in `App.tsx` (wraps the whole router).
+  - `components/ui/confirm-dialog.tsx` — single `ConfirmDialog` built on `AlertDialog`, driven by the provider.
+  - i18n keys under `confirm.*` in `locales/{ru,en,kz}.json` (generic labels/hints). Per-action titles/descriptions are passed inline (mostly Russian, matching existing UI).
+- Severity tones:
+  - `warning` — single confirmation, neutral primary button (e.g. payment-method classification, staff invitation).
+  - `danger` — single confirmation, red button; default for deletions/irreversible actions (payroll approval, salary scheme change, tooth extraction start, plan-item cancel, attachment delete, mass import, chatbot disable, knowledge-source delete / prompt regenerate, integration disconnects, WhatsApp reconnect, app-lock disable, tablet unlink, expense/contract-template delete).
+  - `critical` — **double confirmation via type-to-confirm**: the user must type an exact phrase (`requirePhrase`, usually the entity name or "УДАЛИТЬ") before the confirm button enables. Reserved for the most destructive actions only: delete staff user, delete clinic branch, delete geo-tracking branch, wipe all clinic data.
+- Usage:
+  ```ts
+  const confirm = useConfirm();
+  if (!(await confirm({ tone: "danger", title: "Удалить?" }))) return;
+  mutation.mutate(...);
+  ```
+- Intentionally left WITHOUT confirmation (per product decision, to avoid friction): logout, patient status change (drag & dropdown), inventory stock inline edit, expense create/edit forms, routine treatment/plan-item completion.
+- All native `window.confirm` calls were replaced with the unified dialog.
+
 ## Packages
 
 ### `artifacts/api-server` (`@workspace/api-server`)

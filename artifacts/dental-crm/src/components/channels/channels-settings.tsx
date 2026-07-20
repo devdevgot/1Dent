@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useConfirm } from "@/hooks/use-confirm";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { Copy, Download, Trash2, Plus, Globe, Handshake, Megaphone, MapPin, ChevronDown, LogOut, RefreshCw, AlertTriangle, Pencil, Check, X } from "lucide-react";
@@ -65,6 +66,7 @@ export function ChannelsSettings() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -380,7 +382,17 @@ export function ChannelsSettings() {
                 </button>
               )}
               <button
-                onClick={() => {
+                onClick={async () => {
+                  // Danger: reconnecting can drop the current WhatsApp session.
+                  if (waStatus?.connected) {
+                    const ok = await confirm({
+                      tone: "danger",
+                      title: "Переподключить WhatsApp?",
+                      description: "Текущее подключение WhatsApp может быть сброшено, и потребуется заново отсканировать QR-код. Приём и отправка сообщений временно прервутся.",
+                      confirmLabel: "Продолжить",
+                    });
+                    if (!ok) return;
+                  }
                   setWaForceSetup(!!waStatus?.connected);
                   setWaModalOpen(true);
                 }}

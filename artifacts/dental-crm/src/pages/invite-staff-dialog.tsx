@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { customFetch, getListUsersAllQueryKey } from "@workspace/api-client-react";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { AppDialog } from "@/components/layout/app-dialog";
+import { useConfirm } from "@/hooks/use-confirm";
 import { cn } from "@/lib/utils";
 import { formatPhoneInput, phoneToApi } from "@/lib/whatsapp-auth";
 
@@ -327,6 +328,7 @@ interface InviteStaffDialogProps {
 
 export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogProps) {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<InviteFormData>(DEFAULT_FORM);
   const [phoneError, setPhoneError] = useState("");
@@ -469,7 +471,17 @@ export default function InviteStaffDialog({ open, onClose }: InviteStaffDialogPr
             <button
               type="button"
               disabled={inviteMutation.isPending}
-              onClick={() => inviteMutation.mutate(form)}
+              onClick={async () => {
+                // Warning: creates an account and sends login credentials via WhatsApp.
+                const ok = await confirm({
+                  tone: "warning",
+                  title: "Создать сотрудника и отправить приглашение?",
+                  description: `Будет создан аккаунт${form.name.trim() ? ` для «${form.name.trim()}»` : ""} с ролью и данными для входа. Приглашение с доступом отправится на WhatsApp ${form.phone || "указанный номер"}.`,
+                  confirmLabel: "Создать и отправить",
+                });
+                if (!ok) return;
+                inviteMutation.mutate(form);
+              }}
               className="dash-btn dash-btn-primary flex-1 flex items-center justify-center gap-2"
             >
               <Send className="w-4 h-4" />
