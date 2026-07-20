@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { canBeTreatingDoctor, filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 
 const STATUS_COLORS: Record<ProcedureStatus, string> = {
   scheduled:       "bg-[#e0f2fe] text-[#0284c7] border-[#0284c7]/20",
@@ -89,7 +90,7 @@ function NewProcedureModal({
   const { data: inventoryData } = useListInventory();
 
   const patients = patientsData?.data?.patients ?? [];
-  const doctors  = (usersData?.data?.users ?? []).filter((u) => u.role === "doctor");
+  const doctors  = filterTreatingDoctors(usersData?.data?.users ?? []);
   const templates = templatesData?.data?.templates ?? [];
   const inventoryItems = inventoryData?.data?.items ?? [];
 
@@ -99,7 +100,7 @@ function NewProcedureModal({
 
   const [form, setForm] = useState({
     patientId:   "",
-    doctorId:    user?.role === "doctor" ? user.id : "",
+    doctorId:    canBeTreatingDoctor(user?.role) && user ? user.id : "",
     templateId:  "",
     name:        "",
     price:       "",
@@ -388,7 +389,7 @@ function NewProcedureModal({
                 >
                   <option value="">{t("procedure.noDoctor")}</option>
                   {doctors.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
+                    <option key={d.id} value={d.id}>{treatingDoctorLabel(d)}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8] pointer-events-none" />

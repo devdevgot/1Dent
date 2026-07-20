@@ -17,7 +17,7 @@ import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { ScheduleMonthSkeleton } from "@/components/skeletons";
-import { seesClinicSchedule } from "@/lib/role-groups";
+import { filterTreatingDoctors, seesClinicSchedule, treatingDoctorLabel } from "@/lib/role-groups";
 
 /** Solid blue used for day markers (dot / multi-line) — no per-status colors. */
 const MARKER_BLUE = "bg-[#1f75fe]";
@@ -63,9 +63,8 @@ export default function DoctorSchedulePage() {
     [patientData],
   );
   const doctors = useMemo(
-    () => (userData?.data?.users ?? [])
-      .filter((u) => u.role === "doctor")
-      .map((u) => ({ id: u.id, name: u.name })),
+    () => filterTreatingDoctors(userData?.data?.users ?? [])
+      .map((u) => ({ id: u.id, name: treatingDoctorLabel(u) })),
     [userData],
   );
   const templates: ProcedureTemplate[] = useMemo(

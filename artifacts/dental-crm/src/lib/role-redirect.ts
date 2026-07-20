@@ -1,6 +1,15 @@
 export type UserRole = "owner" | "admin" | "doctor" | "accountant" | "warehouse" | "assistant" | "nurse";
 
-export { CLINICAL_STAFF_ROLES, isClinicalStaff, isDoctorRole, seesClinicSchedule, usesScheduleCalendar } from "./role-groups";
+export {
+  CLINICAL_STAFF_ROLES,
+  TREATING_DOCTOR_ROLES,
+  isClinicalStaff,
+  isDoctorRole,
+  canBeTreatingDoctor,
+  filterTreatingDoctors,
+  seesClinicSchedule,
+  usesScheduleCalendar,
+} from "./role-groups";
 
 export function getRoleDashboardPath(role: UserRole | string): string {
   switch (role) {

@@ -3,9 +3,10 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import { doctorHandoffsTable, usersTable, proceduresTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
+import { TREATING_DOCTOR_ROLES } from "../../lib/clinical-roles";
 
 const router: IRouter = Router();
 
@@ -37,18 +38,19 @@ router.post(
     }
 
     try {
-      // Verify both doctors belong to the same clinic and have the 'doctor' role,
-      // and optionally verify that procedureId belongs to this clinic.
+      // Verify both parties belong to the clinic and can be treating physicians
+      // (doctor or owner), and optionally verify that procedureId belongs here.
+      const treatingRoleFilter = inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]);
       const verifications: Promise<unknown>[] = [
         db
           .select({ id: usersTable.id })
           .from(usersTable)
-          .where(and(eq(usersTable.id, fromDoctorId), eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")))
+          .where(and(eq(usersTable.id, fromDoctorId), eq(usersTable.clinicId, clinicId), treatingRoleFilter))
           .limit(1),
         db
           .select({ id: usersTable.id })
           .from(usersTable)
-          .where(and(eq(usersTable.id, toDoctorId), eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")))
+          .where(and(eq(usersTable.id, toDoctorId), eq(usersTable.clinicId, clinicId), treatingRoleFilter))
           .limit(1),
       ];
 

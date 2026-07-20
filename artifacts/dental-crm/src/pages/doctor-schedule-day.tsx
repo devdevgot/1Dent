@@ -21,7 +21,7 @@ import { isCalendarProcedure } from "@/lib/calendar-procedures";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { Bone } from "@/components/skeletons";
-import { seesClinicSchedule } from "@/lib/role-groups";
+import { filterTreatingDoctors, seesClinicSchedule, treatingDoctorLabel } from "@/lib/role-groups";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { usePageBack } from "@/hooks/use-page-back";
 import { haptic, hapticNotify } from "@/lib/haptics";
@@ -631,9 +631,8 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     [ptData],
   );
   const doctorsForModal = useMemo(
-    () => (userData?.data?.users ?? [])
-      .filter((u) => u.role === "doctor")
-      .map((u) => ({ id: u.id, name: u.name })),
+    () => filterTreatingDoctors(userData?.data?.users ?? [])
+      .map((u) => ({ id: u.id, name: treatingDoctorLabel(u) })),
     [userData],
   );
   const templatesForModal: ProcedureTemplate[] = useMemo(

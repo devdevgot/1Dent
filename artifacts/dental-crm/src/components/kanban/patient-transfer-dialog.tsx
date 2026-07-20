@@ -11,6 +11,7 @@ import { TreatmentSchedulePicker } from "@/components/shared/treatment-schedule-
 import { useToast } from "@/hooks/use-toast";
 import { getBaseUrl } from "@/lib/base-url";
 import { cn } from "@/lib/utils";
+import { filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 
 interface PatientTransferDialogProps {
   open: boolean;
@@ -42,7 +43,7 @@ export function PatientTransferDialog({
   const [submitting, setSubmitting] = useState(false);
 
   const doctors = useMemo(
-    () => allUsers.filter((u) => u.role === "doctor" && u.id !== currentDoctorId),
+    () => filterTreatingDoctors(allUsers).filter((u) => u.id !== currentDoctorId),
     [allUsers, currentDoctorId],
   );
 
@@ -195,7 +196,7 @@ export function PatientTransferDialog({
                       {doctor.name[0]?.toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#0f172a] truncate">{doctor.name}</p>
+                      <p className="text-sm font-semibold text-[#0f172a] truncate">{treatingDoctorLabel(doctor)}</p>
                       <p className="text-xs text-[#94a3b8] truncate">{doctor.email}</p>
                     </div>
                   </button>
@@ -227,7 +228,7 @@ export function PatientTransferDialog({
                 Передать пациента{" "}
                 <span className="font-semibold text-[#0f172a]">{patientName}</span>{" "}
                 врачу{" "}
-                <span className="font-semibold text-[#0f172a]">{targetDoctor.name}</span>?
+                <span className="font-semibold text-[#0f172a]">{treatingDoctorLabel(targetDoctor)}</span>?
               </p>
               <p className="text-[13px] text-[#64748b]">
                 Запись:{" "}

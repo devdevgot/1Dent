@@ -13,6 +13,7 @@ import {
   isInvalidAppointmentTime,
 } from "./almaty-time";
 import type { DoctorWithSlots } from "./chatbot.service.types";
+import { TREATING_DOCTOR_ROLES } from "../../lib/clinical-roles";
 
 const ACTIVE_PROCEDURE_STATUSES = ["scheduled", "in_progress"] as const;
 
@@ -214,7 +215,11 @@ export async function getClinicDoctorsLightweight(clinicId: string): Promise<Doc
   const doctors = await db
     .select({ id: usersTable.id, name: usersTable.name, specialty: usersTable.specialty })
     .from(usersTable)
-    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)))
+    .where(and(
+      eq(usersTable.clinicId, clinicId),
+      inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
+      eq(usersTable.isActive, true),
+    ))
     .limit(8);
 
   return doctors.map((doc) => ({
@@ -232,7 +237,11 @@ export async function getClinicDoctorsWithSlots(
   const doctors = await db
     .select({ id: usersTable.id, name: usersTable.name, specialty: usersTable.specialty })
     .from(usersTable)
-    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor"), eq(usersTable.isActive, true)))
+    .where(and(
+      eq(usersTable.clinicId, clinicId),
+      inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
+      eq(usersTable.isActive, true),
+    ))
     .limit(15);
 
   if (doctors.length === 0) return [];

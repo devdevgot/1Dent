@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, doctorHandoffsTable, usersTable } from "@workspace/db";
 import { PatientsRepository } from "./patients.repository";
 import { ProceduresRepository } from "../procedures/procedures.repository";
@@ -15,6 +15,7 @@ import {
 } from "../../shared/errors";
 import { isBaseVersionCurrent } from "../../shared/optimistic-concurrency";
 import { parseIIN, isIINError } from "@workspace/api-zod";
+import { TREATING_DOCTOR_ROLES } from "../../lib/clinical-roles";
 import type {
   Patient,
   PatientInteraction,
@@ -295,7 +296,7 @@ export class PatientsService {
         and(
           eq(usersTable.id, data.toDoctorId),
           eq(usersTable.clinicId, clinicId),
-          eq(usersTable.role, "doctor"),
+          inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
         ),
       )
       .limit(1);

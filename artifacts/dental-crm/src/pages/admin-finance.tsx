@@ -20,6 +20,7 @@ import {
   Users, Zap, Plus, Pencil, Trash2, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { filterTreatingDoctors } from "@/lib/role-groups";
 import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, parseISO, differenceInDays } from "date-fns";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -114,7 +115,7 @@ export default function AdminFinancePage() {
   const allProcedures = proceduresData?.data?.procedures ?? [];
   const allUsers = usersData?.data?.users ?? [];
   const allPatients = patientsData?.data?.patients ?? [];
-  const doctors = allUsers.filter((u) => u.role === "doctor");
+  const doctors = filterTreatingDoctors(allUsers);
   const patientMap = new Map(allPatients.map((p) => [p.id, p.name]));
   const doctorMap = new Map(allUsers.map((u) => [u.id, u.name]));
 
