@@ -9,13 +9,14 @@
  *    offline. This keeps deploys fresh (new index.html is always fetched online).
  *  - Hashed build assets (/assets/*): cache-first. Filenames are content-hashed
  *    and immutable, so cached copies are always correct and enable offline reloads.
- *  - Same-origin static files (icons, images, manifest): stale-while-revalidate.
+ *  - App 3D icons (/icons/*): cache-first (small, immutable-enough assets).
+ *  - Other same-origin static files (images, manifest, fonts): stale-while-revalidate.
  *  - API requests (/api/*) and cross-origin requests: never handled by the SW.
  *  - On activate after a version bump, tell open clients to reload once so lazy
  *    chunks match the fresh shell (avoids blank Schedule / other lazy routes).
  */
 
-const VERSION = "1dent-pwa-v10";
+const VERSION = "1dent-pwa-v11";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -99,9 +100,13 @@ function isHashedAsset(url) {
   return url.pathname.startsWith("/assets/");
 }
 
+function isAppIcon(url) {
+  return url.pathname.startsWith("/icons/");
+}
+
 function isCacheableStatic(url) {
+  if (isAppIcon(url)) return false;
   return (
-    url.pathname.startsWith("/icons/") ||
     url.pathname.startsWith("/images/") ||
     url.pathname === "/manifest.webmanifest" ||
     /\.(png|jpe?g|svg|webp|gif|ico|woff2?|ttf)$/i.test(url.pathname)
@@ -177,6 +182,13 @@ self.addEventListener("fetch", (event) => {
 
   if (isHashedAsset(url)) {
     event.respondWith(cacheFirst(request, ASSET_CACHE));
+    return;
+  }
+
+  // Profile/Services 3D icons: serve instantly from cache to avoid blank
+  // circles when the network is slow or the SW race aborts a large PNG.
+  if (isAppIcon(url)) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }
 

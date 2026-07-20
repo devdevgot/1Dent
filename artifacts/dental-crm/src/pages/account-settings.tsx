@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { ListRowsSkeleton } from "@/components/skeletons";
 import PhotoCropModal from "@/components/account/photo-crop-modal";
 import { SettingsRowIcon } from "@/components/account/settings-row-icon";
-import { PROFILE_ICONS, PROFILE_CARD_CLASS } from "@/lib/profile-icons";
+import { PROFILE_ICONS, PROFILE_CARD_CLASS, prefetchProfileIcons } from "@/lib/profile-icons";
 import { formatUserPhoneDisplay } from "@/lib/user-contact";
 import { PageShell } from "@/components/layout/page-shell";
 import { RootTabHeader } from "@/components/layout/root-tab-header";
@@ -52,6 +52,10 @@ export default function AccountSettings() {
     const handleLanguageChanged = (lang: string) => setCurrentLang(normalizeLang(lang));
     i18n.on("languageChanged", handleLanguageChanged);
     return () => i18n.off("languageChanged", handleLanguageChanged);
+  }, []);
+
+  useEffect(() => {
+    prefetchProfileIcons();
   }, []);
 
   const { data: myPayrollData, isLoading: payrollLoading } = useGetMyPayrollRecords();

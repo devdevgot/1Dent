@@ -1,6 +1,6 @@
 /**
  * 3D icon assets for the Profile page, matching the Home/Services icon style.
- * Files live in /public/icons/profile/*.png (512×512, pastel squircle renders).
+ * Files live in /public/icons/profile/*.png (compressed ~128×128 pastels).
  */
 export const PROFILE_ICONS = {
   profile: "/icons/profile/profile.png",
@@ -15,6 +15,16 @@ export const PROFILE_ICONS = {
   logout: "/icons/profile/logout.png",
   salary: "/icons/menu/financials.png",
 } as const;
+
+/** Warm browser/HTTP cache so Profile rows don't paint empty circles. */
+export function prefetchProfileIcons() {
+  if (typeof window === "undefined") return;
+  for (const src of Object.values(PROFILE_ICONS)) {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = src;
+  }
+}
 
 /** Unified card look shared with the Home & Services pages. */
 export const PROFILE_CARD_CLASS =

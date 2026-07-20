@@ -102,7 +102,7 @@ function PushNotificationSettingsInner() {
   return (
     <IosSection title={t("push.sectionTitle")}>
       <IosGroup className={PROFILE_CARD_CLASS}>
-        <IosGroupRow className="gap-3 items-start">
+        <IosGroupRow className="gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <SettingsRowIcon img={PROFILE_ICONS.notifications} />
             <div className="min-w-0">
@@ -117,6 +117,7 @@ function PushNotificationSettingsInner() {
             </div>
           </div>
           <Switch
+            className="self-center"
             checked={enabled}
             onCheckedChange={(v) => void handleToggle(v)}
             disabled={loading || busy || permission === "denied"}
