@@ -8,7 +8,7 @@ import { ContractsRepository } from "./contracts.repository";
 import { analyzeContractFields, renderContractHtml, PATIENT_FIELDS } from "./contracts.ai";
 import { getExtractionTemplateDef, renderExtractionTemplate, getExtractionTemplateText } from "./extraction-templates";
 import { textToHtml, wrapContractPreviewDocument } from "./contract-render";
-import { sendToPatient } from "../../shared/messaging";
+import { sendPlatformWhatsApp, isPlatformWhatsAppConfigured } from "../../shared/platform-whatsapp";
 import { getPublicAppBaseUrl } from "../../shared/public-url";
 import { logger } from "../../lib/logger";
 import { db, patientsTable, usersTable, clinicsTable, type FieldMapping } from "@workspace/db";
@@ -465,7 +465,8 @@ router.post(
 
     const message = `📋 *${template.name}*\n\nУважаемый(-ая) ${patientRow.name}!\n\nВам отправлен договор для ознакомления и подписи.\n\nОткройте по ссылке: ${contractUrl}\n\nПосле прочтения нажмите кнопку «Подписать».`;
 
-    sendToPatient(clinicId, patientRow.phone, message).catch((err: unknown) => {
+    // Contract links go via platform 1Dent WhatsApp (same channel as login OTP / staff invites)
+    sendPlatformWhatsApp(patientRow.phone, message).catch((err: unknown) => {
       logger.error({ err, patientId, token }, "[contracts] Failed to send WhatsApp message");
     });
 
@@ -500,24 +501,9 @@ function buildBundleWhatsappMessage(opts: {
   );
 }
 
-async function isWhatsappConfigured(clinicId: string): Promise<boolean> {
-  const [clinicSettings] = await db
-    .select({
-      greenApiInstanceId: clinicsTable.greenApiInstanceId,
-      greenApiToken: clinicsTable.greenApiToken,
-    })
-    .from(clinicsTable)
-    .where(eq(clinicsTable.id, clinicId))
-    .limit(1);
-
-  const metaEnabled = !!(
-    process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
-  );
-  const greenApiEnabled = !!(
-    clinicSettings?.greenApiInstanceId && clinicSettings?.greenApiToken
-  );
-
-  return greenApiEnabled || metaEnabled;
+/** Contracts use the platform 1Dent WhatsApp instance, not the clinic's number. */
+async function isContractWhatsappConfigured(): Promise<boolean> {
+  return isPlatformWhatsAppConfigured();
 }
 
 /** Shared helper — loads patient + clinic + doctor for the extraction bundle endpoints */
@@ -669,8 +655,8 @@ router.post(
 );
 
 // POST /contracts/bundle/:bundleToken/send-whatsapp
-// Sends the WhatsApp link for an already-prepared bundle.
-// Returns 422 WHATSAPP_NOT_CONNECTED if the clinic has no WhatsApp configured.
+// Sends the WhatsApp link for an already-prepared bundle via platform 1Dent WhatsApp.
+// Returns 422 WHATSAPP_NOT_CONNECTED if the platform instance is not configured.
 router.post(
   "/bundle/:bundleToken/send-whatsapp",
   authMiddleware,
@@ -686,8 +672,12 @@ router.post(
       return next(new NotFoundError("Пакет не найден"));
     }
 
-    if (!(await isWhatsappConfigured(clinicId))) {
-      return next(new WhatsappNotConnectedError());
+    if (!(await isContractWhatsappConfigured())) {
+      return next(
+        new WhatsappNotConnectedError(
+          "Системный WhatsApp 1Dent временно недоступен. Попробуйте позже или обратитесь в поддержку.",
+        ),
+      );
     }
 
     const { patientName, patientPhone, clinicName } = rows[0]!;
@@ -713,16 +703,16 @@ router.post(
     });
 
     try {
-      const idMessage = await sendToPatient(clinicId, patientPhone, message);
+      const idMessage = await sendPlatformWhatsApp(patientPhone, message);
       if (!idMessage) {
-        logger.warn({ bundleToken, clinicId, patientPhone }, "[contracts] sendToPatient returned empty idMessage");
+        logger.warn({ bundleToken, clinicId, patientPhone }, "[contracts] sendPlatformWhatsApp returned empty idMessage");
         return res.status(502).json({
           success: false,
           code: "WHATSAPP_SEND_FAILED",
-          error: "WhatsApp не подключён или сообщение не доставлено",
+          error: "Не удалось отправить сообщение через системный WhatsApp 1Dent",
         });
       }
-      logger.info({ bundleToken, idMessage }, "[contracts] bundle WhatsApp sent");
+      logger.info({ bundleToken, idMessage }, "[contracts] bundle WhatsApp sent via platform");
       await repo.markBundleSent(bundleToken);
       res.json({ success: true, data: { bundleToken, bundleUrl, idMessage } });
     } catch (err) {
@@ -797,8 +787,12 @@ router.post(
       );
     }
 
-    if (!(await isWhatsappConfigured(clinicId))) {
-      return next(new WhatsappNotConnectedError());
+    if (!(await isContractWhatsappConfigured())) {
+      return next(
+        new WhatsappNotConnectedError(
+          "Системный WhatsApp 1Dent временно недоступен. Попробуйте позже или обратитесь в поддержку.",
+        ),
+      );
     }
 
     const bundleUrl = buildBundleUrl(req, bundleToken);
@@ -823,12 +817,12 @@ router.post(
     });
 
     try {
-      const idMessage = await sendToPatient(clinicId, ctx.patientPhone, message);
+      const idMessage = await sendPlatformWhatsApp(ctx.patientPhone, message);
       if (!idMessage) {
         return res.status(502).json({
           success: false,
           code: "WHATSAPP_SEND_FAILED",
-          error: "WhatsApp не подключён или сообщение не доставлено",
+          error: "Не удалось отправить сообщение через системный WhatsApp 1Dent",
         });
       }
       await repo.markBundleSent(bundleToken);

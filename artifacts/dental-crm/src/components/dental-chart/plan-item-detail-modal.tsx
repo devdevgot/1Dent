@@ -392,7 +392,10 @@ export function PlanItemDetailModal({
       };
       if (!sendRes.ok || !sendData.success) {
         if (sendData.code === "WHATSAPP_NOT_CONNECTED" || sendRes.status === 422) {
-          throw new Error("WhatsApp не подключён. Подключите WhatsApp в настройках каналов.");
+          throw new Error(
+            sendData.error
+              ?? "Системный WhatsApp 1Dent временно недоступен. Попробуйте позже или обратитесь в поддержку.",
+          );
         }
         throw new Error(sendData.error ?? "Ошибка отправки WhatsApp");
       }

@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef, Suspense, startTransition, type ComponentType } from "react";
 import { createPortal } from "react-dom";
-import { useLocation } from "wouter";
 import {
   useGetPatient,
   useListTeeth,
@@ -841,7 +840,6 @@ function DiagnosisSummaryModal({
 
 export function PatientDetailPanel() {
   const { t } = useTranslation();
-  const [, setLocation] = useLocation();
   const selectedPatientId = useKanbanStore((s) => s.selectedPatientId);
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
   const activeTab = useKanbanStore((s) => s.activeTab);
@@ -2885,20 +2883,13 @@ export function PatientDetailPanel() {
                     <AppDialog
                       open={whatsappNotConnectedOpen}
                       onOpenChange={setWhatsappNotConnectedOpen}
-                      title="WhatsApp не подключён"
-                      description="Чтобы отправить договоры пациенту, сначала подключите WhatsApp в настройках каналов."
+                      title="Не удалось отправить"
+                      description="Системный WhatsApp 1Dent временно недоступен. Попробуйте позже или обратитесь в поддержку."
                       size="sm"
                       showClose={false}
                       footer={
                         <div className="flex flex-col gap-2 w-full">
                           <Button
-                            className="w-full"
-                            onClick={() => { setWhatsappNotConnectedOpen(false); setLocation("/channels"); }}
-                          >
-                            Подключить WhatsApp
-                          </Button>
-                          <Button
-                            variant="outline"
                             className="w-full"
                             onClick={() => setWhatsappNotConnectedOpen(false)}
                           >
