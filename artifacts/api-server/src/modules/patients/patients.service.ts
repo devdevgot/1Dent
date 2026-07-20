@@ -7,7 +7,13 @@ import {
   transitionPatientStage,
   PATIENT_STAGE_TRIGGERS,
 } from "./patient-stage.service";
-import { NotFoundError, ForbiddenError, ValidationError } from "../../shared/errors";
+import {
+  NotFoundError,
+  ForbiddenError,
+  ValidationError,
+  ConflictError,
+} from "../../shared/errors";
+import { isBaseVersionCurrent } from "../../shared/optimistic-concurrency";
 import { parseIIN, isIINError } from "@workspace/api-zod";
 import type {
   Patient,
@@ -18,6 +24,18 @@ import type {
   InteractionType,
   UserRole,
 } from "@workspace/db";
+
+function assertPatientVersion(
+  existing: Patient,
+  baseUpdatedAt?: string | null,
+): void {
+  if (isBaseVersionCurrent(existing.updatedAt, baseUpdatedAt)) return;
+  throw new ConflictError(
+    "Пациент был изменён другим пользователем. Обновите данные и повторите изменение.",
+    { entity: "patient", current: existing },
+    "VERSION_CONFLICT",
+  );
+}
 
 function maskPhone(phone: string, role: UserRole): string {
   if (role === "doctor" || role === "assistant" || role === "nurse") {
@@ -145,9 +163,11 @@ export class PatientsService {
     }>,
     requestingRole: UserRole,
     requestingUserId: string,
+    baseUpdatedAt?: string | null,
   ): Promise<PatientDTO> {
     const existing = await this.repo.findById(id, clinicId);
     if (!existing) throw new NotFoundError("Patient not found");
+    assertPatientVersion(existing, baseUpdatedAt);
 
     const sanitizedData = { ...data };
     if (requestingRole === "doctor") {
@@ -178,9 +198,11 @@ export class PatientsService {
     status: PatientStatus,
     requestingRole: UserRole,
     requestingUserId: string,
+    baseUpdatedAt?: string | null,
   ): Promise<PatientDTO> {
     const existing = await this.repo.findById(id, clinicId);
     if (!existing) throw new NotFoundError("Patient not found");
+    assertPatientVersion(existing, baseUpdatedAt);
 
     await transitionPatientStage({
       patientId: id,

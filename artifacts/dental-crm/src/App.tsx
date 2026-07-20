@@ -19,6 +19,10 @@ import { AppLockProvider } from "@/components/app-lock/app-lock-provider";
 import { PushNotificationsProvider } from "@/components/push/push-notifications-provider";
 import { GeoTrackingProvider } from "@/components/geo/geo-tracking-provider";
 import { PwaPullToRefreshProvider } from "@/components/pwa/pwa-pull-to-refresh-provider";
+import {
+  OfflineSyncProvider,
+  wipeOfflineOnLogout,
+} from "@/components/offline/offline-sync-provider";
 import { getRoleDashboardPath, CLINICAL_STAFF_ROLES } from "@/lib/role-redirect";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ConfirmProvider } from "@/hooks/use-confirm";
@@ -210,6 +214,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (path.startsWith("/tablet")) return;
 
       clearPersistedQueryCache();
+      void wipeOfflineOnLogout();
       clearBranchContext();
       clearAppLockSessionMarkers();
       useAppLockStore.getState().reset();
@@ -488,6 +493,7 @@ function App() {
                   <PushNotificationsProvider>
                     <GeoTrackingProvider>
                       <PwaPullToRefreshProvider />
+                      <OfflineSyncProvider />
                       <Router />
                     </GeoTrackingProvider>
                   </PushNotificationsProvider>

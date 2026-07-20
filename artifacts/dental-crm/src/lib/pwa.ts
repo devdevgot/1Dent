@@ -158,6 +158,25 @@ export async function promptInstall(): Promise<
   }
 }
 
+type ServiceWorkerMessageHandler = (data: { type?: string }) => void;
+
+let swMessageHandler: ServiceWorkerMessageHandler | null = null;
+
+/** Listen for service-worker messages (e.g. Background Sync → flush outbox). */
+export function setServiceWorkerMessageHandler(
+  handler: ServiceWorkerMessageHandler | null,
+): void {
+  swMessageHandler = handler;
+}
+
+/** Ask the service worker to register a Background Sync tag for the outbox. */
+export function requestOutboxBackgroundSync(): void {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+  const controller = navigator.serviceWorker.controller;
+  if (!controller) return;
+  controller.postMessage({ type: "REQUEST_OUTBOX_SYNC" });
+}
+
 /** Register the service worker in production builds. */
 export function registerServiceWorker(): void {
   if (typeof window === "undefined") return;
@@ -169,6 +188,12 @@ export function registerServiceWorker(): void {
       // Registration failures must never break the app.
     });
   };
+
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    const data = event.data as { type?: string } | null;
+    if (!data?.type) return;
+    swMessageHandler?.(data);
+  });
 
   if (document.readyState === "complete") {
     register();

@@ -15,6 +15,21 @@ export type AuthTokenGetter = () => Promise<string | null> | string | null;
 export type BranchIdGetter = () => Promise<string | null> | string | null;
 export type UnauthorizedHandler = () => void;
 
+/** Optional offline/outbox interceptor registered by the CRM PWA. */
+export type OfflineMutationInterceptor = (args: {
+  url: string;
+  method: string;
+  body: string | null;
+  headers: Headers;
+}) => Promise<unknown | null>;
+
+/** Optional body rewriter (e.g. inject baseUpdatedAt for optimistic concurrency). */
+export type RequestBodyRewriter = (args: {
+  url: string;
+  method: string;
+  body: string | null;
+}) => string | null;
+
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
@@ -37,6 +52,8 @@ let _authTokenGetter: AuthTokenGetter | null = null;
 let _branchIdGetter: BranchIdGetter | null = null;
 let _unauthorizedHandler: UnauthorizedHandler | null = null;
 let _unauthorizedFired = false;
+let _offlineMutationInterceptor: OfflineMutationInterceptor | null = null;
+let _requestBodyRewriter: RequestBodyRewriter | null = null;
 
 /**
  * Register a handler that is called once when any API response returns 401.
@@ -77,6 +94,22 @@ export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
 
 export function setBranchIdGetter(getter: BranchIdGetter | null): void {
   _branchIdGetter = getter;
+}
+
+/**
+ * Register an interceptor that can queue mutating API calls while offline
+ * and return a synthetic success payload so the UI stays usable.
+ * Return `null` to fall through to the network.
+ */
+export function setOfflineMutationInterceptor(
+  interceptor: OfflineMutationInterceptor | null,
+): void {
+  _offlineMutationInterceptor = interceptor;
+}
+
+/** Rewrite JSON bodies before send (used to inject baseUpdatedAt). */
+export function setRequestBodyRewriter(rewriter: RequestBodyRewriter | null): void {
+  _requestBodyRewriter = rewriter;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -419,10 +452,28 @@ export async function customFetch<T = unknown>(
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
 
+  let body =
+    typeof init.body === "string"
+      ? init.body
+      : init.body == null
+        ? null
+        : null;
+
+  // Only rewrite string JSON bodies (Orval always sends JSON.stringify).
+  if (typeof init.body === "string" && _requestBodyRewriter) {
+    body = _requestBodyRewriter({
+      url: resolveUrl(input),
+      method,
+      body: init.body,
+    });
+  } else if (typeof init.body === "string") {
+    body = init.body;
+  }
+
   if (
-    typeof init.body === "string" &&
+    typeof body === "string" &&
     !headers.has("content-type") &&
-    looksLikeJson(init.body)
+    looksLikeJson(body)
   ) {
     headers.set("content-type", "application/json");
   }
@@ -433,7 +484,51 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = await attachAuthHeaders(input, headers);
 
-  const response = await fetch(input, { ...init, method, headers, credentials: "include" });
+  if (
+    _offlineMutationInterceptor &&
+    method !== "GET" &&
+    method !== "HEAD" &&
+    typeof navigator !== "undefined" &&
+    navigator.onLine === false
+  ) {
+    const synthetic = await _offlineMutationInterceptor({
+      url: requestInfo.url,
+      method,
+      body,
+      headers,
+    });
+    if (synthetic !== null) {
+      return synthetic as T;
+    }
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(input, {
+      ...init,
+      method,
+      headers,
+      body: body ?? init.body,
+      credentials: "include",
+    });
+  } catch (networkErr) {
+    if (
+      _offlineMutationInterceptor &&
+      method !== "GET" &&
+      method !== "HEAD"
+    ) {
+      const synthetic = await _offlineMutationInterceptor({
+        url: requestInfo.url,
+        method,
+        body,
+        headers,
+      });
+      if (synthetic !== null) {
+        return synthetic as T;
+      }
+    }
+    throw networkErr;
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

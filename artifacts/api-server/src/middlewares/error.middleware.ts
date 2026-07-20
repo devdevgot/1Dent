@@ -112,11 +112,20 @@ export function errorHandler(
   if (err instanceof AppError) {
     req.log?.warn({ err, code: err.code }, err.message);
     captureAppError(err, req);
-    res.status(err.statusCode).json({
+    const payload: {
+      success: false;
+      error: string;
+      code?: string;
+      data?: unknown;
+    } = {
       success: false,
       error: err.message,
       code: err.code,
-    });
+    };
+    if (err instanceof ConflictError && err.details !== undefined) {
+      payload.data = err.details;
+    }
+    res.status(err.statusCode).json(payload);
     return;
   }
 
