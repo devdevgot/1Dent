@@ -8,9 +8,10 @@ import { isPwaStandalone } from "@/lib/pwa";
 /**
  * App-wide pull-to-refresh for the standalone PWA.
  *
- * Mounted once at the root. Rubber-bands the `data-ptr-surface` (header +
- * content) so a spinner appears in the top gap above search — never overlaid
- * on chrome. Surfaces with `data-ptr-ignore` (e.g. schedule drag) are skipped.
+ * Mounted once at the root. Rubber-bands the nearest `data-ptr-surface`
+ * (home chrome, menu overlays, etc.) so the iOS spinner sits in the revealed
+ * gap above the page — never over search/title. `data-ptr-ignore` skips
+ * schedule drag-to-create.
  */
 export function PwaPullToRefreshProvider() {
   const queryClient = useQueryClient();
