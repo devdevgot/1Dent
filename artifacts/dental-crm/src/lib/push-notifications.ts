@@ -1,4 +1,5 @@
 import { getBaseUrl } from "@/lib/base-url";
+import { clearAppBadge } from "@/lib/app-badge";
 import { isPwaStandalone } from "@/lib/pwa";
 
 function getAuthHeaders(): HeadersInit {
@@ -175,6 +176,8 @@ export async function unsubscribeFromPushNotifications(): Promise<void> {
 
     await subscription.unsubscribe().catch(() => {});
   }
+
+  await clearAppBadge();
 }
 
 export async function syncPushSubscriptionIfGranted(): Promise<boolean> {

@@ -16,7 +16,7 @@
  *    chunks match the fresh shell (avoids blank Schedule / other lazy routes).
  */
 
-const VERSION = "1dent-pwa-v11";
+const VERSION = "1dent-pwa-v12";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -197,6 +197,39 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+async function updateAppBadgeFromPush(payload) {
+  const nav = self.navigator;
+  if (!nav || typeof nav.setAppBadge !== "function") return;
+
+  try {
+    if (typeof payload.unreadCount === "number" && Number.isFinite(payload.unreadCount)) {
+      const n = Math.max(0, Math.floor(payload.unreadCount));
+      if (n <= 0) {
+        if (typeof nav.clearAppBadge === "function") await nav.clearAppBadge();
+        else await nav.setAppBadge(0);
+      } else {
+        await nav.setAppBadge(n);
+      }
+      return;
+    }
+
+    // Tracking / broadcast pushes without an unread count: badge = open notifications.
+    const notes = await self.registration.getNotifications();
+    const count = Math.max(1, notes.length);
+    await nav.setAppBadge(count);
+  } catch {
+    // Badging unsupported or permission revoked — ignore.
+  }
+}
+
+function askClientsToSyncAppBadge() {
+  return clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+    for (const client of windowClients) {
+      client.postMessage({ type: "1DENT_SYNC_APP_BADGE" });
+    }
+  });
+}
+
 self.addEventListener("push", (event) => {
   let payload = {
     title: "Уведомление",
@@ -216,13 +249,17 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: "/icons/pwa/icon-192.png",
-      badge: "/icons/pwa/icon-192.png",
-      tag: payload.tag || "1dent",
-      data: { url: payload.url || "/" },
-    }),
+    (async () => {
+      await self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: "/icons/pwa/icon-192.png",
+        badge: "/icons/pwa/icon-192.png",
+        tag: payload.tag || "1dent",
+        data: { url: payload.url || "/" },
+      });
+      // Home-screen badge (iOS PWA Badging API; Android often auto-badges from notifications).
+      await updateAppBadgeFromPush(payload);
+    })(),
   );
 });
 
@@ -231,7 +268,9 @@ self.addEventListener("notificationclick", (event) => {
   const targetUrl = event.notification.data?.url || "/";
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+    (async () => {
+      await askClientsToSyncAppBadge();
+      const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
       const urlToOpen = new URL(targetUrl, self.location.origin).href;
       for (const client of windowClients) {
         if ("focus" in client) {
@@ -242,6 +281,6 @@ self.addEventListener("notificationclick", (event) => {
         return clients.openWindow(urlToOpen);
       }
       return undefined;
-    }),
+    })(),
   );
 });

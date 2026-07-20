@@ -1,9 +1,24 @@
-import type { Notification, NotificationType } from "@workspace/db";
+import { db, notificationsTable, type Notification, type NotificationType } from "@workspace/db";
+import { and, count, eq } from "drizzle-orm";
 import {
   sendWebPushToUser,
   sendWebPushToUsers,
   type WebPushPayload,
 } from "./push-notifications";
+
+async function countUnreadForUser(userId: string, clinicId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: count() })
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.userId, userId),
+        eq(notificationsTable.clinicId, clinicId),
+        eq(notificationsTable.read, false),
+      ),
+    );
+  return Number(row?.count ?? 0);
+}
 
 function titleForType(
   type: NotificationType,
@@ -78,18 +93,26 @@ function urlForNotification(notification: Notification): string {
   }
 }
 
-export function buildNotificationPushPayload(notification: Notification): WebPushPayload {
+export function buildNotificationPushPayload(
+  notification: Notification,
+  unreadCount?: number,
+): WebPushPayload {
   return {
     title: titleForType(notification.type, notification.payload),
     body: notification.message,
     url: urlForNotification(notification),
     tag: `1dent-${notification.type}-${notification.id}`,
     notificationId: notification.id,
+    ...(typeof unreadCount === "number" ? { unreadCount } : {}),
   };
 }
 
 export async function emitPushForNotification(notification: Notification): Promise<void> {
-  void sendWebPushToUser(notification.userId, buildNotificationPushPayload(notification));
+  const unreadCount = await countUnreadForUser(notification.userId, notification.clinicId);
+  void sendWebPushToUser(
+    notification.userId,
+    buildNotificationPushPayload(notification, unreadCount),
+  );
 }
 
 export async function emitPushForNotifications(notifications: Notification[]): Promise<void> {
@@ -97,7 +120,11 @@ export async function emitPushForNotifications(notifications: Notification[]): P
 
   await Promise.all(
     notifications.map(async (notification) => {
-      await sendWebPushToUser(notification.userId, buildNotificationPushPayload(notification));
+      const unreadCount = await countUnreadForUser(notification.userId, notification.clinicId);
+      await sendWebPushToUser(
+        notification.userId,
+        buildNotificationPushPayload(notification, unreadCount),
+      );
     }),
   );
 }

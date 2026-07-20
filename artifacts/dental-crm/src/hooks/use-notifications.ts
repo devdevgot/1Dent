@@ -19,11 +19,12 @@ export function useNotifications(options?: { paused?: boolean }) {
   });
 }
 
-export function useUnreadCount() {
+export function useUnreadCount(options?: { enabled?: boolean }) {
   return useGetUnreadNotificationsCount({
     query: {
       queryKey: getGetUnreadNotificationsCountQueryKey(),
       refetchInterval: 10000,
+      enabled: options?.enabled,
     },
   });
 }
