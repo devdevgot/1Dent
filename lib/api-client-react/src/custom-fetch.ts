@@ -23,6 +23,12 @@ export type OfflineMutationInterceptor = (args: {
   headers: Headers;
 }) => Promise<unknown | null>;
 
+/** Optional offline read interceptor — return cached payload or null. */
+export type OfflineReadInterceptor = (args: {
+  url: string;
+  method: string;
+}) => Promise<unknown | null>;
+
 /** Optional body rewriter (e.g. inject baseUpdatedAt for optimistic concurrency). */
 export type RequestBodyRewriter = (args: {
   url: string;
@@ -53,6 +59,7 @@ let _branchIdGetter: BranchIdGetter | null = null;
 let _unauthorizedHandler: UnauthorizedHandler | null = null;
 let _unauthorizedFired = false;
 let _offlineMutationInterceptor: OfflineMutationInterceptor | null = null;
+let _offlineReadInterceptor: OfflineReadInterceptor | null = null;
 let _requestBodyRewriter: RequestBodyRewriter | null = null;
 
 /**
@@ -107,9 +114,23 @@ export function setOfflineMutationInterceptor(
   _offlineMutationInterceptor = interceptor;
 }
 
+/**
+ * Register an interceptor that serves cached GET responses while offline.
+ * Return `null` to fall through (or fail) normally.
+ */
+export function setOfflineReadInterceptor(
+  interceptor: OfflineReadInterceptor | null,
+): void {
+  _offlineReadInterceptor = interceptor;
+}
+
 /** Rewrite JSON bodies before send (used to inject baseUpdatedAt). */
 export function setRequestBodyRewriter(rewriter: RequestBodyRewriter | null): void {
   _requestBodyRewriter = rewriter;
+}
+
+function isBrowserOffline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -483,13 +504,23 @@ export async function customFetch<T = unknown>(
   }
 
   const requestInfo = await attachAuthHeaders(input, headers);
+  const offline = isBrowserOffline();
+
+  if (offline && method === "GET" && _offlineReadInterceptor) {
+    const cached = await _offlineReadInterceptor({
+      url: requestInfo.url,
+      method,
+    });
+    if (cached !== null) {
+      return cached as T;
+    }
+  }
 
   if (
+    offline &&
     _offlineMutationInterceptor &&
     method !== "GET" &&
-    method !== "HEAD" &&
-    typeof navigator !== "undefined" &&
-    navigator.onLine === false
+    method !== "HEAD"
   ) {
     const synthetic = await _offlineMutationInterceptor({
       url: requestInfo.url,
@@ -512,6 +543,15 @@ export async function customFetch<T = unknown>(
       credentials: "include",
     });
   } catch (networkErr) {
+    if (method === "GET" && _offlineReadInterceptor) {
+      const cached = await _offlineReadInterceptor({
+        url: requestInfo.url,
+        method,
+      });
+      if (cached !== null) {
+        return cached as T;
+      }
+    }
     if (
       _offlineMutationInterceptor &&
       method !== "GET" &&

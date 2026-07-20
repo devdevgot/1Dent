@@ -14,15 +14,15 @@ import {
   configureOfflineSync,
   flushOutbox,
   installOfflineFetchInterceptors,
+  listPendingOutbox,
   readCachedPatients,
   rememberPatients,
   rememberTeeth,
   startOfflineSync,
 } from "@/lib/offline";
+import { applyOutboxToPatients } from "@/lib/offline/optimistic-cache";
 import { OfflineBanner } from "./offline-banner";
 import { SyncConflictDialog } from "./sync-conflict-dialog";
-
-let interceptorsInstalled = false;
 
 export function OfflineSyncProvider() {
   const queryClient = useQueryClient();
@@ -30,12 +30,10 @@ export function OfflineSyncProvider() {
   const clinicId = user?.clinicId ?? null;
 
   useEffect(() => {
-    if (!interceptorsInstalled) {
-      installOfflineFetchInterceptors({
-        getClinicId: () => useAuthStore.getState().user?.clinicId ?? null,
-      });
-      interceptorsInstalled = true;
-    }
+    installOfflineFetchInterceptors({
+      getClinicId: () => useAuthStore.getState().user?.clinicId ?? null,
+      queryClient,
+    });
 
     configureOfflineSync({
       getClinicId: () => useAuthStore.getState().user?.clinicId ?? null,
@@ -44,7 +42,8 @@ export function OfflineSyncProvider() {
         void queryClient.invalidateQueries({
           predicate: (q) =>
             typeof q.queryKey[0] === "string" &&
-            q.queryKey[0].includes("/teeth"),
+            (q.queryKey[0].includes("/teeth") ||
+              q.queryKey[0].startsWith("/api/patients/")),
         });
       },
     });
@@ -63,24 +62,39 @@ export function OfflineSyncProvider() {
     };
   }, [queryClient]);
 
-  // Hydrate clinical cache when offline / on login; mirror successful queries to IDB.
+  // Hydrate clinical cache on login; mirror successful queries to IDB.
   useEffect(() => {
     if (!clinicId) return;
 
     let cancelled = false;
 
     const hydrate = async () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        const cached = await readCachedPatients(clinicId);
-        if (!cancelled && cached?.patients?.length) {
-          rememberPatients(
-            cached.patients as Array<{ id?: string; updatedAt?: string }>,
-          );
-          queryClient.setQueryData(getListPatientsQueryKey(), {
-            success: true,
-            data: { patients: cached.patients },
-          });
-        }
+      const existing = queryClient.getQueryData(getListPatientsQueryKey()) as
+        | { data?: { patients?: unknown[] } }
+        | undefined;
+      const hasPatients = Array.isArray(existing?.data?.patients)
+        && existing.data.patients.length > 0;
+
+      const cached = await readCachedPatients(clinicId);
+      if (cancelled || !cached?.patients?.length) return;
+
+      rememberPatients(
+        cached.patients as Array<{ id?: string; updatedAt?: string }>,
+      );
+
+      // Always prefer hydrating when offline or when RQ has no patients yet.
+      const offline =
+        typeof navigator !== "undefined" && navigator.onLine === false;
+      if (offline || !hasPatients) {
+        const pending = await listPendingOutbox(clinicId);
+        const patients = applyOutboxToPatients(
+          cached.patients as Array<Record<string, unknown> & { id?: string }>,
+          pending,
+        );
+        queryClient.setQueryData(getListPatientsQueryKey(), {
+          success: true,
+          data: { patients },
+        });
       }
     };
 
@@ -98,8 +112,12 @@ export function OfflineSyncProvider() {
           | { data?: { patients?: unknown[] } }
           | undefined;
         const patients = data?.data?.patients;
-        if (Array.isArray(patients)) {
-          void cachePatientsList(clinicId, patients);
+        if (Array.isArray(patients) && patients.length > 0) {
+          // Don't persist sparse optimistic-only lists without real fields.
+          const sample = patients[0] as { name?: unknown } | undefined;
+          if (sample && typeof sample.name === "string") {
+            void cachePatientsList(clinicId, patients);
+          }
         }
         return;
       }
