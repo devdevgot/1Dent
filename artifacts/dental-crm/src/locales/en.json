@@ -242,6 +242,7 @@
   },
   "offline": {
     "offlineBanner": "Offline — changes are saved locally ({{count}})",
+    "offlineReady": "Offline — cached data is available; edits will be saved locally",
     "syncingBanner": "Syncing offline changes ({{count}})",
     "conflictBanner": "Edit conflict: choose a version ({{count}})",
     "syncNow": "Sync now",

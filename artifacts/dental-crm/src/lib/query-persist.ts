@@ -50,6 +50,14 @@ export const queryClient = new QueryClient({
       // pages doesn't re-show spinners; persisted entries survive reloads.
       staleTime: 60_000,
       gcTime: MAX_AGE_MS,
+      // Prefer cache when the network is down so invalidate/refetch offline
+      // does not wipe clinical screens.
+      networkMode: "offlineFirst",
+    },
+    mutations: {
+      // Must run while offline so the outbox interceptor can queue writes.
+      // Default "online" pauses mutations and never reaches customFetch.
+      networkMode: "always",
     },
   },
 });

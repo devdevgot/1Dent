@@ -7,6 +7,7 @@ export {
   setBranchIdGetter,
   setUnauthorizedHandler,
   setOfflineMutationInterceptor,
+  setOfflineReadInterceptor,
   setRequestBodyRewriter,
   customFetch,
   fetchWithAuth,
@@ -17,6 +18,7 @@ export type {
   BranchIdGetter,
   UnauthorizedHandler,
   OfflineMutationInterceptor,
+  OfflineReadInterceptor,
   RequestBodyRewriter,
   FetchWithAuthOptions,
 } from "./custom-fetch";

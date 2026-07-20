@@ -22,6 +22,11 @@ export {
   readCachedTeeth,
 } from "./clinical-cache";
 export {
+  applyOutboxToPatients,
+  applyOutboxToTeeth,
+  applyOptimisticMutationToQueryCache,
+} from "./optimistic-cache";
+export {
   rememberPatientVersion,
   rememberPatients,
   rememberToothVersion,
