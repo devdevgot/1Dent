@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck, Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/haptics";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +27,7 @@ export function TabletPinEntryModal({
   }, [open]);
 
   const press = (d: string) => {
+    haptic("light");
     setError(false);
     setPin((p) => {
       const next = (p + d).slice(0, 4);
@@ -67,7 +69,15 @@ export function TabletPinEntryModal({
           ))}
           <div />
           <button type="button" disabled={loading} onClick={() => press("0")} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#faf8f4] text-xl font-semibold">0</button>
-          <button type="button" disabled={loading} onClick={() => setPin((p) => p.slice(0, -1))} className="flex h-14 w-14 items-center justify-center rounded-2xl text-[#64748b]">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              haptic("light");
+              setPin((p) => p.slice(0, -1));
+            }}
+            className="flex h-14 w-14 items-center justify-center rounded-2xl text-[#64748b]"
+          >
             <Delete className="h-5 w-5" />
           </button>
         </div>

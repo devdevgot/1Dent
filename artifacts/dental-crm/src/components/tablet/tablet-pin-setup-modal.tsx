@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Delete, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { haptic, hapticNotify } from "@/lib/haptics";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +34,7 @@ export function TabletPinSetupModal({
   }, [open]);
 
   const press = (d: string) => {
+    haptic("light");
     setError("");
     const target = step === "enter" ? pin : confirm;
     const next = (target + d).slice(0, 4);
@@ -44,11 +46,13 @@ export function TabletPinSetupModal({
       if (next.length === 4) {
         setTimeout(() => {
           if (next !== pin) {
+            hapticNotify("error");
             setError("PIN-коды не совпадают");
             setConfirm("");
             setStep("enter");
             setPin("");
           } else {
+            hapticNotify("success");
             onSubmit(next);
           }
         }, 150);
@@ -57,6 +61,7 @@ export function TabletPinSetupModal({
   };
 
   const back = () => {
+    haptic("light");
     setError("");
     if (step === "confirm") {
       setConfirm("");

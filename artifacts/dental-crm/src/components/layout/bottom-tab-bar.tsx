@@ -15,6 +15,7 @@ import {
 } from "./bottom-tab-icons";
 import { usesScheduleCalendar } from "@/lib/role-groups";
 import { hrefToServiceSlug } from "@/lib/menu-services";
+import { haptic } from "@/lib/haptics";
 
 type BottomTabBarProps = {
   roleDashboardHref: string;
@@ -160,10 +161,12 @@ export function BottomTabBar({
   const tabs = buildTabs(role, roleDashboardHref, location, activeService);
 
   const openWorkOverlay = (slug: string) => {
+    haptic("light");
     navigate(`${roleDashboardHref}?service=${slug}`);
   };
 
   const navigateToTab = (href: string) => {
+    haptic("light");
     navigate(href, { replace: activeService !== null });
   };
 
@@ -244,6 +247,7 @@ export function BottomTabBar({
             <Link
               key={tab.id}
               href={tab.href}
+              onClick={() => haptic("light")}
               className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none transition-colors"
             >
               {content}

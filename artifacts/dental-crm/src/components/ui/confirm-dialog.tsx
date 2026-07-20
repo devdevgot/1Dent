@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ConfirmTone } from "@/hooks/use-confirm";
+import { haptic, hapticNotify } from "@/lib/haptics";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -53,6 +54,14 @@ export function ConfirmDialog({
   useEffect(() => {
     if (open) setPhrase("");
   }, [open]);
+
+  // Soft warning pulse when a destructive confirm appears (PWA only).
+  useEffect(() => {
+    if (!open) return;
+    if (tone === "danger" || tone === "critical") {
+      hapticNotify("warning");
+    }
+  }, [open, tone]);
 
   const resolvedConfirmLabel =
     confirmLabel ??
@@ -107,7 +116,10 @@ export function ConfirmDialog({
               spellCheck={false}
               onChange={(e) => setPhrase(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && phraseOk) onConfirm();
+                if (e.key === "Enter" && phraseOk) {
+                  haptic(isDanger ? "heavy" : "medium");
+                  onConfirm();
+                }
               }}
               placeholder={requirePhrase}
               className="w-full rounded-xl border border-[var(--ds-border)] bg-[var(--ds-bg,#fff)] px-3 py-2 text-sm outline-none focus:border-[var(--danger)] focus:ring-1 focus:ring-[var(--danger)]"
@@ -125,7 +137,10 @@ export function ConfirmDialog({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => {
+              haptic(isDanger ? "heavy" : "medium");
+              onConfirm();
+            }}
             disabled={!phraseOk}
             className={cn(
               "dash-btn flex-1 h-9 text-sm border-0",

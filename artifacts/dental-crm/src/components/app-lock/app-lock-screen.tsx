@@ -6,6 +6,7 @@ import { useAppLockStore } from "@/lib/app-lock/store";
 import { canUseBiometricUnlock } from "@/lib/app-lock/webauthn";
 import { loadAppLockConfig } from "@/lib/app-lock/storage";
 import { cn } from "@/lib/utils";
+import { hapticNotify } from "@/lib/haptics";
 
 const PIN_LENGTH = 4;
 const MAX_ATTEMPTS = 5;
@@ -35,6 +36,7 @@ export function AppLockScreen() {
   const biometricFirst = showBiometric && !showPinFallback && !lockedOut;
 
   const flashError = useCallback((message: string) => {
+    hapticNotify("error");
     setError(message);
     setShaking(true);
     window.setTimeout(() => setShaking(false), 450);
@@ -54,6 +56,7 @@ export function AppLockScreen() {
 
     const ok = await unlockWithBiometric();
     if (ok) {
+      hapticNotify("success");
       setBiometricPrompting(false);
       setSubmitting(false);
       biometricInFlightRef.current = false;
@@ -102,6 +105,8 @@ export function AppLockScreen() {
         } else {
           flashError(t("appLock.wrongPin"));
         }
+      } else {
+        hapticNotify("success");
       }
       setSubmitting(false);
     },

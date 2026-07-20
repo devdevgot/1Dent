@@ -31,6 +31,7 @@ import {
   getDentalAiAnalysisQueryKey,
 } from "@workspace/api-client-react";
 import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
+import { haptic } from "@/lib/haptics";
 // Lazy-loaded so they don't block the first paint of the patient card
 const DentalAiAnalysisPanel = lazyWithChunkRecovery(() =>
   import("./dental-ai-analysis-panel").then((m) => ({ default: m.DentalAiAnalysisPanel })),
@@ -349,7 +350,7 @@ function ToothActionModal({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
-    navigator.vibrate?.(40);
+    haptic("heavy");
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
