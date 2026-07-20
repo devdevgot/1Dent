@@ -153,7 +153,7 @@ export function DonutChart({
   return (
     <div style={{ width: SIZE, height: SIZE, position: "relative" }}>
       <svg width={SIZE} height={SIZE}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e8e3d9" strokeWidth={SW} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--ds-border)" strokeWidth={SW} />
         {!isEmpty &&
           segs.map((s, i) => (
             <circle
