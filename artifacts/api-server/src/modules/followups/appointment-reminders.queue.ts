@@ -16,21 +16,66 @@ import { attachWorkerFailedHandler } from "../error-events/error-events.worker-c
 
 const QUEUE_NAME = "appointment-reminders";
 
+type ReminderType = "24h" | "1h" | "5m";
+
 interface AppointmentReminderJobData {
   reminderId: string;
   clinicId: string;
   patientId: string;
   procedureId: string;
-  reminderType: "24h" | "1h";
+  reminderType: ReminderType;
   patientName: string;
   procedureName: string;
   scheduledAt: string;
   doctorName: string;
   clinicName: string;
+  /** Assigned staff user for the appointment (doctor / owner acting as doctor). */
+  doctorId?: string | null;
+}
+
+function isReminderType(value: string): value is ReminderType {
+  return value === "24h" || value === "1h" || value === "5m";
+}
+
+async function resolveStaffRecipientIds(
+  clinicId: string,
+  doctorId: string | null | undefined,
+): Promise<string[]> {
+  if (doctorId) {
+    const [assignee] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(and(eq(usersTable.id, doctorId), eq(usersTable.clinicId, clinicId)))
+      .limit(1);
+    if (assignee) return [assignee.id];
+  }
+
+  // No assignee — fall back to clinic owners/admins so the visit is not silent.
+  const recipients = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(
+      and(
+        eq(usersTable.clinicId, clinicId),
+        inArray(usersTable.role, ["owner", "admin"]),
+      ),
+    );
+  return recipients.map((r) => r.id);
 }
 
 async function processReminderJob(data: AppointmentReminderJobData): Promise<void> {
-  const { reminderId, patientId, clinicId, reminderType, patientName, procedureName, scheduledAt, doctorName, clinicName } = data;
+  const {
+    reminderId,
+    patientId,
+    clinicId,
+    reminderType,
+    patientName,
+    procedureName,
+    scheduledAt,
+    doctorName,
+    clinicName,
+    doctorId,
+  } = data;
 
   // CRITICAL: Check reminder status in DB before processing.
   // The reminder may have been cancelled after the job was enqueued in Redis/BullMQ.
@@ -48,7 +93,31 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
     return;
   }
 
-  const scheduledDate = new Date(scheduledAt);
+  // Skip if the appointment was cancelled / completed since scheduling.
+  const [procedureRow] = await db
+    .select({
+      status: proceduresTable.status,
+      doctorId: proceduresTable.doctorId,
+      scheduledAt: proceduresTable.scheduledAt,
+    })
+    .from(proceduresTable)
+    .where(eq(proceduresTable.id, data.procedureId))
+    .limit(1);
+
+  if (!procedureRow || procedureRow.status === "cancelled") {
+    await db
+      .update(appointmentRemindersTable)
+      .set({ status: "cancelled" })
+      .where(eq(appointmentRemindersTable.id, reminderId));
+    logger.info(
+      { reminderId, procedureId: data.procedureId, status: procedureRow?.status },
+      "[AppointmentReminders] Skipping — procedure missing or cancelled",
+    );
+    return;
+  }
+
+  const effectiveDoctorId = doctorId ?? procedureRow.doctorId ?? null;
+  const scheduledDate = new Date(procedureRow.scheduledAt?.toISOString() ?? scheduledAt);
   const timeStr = scheduledDate.toLocaleTimeString("ru-RU", {
     hour: "2-digit",
     minute: "2-digit",
@@ -60,6 +129,51 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
     timeZone: "Asia/Almaty",
   });
 
+  // ── 5-minute staff push (no WhatsApp to patient) ──────────────────────────
+  if (reminderType === "5m") {
+    const recipientIds = await resolveStaffRecipientIds(clinicId, effectiveDoctorId);
+    if (recipientIds.length > 0) {
+      const notifMessage = `Через 5 минут приём: ${patientName} — «${procedureName}» в ${timeStr}`;
+      await insertNotifications(
+        recipientIds.map((userId) => ({
+          id: randomUUID(),
+          clinicId,
+          userId,
+          type: "appointment_reminder" as const,
+          message: notifMessage,
+          read: false,
+          payload: {
+            patientName,
+            doctorName,
+            scheduledAt: scheduledDate.toISOString(),
+            procedureName,
+            reminderType,
+            procedureId: data.procedureId,
+            patientId,
+            clinicName,
+            doctorId: effectiveDoctorId,
+          } as Record<string, unknown>,
+        })),
+      );
+      logger.info(
+        { reminderId, clinicId, recipientCount: recipientIds.length, reminderType },
+        "[AppointmentReminders] 5m staff push/in-app notifications created",
+      );
+    } else {
+      logger.warn(
+        { reminderId, clinicId, procedureId: data.procedureId },
+        "[AppointmentReminders] 5m reminder has no staff recipients",
+      );
+    }
+
+    await db
+      .update(appointmentRemindersTable)
+      .set({ status: "sent" })
+      .where(eq(appointmentRemindersTable.id, reminderId));
+    return;
+  }
+
+  // ── 24h / 1h patient WhatsApp + owner/admin notify ────────────────────────
   const [patient] = await db
     .select({ phone: patientsTable.phone })
     .from(patientsTable)
@@ -142,12 +256,13 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
         payload: {
           patientName,
           doctorName,
-          scheduledAt,
+          scheduledAt: scheduledDate.toISOString(),
           procedureName,
           reminderType,
           procedureId: data.procedureId,
           patientId,
           clinicName,
+          doctorId: effectiveDoctorId,
         } as Record<string, unknown>,
       })),
     );
@@ -234,17 +349,22 @@ if (process.env["REDIS_URL"]) {
           doctorName = doctor?.name ?? "";
         }
 
+        const reminderType = isReminderType(reminder.reminderType)
+          ? reminder.reminderType
+          : "1h";
+
         await processReminderJob({
           reminderId: reminder.id,
           clinicId: reminder.clinicId,
           patientId: reminder.patientId,
           procedureId: reminder.procedureId,
-          reminderType: reminder.reminderType as "24h" | "1h",
+          reminderType,
           patientName: patient?.name ?? "Пациент",
           procedureName: procedure?.name ?? "Процедура",
           scheduledAt: procedure?.scheduledAt?.toISOString() ?? new Date().toISOString(),
           doctorName,
           clinicName: clinic?.name ?? "",
+          doctorId: procedure?.doctorId ?? null,
         });
       }
     } catch (err) {
@@ -262,6 +382,7 @@ export interface ScheduleAppointmentRemindersInput {
   procedureName: string;
   doctorName: string;
   clinicName: string;
+  doctorId?: string | null;
 }
 
 export async function cancelAppointmentReminders(procedureId: string, clinicId: string): Promise<void> {
@@ -291,19 +412,36 @@ export async function cancelAppointmentReminders(procedureId: string, clinicId: 
 export async function scheduleAppointmentReminders(
   input: ScheduleAppointmentRemindersInput,
 ): Promise<void> {
-  const { clinicId, patientId, procedureId, scheduledAt, patientName, procedureName, doctorName, clinicName } = input;
+  const {
+    clinicId,
+    patientId,
+    procedureId,
+    scheduledAt,
+    patientName,
+    procedureName,
+    doctorName,
+    clinicName,
+    doctorId,
+  } = input;
 
   const now = new Date();
   const h24Before = new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000);
   const h1Before = new Date(scheduledAt.getTime() - 60 * 60 * 1000);
+  const m5Before = new Date(scheduledAt.getTime() - 5 * 60 * 1000);
 
-  const reminders: { id: string; reminderType: "24h" | "1h"; sendAt: Date }[] = [];
+  const reminders: { id: string; reminderType: ReminderType; sendAt: Date }[] = [];
 
   if (h24Before > now) {
     reminders.push({ id: randomUUID(), reminderType: "24h", sendAt: h24Before });
   }
   if (h1Before > now) {
     reminders.push({ id: randomUUID(), reminderType: "1h", sendAt: h1Before });
+  }
+  if (m5Before > now) {
+    reminders.push({ id: randomUUID(), reminderType: "5m", sendAt: m5Before });
+  } else if (scheduledAt > now) {
+    // Appointment is already inside the 5-minute window — notify ASAP.
+    reminders.push({ id: randomUUID(), reminderType: "5m", sendAt: now });
   }
 
   if (reminders.length === 0) {
@@ -325,7 +463,7 @@ export async function scheduleAppointmentReminders(
 
   if (appointmentReminderQueue) {
     for (const r of reminders) {
-      const delayMs = r.sendAt.getTime() - now.getTime();
+      const delayMs = Math.max(0, r.sendAt.getTime() - now.getTime());
       await appointmentReminderQueue.add(
         "send-appointment-reminder",
         {
@@ -339,6 +477,7 @@ export async function scheduleAppointmentReminders(
           scheduledAt: scheduledAt.toISOString(),
           doctorName,
           clinicName,
+          doctorId: doctorId ?? null,
         },
         {
           delay: delayMs,

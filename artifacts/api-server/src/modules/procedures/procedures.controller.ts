@@ -327,6 +327,7 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
         procedureName: procedure.name,
         doctorName,
         clinicName,
+        doctorId: procedure.doctorId,
       });
     }).catch(() => {});
   }
@@ -555,6 +556,7 @@ router.put(
             procedureName: procedure.name,
             doctorName,
             clinicName,
+            doctorId: procedure.doctorId,
           });
         }).catch(() => {});
       }
