@@ -20,6 +20,7 @@ import { ListRowsSkeleton } from "@/components/skeletons";
 import PhotoCropModal from "@/components/account/photo-crop-modal";
 import { SettingsRowIcon } from "@/components/account/settings-row-icon";
 import { PROFILE_ICONS, PROFILE_CARD_CLASS, prefetchProfileIcons } from "@/lib/profile-icons";
+import { formatUserPhoneDisplay } from "@/lib/user-contact";
 import { PageShell } from "@/components/layout/page-shell";
 import { RootTabHeader } from "@/components/layout/root-tab-header";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
@@ -132,19 +133,26 @@ export default function AccountSettings() {
 
   const photoUrl = (user as typeof user & { photoUrl?: string | null })?.photoUrl;
   const initials = (user?.name ?? "?").charAt(0).toUpperCase();
+  const phoneDisplay = formatUserPhoneDisplay(user?.email);
 
-  const profileItems = [
+  const profileItems: {
+    img: string;
+    label: string;
+    value: string;
+    href?: string;
+  }[] = [
     {
       img: PROFILE_ICONS.profile,
       label: t("settingsPage.name"),
-      value: user?.name,
+      value: user?.name ?? "",
       href: "/account/edit-profile",
     },
     {
+      // Login is WhatsApp OTP — show phone, not the internal synthetic email.
       img: PROFILE_ICONS.email,
-      label: t("settingsPage.email"),
-      value: user?.email,
-      href: "/account/change-email",
+      label: t("settingsPage.phone"),
+      value: phoneDisplay ?? user?.email ?? "",
+      // Phone change via WhatsApp is not exposed in Profile yet.
     },
     {
       img: PROFILE_ICONS.password,
@@ -205,7 +213,7 @@ export default function AccountSettings() {
                     {user?.name}
                   </p>
                   <p className="text-[13px] text-white/70 truncate mt-0.5">
-                    {user?.email}
+                    {phoneDisplay ?? user?.email}
                   </p>
                   {user?.role && (
                     <span className="inline-block mt-2 text-[11px] font-bold text-white uppercase tracking-wider bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full">
@@ -221,14 +229,12 @@ export default function AccountSettings() {
         {/* Profile fields */}
         <IosSection title={t("settingsPage.profile")}>
           <IosGroup className={PROFILE_CARD_CLASS}>
-            {profileItems.map((item) => (
-              <button
-                key={item.href}
-                type="button"
-                onClick={() => setLocation(item.href)}
-                className="w-full"
-              >
-                <IosGroupRow as="div" className="cursor-pointer hover:bg-[#faf8f4]">
+            {profileItems.map((item) => {
+              const row = (
+                <IosGroupRow
+                  as="div"
+                  className={item.href ? "cursor-pointer hover:bg-[#faf8f4]" : undefined}
+                >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <SettingsRowIcon img={item.img} />
                     <p className="text-sm text-[#0f172a]">{item.label}</p>
@@ -237,11 +243,28 @@ export default function AccountSettings() {
                     <span className="text-xs text-[#64748b] truncate max-w-[150px]">
                       {item.value}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                    {item.href && (
+                      <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
+                    )}
                   </div>
                 </IosGroupRow>
-              </button>
-            ))}
+              );
+
+              if (!item.href) {
+                return <div key={item.label}>{row}</div>;
+              }
+
+              return (
+                <button
+                  key={item.href}
+                  type="button"
+                  onClick={() => setLocation(item.href!)}
+                  className="w-full"
+                >
+                  {row}
+                </button>
+              );
+            })}
           </IosGroup>
         </IosSection>
 

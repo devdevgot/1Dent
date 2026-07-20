@@ -1204,6 +1204,7 @@
     "accountTitle": "Настройки аккаунта",
     "name": "Имя",
     "email": "Email",
+    "phone": "Телефон",
     "password": "Пароль",
     "changePhoto": "Изменить фото",
     "photoUpdated": "Фото профиля обновлено",

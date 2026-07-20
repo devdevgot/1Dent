@@ -1196,6 +1196,7 @@
     "accountTitle": "Account settings",
     "name": "Name",
     "email": "Email",
+    "phone": "Phone",
     "password": "Password",
     "changePhoto": "Change photo",
     "photoUpdated": "Profile photo updated",
