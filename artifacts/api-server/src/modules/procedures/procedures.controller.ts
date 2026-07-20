@@ -520,23 +520,48 @@ router.put(
     const authorized = await assertDoctorOwnership(id, clinicId, userId, role, next);
     if (!authorized) return;
 
+    const existing = await repo.findById(id, clinicId).catch(next);
+    if (!existing) return next(new NotFoundError("Procedure not found"));
+
     const { scheduledAt, ...rest } = parsed.data;
+    const scheduleLocked =
+      existing.status === "completed" ||
+      existing.status === "cancelled" ||
+      existing.status === "pending_payment";
+
+    let nextScheduledAt: Date | null | undefined =
+      scheduledAt ? new Date(scheduledAt) : scheduledAt === null ? null : undefined;
+
+    if (nextScheduledAt !== undefined && scheduleLocked) {
+      const prevMs = existing.scheduledAt ? new Date(existing.scheduledAt).getTime() : null;
+      const nextMs = nextScheduledAt ? nextScheduledAt.getTime() : null;
+      if (prevMs !== nextMs) {
+        return next(
+          new ValidationError(
+            "Нельзя перенести завершённую или закрытую запись — время уже зафиксировано",
+          ),
+        );
+      }
+      // Same slot — skip scheduledAt write (notes/doctor updates still allowed).
+      nextScheduledAt = undefined;
+    }
+
     const procedure = await repo
       .update(id, clinicId, {
         ...rest,
         doctorId: rest.doctorId as string | null | undefined,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : scheduledAt === null ? null : undefined,
+        scheduledAt: nextScheduledAt,
       })
       .catch(next);
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
-    if (scheduledAt !== undefined && procedure.patientId) {
+    if (nextScheduledAt !== undefined && procedure.patientId) {
       cancelAppointmentReminders(procedure.id, clinicId).catch(() => {});
 
-      if (scheduledAt) {
-        const scheduledDate = new Date(scheduledAt);
+      if (nextScheduledAt) {
+        const scheduledDate = nextScheduledAt;
         Promise.all([
           db.select({ name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.id, procedure.patientId)).limit(1),
           procedure.doctorId

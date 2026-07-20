@@ -22,6 +22,7 @@ import {
   useTriggerDentalAiAnalysis,
   useCompleteDiagnosis,
   getListPatientsQueryKey,
+  getListProceduresQueryKey,
   getGetPatientQueryKey,
   getListTeethQueryKey,
   getListPatientTreatmentsQueryKey,
@@ -1333,6 +1334,8 @@ export function PatientDetailPanel() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+        // Diagnostics stage locks past appointment slots on the schedule.
+        queryClient.invalidateQueries({ queryKey: getListProceduresQueryKey() });
       },
     },
   });
@@ -1345,6 +1348,7 @@ export function PatientDetailPanel() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListProceduresQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(selectedPatientId ?? "") });
         queryClient.invalidateQueries({
           predicate: (query) => {

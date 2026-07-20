@@ -12,12 +12,12 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { useLocation, useParams } from "wouter";
 import {
   ChevronLeft, ChevronRight,
-  Clock, CheckCircle2, PlayCircle, XCircle, Plus,
+  Clock, CheckCircle2, PlayCircle, XCircle, Plus, Lock,
 } from "lucide-react";
 import { AppointmentModal } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import type { ProcedureTemplate } from "@/components/appointment-modal";
-import { isCalendarProcedure } from "@/lib/calendar-procedures";
+import { isCalendarProcedure, isScheduleLockedProcedure } from "@/lib/calendar-procedures";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { Bone } from "@/components/skeletons";
@@ -405,6 +405,8 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const onEventPointerDown = useCallback((e: React.PointerEvent, proc: Procedure) => {
     if (!e.isPrimary || !proc.scheduledAt) return;
     e.stopPropagation();
+    // Completed / closed visits stay fixed on the timeline (procedure already happened).
+    if (isScheduleLockedProcedure(proc)) return;
     const { clientX, clientY, pointerId } = e;
     dragClientYRef.current = clientY;
     const startMin = timeMins(proc.scheduledAt);
@@ -805,7 +807,8 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
               Long-press then drag to reschedule; tap opens the edit modal. */}
           {visibleProcs.map(proc => {
             if (!proc.scheduledAt) return null;
-            const isMoving = movingProcId === proc.id && dragVisualMins != null;
+            const locked = isScheduleLockedProcedure(proc);
+            const isMoving = !locked && movingProcId === proc.id && dragVisualMins != null;
             const startMin = isMoving ? dragVisualMins! : timeMins(proc.scheduledAt);
             const labelMins = isMoving && dragSnapMins != null ? dragSnapMins : timeMins(proc.scheduledAt);
             const top    = minToPx(startMin - START_H * 60);
@@ -830,7 +833,9 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                 className={`absolute rounded-xl overflow-hidden flex text-left hover:ring-2 hover:ring-[var(--ds-primary)]/30 transition-shadow ${sc.bg} ${
                   isMoving
                     ? "z-40 cursor-grabbing shadow-lg shadow-[#1f75fe]/25 ring-2 ring-[#1f75fe]/40"
-                    : "cursor-pointer hover:z-10"
+                    : locked
+                      ? "cursor-pointer hover:z-10 opacity-90"
+                      : "cursor-pointer hover:z-10"
                 }`}
                 style={{
                   top: top + 2,
@@ -847,6 +852,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                 <div className="flex-1 px-2.5 py-1.5 min-w-0">
                   <div className="flex items-start justify-between gap-1">
                     <p className={`text-[12px] font-bold leading-snug ${sc.text} truncate flex-1`}>
+                      {locked && <Lock className={`inline w-3 h-3 mr-1 align-[-1px] ${sc.text}`} />}
                       {proc.name}
                     </p>
                     {layout.cols === 1 && !isMoving && (
