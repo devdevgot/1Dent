@@ -612,19 +612,20 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
           })}
 
           {/* Drag-to-create ghost block (long press) */}
+          {/* Drag-to-create ghost block (long press) */}
           {dragMins != null && (
             <div
-              className="absolute left-0 right-0 z-30 pointer-events-none"
+              className="absolute left-0 right-0 z-40 pointer-events-none"
               style={{ top: minToPx(dragMins - START_H * 60), height: minToPx(NEW_SLOT_DURATION) }}
             >
-              {/* Start / end time labels in the gutter — minutes snap to :15 / :30 / :45 */}
-              <div className="absolute left-0 -top-2 w-14 pr-3 text-right">
-                <span className="text-[11px] font-bold text-[#1f75fe] bg-white/95 rounded px-0.5 leading-none">
+              {/* Gutter time badges — solid blue so they fully cover black hour labels */}
+              <div className="absolute left-0 top-0 z-50 w-14 -translate-y-1/2 pr-2 text-right">
+                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm">
                   {fmtMins(dragMins)}
                 </span>
               </div>
-              <div className="absolute left-0 -bottom-2 w-14 pr-3 text-right">
-                <span className="text-[11px] font-bold text-[#1f75fe] bg-white/95 rounded px-0.5 leading-none">
+              <div className="absolute left-0 bottom-0 z-50 w-14 translate-y-1/2 pr-2 text-right">
+                <span className="inline-block rounded-md bg-[#1f75fe] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-sm">
                   {fmtMins(dragMins + NEW_SLOT_DURATION)}
                 </span>
               </div>
