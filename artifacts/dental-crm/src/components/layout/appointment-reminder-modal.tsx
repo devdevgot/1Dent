@@ -57,17 +57,19 @@ export function AppointmentReminderModal() {
 
   const payload = (current.payload ?? {}) as AppointmentReminderPayload;
   const formatted = payload.scheduledAt ? formatScheduledAt(payload.scheduledAt) : null;
-  const isOneHour = payload.reminderType === "1h";
+  const reminderType = payload.reminderType;
+  const title =
+    reminderType === "5m"
+      ? t("appointmentReminder.titleFiveMin", "Приём через 5 минут")
+      : reminderType === "1h"
+        ? t("appointmentReminder.titleOneHour", "Приём через 1 час")
+        : t("appointmentReminder.title24h", "Приём завтра");
 
   return (
     <AppDialog
       open
       onOpenChange={(isOpen) => { if (!isOpen) handleDismiss(); }}
-      title={
-        isOneHour
-          ? t("appointmentReminder.titleOneHour", "Приём через 1 час")
-          : t("appointmentReminder.title24h", "Приём завтра")
-      }
+      title={title}
       description={t("appointmentReminder.subtitle", "Напоминание о записи")}
       size="sm"
       bodyClassName="!p-0"

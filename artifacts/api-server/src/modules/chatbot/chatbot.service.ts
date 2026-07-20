@@ -1681,6 +1681,7 @@ async function finalizeBookingAppointment(params: {
             procedureName: serviceLabel,
             doctorName: data.suggestedDoctorName ?? "",
             clinicName: clinicRow?.name ?? "",
+            doctorId: data.suggestedDoctorId ?? null,
           });
         } catch (schedErr) {
           logger.warn({ err: schedErr, procedureId }, "ChatbotService: failed to schedule reminders after booking");

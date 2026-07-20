@@ -5,14 +5,19 @@ import {
   type WebPushPayload,
 } from "./push-notifications";
 
-function titleForType(type: NotificationType): string {
+function titleForType(
+  type: NotificationType,
+  payload?: Record<string, unknown> | null,
+): string {
   switch (type) {
     case "red_alert":
       return "Red Alert";
     case "pending_payment":
       return "Ожидает оплаты";
     case "appointment_reminder":
-      return "Напоминание о приёме";
+      return payload?.["reminderType"] === "5m"
+        ? "Приём через 5 минут"
+        : "Напоминание о приёме";
     case "new_message":
       return "Новое сообщение";
     case "system":
@@ -27,19 +32,33 @@ function payloadKind(payload: Record<string, unknown> | null | undefined): strin
   return typeof kind === "string" ? kind : undefined;
 }
 
+function scheduleDayUrl(payload: Record<string, unknown> | null | undefined): string {
+  const scheduledAt = payload?.["scheduledAt"];
+  if (typeof scheduledAt === "string" && scheduledAt.length >= 10) {
+    return `/schedule/${scheduledAt.slice(0, 10)}`;
+  }
+  return "/schedule";
+}
+
 function urlForNotification(notification: Notification): string {
   const patientId =
     notification.patientId ??
     (typeof notification.payload?.["patientId"] === "string"
       ? notification.payload["patientId"]
       : undefined);
+  const reminderType =
+    typeof notification.payload?.["reminderType"] === "string"
+      ? notification.payload["reminderType"]
+      : undefined;
 
   switch (notification.type) {
     case "red_alert":
     case "pending_payment":
       return patientId ? "/patients?view=kanban" : "/patients?view=kanban";
     case "appointment_reminder":
-      return patientId ? "/patients?view=kanban" : "/calendar";
+      // Staff 5-minute heads-up opens the day timeline; longer reminders keep patient context.
+      if (reminderType === "5m") return scheduleDayUrl(notification.payload ?? undefined);
+      return patientId ? "/patients?view=kanban" : scheduleDayUrl(notification.payload ?? undefined);
     case "new_message":
       return "/chat";
     case "system": {
@@ -61,7 +80,7 @@ function urlForNotification(notification: Notification): string {
 
 export function buildNotificationPushPayload(notification: Notification): WebPushPayload {
   return {
-    title: titleForType(notification.type),
+    title: titleForType(notification.type, notification.payload),
     body: notification.message,
     url: urlForNotification(notification),
     tag: `1dent-${notification.type}-${notification.id}`,

@@ -60,6 +60,10 @@ export function getNotificationTarget(
 
     case "appointment_reminder":
     case "appointment": {
+      // 5-minute staff heads-up → open the day timeline for that visit.
+      if (payloadStr(payload, "reminderType") === "5m") {
+        return { href: scheduleHref(role, payloadStr(payload, "scheduledAt")) };
+      }
       if (patientId) return { href: "/patients?view=kanban", patientId };
       return { href: scheduleHref(role, payloadStr(payload, "scheduledAt")) };
     }
