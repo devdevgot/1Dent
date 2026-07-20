@@ -15,6 +15,7 @@ import { format, startOfMonth, endOfMonth, startOfDay, startOfWeek, startOfYear 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import ExpenseDialog from "@/components/expense-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
 import { useQueryClient } from "@tanstack/react-query";
 import { downloadFile, downloadErrorMessage } from "@/lib/download-file";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,7 @@ export default function FinancialsPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const canCreate = user?.role === "owner" || user?.role === "admin" || user?.role === "accountant";
   const canWrite  = user?.role === "owner" || user?.role === "admin";
@@ -137,7 +139,13 @@ export default function FinancialsPage() {
   }
 
   async function handleDeleteExpense(id: string) {
-    if (!confirm(t("expenses.confirmDelete"))) return;
+    const ok = await confirm({
+      tone: "danger",
+      title: t("expenses.confirmDelete", "Удалить расход?"),
+      description: t("expenses.confirmDeleteDesc", "Запись о расходе будет удалена из финансового учёта."),
+      confirmLabel: t("common.delete"),
+    });
+    if (!ok) return;
     try {
       await doDelete(id);
       toast({ title: t("expenses.deleted") });

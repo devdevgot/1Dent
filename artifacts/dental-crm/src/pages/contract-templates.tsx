@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, startTransition } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
@@ -159,6 +160,7 @@ export default function ContractTemplatesPage() {
   const { user } = useAuthStore();
   const canEdit = user?.role === "owner" || user?.role === "admin";
   const { toast } = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const goBack = usePageBack({ menuFallback: true });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -267,8 +269,14 @@ export default function ContractTemplatesPage() {
     if (file) handleFile(file);
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Удалить шаблон «${name}»? Уже отправленные договоры сохранятся.`)) return;
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await confirm({
+      tone: "danger",
+      title: `Удалить шаблон «${name}»?`,
+      description: "Шаблон договора будет удалён. Уже отправленные пациентам договоры сохранятся.",
+      confirmLabel: "Удалить",
+    });
+    if (!ok) return;
     deleteMutation.mutate(id, {
       onSuccess: () => {
         toast({ title: "Шаблон удалён" });
