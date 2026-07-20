@@ -1,13 +1,15 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import {
   MENU_SERVICES,
   getHomeServiceSlugsForRole,
+  prefetchMenuIcons,
 } from "@/lib/menu-services";
 import { useOpenMenuService } from "@/components/layout/menu-service-overlay";
 import { useAuthStore } from "@/hooks/use-auth";
 import { isDoctorRole } from "@/lib/role-groups";
+import { AppIcon } from "@/components/ui/app-icon";
 
 /*
  * Reference-style home blocks (superapp marketplace):
@@ -105,16 +107,15 @@ function PromoBanner({ slug, title, subtitle, img, variant = "light" }: PromoBan
           {subtitle}
         </p>
       </div>
-      <img
+      <AppIcon
         src={img}
-        alt=""
-        aria-hidden
+        size="lg"
+        eager
         className={
           isGradient
-            ? "relative z-10 w-[76px] h-[76px] object-contain drop-shadow-xl shrink-0"
-            : "relative z-10 w-[76px] h-[76px] object-contain drop-shadow-lg shrink-0"
+            ? "relative z-10 w-[76px] h-[76px] drop-shadow-xl"
+            : "relative z-10 w-[76px] h-[76px] drop-shadow-lg"
         }
-        draggable={false}
       />
     </button>
   );
@@ -124,6 +125,10 @@ export function HomeServiceTiles() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const openService = useOpenMenuService();
+
+  useEffect(() => {
+    prefetchMenuIcons();
+  }, []);
 
   const homeTiles = getHomeServiceSlugsForRole(user?.role)
     .map((slug) => {
@@ -147,12 +152,11 @@ export function HomeServiceTiles() {
           onClick={() => openService(tile.slug)}
           className="flex flex-col items-center gap-1.5 shrink-0 w-[68px]"
         >
-          <img
+          <AppIcon
             src={tile.img}
-            alt=""
-            aria-hidden
-            className="w-[56px] h-[56px] object-contain drop-shadow-sm"
-            draggable={false}
+            size="lg"
+            eager
+            className="w-[56px] h-[56px]"
           />
           <span className="w-full text-xs font-semibold text-[#0f172a] text-center leading-[1.2] line-clamp-2">
             {tile.label}
