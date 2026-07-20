@@ -116,11 +116,14 @@ export function ScheduleMonthSkeleton({ weeks = 5 }: { weeks?: number }) {
       {Array.from({ length: weeks }).map((_, wi) => (
         <div key={wi} className="border-b border-[var(--ds-border)] grid grid-cols-7">
           {Array.from({ length: 7 }).map((_, di) => (
-            <div key={di} className="min-h-[80px] border-r border-[var(--ds-border)] last:border-r-0 p-1.5">
-              <div className="flex justify-center mb-1.5">
+            <div key={di} className="min-h-[64px] border-r border-[var(--ds-border)] last:border-r-0 p-1.5">
+              <div className="flex justify-center">
                 <Bone className="w-7 h-7 rounded-full" />
               </div>
-              {(wi * 7 + di) % 6 === 2 && <Bone className="h-4 w-full rounded" />}
+              <div className="flex justify-center items-center h-3 mt-0.5">
+                {(wi * 7 + di) % 6 === 2 && <Bone className="h-1 w-1.5 rounded-full" />}
+                {(wi * 7 + di) % 6 === 4 && <Bone className="h-1 w-3.5 rounded-full" />}
+              </div>
             </div>
           ))}
         </div>
