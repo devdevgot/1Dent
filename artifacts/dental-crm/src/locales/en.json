@@ -169,6 +169,15 @@
     "edit": "Edit",
     "back": "Back"
   },
+  "confirm": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "disable": "Disable",
+    "areYouSure": "Are you sure?",
+    "irreversible": "This action cannot be undone.",
+    "typeToConfirmHint": "To confirm, type:"
+  },
   "account": {
     "title": "Account",
     "signOut": "Sign out",

@@ -169,6 +169,15 @@
     "edit": "Өңдеу",
     "back": "Артқа"
   },
+  "confirm": {
+    "cancel": "Болдырмау",
+    "confirm": "Растау",
+    "delete": "Жою",
+    "disable": "Ажырату",
+    "areYouSure": "Сенімдісіз бе?",
+    "irreversible": "Бұл әрекетті кері қайтару мүмкін емес.",
+    "typeToConfirmHint": "Растау үшін теріңіз:"
+  },
   "account": {
     "title": "Аккаунт",
     "signOut": "Шығу",
