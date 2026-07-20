@@ -33,7 +33,10 @@ const START_H = 0;    // full day — no working-hours restriction
 const END_H   = 24;
 const DEFAULT_SCROLL_HOUR = 8; // where to land when the day has no appointments
 const LONG_PRESS_MS = 320;     // hold duration before drag-to-create kicks in
-const MOVE_ACTIVATE_PX = 8;    // finger travel before drag-to-move activates
+/** Hold before drag-to-move (matches Kanban TouchSensor delay). */
+const MOVE_LONG_PRESS_MS = 180;
+/** Movement beyond this before the hold fires cancels drag (scroll / tap). */
+const PRESS_TOLERANCE_PX = 5;
 const SNAP_MIN = 15;           // drag snaps to 15-minute steps
 const NEW_SLOT_DURATION = 60;  // appointment / create block height = 1 hour
 /** Distance from viewport edge that starts auto-scroll while dragging. */
@@ -237,9 +240,9 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
   const tlRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  /* ── Drag interactions (Apple Calendar style) ──
+  /* ── Drag interactions (Apple Calendar + Kanban hold-to-drag) ──
      • Empty space long-press → create a 1-hour slot that follows the finger
-     • Drag an existing appointment block → reschedule (snap 15 min)
+     • Hold an existing appointment, then drag → reschedule (snap 15 min)
      Near the viewport edges the timeline auto-scrolls. */
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -409,20 +412,27 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       NEW_SLOT_DURATION - SNAP_MIN,
       Math.max(0, clientYToMins(clientY) - startMin),
     );
+    // Kanban-style: must hold briefly before the block can be dragged.
+    // A short tap still opens the edit modal; a quick flick scrolls the day.
+    const timer = setTimeout(() => {
+      const p = pressRef.current;
+      if (!p || p.active || p.mode !== "move" || p.procId !== proc.id) return;
+      activateDrag(p);
+    }, MOVE_LONG_PRESS_MS);
     pressRef.current = {
       pointerId,
       startX: clientX,
       startY: clientY,
       lastX: clientX,
       lastY: clientY,
-      timer: null,
+      timer,
       active: false,
       mode: "move",
       procId: proc.id,
       proc,
       grabOffsetMins,
     };
-  }, [clientYToMins]);
+  }, [clientYToMins, activateDrag]);
 
   const onTimelinePointerMove = useCallback((e: React.PointerEvent) => {
     const p = pressRef.current;
@@ -433,15 +443,8 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     if (!p.active) {
       const dx = Math.abs(e.clientX - p.startX);
       const dy = Math.abs(e.clientY - p.startY);
-      if (p.mode === "move") {
-        // Drag appointment as soon as the finger travels a few pixels.
-        if (dx > MOVE_ACTIVATE_PX || dy > MOVE_ACTIVATE_PX) {
-          activateDrag(p);
-        }
-        return;
-      }
-      // Create: finger moved before long-press fired → scroll, not a hold
-      if (p.timer && (dx > MOVE_ACTIVATE_PX || dy > MOVE_ACTIVATE_PX)) {
+      // Finger moved before the hold completed → cancel (scroll / tap), don't drag.
+      if (p.timer && (dx > PRESS_TOLERANCE_PX || dy > PRESS_TOLERANCE_PX)) {
         clearTimeout(p.timer);
         p.timer = null;
       }
@@ -449,7 +452,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     }
     applyDragFromClientY(e.clientY);
     ensureAutoScroll();
-  }, [activateDrag, applyDragFromClientY, ensureAutoScroll]);
+  }, [applyDragFromClientY, ensureAutoScroll]);
 
   const rescheduleMutation = useUpdateProcedure({
     mutation: {
@@ -508,15 +511,22 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
       } else if (p.mode === "move" && p.proc) {
         void rescheduleProcedure(p.proc, droppedMins);
       }
-    } else if (p.mode === "create") {
-      // Horizontal swipe → previous / next day (Apple Calendar style)
+    } else {
       const dx = e.clientX - p.startX;
       const dy = e.clientY - p.startY;
-      if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-        suppressClickRef.current = true;
-        const d = new Date(selDate);
-        d.setDate(d.getDate() + (dx < 0 ? 1 : -1));
-        goToDate(d, true);
+      if (p.mode === "create") {
+        // Horizontal swipe → previous / next day (Apple Calendar style)
+        if (Math.abs(dx) > 56 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          suppressClickRef.current = true;
+          const d = new Date(selDate);
+          d.setDate(d.getDate() + (dx < 0 ? 1 : -1));
+          goToDate(d, true);
+        }
+      } else if (p.mode === "move") {
+        // Moved past tolerance without completing hold → scroll/flick, not a tap.
+        if (Math.abs(dx) > PRESS_TOLERANCE_PX || Math.abs(dy) > PRESS_TOLERANCE_PX) {
+          suppressClickRef.current = true;
+        }
       }
     }
 
@@ -792,7 +802,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
           )}
 
           {/* Events — side-by-side columns when overlapping (iPhone style).
-              Drag vertically to reschedule; tap opens the edit modal. */}
+              Long-press then drag to reschedule; tap opens the edit modal. */}
           {visibleProcs.map(proc => {
             if (!proc.scheduledAt) return null;
             const isMoving = movingProcId === proc.id && dragVisualMins != null;
@@ -817,10 +827,10 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
                   }
                   setEditingProcedure(proc);
                 }}
-                className={`absolute rounded-xl overflow-hidden flex text-left cursor-grab active:cursor-grabbing hover:ring-2 hover:ring-[var(--ds-primary)]/30 transition-shadow ${sc.bg} ${
+                className={`absolute rounded-xl overflow-hidden flex text-left hover:ring-2 hover:ring-[var(--ds-primary)]/30 transition-shadow ${sc.bg} ${
                   isMoving
-                    ? "z-40 shadow-lg shadow-[#1f75fe]/25 ring-2 ring-[#1f75fe]/40"
-                    : "hover:z-10"
+                    ? "z-40 cursor-grabbing shadow-lg shadow-[#1f75fe]/25 ring-2 ring-[#1f75fe]/40"
+                    : "cursor-pointer hover:z-10"
                 }`}
                 style={{
                   top: top + 2,
