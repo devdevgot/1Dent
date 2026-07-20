@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { Settings, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { SettingsRowIcon } from "@/components/account/settings-row-icon";
 import { PROFILE_ICONS, PROFILE_CARD_CLASS } from "@/lib/profile-icons";
 import { useAppLockStore } from "@/lib/app-lock/store";
@@ -35,6 +36,7 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
   const refreshConfig = useAppLockStore((s) => s.refreshConfig);
 
   const [setupOpen, setSetupOpen] = useState(false);
+  const [idleOpen, setIdleOpen] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
@@ -116,6 +118,11 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
     setSetupOpen(true);
   };
 
+  const idleLabel =
+    config.idleMinutes === 0
+      ? t("appLock.idleImmediate")
+      : t("appLock.idleMinutes", { count: config.idleMinutes });
+
   return (
     <>
       <PwaExclusiveGate
@@ -166,39 +173,77 @@ export function AppLockSettingsSection({ userName }: { userName: string }) {
                       <p className="text-xs text-[#64748b]">{t("appLock.biometricDesc")}</p>
                     </div>
                   </div>
-                  <Switch
-                    checked={config.biometricEnabled}
-                    onCheckedChange={(v) => void handleBiometricToggle(v)}
-                    disabled={biometricLoading}
-                  />
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIdleOpen(true)}
+                      aria-label={t("appLock.idleTimeoutAria")}
+                      title={t("appLock.idleTimeoutSettings")}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-[#64748b] transition-colors hover:bg-[#f1ede4] hover:text-[#0f172a] active:scale-95"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+                    <Switch
+                      checked={config.biometricEnabled}
+                      onCheckedChange={(v) => void handleBiometricToggle(v)}
+                      disabled={biometricLoading}
+                    />
+                  </div>
                 </IosGroupRow>
               )}
 
-              <div className="px-4 py-3.5 border-t border-[#e8e3d9]/60">
-                <p className="text-sm text-[#0f172a] mb-2">{t("appLock.idleTimeout")}</p>
-                <div className="flex flex-wrap gap-2">
-                  {IDLE_OPTIONS.map((minutes) => (
-                    <button
-                      key={minutes}
-                      type="button"
-                      onClick={() => setIdleMinutes(minutes)}
-                      className={cn(
-                        "text-xs font-semibold px-3 py-1.5 rounded-lg transition-all",
-                        config.idleMinutes === minutes
-                          ? "bg-[#1f75fe] text-white"
-                          : "bg-[#f1ede4] text-[#64748b] hover:text-[#0f172a]",
-                      )}
-                    >
-                      {minutes === 0 ? t("appLock.idleImmediate") : t("appLock.idleMinutes", { count: minutes })}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* When biometric hardware is unavailable, still expose idle settings */}
+              {!biometricAvailable && (
+                <IosGroupRow
+                  as="button"
+                  onClick={() => setIdleOpen(true)}
+                  className="cursor-pointer hover:bg-[#faf8f4]"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f1ede4] text-[#64748b]">
+                      <Settings className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <p className="text-sm text-[#0f172a]">{t("appLock.idleTimeout")}</p>
+                      <p className="text-xs text-[#64748b]">{idleLabel}</p>
+                    </div>
+                  </div>
+                </IosGroupRow>
+              )}
             </>
           )}
         </IosGroup>
       </IosSection>
       </PwaExclusiveGate>
+
+      <AppDialog
+        open={idleOpen}
+        onOpenChange={setIdleOpen}
+        title={t("appLock.idleTimeout")}
+        description={t("appLock.idleTimeoutSettings")}
+        size="sm"
+      >
+        <div className="flex flex-wrap gap-2">
+          {IDLE_OPTIONS.map((minutes) => (
+            <button
+              key={minutes}
+              type="button"
+              onClick={() => {
+                setIdleMinutes(minutes);
+                setIdleOpen(false);
+              }}
+              className={cn(
+                "text-xs font-semibold px-3 py-2 rounded-xl transition-all",
+                config.idleMinutes === minutes
+                  ? "bg-[#1f75fe] text-white"
+                  : "bg-[#f1ede4] text-[#64748b] hover:text-[#0f172a]",
+              )}
+            >
+              {minutes === 0 ? t("appLock.idleImmediate") : t("appLock.idleMinutes", { count: minutes })}
+            </button>
+          ))}
+        </div>
+      </AppDialog>
 
       <AppLockSetupModal
         open={setupOpen}
