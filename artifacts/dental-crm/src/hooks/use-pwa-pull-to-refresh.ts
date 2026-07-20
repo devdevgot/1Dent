@@ -40,7 +40,8 @@ function getScrollParent(start: EventTarget | null): HTMLElement | null {
 
 /**
  * Element that rubber-bands during PTR. Prefer a layout surface that includes
- * sticky headers (search chrome), so the spinner gap opens above the whole page.
+ * sticky headers (search chrome / overlay title), so the spinner gap opens
+ * above the whole page — not over the chrome.
  */
 function getPullSurface(scrollEl: HTMLElement): HTMLElement {
   const surface = scrollEl.closest("[data-ptr-surface]");
@@ -56,12 +57,15 @@ function clearPullVisual(el: HTMLElement | null) {
   el.style.transform = "";
   el.style.transition = "";
   el.style.willChange = "";
+  el.removeAttribute("data-ptr-pulling");
 }
 
 function applyPullVisual(el: HTMLElement, pullY: number, animated: boolean) {
   el.style.willChange = "transform";
   el.style.transition = animated ? "transform 180ms ease-out" : "none";
   el.style.transform = pullY > 0 ? `translate3d(0, ${pullY}px, 0)` : "";
+  if (pullY > 0) el.setAttribute("data-ptr-pulling", "true");
+  else el.removeAttribute("data-ptr-pulling");
 }
 
 /**
@@ -78,6 +82,8 @@ export function usePwaPullToRefresh({
 }: Options) {
   const [pullY, setPullY] = useState(0);
   const [phase, setPhase] = useState<PullToRefreshPhase>("idle");
+  /** Bottom of the revealed gap (= top edge of the pulled surface). */
+  const [gapBottom, setGapBottom] = useState(0);
 
   const armedRef = useRef(false);
   const engagedRef = useRef(false);
@@ -89,6 +95,16 @@ export function usePwaPullToRefresh({
   const pullYRef = useRef(0);
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
+
+  const syncGap = useCallback((el: HTMLElement | null, fallback: number) => {
+    if (!el) {
+      setGapBottom(fallback);
+      return;
+    }
+    // After translateY, the surface's top is the bottom of the spinner gap.
+    const top = el.getBoundingClientRect().top;
+    setGapBottom(Math.max(fallback, top));
+  }, []);
 
   const reset = useCallback((animated = false) => {
     const el = surfaceElRef.current;
@@ -106,6 +122,7 @@ export function usePwaPullToRefresh({
     surfaceElRef.current = null;
     pullYRef.current = 0;
     setPullY(0);
+    setGapBottom(0);
     setPhase("idle");
   }, []);
 
@@ -116,7 +133,13 @@ export function usePwaPullToRefresh({
     setPhase("refreshing");
     setPullY(THRESHOLD);
     pullYRef.current = THRESHOLD;
-    if (el) applyPullVisual(el, THRESHOLD, true);
+    if (el) {
+      applyPullVisual(el, THRESHOLD, true);
+      // Measure after the animated transform starts.
+      window.requestAnimationFrame(() => syncGap(el, THRESHOLD));
+    } else {
+      setGapBottom(THRESHOLD);
+    }
 
     try {
       await onRefreshRef.current();
@@ -124,7 +147,7 @@ export function usePwaPullToRefresh({
       refreshingRef.current = false;
       reset(true);
     }
-  }, [reset]);
+  }, [reset, syncGap]);
 
   useEffect(() => {
     if (!enabled || typeof document === "undefined") return;
@@ -186,6 +209,7 @@ export function usePwaPullToRefresh({
         applyPullVisual(surfaceEl, 0, false);
         pullYRef.current = 0;
         setPullY(0);
+        setGapBottom(0);
         setPhase("pulling");
         return;
       }
@@ -197,6 +221,7 @@ export function usePwaPullToRefresh({
       setPullY(next);
       setPhase(next >= THRESHOLD ? "release" : "pulling");
       applyPullVisual(surfaceEl, next, false);
+      syncGap(surfaceEl, next);
     };
 
     const onTouchEnd = () => {
@@ -226,10 +251,11 @@ export function usePwaPullToRefresh({
       document.removeEventListener("touchcancel", onTouchEnd, true);
       clearPullVisual(surfaceElRef.current);
     };
-  }, [enabled, reset, runRefresh]);
+  }, [enabled, reset, runRefresh, syncGap]);
 
   return {
     pullY,
+    gapBottom,
     phase,
     threshold: THRESHOLD,
     visible: phase !== "idle",
