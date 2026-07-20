@@ -42,7 +42,9 @@ export function OfflineBanner() {
           {isConflict
             ? t("offline.conflictBanner", { count: state.conflictCount })
             : isOffline
-              ? t("offline.offlineBanner", { count: state.pendingCount })
+              ? state.pendingCount > 0
+                ? t("offline.offlineBanner", { count: state.pendingCount })
+                : t("offline.offlineReady")
               : t("offline.syncingBanner", { count: state.pendingCount })}
         </span>
       </div>

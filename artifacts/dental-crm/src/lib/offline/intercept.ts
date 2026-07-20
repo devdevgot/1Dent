@@ -1,17 +1,24 @@
+import type { QueryClient } from "@tanstack/react-query";
 import {
   setOfflineMutationInterceptor,
+  setOfflineReadInterceptor,
   setRequestBodyRewriter,
 } from "@workspace/api-client-react";
-import { enqueueOutboxOp } from "./outbox";
+import { enqueueOutboxOp, listPendingOutbox } from "./outbox";
 import { matchOfflineMutation } from "./route-match";
 import {
   getEntityVersion,
   patientVersionKey,
   toothVersionKey,
 } from "./entity-versions";
-import { isOnline } from "./online";
+import {
+  applyOptimisticMutationToQueryCache,
+  buildMergedOptimisticResponse,
+  resolveOfflineRead,
+} from "./optimistic-cache";
 
 let clinicIdGetter: (() => string | null) | null = null;
+let queryClientRef: QueryClient | null = null;
 let installed = false;
 
 function parseBody(body: string | null): Record<string, unknown> {
@@ -51,65 +58,15 @@ function injectBaseUpdatedAt(
   return JSON.stringify({ ...payload, baseUpdatedAt: version });
 }
 
-function buildOptimisticResponse(
-  matched: NonNullable<ReturnType<typeof matchOfflineMutation>>,
-  payload: Record<string, unknown>,
-): unknown {
-  const now = new Date().toISOString();
-
-  if (matched.type === "update_tooth") {
-    return {
-      success: true,
-      data: {
-        tooth: {
-          patientId: matched.resourceId,
-          toothFdi: matched.toothFdi,
-          condition: payload.condition,
-          notes: payload.notes ?? null,
-          updatedAt: now,
-          _offlinePending: true,
-        },
-      },
-      offlineQueued: true,
-    };
-  }
-
-  if (matched.type === "add_interaction") {
-    return {
-      success: true,
-      data: {
-        interaction: {
-          id: `offline_${Date.now()}`,
-          patientId: matched.resourceId,
-          type: payload.type,
-          content: payload.content,
-          createdAt: now,
-          _offlinePending: true,
-        },
-      },
-      offlineQueued: true,
-    };
-  }
-
-  // patient update / status
-  return {
-    success: true,
-    data: {
-      patient: {
-        id: matched.resourceId,
-        ...payload,
-        updatedAt: now,
-        _offlinePending: true,
-      },
-    },
-    offlineQueued: true,
-  };
-}
-
 export function installOfflineFetchInterceptors(options: {
   getClinicId: () => string | null;
+  queryClient: QueryClient;
 }): void {
+  // Always refresh getters — provider remount / HMR must not keep a stale
+  // QueryClient reference from the first install.
   clinicIdGetter = options.getClinicId;
+  queryClientRef = options.queryClient;
+
   if (installed) return;
   installed = true;
 
@@ -125,6 +82,20 @@ export function installOfflineFetchInterceptors(options: {
     }) => injectBaseUpdatedAt(url, method, body),
   );
 
+  setOfflineReadInterceptor(async ({ url, method }) => {
+    if (method.toUpperCase() !== "GET") return null;
+    const qc = queryClientRef;
+    if (!qc) return null;
+    const clinicId = clinicIdGetter?.() ?? null;
+    const pending = clinicId ? await listPendingOutbox(clinicId) : [];
+    return resolveOfflineRead({
+      url,
+      clinicId,
+      queryClient: qc,
+      pendingOps: pending,
+    });
+  });
+
   setOfflineMutationInterceptor(async ({
     url,
     method,
@@ -135,8 +106,6 @@ export function installOfflineFetchInterceptors(options: {
     body: string | null;
     headers: Headers;
   }) => {
-    // Only queue when we believe we're offline / network failed.
-    // Online path with body rewriter still injects baseUpdatedAt.
     const matched = matchOfflineMutation(method, url);
     if (!matched) return null;
 
@@ -167,10 +136,11 @@ export function installOfflineFetchInterceptors(options: {
       clinicId,
     });
 
-    return buildOptimisticResponse(matched, rest);
-  });
-}
+    const qc = queryClientRef;
+    const merged = qc
+      ? applyOptimisticMutationToQueryCache(qc, matched, rest, clinicId)
+      : {};
 
-export function shouldQueueForOffline(): boolean {
-  return !isOnline();
+    return buildMergedOptimisticResponse(matched, merged, rest);
+  });
 }
