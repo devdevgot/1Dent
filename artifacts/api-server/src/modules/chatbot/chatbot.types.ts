@@ -64,8 +64,16 @@ export interface ChatbotSessionData {
   doctorConfirmed?: boolean;
   excludedDoctorIds?: string[];
   leadNurtureAnchorAt?: string;
+  /**
+   * Number of lead-nurture touches already sent (0–4).
+   * Cadence: 3 days in a row — day 1 twice, days 2 and 3 once each.
+   */
+  leadNurtureTouchesSent?: number;
+  /** @deprecated legacy 24/72/168h cadence flags — kept for in-flight sessions. */
   leadFollowup24Sent?: boolean;
+  /** @deprecated legacy 24/72/168h cadence flags — kept for in-flight sessions. */
   leadFollowup72Sent?: boolean;
+  /** @deprecated legacy 24/72/168h cadence flags — kept for in-flight sessions. */
   leadFollowup168Sent?: boolean;
   branchAskCount?: number;
   handoffSummary?: string;

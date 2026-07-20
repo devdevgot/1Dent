@@ -1285,7 +1285,17 @@ function renderScriptBlocks(
   return out;
 }
 
-const LEAD_NURTURE_HOURS = [24, 72, 168] as const;
+/**
+ * Lead-nurture cadence: 4 touches over 3 consecutive days.
+ * Day 1 — two touches (morning-ish and evening-ish), days 2 and 3 — one touch each.
+ * Hours are measured from the moment the patient went silent (leadNurtureAnchorAt).
+ */
+const LEAD_NURTURE_TOUCHES = [
+  { hours: 3, label: "день 1, касание 1 из 2" },
+  { hours: 9, label: "день 1, касание 2 из 2" },
+  { hours: 27, label: "день 2, одно касание" },
+  { hours: 51, label: "день 3, финальное касание" },
+] as const;
 const LEAD_NURTURE_STATES: ChatbotState[] = [
   "collect_problem",
   "collect_qualification",
@@ -1301,14 +1311,17 @@ const LEAD_NURTURE_STATES: ChatbotState[] = [
   "collect_phone",
 ];
 
-function getLeadNurtureTemplates(settings: Awaited<ReturnType<typeof getSettings>>): [string, string, string] {
+function getLeadNurtureTemplates(
+  settings: Awaited<ReturnType<typeof getSettings>>,
+): [string, string, string, string] {
   const savedBlocks = (settings.scriptBlocks ?? []) as ScriptBlock[];
   const activeBlocks = savedBlocks.length > 0 ? savedBlocks : STANDARD_SCRIPT_BLOCKS;
   const followup = activeBlocks.find((b) => b.id === "followup" && b.enabled);
-  const defaults: [string, string, string] = [
+  const defaults: [string, string, string, string] = [
     "Подобрать для вас удобное время? 😊 Есть свободные окна на сегодня и завтра.",
     "Напоминаю вам 😊 Могу записать вас без ожидания. Когда вам будет удобно?",
     "Здравствуйте 😊 Вы интересовались приёмом. Могу записать на удобное время — когда подойдёт?",
+    "Здравствуйте 😊 Не хочу быть навязчивым, поэтому пишу в последний раз. Если вопрос ещё актуален — с радостью подберу для вас удобное время, просто напишите 🤍",
   ];
   if (!followup?.content.trim()) return defaults;
 
@@ -1320,6 +1333,7 @@ function getLeadNurtureTemplates(settings: Awaited<ReturnType<typeof getSettings
     parts[0] ?? defaults[0],
     parts[1] ?? defaults[1],
     parts[2] ?? defaults[2],
+    parts[3] ?? defaults[3],
   ];
 }
 
@@ -2171,8 +2185,13 @@ export class ChatbotService {
     let state = session.state;
     let data = { ...session.data };
 
-    if (LEAD_NURTURE_STATES.includes(state) && !data.leadNurtureAnchorAt) {
+    if (LEAD_NURTURE_STATES.includes(state)) {
+      // Patient wrote to us — restart the silence timer and the 3-day touch cadence.
       data.leadNurtureAnchorAt = new Date().toISOString();
+      data.leadNurtureTouchesSent = 0;
+      data.leadFollowup24Sent = false;
+      data.leadFollowup72Sent = false;
+      data.leadFollowup168Sent = false;
     }
 
     // Single-branch clinic — pre-select the branch so the funnel never asks about it
@@ -4772,15 +4791,14 @@ export class ChatbotService {
       const anchorMs = new Date(data.leadNurtureAnchorAt ?? row.updatedAt).getTime();
       const hoursSince = (now - anchorMs) / (60 * 60 * 1000);
 
-      let stage: 0 | 1 | 2 | null = null;
-      if (hoursSince >= LEAD_NURTURE_HOURS[2] && !data.leadFollowup168Sent && data.leadFollowup72Sent) {
-        stage = 2;
-      } else if (hoursSince >= LEAD_NURTURE_HOURS[1] && !data.leadFollowup72Sent && data.leadFollowup24Sent) {
-        stage = 1;
-      } else if (hoursSince >= LEAD_NURTURE_HOURS[0] && !data.leadFollowup24Sent) {
-        stage = 0;
-      }
-      if (stage === null) continue;
+      // Migrate in-flight sessions from the legacy 24/72/168h flags to the touch counter.
+      const legacyTouches = data.leadFollowup72Sent ? 3 : data.leadFollowup24Sent ? 2 : 0;
+      const touchesSent = Math.max(data.leadNurtureTouchesSent ?? 0, legacyTouches);
+      if (touchesSent >= LEAD_NURTURE_TOUCHES.length) continue;
+
+      const nextTouch = LEAD_NURTURE_TOUCHES[touchesSent]!;
+      if (hoursSince < nextTouch.hours) continue;
+      const stage = touchesSent as 0 | 1 | 2 | 3;
 
       let settings: Awaited<ReturnType<typeof getSettings>>;
       try {
@@ -4796,9 +4814,11 @@ export class ChatbotService {
       if (!data.leadNurtureAnchorAt) {
         data.leadNurtureAnchorAt = new Date(anchorMs).toISOString();
       }
-      if (stage === 0) data.leadFollowup24Sent = true;
-      if (stage === 1) data.leadFollowup72Sent = true;
-      if (stage === 2) data.leadFollowup168Sent = true;
+      data.leadNurtureTouchesSent = stage + 1;
+      // Keep legacy flags in sync so older readers/deploys behave sanely.
+      if (stage + 1 >= 2) data.leadFollowup24Sent = true;
+      if (stage + 1 >= 3) data.leadFollowup72Sent = true;
+      if (stage + 1 >= 4) data.leadFollowup168Sent = true;
 
       await saveSession({
         id: row.id,
@@ -4809,7 +4829,10 @@ export class ChatbotService {
         humanTakeover: row.humanTakeover,
       });
 
-      logger.info({ phone: row.phone, stage, hoursSince }, "[ChatbotService] Sending lead nurture follow-up");
+      logger.info(
+        { phone: row.phone, stage, touch: nextTouch.label, hoursSince },
+        "[ChatbotService] Sending lead nurture follow-up",
+      );
 
       const recentRows = await db
         .select()
@@ -4845,7 +4868,7 @@ export class ChatbotService {
         continue;
       }
 
-      const nurtureGuidance = `Пациент не завершил запись (этап «${state}»). Одно короткое follow-up — без повторения уже заданных вопросов. Этап ${stage + 1} из 3.`;
+      const nurtureGuidance = `Пациент не завершил запись (этап «${state}») и не отвечает. Это повторное касание ${stage + 1} из 4 (${nextTouch.label}). Одно короткое follow-up — новая формулировка, без повторения уже заданных вопросов и прошлых напоминаний.${stage === 3 ? " Это финальное касание: мягко попрощайся и оставь дверь открытой, без давления." : ""}`;
 
       const helperPrompt = buildFollowUpMiniPrompt({
         clinicName: resolveClinicName(settings, clinicName),
