@@ -55,7 +55,8 @@ export function MenuServiceSheet({
       <motion.div
         key="menu-service-overlay"
         className={cn(
-          "fixed inset-0 z-[80] flex flex-col overflow-hidden bg-white",
+          // Canvas behind the rubber-banded surface — spinner lives in this gap
+          "fixed inset-0 z-[80] flex flex-col overflow-hidden bg-[#faf8f4]",
           "h-[100dvh] min-h-[100dvh] max-h-[100dvh]",
           "h-[100svh] min-h-[100svh] max-h-[100svh]",
         )}
@@ -66,7 +67,9 @@ export function MenuServiceSheet({
         animate={{ y: 0 }}
         transition={{ duration: 0.5, ease: EASE }}
       >
-          <header className="shrink-0 bg-white border-b border-[#e8e3d9] safe-area-top">
+        {/* data-ptr-surface: header + body move together so PTR spinner sits above the sheet */}
+        <div data-ptr-surface className="flex min-h-0 flex-1 flex-col">
+          <header className="shrink-0 border-b border-[#e8e3d9] bg-white safe-area-top">
             <div className="flex items-center gap-2 px-4 sm:px-5 pt-3 pb-3">
               {onStackBack ? (
                 <button
@@ -104,10 +107,11 @@ export function MenuServiceSheet({
             </div>
           </header>
 
-          <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-hidden overscroll-contain bg-[#faf8f4]">
+          <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain bg-[#faf8f4]">
             {children}
           </div>
-        </motion.div>
+        </div>
+      </motion.div>
     ) : null,
     document.body,
   );

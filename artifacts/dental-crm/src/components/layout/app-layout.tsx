@@ -115,6 +115,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <OverlayNavigationProvider>
+      {/* Canvas behind rubber-banded surface — PTR spinner draws in this top gap */}
       <div className="flex flex-col h-app bg-[#faf8f4] overflow-hidden font-manrope">
       {afterFirstPaint && (
         <Suspense fallback={null}>
@@ -123,8 +124,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </Suspense>
       )}
 
-      {/* data-ptr-surface: header + main rubber-band together so PTR spinner sits in the top gap */}
-      <div data-ptr-surface className="flex flex-1 min-h-0 flex-col overflow-hidden">
+      {/* data-ptr-surface: home search + main move together → spinner above the page, like Services */}
+      <div data-ptr-surface className="flex flex-1 min-h-0 flex-col overflow-hidden bg-[#faf8f4]">
       {/* Home page header */}
       {isHomePage && (
         <header className="flex-none bg-white border-b border-[#e8e3d9] z-20 safe-area-top">

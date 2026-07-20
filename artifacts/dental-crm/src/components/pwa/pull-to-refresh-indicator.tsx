@@ -3,6 +3,8 @@ import type { PullToRefreshPhase } from "@/hooks/use-pwa-pull-to-refresh";
 
 type PullToRefreshIndicatorProps = {
   pullY: number;
+  /** Bottom Y of the revealed gap (top of the pulled page surface). */
+  gapBottom?: number;
   phase: PullToRefreshPhase;
   threshold: number;
   visible: boolean;
@@ -11,21 +13,24 @@ type PullToRefreshIndicatorProps = {
 const TICK_COUNT = 12;
 
 /**
- * Instagram / iOS-style activity indicator: grey radial ticks in the
- * rubber-band gap above the page (no card, no blue Loader icon).
+ * Instagram / iOS-style activity indicator in the rubber-band gap
+ * above the pulled page/overlay — never drawn over search/title chrome.
  */
 export function PullToRefreshIndicator({
   pullY,
+  gapBottom,
   phase,
   threshold,
   visible,
 }: PullToRefreshIndicatorProps) {
   if (!visible || typeof document === "undefined") return null;
 
-  const gap = phase === "refreshing" ? threshold : pullY;
+  const fallbackGap = phase === "refreshing" ? threshold : pullY;
+  // Prefer the measured surface top so the spinner tracks the real gap
+  // (home chrome, service overlays, etc.).
+  const gap = Math.max(fallbackGap, gapBottom ?? 0);
   const progress = Math.min(gap / threshold, 1);
   const spinning = phase === "refreshing";
-  // While pulling, rotate the tick “head” with progress so it feels alive.
   const pullRotate = spinning ? 0 : progress * 360;
 
   return createPortal(
@@ -48,7 +53,6 @@ export function PullToRefreshIndicator({
         style={spinning ? undefined : { transform: `rotate(${pullRotate}deg)` }}
       >
         {Array.from({ length: TICK_COUNT }, (_, i) => {
-          // Fade trail around the circle (brightest tick leads).
           const opacity = 0.18 + (i / (TICK_COUNT - 1)) * 0.82;
           return (
             <span
