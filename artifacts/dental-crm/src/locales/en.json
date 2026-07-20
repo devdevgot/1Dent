@@ -240,6 +240,18 @@
       "trackingPushDesc": "Install 1Dent on your home screen, enable push in profile, then test."
     }
   },
+  "offline": {
+    "offlineBanner": "Offline — changes are saved locally ({{count}})",
+    "syncingBanner": "Syncing offline changes ({{count}})",
+    "conflictBanner": "Edit conflict: choose a version ({{count}})",
+    "syncNow": "Sync now",
+    "conflictTitle": "Edit conflict",
+    "conflictDesc": "While you were offline, someone else changed this record. Choose which version to keep.",
+    "yourChange": "Your offline change",
+    "serverChange": "Server version",
+    "keepLocal": "Keep mine",
+    "keepServer": "Keep server"
+  },
   "role": {
     "owner": "Owner",
     "admin": "Admin",

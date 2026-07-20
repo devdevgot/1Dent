@@ -15,12 +15,13 @@
  *    chunks match the fresh shell (avoids blank Schedule / other lazy routes).
  */
 
-const VERSION = "1dent-pwa-v9";
+const VERSION = "1dent-pwa-v10";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
 
 const OFFLINE_URL = "/index.html";
+const SYNC_TAG = "1dent-outbox-sync";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -58,11 +59,40 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Allow the page to trigger an immediate SW takeover after an update.
+// Allow the page to trigger an immediate SW takeover after an update,
+// or ask clients to flush the offline outbox after Background Sync.
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
+  if (event.data && event.data.type === "REQUEST_OUTBOX_SYNC") {
+    event.waitUntil(
+      (async () => {
+        try {
+          if ("sync" in self.registration) {
+            await self.registration.sync.register(SYNC_TAG);
+          }
+        } catch {
+          // Background Sync may be unsupported / permission denied.
+        }
+      })(),
+    );
+  }
+});
+
+self.addEventListener("sync", (event) => {
+  if (event.tag !== SYNC_TAG) return;
+  event.waitUntil(
+    (async () => {
+      const windowClients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      for (const client of windowClients) {
+        client.postMessage({ type: "FLUSH_OUTBOX" });
+      }
+    })(),
+  );
 });
 
 function isHashedAsset(url) {
@@ -90,7 +120,7 @@ async function networkFirstNavigation(request) {
       (await cache.match(request)) || (await cache.match(OFFLINE_URL));
     if (cached) return cached;
     return new Response(
-      "<!doctype html><meta charset=utf-8><title>Офлайн</title><body style=\"font-family:system-ui;padding:2rem;text-align:center;color:#0f172a\"><h1>Нет подключения</h1><p>1Dent недоступен без интернета. Проверьте соединение и попробуйте снова.</p></body>",
+      "<!doctype html><meta charset=utf-8><title>Офлайн</title><body style=\"font-family:system-ui;padding:2rem;text-align:center;color:#0f172a\"><h1>Нет подключения</h1><p>Откройте установленное приложение 1Dent — клинические данные и несинхронизированные изменения доступны офлайн и отправятся при появлении сети.</p></body>",
       { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
     );
   }

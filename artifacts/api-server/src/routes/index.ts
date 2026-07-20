@@ -35,6 +35,7 @@ import landingLeadsRouter from "../modules/landing-leads/landing-leads.controlle
 import pushRouter from "../modules/push/push.controller";
 import tabletPublicRouter from "../modules/tablet/tablet-public.controller";
 import tabletRouter from "../modules/tablet/tablet.controller";
+import syncRouter from "../modules/sync/sync.controller";
 import { actionLogMiddleware } from "../middlewares/action-log.middleware";
 import { authMiddleware, roleGuard } from "../middlewares/auth.middleware";
 import { clinicalReadRoles } from "../lib/clinical-roles";
@@ -66,6 +67,7 @@ router.use("/tablet/public", tabletPublicRouter);
 router.use("/tablet", tabletRouter);
 router.use(actionLogMiddleware);
 router.use("/users", usersRouter);
+router.use("/sync", syncRouter);
 router.use("/patients", patientsRouter);
 router.use("/patients/:id", diagnosisRouter);
 router.use("/patients/:id/teeth", dentalRouter);

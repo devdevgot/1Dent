@@ -44,6 +44,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /sync/push:
+    post:
+      operationId: pushOfflineSync
+      tags: [sync]
+      summary: Push offline mutation outbox
+      description: >
+        Applies a batch of offline mutations with per-operation results.
+        Each op may succeed, conflict (409 VERSION_CONFLICT semantics), or fail
+        independently so multi-user offline edits do not silently overwrite each other.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPushRequest"
+      responses:
+        "200":
+          description: Sync results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncPushResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /auth/register:
     post:
       operationId: register
@@ -2559,9 +2590,97 @@ components:
           type: string
         code:
           type: string
+        data:
+          description: Optional structured payload (e.g. current server entity on VERSION_CONFLICT)
+          nullable: true
       required:
         - success
         - error
+
+    SyncOpType:
+      type: string
+      enum:
+        - update_patient
+        - update_patient_status
+        - update_tooth
+        - add_interaction
+
+    SyncOp:
+      type: object
+      properties:
+        clientOpId:
+          type: string
+        type:
+          $ref: "#/components/schemas/SyncOpType"
+        resourceId:
+          type: string
+          description: Usually patient id
+        toothFdi:
+          type: integer
+        baseUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        payload:
+          type: object
+          additionalProperties: true
+        clientTimestamp:
+          type: string
+          format: date-time
+      required:
+        - clientOpId
+        - type
+        - resourceId
+        - payload
+
+    SyncPushRequest:
+      type: object
+      properties:
+        ops:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SyncOp"
+      required:
+        - ops
+
+    SyncOpResult:
+      type: object
+      properties:
+        clientOpId:
+          type: string
+        status:
+          type: string
+          enum: [applied, conflict, error, skipped]
+        data:
+          description: Applied entity or conflict current state
+        error:
+          type: string
+        code:
+          type: string
+      required:
+        - clientOpId
+        - status
+
+    SyncPushResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: "#/components/schemas/SyncOpResult"
+          required:
+            - results
+      required:
+        - success
+        - data
 
     SuccessResponse:
       type: object
@@ -3142,12 +3261,25 @@ components:
           type: string
         notes:
           type: string
+        baseUpdatedAt:
+          type: string
+          format: date-time
+          description: >
+            Last-seen patient.updatedAt from the client. When provided and the
+            server row differs, the API returns 409 VERSION_CONFLICT instead of
+            overwriting concurrent edits (offline sync / multi-user safety).
 
     UpdatePatientStatusRequest:
       type: object
       properties:
         status:
           $ref: "#/components/schemas/PatientStatus"
+        baseUpdatedAt:
+          type: string
+          format: date-time
+          description: >
+            Last-seen patient.updatedAt. Rejects with 409 VERSION_CONFLICT when
+            another user changed the patient while this client was offline.
       required:
         - status
 
@@ -3467,6 +3599,12 @@ components:
           $ref: "#/components/schemas/ToothCondition"
         notes:
           type: string
+        baseUpdatedAt:
+          type: string
+          format: date-time
+          description: >
+            Last-seen tooth.updatedAt. When the tooth was changed by another
+            user, returns 409 VERSION_CONFLICT with the current server record.
       required:
         - condition
 

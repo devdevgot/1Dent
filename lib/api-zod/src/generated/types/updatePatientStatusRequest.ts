@@ -9,4 +9,10 @@ import type { PatientStatus } from "./patientStatus";
 
 export interface UpdatePatientStatusRequest {
   status: PatientStatus;
+  /**
+   * Last-seen patient.updatedAt. Rejects with 409 VERSION_CONFLICT when
+   * another user changed the patient while this client was offline.
+   * @nullable
+   */
+  baseUpdatedAt?: string;
 }

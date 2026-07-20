@@ -28,8 +28,12 @@ export class NotFoundError extends AppError {
 }
 
 export class ConflictError extends AppError {
-  constructor(message = "Conflict") {
-    super(message, 409, "CONFLICT");
+  constructor(
+    message = "Conflict",
+    public readonly details?: unknown,
+    code: string = "CONFLICT",
+  ) {
+    super(message, 409, code);
   }
 }
 

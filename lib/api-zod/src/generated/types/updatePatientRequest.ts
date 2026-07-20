@@ -20,4 +20,11 @@ export interface UpdatePatientRequest {
   source?: PatientSource;
   doctorId?: string;
   notes?: string;
+  /**
+   * Last-seen patient.updatedAt from the client. When provided and the server
+   * row differs, the API returns 409 VERSION_CONFLICT instead of overwriting
+   * concurrent edits (offline sync / multi-user safety).
+   * @nullable
+   */
+  baseUpdatedAt?: string;
 }

@@ -11,7 +11,8 @@ import multer from "multer";
 import { DentalRepository } from "./dental.repository";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { clinicalReadRoles, clinicalWriteRoles } from "../../lib/clinical-roles";
-import { ValidationError, NotFoundError } from "../../shared/errors";
+import { ValidationError, NotFoundError, ConflictError } from "../../shared/errors";
+import { isBaseVersionCurrent } from "../../shared/optimistic-concurrency";
 import { PatientsRepository } from "../patients/patients.repository";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import { ClinicPricesRepository } from "../clinic/clinic-prices.repository";
@@ -127,6 +128,8 @@ const toothConditionValues = [
 const updateToothSchema = z.object({
   condition: z.enum(toothConditionValues),
   notes: z.string().optional(),
+  /** Client's last-seen tooth updatedAt for optimistic concurrency (offline sync). */
+  baseUpdatedAt: z.string().min(1).optional(),
 });
 
 const addTreatmentSchema = z.object({
@@ -174,6 +177,24 @@ router.put("/:toothFdi", writeRoles, async (req: Request, res: Response, next: N
   }
   const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
   if (!ok) return;
+
+  const existingTooth = await repo
+    .findTooth(patientId, req.user!.clinicId, toothFdi)
+    .catch(next);
+  if (existingTooth === undefined) return;
+  if (
+    existingTooth &&
+    !isBaseVersionCurrent(existingTooth.updatedAt, parsed.data.baseUpdatedAt)
+  ) {
+    return next(
+      new ConflictError(
+        "Карта зуба была изменена другим пользователем. Обновите данные и повторите изменение.",
+        { entity: "tooth", current: existingTooth },
+        "VERSION_CONFLICT",
+      ),
+    );
+  }
+
   const tooth = await repo
     .upsertTooth({
       id: randomUUID(),

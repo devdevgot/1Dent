@@ -65,6 +65,9 @@ const createPatientSchema = z.object({
   notes: z.string().optional(),
 });
 
+/** Client's last-seen updatedAt for optimistic concurrency (offline sync). */
+const baseUpdatedAtSchema = z.string().min(1).optional();
+
 const updatePatientSchema = z.object({
   name: z.string().min(2).optional(),
   phone: z.string().min(5).optional(),
@@ -74,10 +77,12 @@ const updatePatientSchema = z.object({
   source: z.string().optional(),
   doctorId: z.string().optional(),
   notes: z.string().optional(),
+  baseUpdatedAt: baseUpdatedAtSchema,
 });
 
 const updateStatusSchema = z.object({
   status: z.enum(patientStatusValues),
+  baseUpdatedAt: baseUpdatedAtSchema,
 });
 
 const addInteractionSchema = z.object({
@@ -406,8 +411,16 @@ router.put(
       );
     }
     const id = String(req.params["id"]);
+    const { baseUpdatedAt, ...patientData } = parsed.data;
     const result = await service
-      .update(id, req.user!.clinicId, parsed.data, req.user!.role, req.user!.userId)
+      .update(
+        id,
+        req.user!.clinicId,
+        patientData,
+        req.user!.role,
+        req.user!.userId,
+        baseUpdatedAt,
+      )
       .catch(next);
     if (!result) return;
     analyticsRepo.invalidateClinicCache(req.user!.clinicId).catch(() => {});
@@ -430,7 +443,14 @@ router.patch(
     }
     const id = String(req.params["id"]);
     const result = await service
-      .updateStatus(id, req.user!.clinicId, parsed.data.status, req.user!.role, req.user!.userId)
+      .updateStatus(
+        id,
+        req.user!.clinicId,
+        parsed.data.status,
+        req.user!.role,
+        req.user!.userId,
+        parsed.data.baseUpdatedAt,
+      )
       .catch(next);
     if (!result) return;
     analyticsRepo.invalidateClinicCache(req.user!.clinicId).catch(() => {});

@@ -396,10 +396,21 @@ export interface UpdatePatientRequest {
   source?: PatientSource;
   doctorId?: string;
   notes?: string;
+  /**
+   * Last-seen patient.updatedAt from the client. When provided and the server
+   * row differs, the API returns 409 VERSION_CONFLICT instead of overwriting
+   * concurrent edits (offline sync / multi-user safety).
+   */
+  baseUpdatedAt?: string;
 }
 
 export interface UpdatePatientStatusRequest {
   status: PatientStatus;
+  /**
+   * Last-seen patient.updatedAt. Rejects with 409 VERSION_CONFLICT when
+   * another user changed the patient while this client was offline.
+   */
+  baseUpdatedAt?: string;
 }
 
 export interface AddInteractionRequest {
@@ -567,6 +578,11 @@ export interface ToothRecord {
 export interface UpdateToothRequest {
   condition: ToothCondition;
   notes?: string;
+  /**
+   * Last-seen tooth.updatedAt. When the tooth was changed by another user,
+   * returns 409 VERSION_CONFLICT with the current server record.
+   */
+  baseUpdatedAt?: string;
 }
 
 export type ToothResponseData = {

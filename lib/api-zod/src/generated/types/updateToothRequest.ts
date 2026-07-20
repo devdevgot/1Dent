@@ -10,4 +10,10 @@ import type { ToothCondition } from "./toothCondition";
 export interface UpdateToothRequest {
   condition: ToothCondition;
   notes?: string;
+  /**
+   * Last-seen tooth.updatedAt. When the tooth was changed by another user,
+   * returns 409 VERSION_CONFLICT with the current server record.
+   * @nullable
+   */
+  baseUpdatedAt?: string;
 }
