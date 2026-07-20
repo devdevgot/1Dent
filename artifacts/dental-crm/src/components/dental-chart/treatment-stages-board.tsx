@@ -73,6 +73,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
 import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import type { ToothRecord, TreatmentPlan, TreatmentPlanItem, UpdateTreatmentPlanItemRequest } from "@workspace/api-client-react";
 import { CONDITION_CONFIG } from "./fdi-chart";
@@ -1693,6 +1694,7 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
   const [discountModalStageId, setDiscountModalStageId] = useState<string | null>(null);
   const [discountValue, setDiscountValue] = useState<string>("");
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { user } = useAuthStore();
   const isAdmin = user?.role === "admin";
   const { data: usersData } = useListUsers();
@@ -2057,11 +2059,19 @@ export function TreatmentStagesBoard({ patientId, teeth, activePlan, filterFdi =
     completeMutation.mutate({ id: patientId, planId, itemId });
   }, [planId, patientId, completingId, cancellingId, completeMutation, toast]);
 
-  const handleCancel = useCallback((itemId: string) => {
+  const handleCancel = useCallback(async (itemId: string) => {
     if (!planId || completingId || cancellingId) return;
+    // Danger: cancelling a plan item removes it from the active treatment plan.
+    const ok = await confirm({
+      tone: "danger",
+      title: "Отменить пункт плана?",
+      description: "Процедура будет отменена и исключена из активного плана лечения.",
+      confirmLabel: "Отменить процедуру",
+    });
+    if (!ok) return;
     setCancellingId(itemId);
     cancelMutation.mutate({ id: patientId, planId, itemId, data: { status: "cancelled" } });
-  }, [planId, patientId, completingId, cancellingId, cancelMutation]);
+  }, [planId, patientId, completingId, cancellingId, cancelMutation, confirm]);
 
   const getTimerStart = useCallback(
     (itemId: string) => activeTimers.get(itemId),

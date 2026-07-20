@@ -27,6 +27,7 @@ import {
 import PayrollApproveModal from "./payroll-approve-modal";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
+import { useConfirm } from "@/hooks/use-confirm";
 import { cn } from "@/lib/utils";
 import { getBaseUrl } from "@/lib/base-url";
 import { usePageBack } from "@/hooks/use-page-back";
@@ -105,6 +106,7 @@ export default function StaffDetailPage({
   const { data: payrollData, refetch: refetchPayroll } = useGetPayrollRecords(doctorId ?? "");
   const { data: salaryData, refetch: refetchSalary } = useGetSalarySettings(doctorId ?? "");
   const { mutateAsync: saveSettings, isPending: savingSettings } = useUpdateSalarySettings();
+  const confirm = useConfirm();
 
   const payrollRecords: PayrollRecord[] = payrollData?.data?.records ?? [];
   const salarySettings = salaryData?.data?.settings;
@@ -253,6 +255,15 @@ export default function StaffDetailPage({
 
   const handleSaveSettings = async () => {
     if (!doctorId) return;
+    // Danger: salary scheme is the basis for all future payroll calculations.
+    const ok = await confirm({
+      tone: "danger",
+      title: "Изменить схему зарплаты?",
+      description:
+        "Новая схема будет использоваться при расчёте зарплаты и ФОТ сотрудника. Убедитесь, что данные верны.",
+      confirmLabel: "Сохранить",
+    });
+    if (!ok) return;
     await saveSettings({ userId: doctorId, data: { salaryType: salaryType as any, fixedAmount, commissionPercent } });
     await refetchSalary();
     setEditingSalary(false);

@@ -2,6 +2,7 @@ import { LogIn, TabletSmartphone, Trash2 } from "lucide-react";
 import { AppDialog } from "@/components/layout/app-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/hooks/use-confirm";
 
 export function TabletOwnerActionModal({
   open,
@@ -23,6 +24,19 @@ export function TabletOwnerActionModal({
   removing?: boolean;
 }) {
   const busy = entering || removing;
+  const confirm = useConfirm();
+
+  const handleRemove = async () => {
+    if (!onRemove) return;
+    // Danger: unlinking removes the tablet's paired session with the clinic.
+    const ok = await confirm({
+      tone: "danger",
+      title: "Отвязать планшет?",
+      description: `Планшет${cabinetName ? ` «${cabinetName}»` : ""} будет отвязан от клиники. Для повторного использования потребуется заново подключить устройство.`,
+      confirmLabel: "Отвязать",
+    });
+    if (ok) onRemove();
+  };
 
   return (
     <AppDialog
@@ -72,7 +86,7 @@ export function TabletOwnerActionModal({
                 "text-[#dc2626] hover:bg-[#fef2f2] hover:text-[#b91c1c]",
               )}
               disabled={busy}
-              onClick={onRemove}
+              onClick={() => { void handleRemove(); }}
             >
               <Trash2 className="mr-1 h-4 w-4" />
               {removing ? "Отвязываем…" : "Удалить планшет"}

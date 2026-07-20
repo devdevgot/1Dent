@@ -43,6 +43,7 @@ import { FSM_STATE_LABELS } from "@/lib/chatbot-fsm-states";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/api-error-message";
 import { usePageBack } from "@/hooks/use-page-back";
+import { useConfirm } from "@/hooks/use-confirm";
 
 
 const STATE_COLORS: Record<string, string> = {
@@ -648,6 +649,7 @@ function AiBroadcastTab() {
 
 export default function ChatbotPage() {
   const goBack = usePageBack();
+  const confirm = useConfirm();
   const { t, i18n } = useTranslation();
   const lang = i18n.language || "ru";
   const [tab, setTab] = useState<"sessions" | "settings" | "playground" | "ai-broadcast">("sessions");
@@ -854,7 +856,20 @@ export default function ChatbotPage() {
                   <p className="text-xs text-[#64748b]">{t("chatbot.settings.enableBotDesc")}</p>
                 </div>
                 <button
-                  onClick={() => setLocalSettings((p) => ({ ...p, enabled: !effectiveEnabled }))}
+                  onClick={async () => {
+                    // Danger: disabling stops all automatic replies clinic-wide.
+                    if (effectiveEnabled) {
+                      const ok = await confirm({
+                        tone: "danger",
+                        title: "Отключить чат-бота?",
+                        description:
+                          "Бот перестанет автоматически отвечать пациентам в WhatsApp по всей клинике, пока вы не включите его снова.",
+                        confirmLabel: "Отключить",
+                      });
+                      if (!ok) return;
+                    }
+                    setLocalSettings((p) => ({ ...p, enabled: !effectiveEnabled }));
+                  }}
                   className={cn(
                     "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none",
                     effectiveEnabled ? "bg-[var(--success)]" : "bg-[#94a3b8]/40",

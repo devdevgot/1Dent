@@ -65,6 +65,7 @@ import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
 import {
   KANBAN_COLUMNS,
   SOURCE_LABELS,
@@ -317,6 +318,7 @@ function ToothActionModal({
 }) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const qc = useQueryClient();
   const activeTreatmentForThisTooth = activeTreatment?.toothFdi === fdi ? activeTreatment : null;
   const blockingTreatment = activeTreatment && activeTreatment.toothFdi !== fdi ? activeTreatment : null;
@@ -412,7 +414,7 @@ function ToothActionModal({
     },
   });
 
-  const handleAction = (type: "treatment" | "extraction", label?: string) => {
+  const handleAction = async (type: "treatment" | "extraction", label?: string) => {
     if (blockingTreatment) {
       toast({
         title: "Уже идёт лечение",
@@ -420,6 +422,16 @@ function ToothActionModal({
         variant: "destructive",
       });
       return;
+    }
+    // Danger: starting an extraction is an irreversible clinical action.
+    if (type === "extraction") {
+      const ok = await confirm({
+        tone: "danger",
+        title: `Удалить зуб ${fdi}?`,
+        description: "Будет начата процедура удаления зуба. Убедитесь, что выбран правильный зуб и пациент.",
+        confirmLabel: "Начать удаление",
+      });
+      if (!ok) return;
     }
     const desc = label ?? (type === "treatment" ? t("tooth.startTreatment") : t("tooth.extractTooth"));
     setInProgressLabel(desc);
@@ -837,6 +849,7 @@ export function PatientDetailPanel() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === "admin";
   const { toast } = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [selectedToothFdi, setSelectedToothFdi] = useState<number | null>(null);
   const [interactionType, setInteractionType] = useState<InteractionType>("note");
@@ -1237,6 +1250,19 @@ export function PatientDetailPanel() {
       },
     },
   });
+
+  // Warning: approving locks the plan into an agreed state with the patient.
+  const handleApprovePlan = async (planId: string) => {
+    if (!selectedPatientId) return;
+    const ok = await confirm({
+      tone: "warning",
+      title: "Согласовать план с пациентом?",
+      description: "План лечения будет зафиксирован как согласованный с пациентом. Убедитесь, что состав и стоимость процедур верны.",
+      confirmLabel: "Согласовать",
+    });
+    if (!ok) return;
+    void approvePlanMutation.mutateAsync({ id: selectedPatientId, planId });
+  };
 
   const addPlanItemMutation = useAddTreatmentPlanItem({
     mutation: {
@@ -2646,12 +2672,7 @@ export function PatientDetailPanel() {
                           <Button
                             className="w-full gap-2 bg-[#1f75fe] rounded-full font-semibold text-white hover:bg-[#1a65e8]"
                             disabled={approvePlanMutation.isPending}
-                            onClick={() => {
-                              void approvePlanMutation.mutateAsync({
-                                id: selectedPatientId,
-                                planId: activePlan.id,
-                              });
-                            }}
+                            onClick={() => { void handleApprovePlan(activePlan.id); }}
                           >
                             {approvePlanMutation.isPending ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -2753,12 +2774,7 @@ export function PatientDetailPanel() {
                             <Button
                               className="w-full gap-2 bg-[#1f75fe] rounded-full font-semibold text-white hover:bg-[#1a65e8]"
                               disabled={approvePlanMutation.isPending}
-                              onClick={() => {
-                                void approvePlanMutation.mutateAsync({
-                                  id: selectedPatientId,
-                                  planId: activePlan.id,
-                                });
-                              }}
+                              onClick={() => { void handleApprovePlan(activePlan.id); }}
                             >
                               {approvePlanMutation.isPending ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -371,6 +371,14 @@ td{padding:7px 10px;border:1px solid #eee}tr:nth-child(even) td{background:#fafa
   };
 
   const handleDisconnectPlatform = async () => {
+    // Danger: disconnecting stops attendance notifications via Telegram.
+    const ok = await confirm({
+      tone: "danger",
+      title: "Отключить Telegram?",
+      description: "Бот 1Dent перестанет присылать уведомления о посещаемости сотрудников. Вы сможете подключить его снова.",
+      confirmLabel: "Отключить",
+    });
+    if (!ok) return;
     setDisconnectingPlatform(true);
     try {
       await apiFetch("/api/clinic/telegram-platform-disconnect", { method: "DELETE" });
