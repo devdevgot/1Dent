@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useCreatePatient,
   useListUsers,
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { parseIIN, isIINError } from "@workspace/api-zod";
 import { AppDialog } from "@/components/layout/app-dialog";
-import { filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
+import { canBeTreatingDoctor, filterTreatingDoctors, treatingDoctorLabel } from "@/lib/role-groups";
 
 interface CreatePatientDialogProps {
   open: boolean;
@@ -56,7 +56,32 @@ export function CreatePatientDialog({ open, onClose, onExistingPatient }: Create
       enabled: user?.role === "owner" || user?.role === "admin",
     },
   });
-  const doctors = filterTreatingDoctors(usersData?.data?.users ?? []);
+  const doctors = useMemo(() => {
+    const list = filterTreatingDoctors(usersData?.data?.users ?? []);
+    // Ensure the signed-in owner appears even if /users omits them.
+    if (user && canBeTreatingDoctor(user.role) && !list.some((d) => d.id === user.id)) {
+      return [
+        ...list,
+        {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          email: user.email,
+          clinicId: user.clinicId,
+          createdAt: user.createdAt,
+        },
+      ];
+    }
+    return list;
+  }, [usersData, user]);
+
+  useEffect(() => {
+    if (!open) return;
+    // Default лечащий врач to the owner when they open the create dialog.
+    if (user?.role === "owner") {
+      setDoctorId(user.id);
+    }
+  }, [open, user?.id, user?.role]);
 
   const { data: channelsData } = useListChannels({
     query: {

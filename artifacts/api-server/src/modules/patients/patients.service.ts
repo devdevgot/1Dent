@@ -49,6 +49,32 @@ function maskPhone(phone: string, role: UserRole): string {
 
 export interface PatientDTO extends Omit<Patient, "phone"> {
   phone: string;
+  /** Resolved treating-physician name (doctor or owner). */
+  doctorName?: string | null;
+}
+
+async function doctorNameMapForIds(
+  doctorIds: Array<string | null | undefined>,
+): Promise<Map<string, string>> {
+  const ids = [...new Set(doctorIds.filter((id): id is string => Boolean(id)))];
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({ id: usersTable.id, name: usersTable.name })
+    .from(usersTable)
+    .where(inArray(usersTable.id, ids));
+  return new Map(rows.map((r) => [r.id, r.name]));
+}
+
+function withDoctorName(
+  patient: Patient,
+  phone: string,
+  names: Map<string, string>,
+): PatientDTO {
+  return {
+    ...patient,
+    phone,
+    doctorName: patient.doctorId ? (names.get(patient.doctorId) ?? null) : null,
+  };
 }
 
 export class PatientsService {
@@ -61,10 +87,10 @@ export class PatientsService {
     _requestingUserId: string,
   ): Promise<PatientDTO[]> {
     const patients = await this.repo.listByClinic(clinicId);
-    return patients.map((p) => ({
-      ...p,
-      phone: maskPhone(p.phone, requestingRole),
-    }));
+    const names = await doctorNameMapForIds(patients.map((p) => p.doctorId));
+    return patients.map((p) =>
+      withDoctorName(p, maskPhone(p.phone, requestingRole), names),
+    );
   }
 
   async get(
@@ -77,8 +103,9 @@ export class PatientsService {
     if (!patient) throw new NotFoundError("Patient not found");
 
     const interactions = await this.repo.listInteractions(id, clinicId);
+    const names = await doctorNameMapForIds([patient.doctorId]);
     return {
-      patient: { ...patient, phone: maskPhone(patient.phone, requestingRole) },
+      patient: withDoctorName(patient, maskPhone(patient.phone, requestingRole), names),
       interactions,
     };
   }
@@ -91,7 +118,8 @@ export class PatientsService {
   ): Promise<PatientDTO | null> {
     const patient = await this.repo.findByIIN(clinicId, iin);
     if (!patient) return null;
-    return { ...patient, phone: maskPhone(patient.phone, requestingRole) };
+    const names = await doctorNameMapForIds([patient.doctorId]);
+    return withDoctorName(patient, maskPhone(patient.phone, requestingRole), names);
   }
 
   async create(
@@ -113,8 +141,25 @@ export class PatientsService {
       throw new ForbiddenError("Insufficient permissions");
     }
 
-    const resolvedDoctorId =
+    let resolvedDoctorId: string | null =
       requestingRole === "doctor" ? requestingUserId : (data.doctorId ?? null);
+
+    if (resolvedDoctorId && requestingRole !== "doctor") {
+      const [assignee] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.id, resolvedDoctorId),
+            eq(usersTable.clinicId, clinicId),
+            inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
+          ),
+        )
+        .limit(1);
+      if (!assignee) {
+        throw new ValidationError("Выбранный лечащий врач не найден в клинике");
+      }
+    }
 
     let resolvedIIN = data.iin ?? null;
     let resolvedDateOfBirth = data.dateOfBirth ?? null;
@@ -146,7 +191,8 @@ export class PatientsService {
       status: "new_request",
     });
 
-    return { ...patient, phone: maskPhone(patient.phone, requestingRole) };
+    const names = await doctorNameMapForIds([patient.doctorId]);
+    return withDoctorName(patient, maskPhone(patient.phone, requestingRole), names);
   }
 
   async update(
@@ -187,10 +233,28 @@ export class PatientsService {
       }
     }
 
+    if (sanitizedData.doctorId) {
+      const [assignee] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.id, sanitizedData.doctorId),
+            eq(usersTable.clinicId, clinicId),
+            inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
+          ),
+        )
+        .limit(1);
+      if (!assignee) {
+        throw new ValidationError("Выбранный лечащий врач не найден в клинике");
+      }
+    }
+
     const updated = await this.repo.update(id, clinicId, sanitizedData);
     if (!updated) throw new NotFoundError("Patient not found");
 
-    return { ...updated, phone: maskPhone(updated.phone, requestingRole) };
+    const names = await doctorNameMapForIds([updated.doctorId]);
+    return withDoctorName(updated, maskPhone(updated.phone, requestingRole), names);
   }
 
   async updateStatus(
@@ -217,7 +281,8 @@ export class PatientsService {
     const updated = await this.repo.findById(id, clinicId);
     if (!updated) throw new NotFoundError("Patient not found");
 
-    return { ...updated, phone: maskPhone(updated.phone, requestingRole) };
+    const names = await doctorNameMapForIds([updated.doctorId]);
+    return withDoctorName(updated, maskPhone(updated.phone, requestingRole), names);
   }
 
   async delete(
@@ -357,8 +422,9 @@ export class PatientsService {
       content: `Пациент передан от ${fromDoctorName} к ${toDoctor.name}. Запись: ${scheduledDate.toLocaleString("ru-RU")}`,
     });
 
+    const names = await doctorNameMapForIds([updated.doctorId]);
     return {
-      patient: { ...updated, phone: maskPhone(updated.phone, requestingRole) },
+      patient: withDoctorName(updated, maskPhone(updated.phone, requestingRole), names),
       procedureId: procedure.id,
     };
   }

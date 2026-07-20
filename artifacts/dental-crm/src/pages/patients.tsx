@@ -101,10 +101,22 @@ function PatientsListView({
   const doctorMap = useMemo(() => {
     const m: Record<string, string> = {};
     for (const u of usersData?.data?.users ?? []) {
-      if (u.role === "doctor" || u.role === "owner") m[u.id] = u.name;
+      m[u.id] = u.name;
     }
+    // Always resolve the signed-in user (owner/doctor) even if /users is empty.
+    if (user?.id && user.name) m[user.id] = user.name;
     return m;
-  }, [usersData]);
+  }, [usersData, user?.id, user?.name]);
+
+  const doctorLabel = useCallback(
+    (patient: Patient) => {
+      const fromApi = (patient as Patient & { doctorName?: string | null }).doctorName;
+      if (fromApi) return fromApi;
+      if (patient.doctorId && doctorMap[patient.doctorId]) return doctorMap[patient.doctorId]!;
+      return null;
+    },
+    [doctorMap],
+  );
 
   const patientTotals = useMemo(() => {
     const totals: Record<string, { paid: number; count: number }> = {};
@@ -158,11 +170,11 @@ function PatientsListView({
           case "status":      cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]; break;
           case "source":      cmp = a.source.localeCompare(b.source); break;
           case "createdAt":   cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(); break;
-          case "doctor":      cmp = (a.doctorId ? (doctorMap[a.doctorId] ?? "") : "").localeCompare(b.doctorId ? (doctorMap[b.doctorId] ?? "") : ""); break;
+          case "doctor":      cmp = (doctorLabel(a) ?? "").localeCompare(doctorLabel(b) ?? ""); break;
         }
         return sortDir === "asc" ? cmp : -cmp;
       });
-  }, [allPatients, search, statusFilter, sourceFilter, dateFilterFn, sortKey, sortDir, doctorMap]);
+  }, [allPatients, search, statusFilter, sourceFilter, dateFilterFn, sortKey, sortDir, doctorLabel]);
 
   const canDelete = user?.role === "owner" || user?.role === "admin";
 
@@ -253,8 +265,8 @@ function PatientsListView({
                       <span className="font-mono text-[#64748b] text-xs">{patient.phone}</span>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      {patient.doctorId && doctorMap[patient.doctorId] ? (
-                        <span className="text-xs font-medium text-[#64748b]">{doctorMap[patient.doctorId]}</span>
+                      {doctorLabel(patient) ? (
+                        <span className="text-xs font-medium text-[#64748b]">{doctorLabel(patient)}</span>
                       ) : (
                         <span className="text-[#94a3b8] text-xs">—</span>
                       )}
