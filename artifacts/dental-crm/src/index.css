@@ -260,6 +260,33 @@
   }
 }
 
+/* PWA pull-to-refresh — Instagram / iOS activity indicator */
+.ptr-ios-spinner {
+  position: relative;
+  width: 22px;
+  height: 22px;
+}
+.ptr-ios-spinner--spinning {
+  animation: ptr-ios-spin 0.75s linear infinite;
+}
+.ptr-ios-spinner__tick {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  display: block;
+  width: 1.5px;
+  height: 6px;
+  margin-left: -0.75px;
+  border-radius: 999px;
+  background: #8e8e93;
+  transform-origin: center 11px;
+}
+@keyframes ptr-ios-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

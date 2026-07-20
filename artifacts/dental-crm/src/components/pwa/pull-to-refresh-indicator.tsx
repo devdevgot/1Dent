@@ -1,6 +1,4 @@
 import { createPortal } from "react-dom";
-import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { PullToRefreshPhase } from "@/hooks/use-pwa-pull-to-refresh";
 
 type PullToRefreshIndicatorProps = {
@@ -10,9 +8,11 @@ type PullToRefreshIndicatorProps = {
   visible: boolean;
 };
 
+const TICK_COUNT = 12;
+
 /**
- * Spinner that sits only in the empty top gap created when the page surface
- * (header + content) is pulled down — never overlaid on the search chrome.
+ * Instagram / iOS-style activity indicator: grey radial ticks in the
+ * rubber-band gap above the page (no card, no blue Loader icon).
  */
 export function PullToRefreshIndicator({
   pullY,
@@ -24,35 +24,43 @@ export function PullToRefreshIndicator({
 
   const gap = phase === "refreshing" ? threshold : pullY;
   const progress = Math.min(gap / threshold, 1);
+  const spinning = phase === "refreshing";
+  // While pulling, rotate the tick “head” with progress so it feels alive.
+  const pullRotate = spinning ? 0 : progress * 360;
 
   return createPortal(
     <div
       className="pointer-events-none fixed inset-x-0 top-0 z-[120] flex items-center justify-center"
       style={{
-        // Match the rubber-band gap from the very top of the viewport (above search).
         height: Math.max(gap, 0),
-        opacity: progress < 0.12 ? 0 : Math.min(1, progress),
+        opacity: progress < 0.1 ? 0 : Math.min(1, progress * 1.15),
         transition:
           phase === "refreshing"
             ? "height 150ms ease-out, opacity 120ms ease-out"
-            : "opacity 80ms linear",
+            : "opacity 60ms linear",
       }}
       aria-live="polite"
-      aria-busy={phase === "refreshing"}
+      aria-busy={spinning}
       aria-label="Refreshing"
     >
-      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e8e3d9] bg-white/95 shadow-md backdrop-blur-sm">
-        <Loader2
-          className={cn(
-            "h-4 w-4 text-[#1f75fe]",
-            phase === "refreshing" && "animate-spin",
-          )}
-          style={
-            phase !== "refreshing"
-              ? { transform: `rotate(${progress * 300}deg)` }
-              : undefined
-          }
-        />
+      <div
+        className={spinning ? "ptr-ios-spinner ptr-ios-spinner--spinning" : "ptr-ios-spinner"}
+        style={spinning ? undefined : { transform: `rotate(${pullRotate}deg)` }}
+      >
+        {Array.from({ length: TICK_COUNT }, (_, i) => {
+          // Fade trail around the circle (brightest tick leads).
+          const opacity = 0.18 + (i / (TICK_COUNT - 1)) * 0.82;
+          return (
+            <span
+              key={i}
+              className="ptr-ios-spinner__tick"
+              style={{
+                transform: `rotate(${(360 / TICK_COUNT) * i}deg)`,
+                opacity,
+              }}
+            />
+          );
+        })}
       </div>
     </div>,
     document.body,
