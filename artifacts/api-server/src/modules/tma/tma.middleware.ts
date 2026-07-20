@@ -3,12 +3,18 @@ import type { Request, Response, NextFunction } from "express";
 import { db, platformAdminsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../../lib/logger";
+import {
+  issueTmaSessionToken,
+  verifyTmaSessionToken,
+  TMA_SESSION_TTL_SEC,
+} from "./tma-session";
+import type { TmaUser } from "./tma.types";
 
-export interface TmaUser {
-  telegramUserId: string;
-  name: string;
-  isAdmin: boolean;
-}
+export type { TmaUser };
+export { issueTmaSessionToken, TMA_SESSION_TTL_SEC };
+
+/** initData is only used to bootstrap a session (Telegram freezes it at launch). */
+const INIT_DATA_MAX_AGE_SEC = 5 * 60;
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -75,24 +81,29 @@ export function invalidateAdminCache(telegramUserId: string) {
   adminCache.delete(telegramUserId);
 }
 
-export async function requireTmaAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+function extractBearerToken(req: Request): string | undefined {
+  const header = req.headers.authorization;
+  if (!header) return undefined;
+  const [scheme, token] = header.split(" ");
+  if (scheme?.toLowerCase() !== "bearer" || !token) return undefined;
+  return token;
+}
+
+type ResolveResult =
+  | { ok: true; user: TmaUser }
+  | { ok: false; status: number; error: string };
+
+async function resolveTmaUserFromInitData(initData: string): Promise<ResolveResult> {
   const botToken = process.env["PLATFORM_TG_BOT_TOKEN"];
   if (!botToken) {
-    res.status(503).json({ success: false, error: "Platform bot not configured" });
-    return;
+    return { ok: false, status: 503, error: "Platform bot not configured" };
   }
 
-  const initData = req.headers["x-telegram-init-data"] as string | undefined;
-  if (!initData) {
-    res.status(401).json({ success: false, error: "Missing Telegram initData" });
-    return;
-  }
-
-  // In dev mode allow bypassing auth with env var (never active in production)
   const devBypass =
     process.env["NODE_ENV"] !== "production"
       ? process.env["TMA_DEV_BYPASS_TG_ID"]
       : undefined;
+
   let telegramUserId: string;
   let firstName = "Dev";
 
@@ -101,49 +112,134 @@ export async function requireTmaAdmin(req: Request, res: Response, next: NextFun
   } else {
     const parsed = validateTelegramInitData(initData, botToken);
     if (!parsed) {
-      res.status(401).json({ success: false, error: "Invalid Telegram initData signature" });
-      return;
+      return { ok: false, status: 401, error: "Invalid Telegram initData signature" };
     }
 
-    // Check freshness (5 minutes)
     const authDate = parseInt(parsed["auth_date"] ?? "0", 10);
-    if (Date.now() / 1000 - authDate > 5 * 60) {
-      res.status(401).json({ success: false, error: "Telegram initData expired" });
-      return;
+    if (Date.now() / 1000 - authDate > INIT_DATA_MAX_AGE_SEC) {
+      return { ok: false, status: 401, error: "Telegram initData expired" };
     }
 
     let userObj: { id?: number; first_name?: string } = {};
     try {
       userObj = JSON.parse(parsed["user"] ?? "{}") as { id?: number; first_name?: string };
     } catch {
-      res.status(401).json({ success: false, error: "Invalid user data in initData" });
-      return;
+      return { ok: false, status: 401, error: "Invalid user data in initData" };
     }
 
     telegramUserId = String(userObj.id ?? "");
     firstName = userObj.first_name ?? "Unknown";
     if (!telegramUserId) {
-      res.status(401).json({ success: false, error: "Missing user ID in initData" });
-      return;
+      return { ok: false, status: 401, error: "Missing user ID in initData" };
     }
   }
 
   try {
-    const { isAdmin, name } = await checkIsAdmin(telegramUserId!);
+    const { isAdmin, name } = await checkIsAdmin(telegramUserId);
     if (!isAdmin) {
       logger.warn({ telegramUserId }, "[TMA] Unauthorized access attempt");
-      res.status(403).json({ success: false, error: "Access denied. You are not a platform admin." });
+      return { ok: false, status: 403, error: "Access denied. You are not a platform admin." };
+    }
+
+    return {
+      ok: true,
+      user: {
+        telegramUserId,
+        name: name || firstName,
+        isAdmin: true,
+      },
+    };
+  } catch (err) {
+    logger.error({ err }, "[TMA] Error checking admin status");
+    throw err;
+  }
+}
+
+async function resolveTmaUserFromSession(token: string): Promise<ResolveResult> {
+  const payload = verifyTmaSessionToken(token);
+  if (!payload) {
+    return { ok: false, status: 401, error: "TMA session expired" };
+  }
+
+  try {
+    const { isAdmin, name } = await checkIsAdmin(payload.telegramUserId);
+    if (!isAdmin) {
+      logger.warn({ telegramUserId: payload.telegramUserId }, "[TMA] Session for revoked admin");
+      return { ok: false, status: 403, error: "Access denied. You are not a platform admin." };
+    }
+
+    return {
+      ok: true,
+      user: {
+        telegramUserId: payload.telegramUserId,
+        name: name || payload.name || "Admin",
+        isAdmin: true,
+      },
+    };
+  } catch (err) {
+    logger.error({ err }, "[TMA] Error checking admin status");
+    throw err;
+  }
+}
+
+/** Exchange Telegram initData for a 6h TMA admin session JWT. */
+export async function createTmaSession(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const initData = req.headers["x-telegram-init-data"] as string | undefined;
+    if (!initData) {
+      res.status(401).json({ success: false, error: "Missing Telegram initData" });
       return;
     }
 
-    req.tmaUser = {
-      telegramUserId,
-      name: name || firstName,
-      isAdmin: true,
-    };
+    const resolved = await resolveTmaUserFromInitData(initData);
+    if (!resolved.ok) {
+      res.status(resolved.status).json({ success: false, error: resolved.error });
+      return;
+    }
+
+    const token = issueTmaSessionToken(resolved.user);
+    res.json({
+      success: true,
+      data: {
+        token,
+        expiresIn: TMA_SESSION_TTL_SEC,
+        user: resolved.user,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function requireTmaAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const bearer = extractBearerToken(req);
+    if (bearer) {
+      const resolved = await resolveTmaUserFromSession(bearer);
+      if (!resolved.ok) {
+        res.status(resolved.status).json({ success: false, error: resolved.error });
+        return;
+      }
+      req.tmaUser = resolved.user;
+      next();
+      return;
+    }
+
+    const initData = req.headers["x-telegram-init-data"] as string | undefined;
+    if (!initData) {
+      res.status(401).json({ success: false, error: "Missing Telegram initData" });
+      return;
+    }
+
+    const resolved = await resolveTmaUserFromInitData(initData);
+    if (!resolved.ok) {
+      res.status(resolved.status).json({ success: false, error: resolved.error });
+      return;
+    }
+
+    req.tmaUser = resolved.user;
     next();
   } catch (err) {
-    logger.error({ err }, "[TMA] Error checking admin status");
     next(err);
   }
 }

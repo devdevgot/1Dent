@@ -34,7 +34,7 @@ import {
   inventoryStockTable,
 } from "@workspace/db";
 import { eq, desc, count, sum, gte, lte, and, sql, not, ilike, or, isNotNull, ne, inArray, type SQL } from "drizzle-orm";
-import { requireTmaAdmin, invalidateAdminCache } from "./tma.middleware";
+import { requireTmaAdmin, invalidateAdminCache, createTmaSession } from "./tma.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { seedProcedureTemplates } from "../../seeds/procedure-templates.seed";
 import { seedContractTemplatesForClinic } from "../../seeds/contract-templates.seed";
@@ -54,6 +54,10 @@ import {
 import { computeRates } from "../dental-broadcast/dental-broadcast-metrics";
 
 const router = Router();
+
+// Bootstrap: exchange Telegram initData for a 6h session JWT (must be before requireTmaAdmin)
+router.post("/session", createTmaSession);
+
 router.use(requireTmaAdmin);
 
 // ── GET /api/tma/me ────────────────────────────────────────────────────────────
