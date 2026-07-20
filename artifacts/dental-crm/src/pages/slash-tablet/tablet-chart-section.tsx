@@ -9,6 +9,7 @@ import {
   useCompleteDiagnosis,
   getListTeethQueryKey,
   getListPatientsQueryKey,
+  getListProceduresQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -56,6 +57,7 @@ export function TabletChartSection({
     mutation: {
       onSuccess: () => {
         void qc.invalidateQueries({ queryKey: getListPatientsQueryKey() });
+        void qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
       },
     },
   });

@@ -18,6 +18,7 @@ import {
   useListPatients,
   useUpdatePatientStatus,
   getListPatientsQueryKey,
+  getListProceduresQueryKey,
   useListNotifications,
   getListNotificationsQueryKey,
 } from "@workspace/api-client-react";
@@ -158,6 +159,10 @@ export const KanbanBoard = memo(function KanbanBoard({
 
   const statusMutation = useUpdatePatientStatus({
     mutation: {
+      onSuccess: () => {
+        // Moving to «Диагностика» locks past visits — refresh schedule caches.
+        void queryClient.invalidateQueries({ queryKey: getListProceduresQueryKey() });
+      },
       onError: () => {
         queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
       },

@@ -45,7 +45,7 @@ import {
   type PatientEntry,
 } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
-import { isCalendarProcedure } from "@/lib/calendar-procedures";
+import { isCalendarProcedure, isScheduleLockedProcedure } from "@/lib/calendar-procedures";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { useToast } from "@/hooks/use-toast";
@@ -320,7 +320,7 @@ export default function AdminCalendar() {
     try {
       for (const procId of procIds) {
         const proc = allProcedures.find((p) => p.id === procId);
-        if (!proc) continue;
+        if (!proc || isScheduleLockedProcedure(proc)) continue;
         const old = proc.scheduledAt ? parseISO(proc.scheduledAt) : new Date();
         const newDate = new Date(day);
         newDate.setHours(old.getHours(), old.getMinutes(), 0, 0);
@@ -491,11 +491,17 @@ export default function AdminCalendar() {
 
                   {/* Appointment pills — one per patient visit */}
                   <div className="space-y-0.5">
-                    {groups.slice(0, 3).map((group) => (
+                    {groups.slice(0, 3).map((group) => {
+                      const locked = group.procedures.every((p) => isScheduleLockedProcedure(p));
+                      return (
                       <div
                         key={group.key}
-                        draggable
+                        draggable={!locked}
                         onDragStart={(e) => {
+                          if (locked) {
+                            e.preventDefault();
+                            return;
+                          }
                           e.stopPropagation();
                           e.dataTransfer.setData("groupProcIds", JSON.stringify(group.procedures.map((p) => p.id)));
                           setDraggingKey(group.key);
@@ -505,8 +511,9 @@ export default function AdminCalendar() {
                           "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium truncate cursor-pointer transition-opacity",
                           STATUS_PILL[group.status ?? "scheduled"],
                           draggingKey === group.key && "opacity-50",
+                          locked && "opacity-90",
                         )}
-                        title={`${group.patientName}${group.doctorName ? " · " + group.doctorName : ""}${group.timeLabel ? " — " + group.timeLabel : ""}`}
+                        title={`${group.patientName}${group.doctorName ? " · " + group.doctorName : ""}${group.timeLabel ? " — " + group.timeLabel : ""}${locked ? " · зафиксировано" : ""}`}
                       >
                         <span
                           className={cn(
@@ -519,7 +526,8 @@ export default function AdminCalendar() {
                           <span className="opacity-60 shrink-0">{group.timeLabel}</span>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                     {groups.length > 3 && (
                       <div className="text-[10px] text-[#94a3b8] pl-1">
                         +{groups.length - 3} ещё

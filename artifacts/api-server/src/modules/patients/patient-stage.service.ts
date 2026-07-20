@@ -152,6 +152,22 @@ export async function transitionPatientStage(params: {
     content: `${existing.status} → ${params.toStatus} (${params.trigger})`,
   });
 
+  // Entering «Диагностика» means the consultation visit already happened —
+  // lock past/open schedule blocks (complete them so they can't be rescheduled).
+  if (params.toStatus === "diagnostics") {
+    try {
+      const { completePastOpenVisitsForPatient } = await import(
+        "../procedures/complete-past-visits"
+      );
+      await completePastOpenVisitsForPatient(params.patientId, params.clinicId);
+    } catch (err) {
+      logger.warn(
+        { err, patientId: params.patientId },
+        "[PatientStage] Failed to lock schedule visits after diagnostics transition",
+      );
+    }
+  }
+
   return {
     changed: true,
     from: existing.status,

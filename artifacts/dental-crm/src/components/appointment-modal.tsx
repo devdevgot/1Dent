@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { X, Trash2, Clock, UserCheck, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Trash2, Clock, UserCheck, CalendarDays, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import type { PaymentMethod, ProcedureTemplate } from "@workspace/api-client-react";
 import { parseIIN, isIINError } from "@workspace/api-zod";
 import { Button } from "@/components/ui/button";
+import { isScheduleLockedProcedure } from "@/lib/calendar-procedures";
 
 export const PAYMENT_METHODS: { value: PaymentMethod; labelRu: string }[] = [
   { value: "cash",           labelRu: "Наличные" },
@@ -322,6 +323,7 @@ export function AppointmentModal({
   const [status, setStatus]           = useState(procedure?.status ?? "scheduled");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showPicker, setShowPicker]   = useState(false);
+  const scheduleLocked = Boolean(procedure && isScheduleLockedProcedure(procedure));
 
   /* IIN */
   const handleIINChange = (value: string) => {
@@ -365,7 +367,10 @@ export function AppointmentModal({
 
   function handleSave() {
     if (!canSave) return;
-    const scheduledAt = new Date(`${apptDate}T${apptTime}`).toISOString();
+    // Keep the original slot when the visit is already locked (completed after diagnostics).
+    const scheduledAt = scheduleLocked && procedure?.scheduledAt
+      ? procedure.scheduledAt
+      : new Date(`${apptDate}T${apptTime}`).toISOString();
     onSave({
       name: "Запись", price: 0, patientId: selectedPatientId,
       doctorId: doctorId || undefined, scheduledAt,
@@ -563,10 +568,24 @@ export function AppointmentModal({
                 <label className="text-sm font-medium text-foreground mb-1 block">Дата и время</label>
                 <button
                   type="button"
-                  onClick={() => setShowPicker(true)}
-                  className={cn(INPUT, "flex items-center gap-2 text-left bg-white hover:bg-[#f1ede4] transition-colors cursor-pointer")}
+                  onClick={() => {
+                    if (scheduleLocked) return;
+                    setShowPicker(true);
+                  }}
+                  disabled={scheduleLocked}
+                  className={cn(
+                    INPUT,
+                    "flex items-center gap-2 text-left transition-colors",
+                    scheduleLocked
+                      ? "bg-[#f1ede4] text-muted-foreground cursor-not-allowed"
+                      : "bg-white hover:bg-[#f1ede4] cursor-pointer",
+                  )}
                 >
-                  <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+                  {scheduleLocked ? (
+                    <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+                  )}
                   <span className="text-foreground">
                     {formatDisplayDate(apptDate)}
                   </span>
@@ -574,6 +593,11 @@ export function AppointmentModal({
                   <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   <span className="text-foreground">{apptTime}</span>
                 </button>
+                {scheduleLocked && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Время зафиксировано — процедура уже прошла
+                  </p>
+                )}
               </div>
 
             </div>
