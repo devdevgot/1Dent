@@ -1215,7 +1215,8 @@
     "wrongPassword": "Current password is incorrect",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeSystem": "System",
+    "themeSystemHint": "“System” follows your phone’s light/dark mode and updates when you change it in OS settings."
   },
   "appLock": {
     "title": "Welcome!",

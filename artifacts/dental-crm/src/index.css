@@ -1,5 +1,6 @@
 @import "./styles/design-system.css";
 @import "tailwindcss";
+@import "./styles/dark-theme-overrides.css";
 
 @theme inline {
   --font-sans: 'Manrope', sans-serif;
@@ -103,28 +104,45 @@
 }
 
 .dark {
+  /* Hex DS tokens (also set in design-system.css; kept here for single-file clarity) */
+  --bg: #0f172a;
+  --ds-surface: #1e293b;
+  --surface-2: #334155;
+  --ds-border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --text: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-subtle: #64748b;
+  --primary-light: rgba(31, 117, 254, 0.18);
+  --success-light: rgba(22, 163, 74, 0.18);
+  --warning-light: rgba(217, 119, 6, 0.2);
+  --danger-light: rgba(220, 38, 38, 0.2);
+  --info-light: rgba(2, 132, 199, 0.2);
+  --theme-color: #0f172a;
+
+  /* shadcn HSL tokens */
   --background: 222 47% 11%;
-  --foreground: 0 0% 96%;
+  --foreground: 210 40% 96%;
   
   --card: 217 33% 17%;
-  --card-foreground: 0 0% 96%;
+  --card-foreground: 210 40% 96%;
   
-  --border: 217 20% 22%;
-  --input: 217 20% 22%;
+  --border: 215 20% 28%;
+  --input: 215 20% 28%;
   
   --primary: 217 99% 62%;
   --primary-foreground: 0 0% 100%;
   
   --secondary: 217 25% 20%;
-  --secondary-foreground: 0 0% 96%;
+  --secondary-foreground: 210 40% 96%;
   
   --muted: 217 25% 20%;
-  --muted-foreground: 215 16% 60%;
+  --muted-foreground: 215 16% 65%;
   
   --accent: 217 25% 20%;
-  --accent-foreground: 0 0% 96%;
+  --accent-foreground: 210 40% 96%;
   
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 62.8% 45%;
   --destructive-foreground: 0 0% 100%;
   
   --ring: 217 99% 62%;
@@ -138,7 +156,11 @@
     @apply border-border;
   }
   html {
-    background-color: #faf8f4;
+    background-color: var(--bg);
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
   html,
   body,

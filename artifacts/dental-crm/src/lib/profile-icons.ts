@@ -28,4 +28,4 @@ export function prefetchProfileIcons() {
 
 /** Unified card look shared with the Home & Services pages. */
 export const PROFILE_CARD_CLASS =
-  "rounded-[20px] border-[#e8e3d9] shadow-[0_1px_2px_rgba(15,23,42,0.03)]";
+  "rounded-[20px] border-border shadow-[0_1px_2px_rgba(15,23,42,0.03)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.25)]";

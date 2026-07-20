@@ -7,10 +7,11 @@ import {
   useUpdateClinicContractSettings,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { User, Shield, Globe, Eye, EyeOff, Settings2, FileText } from "lucide-react";
+import { User, Shield, Globe, Eye, EyeOff, Settings2, FileText, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { ThemePicker } from "@/components/theme/theme-picker";
 
 function RoleBadge({ role }: { role: string }) {
   const { t } = useTranslation();
@@ -317,6 +318,11 @@ export default function SettingsPage() {
             </button>
           ))}
         </div>
+      </Section>
+
+      <Section icon={<Moon className="w-5 h-5" />} title={t("settingsPage.appearance")}>
+        <ThemePicker />
+        <p className="mt-3 text-xs text-[#64748b]">{t("settingsPage.themeSystemHint")}</p>
       </Section>
 
       </div>
