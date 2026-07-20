@@ -50,3 +50,4 @@ Thumbs.db
 
 # Railway CLI local link state
 .railway/
+dump.rdb

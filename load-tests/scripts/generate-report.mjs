@@ -108,11 +108,26 @@ function thresholdFails(raw) {
 }
 
 function classifyHealth(summary) {
+  // Auth scenario with Redis intentionally trips 429 — treat as protected, not capacity break
+  if (summary.name === "auth-login") {
+    const rateLimited = metric(summary.raw, "auth_rate_limited")?.rate;
+    const failRate = metric(summary.raw, "http_req_failed")?.rate ?? 0;
+    if (rateLimited != null && rateLimited > 0.5) return "🟡 RATE-LIMITED (by design)";
+    if (failRate >= 0.2) return "🔴 BREAK";
+    return "🟢 OK";
+  }
+
   const failRate = metric(summary.raw, "http_req_failed")?.rate ?? 0;
   const p95 = metric(summary.raw, "http_req_duration")?.["p(95)"] ?? 0;
+  const patientsP95 = metric(summary.raw, "patients_list_duration")?.["p(95)"] ?? 0;
   const thrFails = thresholdFails(summary.raw);
-  if (failRate >= 0.2 || p95 >= 8000 || thrFails.length >= 3) return "🔴 BREAK";
-  if (failRate >= 0.05 || p95 >= 2500 || thrFails.length > 0) return "🟡 DEGRADED";
+
+  // UX break: CRM batches multi-second even if HTTP still 200
+  if (patientsP95 >= 5000 || p95 >= 8000) return "🔴 UX-BREAK";
+  if (failRate >= 0.2 || thrFails.length >= 3) return "🔴 BREAK";
+  if (failRate >= 0.05 || p95 >= 2500 || patientsP95 >= 1500 || thrFails.length > 0) {
+    return "🟡 DEGRADED";
+  }
   return "🟢 OK";
 }
 
