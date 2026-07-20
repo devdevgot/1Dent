@@ -123,6 +123,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </Suspense>
       )}
 
+      {/* data-ptr-surface: header + main rubber-band together so PTR spinner sits in the top gap */}
+      <div data-ptr-surface className="flex flex-1 min-h-0 flex-col overflow-hidden">
       {/* Home page header */}
       {isHomePage && (
         <header className="flex-none bg-white border-b border-[#e8e3d9] z-20 safe-area-top">
@@ -249,6 +251,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           children
         )}
       </main>
+      </div>
 
       {user && (
         <BottomTabBar
