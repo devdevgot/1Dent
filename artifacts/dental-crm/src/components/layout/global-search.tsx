@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
@@ -89,13 +90,20 @@ function matchesIin(iin: string | null | undefined, query: string) {
 }
 
 export function GlobalSearch() {
-  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
   const [, setLocation] = useLocation();
   const { user } = useAuthStore();
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
+  const [panelBox, setPanelBox] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const role = user?.role ?? "";
   const dashboardHref = ROLE_DASHBOARD[role] ?? "/dashboard";
@@ -107,22 +115,6 @@ export function GlobalSearch() {
   const { data: patientsData }   = useListPatients({ query: { enabled: canSeePatients } });
   const { data: usersData }      = useListUsers({ query: { enabled: canSeeUsers } });
   const { data: proceduresData } = useListProcedures({ query: { enabled: canSeeProcedures } });
-
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 80);
-    } else {
-      setQuery("");
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsOpen(false);
-    }
-    if (isOpen) window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen]);
 
   const groups = useMemo<ResultGroup[]>(() => {
     if (!query.trim()) return [];
@@ -202,109 +194,175 @@ export function GlobalSearch() {
     return result;
   }, [query, role, patientsData, usersData, proceduresData, canSeePatients, canSeeUsers, canSeeProcedures, dashboardHref]);
 
+  const hasResults = groups.length > 0;
+  const isEmpty = query.trim().length > 0 && !hasResults;
+  const showPanel = focused && query.trim().length > 0;
+
+  useLayoutEffect(() => {
+    if (!showPanel) {
+      setPanelBox(null);
+      return;
+    }
+    const el = rootRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setPanelBox({
+        top: r.bottom + 6,
+        left: r.left,
+        width: r.width,
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [showPanel, query, groups.length]);
+
+  useEffect(() => {
+    if (!showPanel && !focused) return;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setFocused(false);
+        inputRef.current?.blur();
+      }
+    }
+
+    function onPointerDown(e: MouseEvent | TouchEvent) {
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setFocused(false);
+    }
+
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [showPanel, focused]);
+
   function navigate(href: string, patientId?: string) {
-    setIsOpen(false);
+    setFocused(false);
+    setQuery("");
     if (patientId) setSelectedPatientId(patientId);
     setLocation(href);
   }
 
-  const hasResults = groups.length > 0;
-  const isEmpty    = query.trim().length > 0 && !hasResults;
+  const placeholder = t("patients.searchPlaceholder", {
+    defaultValue: "Имя, телефон, ИИН",
+  });
 
   return (
-    <div className="flex-1 flex min-w-0">
-      {/* Search bar trigger */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        title="Имя, телефон, ИИН"
-        className="flex-1 flex min-w-0 items-center gap-2 bg-[#f1ede4] rounded-xl px-3 py-2 text-left cursor-pointer hover:bg-[var(--ds-border)]/60 transition-colors"
-      >
-        <Search className="w-4 h-4 text-[#94a3b8] shrink-0" />
-        <span className="min-w-0 truncate text-xs text-[#94a3b8] select-none font-manrope whitespace-nowrap">
-          Поиск…
-        </span>
-      </button>
+    <div ref={rootRef} className="relative flex-1 min-w-0">
+      {/* Inline search — same interaction model as Patients */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+        <input
+          ref={inputRef}
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setFocused(true)}
+          placeholder={placeholder}
+          title={placeholder}
+          className={cn(
+            "w-full rounded-xl border border-[#e8e3d9] bg-white py-2 pl-9 pr-9 text-sm text-[#0f172a]",
+            "placeholder:text-[#94a3b8] font-manrope",
+            "focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20",
+          )}
+        />
+        {query ? (
+          <button
+            type="button"
+            aria-label="Очистить"
+            onClick={() => {
+              setQuery("");
+              inputRef.current?.focus();
+            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
 
-      {/* Overlay */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#faf8f4] font-manrope">
-          {/* Search header — same height/position as the regular header */}
-          <div className="bg-white px-4 py-2.5 border-b border-[#e8e3d9] flex items-center gap-3 safe-area-top">
-            <div className="flex-1 flex items-center gap-2 bg-[#f1ede4] rounded-xl px-3 py-2">
-              <Search className="w-4 h-4 text-[#94a3b8] shrink-0" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Имя, телефон, ИИН"
-                className="flex-1 text-sm bg-transparent outline-none text-[#0f172a] placeholder:text-[#94a3b8] font-manrope"
-              />
-              {query && (
-                <button onClick={() => setQuery("")} className="shrink-0 text-[#94a3b8] hover:text-[#64748b]">
-                  <X className="w-4 h-4" />
-                </button>
+      {showPanel &&
+        panelBox &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={panelRef}
+            className="fixed z-[130] overflow-hidden rounded-2xl border border-[#e8e3d9] bg-white shadow-xl font-manrope"
+            style={{
+              top: panelBox.top,
+              left: panelBox.left,
+              width: panelBox.width,
+              maxHeight: `min(70vh, calc(100dvh - ${panelBox.top + 12}px))`,
+            }}
+          >
+            <div className="max-h-[inherit] overflow-y-auto overscroll-contain">
+              {isEmpty && (
+                <div className="flex flex-col items-center justify-center gap-1 px-4 py-10 text-center">
+                  <p className="text-sm text-[#94a3b8]">Ничего не найдено</p>
+                  <p className="text-xs text-[#94a3b8]/70">Попробуйте другой запрос</p>
+                </div>
+              )}
+
+              {hasResults && (
+                <div className="space-y-3 px-3 py-3">
+                  {groups.map((group) => (
+                    <div key={group.category}>
+                      <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-[#94a3b8]">
+                        {group.category}
+                      </p>
+                      <div className="overflow-hidden rounded-xl border border-[#e8e3d9] divide-y divide-[var(--ds-border)]">
+                        {group.results.map((result) => (
+                          <button
+                            key={result.id}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => navigate(result.href, result.patientId)}
+                            className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[#faf8f4] active:bg-[#f1ede4]"
+                          >
+                            <div
+                              className={cn(
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                                result.iconBg,
+                              )}
+                            >
+                              <result.Icon className={cn("h-4 w-4", result.iconColor)} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm text-[#0f172a]">{result.label}</p>
+                              {result.subtitle ? (
+                                <p className="truncate text-[12px] text-[#94a3b8]">{result.subtitle}</p>
+                              ) : null}
+                            </div>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-[#94a3b8]" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-sm font-medium shrink-0 text-[#1f75fe]"
-            >
-              Отмена
-            </button>
-          </div>
-
-          {/* Results */}
-          <div className="flex-1 overflow-y-auto">
-            {!query.trim() && (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Search className="w-12 h-12 text-[var(--ds-border)]" />
-                <p className="text-sm text-[#94a3b8]">Введите запрос для поиска</p>
-              </div>
-            )}
-
-            {isEmpty && (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <p className="text-sm text-[#94a3b8]">Ничего не найдено</p>
-                <p className="text-xs text-[#94a3b8]/70">Попробуйте другой запрос</p>
-              </div>
-            )}
-
-            {hasResults && (
-              <div className="px-4 py-4 space-y-5">
-                {groups.map((group) => (
-                  <div key={group.category}>
-                    <p className="text-[12px] font-semibold text-[#94a3b8] uppercase tracking-wider mb-2 px-1">
-                      {group.category}
-                    </p>
-                    <div className="bg-white rounded-2xl overflow-hidden border border-[#e8e3d9] divide-y divide-[var(--ds-border)]">
-                      {group.results.map((result) => (
-                        <button
-                          key={result.id}
-                          onClick={() => navigate(result.href, result.patientId)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[#f1ede4] hover:bg-[#faf8f4] transition-colors"
-                        >
-                          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", result.iconBg)}>
-                            <result.Icon className={cn("w-4 h-4", result.iconColor)} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[#0f172a] truncate">{result.label}</p>
-                            {result.subtitle && (
-                              <p className="text-[12px] text-[#94a3b8] truncate">{result.subtitle}</p>
-                            )}
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-[#94a3b8] shrink-0" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
