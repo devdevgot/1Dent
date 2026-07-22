@@ -302,8 +302,13 @@ export class TabletService {
       ? await this.repo.findCabinetById(session.cabinetId)
       : null;
 
-    let doctor: { id: string; name: string; specialty: string | null; avatarColor: string } | null =
-      null;
+    let doctor: {
+      id: string;
+      name: string;
+      specialty: string | null;
+      avatarColor: string;
+      photoUrl: string | null;
+    } | null = null;
 
     if (session.doctorUserId) {
       const doc = await this.repo.getDoctorPublic(session.doctorUserId);
