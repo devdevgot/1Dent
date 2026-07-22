@@ -157,7 +157,7 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-[#0f172a] truncate">{row.name}</p>
-              <p className="text-xs text-[#64748b] mt-0.5 truncate">{row.subtitle}</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{row.subtitle}</p>
             </div>
             <div className="shrink-0 text-right">
               {loadingRevenues || row.revenue === null ? (
@@ -172,7 +172,7 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
         ))}
 
         {hasFetched && branches.length === 0 && (
-          <p className="px-5 py-4 text-xs text-[#64748b] text-center">
+          <p className="px-5 py-4 text-xs text-[var(--text-secondary)] text-center">
             Добавьте филиалы, чтобы видеть прибыль по каждой точке
           </p>
         )}

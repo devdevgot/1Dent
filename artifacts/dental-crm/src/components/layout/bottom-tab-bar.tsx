@@ -195,7 +195,7 @@ export function BottomTabBar({
                 className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none opacity-35"
               >
                 <Icon active={false} />
-                <span className="text-[11px] font-medium leading-none text-[#94a3b8] truncate max-w-full">
+                <span className="text-[11px] font-medium leading-none text-[var(--text-subtle)] truncate max-w-full">
                   {label}
                 </span>
               </div>
@@ -208,7 +208,7 @@ export function BottomTabBar({
               <span
                 className={cn(
                   "text-[11px] font-medium leading-none truncate max-w-full",
-                  tab.isActive ? "text-[#22c55e]" : "text-[#94a3b8]",
+                  tab.isActive ? "text-[#22c55e]" : "text-[var(--text-subtle)]",
                 )}
                 style={tab.isActive ? { color: TAB_ACTIVE } : undefined}
               >
