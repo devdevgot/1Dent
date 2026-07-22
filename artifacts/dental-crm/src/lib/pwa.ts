@@ -130,6 +130,35 @@ export function applyStandaloneDocumentClass(): void {
   root.classList.toggle("pwa-ios-standalone", standalone && detectIos());
 }
 
+const PWA_SPLASH_ID = "pwa-splash";
+const PWA_SPLASH_MIN_MS = 450;
+const PWA_SPLASH_FADE_MS = 280;
+
+/**
+ * Fade out and remove the in-app PWA splash (#pwa-splash from index.html).
+ * No-op outside standalone / when the splash was already dismissed.
+ */
+export function dismissPwaSplash(): void {
+  if (typeof document === "undefined") return;
+  const splash = document.getElementById(PWA_SPLASH_ID);
+  if (!splash || splash.getAttribute("data-dismissed") === "1") return;
+
+  splash.setAttribute("data-dismissed", "1");
+
+  const shownAtRaw = splash.getAttribute("data-shown-at");
+  const shownAt = shownAtRaw ? Number(shownAtRaw) : 0;
+  const elapsed = shownAt > 0 ? Date.now() - shownAt : PWA_SPLASH_MIN_MS;
+  const wait = Math.max(0, PWA_SPLASH_MIN_MS - elapsed);
+
+  window.setTimeout(() => {
+    splash.classList.add("is-hiding");
+    document.documentElement.classList.remove("pwa-splash-active");
+    window.setTimeout(() => {
+      splash.remove();
+    }, PWA_SPLASH_FADE_MS);
+  }, wait);
+}
+
 /**
  * Trigger the native install prompt. Returns the user's choice, or
  * "unavailable" when no deferred prompt exists (e.g. iOS Safari).

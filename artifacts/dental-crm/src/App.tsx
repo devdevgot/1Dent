@@ -28,7 +28,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { ConfirmProvider } from "@/hooks/use-confirm";
 import { installGlobalErrorHandlers } from "@/lib/report-error";
 import { clearChunkReloadFlag, lazyWithChunkRecovery } from "@/lib/chunk-reload";
-import { isPwaStandalone } from "@/lib/pwa";
+import { dismissPwaSplash, isPwaStandalone } from "@/lib/pwa";
 import {
   PatientsPageSkeleton,
   ToothDetailPageSkeleton,
@@ -479,6 +479,7 @@ function App() {
   useEffect(() => {
     const cleanup = installGlobalErrorHandlers("dental-crm");
     clearChunkReloadFlag();
+    dismissPwaSplash();
     return cleanup;
   }, []);
 

@@ -27,9 +27,53 @@
           if (meta) meta.setAttribute("content", color);
           var status = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
           if (status) status.setAttribute("content", dark ? "black" : "default");
+
+          var standalone =
+            window.matchMedia("(display-mode: standalone)").matches ||
+            window.matchMedia("(display-mode: fullscreen)").matches ||
+            window.matchMedia("(display-mode: minimal-ui)").matches ||
+            window.navigator.standalone === true;
+          if (standalone) {
+            root.classList.add("pwa-standalone", "pwa-splash-active");
+            var preload = document.createElement("link");
+            preload.rel = "preload";
+            preload.as = "image";
+            preload.href = "/logo_clean.png";
+            document.head.appendChild(preload);
+          }
         } catch (e) {}
       })();
     </script>
+    <style>
+      /* In-app PWA splash — paints before React; only when .pwa-splash-active is set. */
+      #pwa-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: #faf8f4;
+        transition: opacity 0.28s ease;
+      }
+      html.dark #pwa-splash {
+        background: #0f172a;
+      }
+      html.pwa-splash-active #pwa-splash {
+        display: flex;
+      }
+      #pwa-splash.is-hiding {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #pwa-splash img {
+        width: 7.5rem;
+        height: auto;
+        display: block;
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+    </style>
     <title>1Dent</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -47,6 +91,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
+    <div id="pwa-splash" aria-hidden="true" data-shown-at="">
+      <img
+        src="/logo_clean.png"
+        alt=""
+        width="120"
+        height="125"
+        decoding="async"
+        onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = '/logo.png'; }"
+      />
+    </div>
+    <script>
+      (function () {
+        var splash = document.getElementById("pwa-splash");
+        if (!splash) return;
+        if (document.documentElement.classList.contains("pwa-splash-active")) {
+          splash.setAttribute("data-shown-at", String(Date.now()));
+          // Safety: never leave the splash stuck if the app fails to boot.
+          window.setTimeout(function () {
+            if (splash.getAttribute("data-dismissed") === "1") return;
+            splash.setAttribute("data-dismissed", "1");
+            splash.classList.add("is-hiding");
+            document.documentElement.classList.remove("pwa-splash-active");
+            window.setTimeout(function () {
+              splash.remove();
+            }, 300);
+          }, 5000);
+        } else {
+          splash.remove();
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
