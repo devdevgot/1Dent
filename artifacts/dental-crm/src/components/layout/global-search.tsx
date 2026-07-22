@@ -26,6 +26,8 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { maskIIN } from "@workspace/api-zod";
 import { useKanbanStore } from "@/hooks/use-kanban";
+import { useOpenMenuService } from "@/components/layout/menu-service-overlay";
+import { hrefToServiceSlug } from "@/lib/menu-services";
 
 interface SearchResult {
   id: string;
@@ -99,6 +101,7 @@ export function GlobalSearch() {
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const setSelectedPatientId = useKanbanStore((s) => s.setSelectedPatientId);
+  const openService = useOpenMenuService();
   const [panelBox, setPanelBox] = useState<{
     top: number;
     left: number;
@@ -146,7 +149,7 @@ export function GlobalSearch() {
           id: p.id,
           label: p.name,
           subtitle: [p.phone, p.iin ? `ИИН ${maskIIN(p.iin)}` : null].filter(Boolean).join(" · "),
-          href: "/patients?view=kanban",
+          href: "/patients",
           patientId: p.id,
           Icon: Users,
           iconBg: "bg-[var(--info-light)]",
@@ -253,7 +256,22 @@ export function GlobalSearch() {
   function navigate(href: string, patientId?: string) {
     setFocused(false);
     setQuery("");
-    if (patientId) setSelectedPatientId(patientId);
+
+    // Open menu services as home overlays so closing returns to the searcher
+    // (not a full-page route like /patients?view=kanban).
+    if (patientId) {
+      setSelectedPatientId(patientId);
+      openService("patients");
+      return;
+    }
+
+    const pathOnly = href.split("?")[0];
+    const slug = hrefToServiceSlug(pathOnly);
+    if (slug) {
+      openService(slug);
+      return;
+    }
+
     setLocation(href);
   }
 
