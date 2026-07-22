@@ -131,8 +131,9 @@ export function applyStandaloneDocumentClass(): void {
 }
 
 const PWA_SPLASH_ID = "pwa-splash";
-const PWA_SPLASH_MIN_MS = 450;
-const PWA_SPLASH_FADE_MS = 280;
+/** Keep the logo on screen long enough to feel intentional, not a flash. */
+const PWA_SPLASH_MIN_MS = 1200;
+const PWA_SPLASH_FADE_MS = 450;
 
 /**
  * Fade out and remove the in-app PWA splash (#pwa-splash from index.html).

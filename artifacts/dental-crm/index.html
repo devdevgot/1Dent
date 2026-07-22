@@ -54,7 +54,7 @@
         align-items: center;
         justify-content: center;
         background: #faf8f4;
-        transition: opacity 0.28s ease;
+        transition: opacity 0.45s ease;
       }
       html.dark #pwa-splash {
         background: #0f172a;
@@ -115,8 +115,8 @@
             document.documentElement.classList.remove("pwa-splash-active");
             window.setTimeout(function () {
               splash.remove();
-            }, 300);
-          }, 5000);
+            }, 450);
+          }, 7000);
         } else {
           splash.remove();
         }
