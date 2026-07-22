@@ -31,25 +31,21 @@ import {
   getListProcedureTemplatesQueryKey,
   getDentalAiAnalysisQueryKey,
 } from "@workspace/api-client-react";
-import { lazyNamedWithChunkRecovery } from "@/lib/chunk-reload";
+import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
 import { haptic } from "@/lib/haptics";
 // Lazy-loaded so they don't block the first paint of the patient card
-const DentalAiAnalysisPanel = lazyNamedWithChunkRecovery(
-  () => import("./dental-ai-analysis-panel"),
-  "DentalAiAnalysisPanel",
+const DentalAiAnalysisPanel = lazyWithChunkRecovery(() =>
+  import("./dental-ai-analysis-panel").then((m) => ({ default: m.DentalAiAnalysisPanel })),
 );
-const ContractsTab = lazyNamedWithChunkRecovery(
-  () => import("./contracts-tab"),
-  "ContractsTab",
+const ContractsTab = lazyWithChunkRecovery(() =>
+  import("./contracts-tab").then((m) => ({ default: m.ContractsTab })),
 );
-const PatientBroadcastHistory = lazyNamedWithChunkRecovery(
-  () => import("./patient-broadcast-history"),
-  "PatientBroadcastHistory",
+const PatientBroadcastHistory = lazyWithChunkRecovery(() =>
+  import("./patient-broadcast-history").then((m) => ({ default: m.PatientBroadcastHistory })),
 );
 import type { VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
-const VoiceDiagnosisModal = lazyNamedWithChunkRecovery(
-  () => import("@/components/dental-chart/voice-diagnosis-modal"),
-  "VoiceDiagnosisModal",
+const VoiceDiagnosisModal = lazyWithChunkRecovery(() =>
+  import("@/components/dental-chart/voice-diagnosis-modal").then((m) => ({ default: m.VoiceDiagnosisModal })),
 );
 import { matchServiceToSubcategory, matchSubcategoriesFromTitles } from "@/lib/contract-service-matching";
 import type { ToothRecord, ToothTreatment, ProcedureTemplate } from "@workspace/api-client-react";

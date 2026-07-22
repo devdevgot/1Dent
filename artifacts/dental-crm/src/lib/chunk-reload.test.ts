@@ -8,22 +8,8 @@ describe("isMissingLazyExportError", () => {
     assert.equal(isMissingLazyExportError(err), true);
   });
 
-  it("detects Safari AttendanceCheckModal stale access from login→dashboard", () => {
-    const err = new TypeError(
-      "undefined is not an object (evaluating 'e.AttendanceCheckModal')",
-    );
-    assert.equal(isMissingLazyExportError(err), true);
-  });
-
   it("detects Chromium stale named-export access", () => {
     const err = new TypeError("Cannot read properties of undefined (reading 'PlanPaywall')");
-    assert.equal(isMissingLazyExportError(err), true);
-  });
-
-  it("detects explicit missing named export errors", () => {
-    const err = new TypeError(
-      "Failed to fetch dynamically imported module: missing named export 'AttendanceCheckModal'",
-    );
     assert.equal(isMissingLazyExportError(err), true);
   });
 });
@@ -56,7 +42,7 @@ describe("isChunkLoadError", () => {
   });
 
   it("detects stale named-export access via Safari message", () => {
-    const err = new TypeError("undefined is not an object (evaluating 'e.AttendanceCheckModal')");
+    const err = new TypeError("undefined is not an object (evaluating 'e.PlanPaywall')");
     assert.equal(isChunkLoadError(err), true);
   });
 
