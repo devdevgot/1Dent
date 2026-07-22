@@ -478,9 +478,14 @@ function Router() {
 function App() {
   useEffect(() => {
     const cleanup = installGlobalErrorHandlers("dental-crm");
-    clearChunkReloadFlag();
     dismissPwaSplash();
-    return cleanup;
+    // Keep the one-shot reload flag briefly so concurrent lazy chunks after a
+    // SW/deploy refresh still take the hard-navigate recovery path.
+    const clearTimer = window.setTimeout(() => clearChunkReloadFlag(), 8_000);
+    return () => {
+      window.clearTimeout(clearTimer);
+      cleanup();
+    };
   }, []);
 
   return (

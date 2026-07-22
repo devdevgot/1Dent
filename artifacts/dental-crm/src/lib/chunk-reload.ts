@@ -13,6 +13,7 @@ export function isMissingLazyExportError(err: unknown): boolean {
   if (/undefined is not an object \(evaluating '/i.test(msg)) return true;
   // Chromium: Cannot read properties of undefined (reading 'PlanPaywall')
   if (/cannot read propert(?:y|ies) of undefined/i.test(msg)) return true;
+  if (/missing named export/i.test(msg)) return true;
   return false;
 }
 
@@ -27,6 +28,7 @@ export function isChunkLoadError(err: unknown): boolean {
     msg.includes("failed to load module script") ||
     msg.includes("error loading module script") ||
     msg.includes("missing default export") ||
+    msg.includes("missing named export") ||
     // Safari often surfaces a bare "Load failed" / "Cancelled" on 404 chunks.
     msg === "load failed" ||
     msg === "cancelled" ||
@@ -49,14 +51,32 @@ async function clearStaleDeployCaches(): Promise<void> {
   }
 }
 
-/** Reload once after deploy when a stale tab requests a removed lazy chunk. */
-export function reloadOnceOnChunkError(err: unknown): void {
-  if (!isChunkLoadError(err)) throw err;
-  if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) throw err;
-  sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+function hardNavigateForStaleChunks(): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set("_crm_chunk", String(Date.now()));
+  window.location.replace(url.toString());
+}
+
+function recoverFromStaleChunk(forceHardNavigate: boolean): void {
   void clearStaleDeployCaches().finally(() => {
+    if (forceHardNavigate) {
+      hardNavigateForStaleChunks();
+      return;
+    }
     window.location.reload();
   });
+}
+
+/**
+ * Reload after deploy when a stale tab requests a removed lazy chunk.
+ * Never throw for known chunk errors — concurrent lazy failures must not
+ * surface the React ErrorBoundary while a reload is already in flight.
+ */
+export function reloadOnceOnChunkError(err: unknown): void {
+  if (!isChunkLoadError(err)) throw err;
+  const alreadyTried = Boolean(sessionStorage.getItem(CHUNK_RELOAD_KEY));
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+  recoverFromStaleChunk(alreadyTried);
 }
 
 function loadWithChunkRecovery<T extends ComponentType<any>>(
@@ -84,6 +104,27 @@ export function lazyWithChunkRecovery<T extends ComponentType<any>>(
   return lazy(() => loadWithChunkRecovery(load));
 }
 
+/**
+ * Lazy-load a named export safely. Avoids Safari TypeError when a stale
+ * chunk resolves without the expected export (`e.AttendanceCheckModal`).
+ */
+export function lazyNamedWithChunkRecovery<T extends ComponentType<any>>(
+  load: () => Promise<Record<string, unknown>>,
+  exportName: string,
+): LazyExoticComponent<T> {
+  return lazyWithChunkRecovery(async () => {
+    const mod = await load();
+    const Comp = mod?.[exportName];
+    // function / class / forwardRef / memo — all valid React component types
+    if (Comp == null || (typeof Comp !== "function" && typeof Comp !== "object")) {
+      throw new TypeError(
+        `Failed to fetch dynamically imported module: missing named export '${exportName}'`,
+      );
+    }
+    return { default: Comp as T };
+  });
+}
+
 /** Prefetch a lazy page so the first open after deploy doesn't race a stale shell. */
 export function prefetchLazyPage(load: () => Promise<unknown>): void {
   void load().catch(() => {
@@ -94,22 +135,18 @@ export function prefetchLazyPage(load: () => Promise<unknown>): void {
 export function installChunkReloadHandlers(): void {
   window.addEventListener("vite:preloadError", (event) => {
     event.preventDefault();
-    if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
+    const alreadyTried = Boolean(sessionStorage.getItem(CHUNK_RELOAD_KEY));
     sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
-    void clearStaleDeployCaches().finally(() => {
-      window.location.reload();
-    });
+    recoverFromStaleChunk(alreadyTried);
   });
 
   // New service worker after deploy — refresh once so lazy chunk hashes match.
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type !== "SW_UPDATED") return;
-      if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
+      const alreadyTried = Boolean(sessionStorage.getItem(CHUNK_RELOAD_KEY));
       sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
-      void clearStaleDeployCaches().finally(() => {
-        window.location.reload();
-      });
+      recoverFromStaleChunk(alreadyTried);
     });
   }
 }
