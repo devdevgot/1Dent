@@ -34,32 +34,18 @@
             window.matchMedia("(display-mode: minimal-ui)").matches ||
             window.navigator.standalone === true;
           if (standalone) {
-            root.classList.add("pwa-standalone");
-            // Once per PWA session — avoids a second splash after SW/chunk reloads.
-            var splashKey = "1dent:pwa-splash-shown";
-            var alreadyShown = false;
-            try {
-              alreadyShown = sessionStorage.getItem(splashKey) === "1";
-            } catch (e2) {}
-            if (!alreadyShown) {
-              try {
-                sessionStorage.setItem(splashKey, "1");
-              } catch (e3) {}
-              root.classList.add("pwa-splash-active");
-              var preload = document.createElement("link");
-              preload.rel = "preload";
-              preload.as = "image";
-              // Light PWA icon (matches OS launch screen) — not the 400KB logo_clean.
-              preload.href = "/icons/pwa/icon-192.png";
-              document.head.appendChild(preload);
-            }
+            root.classList.add("pwa-standalone", "pwa-splash-active");
+            var preload = document.createElement("link");
+            preload.rel = "preload";
+            preload.as = "image";
+            preload.href = "/logo_clean.png";
+            document.head.appendChild(preload);
           }
         } catch (e) {}
       })();
     </script>
     <style>
-      /* In-app PWA splash — paints before React; only when .pwa-splash-active is set.
-         Keep .pwa-splash-active during the fade so display:flex is not yanked mid-transition. */
+      /* In-app PWA splash — paints before React; only when .pwa-splash-active is set. */
       #pwa-splash {
         position: fixed;
         inset: 0;
@@ -68,8 +54,7 @@
         align-items: center;
         justify-content: center;
         background: #faf8f4;
-        opacity: 1;
-        transition: opacity 0.28s ease;
+        transition: opacity 0.45s ease;
       }
       html.dark #pwa-splash {
         background: #0f172a;
@@ -82,10 +67,9 @@
         pointer-events: none;
       }
       #pwa-splash img {
-        width: 5.5rem;
-        height: 5.5rem;
+        width: 7.5rem;
+        height: auto;
         display: block;
-        border-radius: 1.25rem;
         user-select: none;
         -webkit-user-drag: none;
       }
@@ -109,13 +93,12 @@
   <body>
     <div id="pwa-splash" aria-hidden="true" data-shown-at="">
       <img
-        src="/icons/pwa/icon-192.png"
+        src="/logo_clean.png"
         alt=""
-        width="88"
-        height="88"
-        decoding="sync"
-        fetchpriority="high"
-        onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = '/apple-touch-icon.png'; }"
+        width="120"
+        height="125"
+        decoding="async"
+        onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = '/logo.png'; }"
       />
     </div>
     <script>
@@ -129,11 +112,11 @@
             if (splash.getAttribute("data-dismissed") === "1") return;
             splash.setAttribute("data-dismissed", "1");
             splash.classList.add("is-hiding");
+            document.documentElement.classList.remove("pwa-splash-active");
             window.setTimeout(function () {
-              document.documentElement.classList.remove("pwa-splash-active");
               splash.remove();
-            }, 280);
-          }, 5000);
+            }, 450);
+          }, 7000);
         } else {
           splash.remove();
         }

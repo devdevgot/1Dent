@@ -131,65 +131,9 @@ export function applyStandaloneDocumentClass(): void {
 }
 
 const PWA_SPLASH_ID = "pwa-splash";
-/** Brief hold after paint — OS already showed a launch screen; keep this short. */
-const PWA_SPLASH_MIN_MS = 650;
-const PWA_SPLASH_FADE_MS = 280;
-
-let splashFinished = false;
-const splashWaiters = new Set<() => void>();
-
-function markPwaSplashFinished(): void {
-  if (splashFinished) return;
-  splashFinished = true;
-  splashWaiters.forEach((resolve) => resolve());
-  splashWaiters.clear();
-}
-
-function isPwaSplashSessionActive(): boolean {
-  if (typeof document === "undefined") return false;
-  if (document.documentElement.classList.contains("pwa-splash-active")) return true;
-  return Boolean(document.getElementById(PWA_SPLASH_ID));
-}
-
-/**
- * Resolves after the in-app PWA splash is fully gone (or immediately when
- * there was no splash — e.g. browser tab). Use to delay Face ID / app lock
- * until the logo splash has finished.
- */
-export function waitForPwaSplash(): Promise<void> {
-  if (typeof document === "undefined" || splashFinished) return Promise.resolve();
-  if (!isPwaSplashSessionActive()) {
-    markPwaSplashFinished();
-    return Promise.resolve();
-  }
-
-  const splash = document.getElementById(PWA_SPLASH_ID);
-  if (!splash) {
-    markPwaSplashFinished();
-    return Promise.resolve();
-  }
-
-  // Catch HTML safety-timeout removal if dismissPwaSplash never ran.
-  const observer = new MutationObserver(() => {
-    if (!document.getElementById(PWA_SPLASH_ID)) {
-      observer.disconnect();
-      markPwaSplashFinished();
-    }
-  });
-  observer.observe(document.body, { childList: true });
-
-  return new Promise((resolve) => {
-    if (splashFinished) {
-      observer.disconnect();
-      resolve();
-      return;
-    }
-    splashWaiters.add(() => {
-      observer.disconnect();
-      resolve();
-    });
-  });
-}
+/** Keep the logo on screen long enough to feel intentional, not a flash. */
+const PWA_SPLASH_MIN_MS = 1200;
+const PWA_SPLASH_FADE_MS = 450;
 
 /**
  * Fade out and remove the in-app PWA splash (#pwa-splash from index.html).
@@ -198,11 +142,7 @@ export function waitForPwaSplash(): Promise<void> {
 export function dismissPwaSplash(): void {
   if (typeof document === "undefined") return;
   const splash = document.getElementById(PWA_SPLASH_ID);
-  if (!splash) {
-    markPwaSplashFinished();
-    return;
-  }
-  if (splash.getAttribute("data-dismissed") === "1") return;
+  if (!splash || splash.getAttribute("data-dismissed") === "1") return;
 
   splash.setAttribute("data-dismissed", "1");
 
@@ -213,12 +153,9 @@ export function dismissPwaSplash(): void {
 
   window.setTimeout(() => {
     splash.classList.add("is-hiding");
-    // Keep .pwa-splash-active until the fade finishes — removing it early
-    // sets display:none and kills the opacity transition (felt like a double flash).
+    document.documentElement.classList.remove("pwa-splash-active");
     window.setTimeout(() => {
-      document.documentElement.classList.remove("pwa-splash-active");
       splash.remove();
-      markPwaSplashFinished();
     }, PWA_SPLASH_FADE_MS);
   }, wait);
 }

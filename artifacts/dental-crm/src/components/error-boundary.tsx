@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { RefreshCw } from "lucide-react";
 import { reportClientError } from "@/lib/report-error";
-import { isChunkLoadError, reloadOnceOnChunkError } from "@/lib/chunk-reload";
+import { isChunkLoadError } from "@/lib/chunk-reload";
 
 interface Props {
   children: ReactNode;
@@ -11,34 +11,20 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
-  recoveringChunk: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, recoveringChunk: false };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return {
-      hasError: true,
-      error,
-      recoveringChunk: isChunkLoadError(error),
-    };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
     console.error("[ErrorBoundary] caught:", error, info.componentStack);
-    if (isChunkLoadError(error)) {
-      // Stale PWA/deploy chunk — recover instead of showing the dead-end UI.
-      try {
-        reloadOnceOnChunkError(error);
-      } catch {
-        // non-chunk path shouldn't reach here
-      }
-      return;
-    }
     reportClientError({
       source: "dental-crm",
       message: error.message,
@@ -51,25 +37,29 @@ export class ErrorBoundary extends Component<Props, State> {
 
   reset = () => {
     if (this.state.error && isChunkLoadError(this.state.error)) {
-      try {
-        reloadOnceOnChunkError(this.state.error);
-      } catch {
+      // Same path as lazy chunk recovery — drop stale asset caches then reload.
+      void (async () => {
+        try {
+          if ("caches" in window) {
+            const keys = await caches.keys();
+            await Promise.all(
+              keys
+                .filter((key) => key.includes("1dent-pwa"))
+                .map((key) => caches.delete(key)),
+            );
+          }
+        } catch {
+          // ignore
+        }
         window.location.reload();
-      }
+      })();
       return;
     }
-    this.setState({ hasError: false, error: null, recoveringChunk: false });
+    this.setState({ hasError: false, error: null });
   };
 
   render() {
     if (this.state.hasError) {
-      if (this.state.recoveringChunk) {
-        return (
-          <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-3 p-6 text-center">
-            <p className="text-sm text-muted-foreground">Обновляем приложение…</p>
-          </div>
-        );
-      }
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-4 p-6 text-center">
