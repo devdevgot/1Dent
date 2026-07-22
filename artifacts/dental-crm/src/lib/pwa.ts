@@ -131,9 +131,9 @@ export function applyStandaloneDocumentClass(): void {
 }
 
 const PWA_SPLASH_ID = "pwa-splash";
-/** Keep the logo on screen long enough to feel intentional, not a flash. */
-const PWA_SPLASH_MIN_MS = 1200;
-const PWA_SPLASH_FADE_MS = 450;
+/** Brief hold after paint — OS already showed a launch screen; keep this short. */
+const PWA_SPLASH_MIN_MS = 650;
+const PWA_SPLASH_FADE_MS = 280;
 
 let splashFinished = false;
 const splashWaiters = new Set<() => void>();
@@ -213,8 +213,10 @@ export function dismissPwaSplash(): void {
 
   window.setTimeout(() => {
     splash.classList.add("is-hiding");
-    document.documentElement.classList.remove("pwa-splash-active");
+    // Keep .pwa-splash-active until the fade finishes — removing it early
+    // sets display:none and kills the opacity transition (felt like a double flash).
     window.setTimeout(() => {
+      document.documentElement.classList.remove("pwa-splash-active");
       splash.remove();
       markPwaSplashFinished();
     }, PWA_SPLASH_FADE_MS);
