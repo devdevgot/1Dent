@@ -32,6 +32,7 @@ import { useTabletVideos, filterVideosByCondition, type TabletVideoItem } from "
 import { PatientBroadcastHistory } from "@/components/kanban/patient-broadcast-history";
 import { PatientTransferDialog } from "@/components/kanban/patient-transfer-dialog";
 import { ContractsTab } from "@/components/kanban/contracts-tab";
+import { StaffAvatar } from "./staff-avatar";
 
 type Tab = "chart" | "plan" | "contracts" | "video" | "info";
 
@@ -588,9 +589,11 @@ function PatientInfo({
         </div>
         {doctorUser ? (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1f75fe]/10 text-sm font-bold text-[#1f75fe]">
-              {doctorUser.name[0]?.toUpperCase()}
-            </div>
+            <StaffAvatar
+              name={doctorUser.name}
+              photoUrl={(doctorUser as { photoUrl?: string | null }).photoUrl}
+              mutedFallback
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[#0f172a]">{doctorUser.name}</p>
               <p className="truncate text-xs text-[#94a3b8]">{doctorUser.email}</p>

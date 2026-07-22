@@ -11,6 +11,8 @@ export interface TabletDoctorBrief {
   name: string;
   specialty?: string | null;
   avatarColor: string;
+  /** Cropped profile photo from CRM account settings (data URL or https). */
+  photoUrl?: string | null;
 }
 
 export interface TabletSessionCreateResult {

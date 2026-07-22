@@ -105,7 +105,13 @@ export class TabletService {
   }
 
   private buildDoctorPublic(
-    doc: { id: string; name: string; role: UserRole; specialty: string | null },
+    doc: {
+      id: string;
+      name: string;
+      role: UserRole;
+      specialty: string | null;
+      photoUrl?: string | null;
+    },
     role?: UserRole,
   ) {
     return {
@@ -113,6 +119,7 @@ export class TabletService {
       name: doc.name,
       specialty: doc.specialty ?? (role === "owner" ? "Владелец · врач" : "Врач"),
       avatarColor: ROLE_COLORS[doc.role] ?? "#1f75fe",
+      photoUrl: doc.photoUrl ?? null,
     };
   }
 
@@ -295,8 +302,13 @@ export class TabletService {
       ? await this.repo.findCabinetById(session.cabinetId)
       : null;
 
-    let doctor: { id: string; name: string; specialty: string | null; avatarColor: string } | null =
-      null;
+    let doctor: {
+      id: string;
+      name: string;
+      specialty: string | null;
+      avatarColor: string;
+      photoUrl: string | null;
+    } | null = null;
 
     if (session.doctorUserId) {
       const doc = await this.repo.getDoctorPublic(session.doctorUserId);

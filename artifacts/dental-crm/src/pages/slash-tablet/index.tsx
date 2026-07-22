@@ -5,8 +5,9 @@ import { LockScreen } from "./lock-screen";
 import { PatientList } from "./patient-list";
 import { PatientCard } from "./patient-card";
 import { TabletDoctorSetup } from "./tablet-doctor-setup";
-import { initials, type TabletDoctor } from "./mock-data";
+import type { TabletDoctor } from "./mock-data";
 import { OneDentLogo } from "./onedent-logo";
+import { StaffAvatar } from "./staff-avatar";
 import { resolveCabinetIdFromUrl } from "@/lib/tablet-api";
 import { useAuthStore } from "@/hooks/use-auth";
 import { clearTabletSessionAuth } from "@/lib/tablet-auth";
@@ -101,10 +102,12 @@ function TabletTopBar({
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white"
-            style={{ backgroundColor: doctor.avatarColor }}>
-            {initials(doctor.name)}
-          </div>
+          <StaffAvatar
+            name={doctor.name}
+            photoUrl={doctor.photoUrl}
+            avatarColor={doctor.avatarColor}
+            size="sm"
+          />
           <div className="text-right">
             <p className="text-sm font-bold leading-tight text-[#0f172a]">{doctor.name}</p>
           </div>

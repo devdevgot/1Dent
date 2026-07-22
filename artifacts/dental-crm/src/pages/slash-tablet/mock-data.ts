@@ -27,6 +27,7 @@ export interface TabletDoctor {
   name: string;
   specialty: string;
   avatarColor: string;
+  photoUrl?: string | null;
 }
 
 export type TabletPatientStatus =

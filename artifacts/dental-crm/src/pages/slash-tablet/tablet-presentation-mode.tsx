@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OneDentLogo } from "./onedent-logo";
 import { itemDisplayPrice } from "./tablet-plan-utils";
 import { TabletDentalChart } from "./tablet-dental-chart";
+import { StaffAvatar } from "./staff-avatar";
 import {
   CONDITION_META, fmtTenge, initials,
   type TabletPatient, type PlanStage, type ToothCondition,
@@ -72,6 +73,7 @@ export function TabletPresentationMode({
 
   const clinicName = clinic?.name ?? "Стоматология";
   const doctorName = user?.name ?? "";
+  const doctorPhotoUrl = (user as { photoUrl?: string | null } | null | undefined)?.photoUrl ?? null;
   const firstName = patient.name.split(" ")[0] ?? patient.name;
 
   const problemTeeth = useMemo(
@@ -191,9 +193,18 @@ export function TabletPresentationMode({
             </div>
             {doctorName && (
               <div className="mt-6 flex items-center gap-2.5 border-t border-white/15 pt-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
-                  <Stethoscope className="h-4 w-4" />
-                </div>
+                {doctorPhotoUrl ? (
+                  <StaffAvatar
+                    name={doctorName}
+                    photoUrl={doctorPhotoUrl}
+                    size="sm"
+                    className="ring-2 ring-white/30"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
+                    <Stethoscope className="h-4 w-4" />
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-white/60">Лечащий врач</p>
                   <p className="text-sm font-semibold">{doctorName}</p>
