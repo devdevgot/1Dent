@@ -135,6 +135,62 @@ const PWA_SPLASH_ID = "pwa-splash";
 const PWA_SPLASH_MIN_MS = 1200;
 const PWA_SPLASH_FADE_MS = 450;
 
+let splashFinished = false;
+const splashWaiters = new Set<() => void>();
+
+function markPwaSplashFinished(): void {
+  if (splashFinished) return;
+  splashFinished = true;
+  splashWaiters.forEach((resolve) => resolve());
+  splashWaiters.clear();
+}
+
+function isPwaSplashSessionActive(): boolean {
+  if (typeof document === "undefined") return false;
+  if (document.documentElement.classList.contains("pwa-splash-active")) return true;
+  return Boolean(document.getElementById(PWA_SPLASH_ID));
+}
+
+/**
+ * Resolves after the in-app PWA splash is fully gone (or immediately when
+ * there was no splash — e.g. browser tab). Use to delay Face ID / app lock
+ * until the logo splash has finished.
+ */
+export function waitForPwaSplash(): Promise<void> {
+  if (typeof document === "undefined" || splashFinished) return Promise.resolve();
+  if (!isPwaSplashSessionActive()) {
+    markPwaSplashFinished();
+    return Promise.resolve();
+  }
+
+  const splash = document.getElementById(PWA_SPLASH_ID);
+  if (!splash) {
+    markPwaSplashFinished();
+    return Promise.resolve();
+  }
+
+  // Catch HTML safety-timeout removal if dismissPwaSplash never ran.
+  const observer = new MutationObserver(() => {
+    if (!document.getElementById(PWA_SPLASH_ID)) {
+      observer.disconnect();
+      markPwaSplashFinished();
+    }
+  });
+  observer.observe(document.body, { childList: true });
+
+  return new Promise((resolve) => {
+    if (splashFinished) {
+      observer.disconnect();
+      resolve();
+      return;
+    }
+    splashWaiters.add(() => {
+      observer.disconnect();
+      resolve();
+    });
+  });
+}
+
 /**
  * Fade out and remove the in-app PWA splash (#pwa-splash from index.html).
  * No-op outside standalone / when the splash was already dismissed.
@@ -142,7 +198,11 @@ const PWA_SPLASH_FADE_MS = 450;
 export function dismissPwaSplash(): void {
   if (typeof document === "undefined") return;
   const splash = document.getElementById(PWA_SPLASH_ID);
-  if (!splash || splash.getAttribute("data-dismissed") === "1") return;
+  if (!splash) {
+    markPwaSplashFinished();
+    return;
+  }
+  if (splash.getAttribute("data-dismissed") === "1") return;
 
   splash.setAttribute("data-dismissed", "1");
 
@@ -156,6 +216,7 @@ export function dismissPwaSplash(): void {
     document.documentElement.classList.remove("pwa-splash-active");
     window.setTimeout(() => {
       splash.remove();
+      markPwaSplashFinished();
     }, PWA_SPLASH_FADE_MS);
   }, wait);
 }

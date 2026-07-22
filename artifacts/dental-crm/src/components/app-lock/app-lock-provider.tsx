@@ -1,11 +1,11 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useAppLockStore } from "@/lib/app-lock/store";
 import { markAppHidden } from "@/lib/app-lock/storage";
 import { loadAppLockConfig } from "@/lib/app-lock/storage";
 import { AppLockScreen } from "./app-lock-screen";
-import { isPwaStandalone } from "@/lib/pwa";
+import { isPwaStandalone, waitForPwaSplash } from "@/lib/pwa";
 
 const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
 const SKIP_LOCK_PREFIXES = ["/tablet"];
@@ -30,6 +30,21 @@ export function AppLockProvider({ children }: AppLockProviderProps) {
   const checkResumeLock = useAppLockStore((s) => s.checkResumeLock);
 
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Hold Face ID / PIN until the PWA logo splash has fully dismissed. */
+  const [splashReady, setSplashReady] = useState(() => {
+    if (typeof document === "undefined") return true;
+    return !document.documentElement.classList.contains("pwa-splash-active");
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    void waitForPwaSplash().then(() => {
+      if (!cancelled) setSplashReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
@@ -97,6 +112,7 @@ export function AppLockProvider({ children }: AppLockProviderProps) {
   const active = loadAppLockConfig();
   const showLock =
     isPwaStandalone() &&
+    splashReady &&
     !skip &&
     !isLoading &&
     Boolean(user?.id) &&
