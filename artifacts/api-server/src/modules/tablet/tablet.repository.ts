@@ -222,6 +222,7 @@ export class TabletRepository {
         name: usersTable.name,
         role: usersTable.role,
         specialty: usersTable.specialty,
+        photoUrl: usersTable.photoUrl,
         tabletPinHash: usersTable.tabletPinHash,
       })
       .from(usersTable)
@@ -276,6 +277,7 @@ export class TabletRepository {
         name: usersTable.name,
         role: usersTable.role,
         specialty: usersTable.specialty,
+        photoUrl: usersTable.photoUrl,
       })
       .from(usersTable)
       .where(eq(usersTable.id, userId))

@@ -134,12 +134,17 @@ export function LockScreen({
         }
 
         if (status === "unlocked" && doctor && cabinet) {
+          const authPhoto =
+            auth && "user" in auth
+              ? (auth.user as { photoUrl?: string | null } | undefined)?.photoUrl
+              : undefined;
           handleUnlock(
             {
               id: doctor.id,
               name: doctor.name,
               specialty: doctor.specialty ?? "Врач",
               avatarColor: doctor.avatarColor,
+              photoUrl: doctor.photoUrl ?? authPhoto ?? null,
             },
             cabinet,
             auth,

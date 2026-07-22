@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, MapPin, ChevronRight, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CABINET, DOCTORS, initials, type TabletDoctor } from "./mock-data";
+import { CABINET, DOCTORS, type TabletDoctor } from "./mock-data";
+import { StaffAvatar } from "./staff-avatar";
 
 export function CabinetConfirm({ onConfirm }: { onConfirm: (doctor: TabletDoctor) => void }) {
   const [selected, setSelected] = useState<TabletDoctor>(DOCTORS[0]!);
@@ -51,12 +52,12 @@ export function CabinetConfirm({ onConfirm }: { onConfirm: (doctor: TabletDoctor
                   active ? "border-[#1f75fe] bg-[#1f75fe]/5" : "border-[#e8e3d9] bg-white hover:bg-[#faf8f4]",
                 )}
               >
-                <div
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ backgroundColor: doc.avatarColor }}
-                >
-                  {initials(doc.name)}
-                </div>
+                <StaffAvatar
+                  name={doc.name}
+                  photoUrl={doc.photoUrl}
+                  avatarColor={doc.avatarColor}
+                  size="lg"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-[#0f172a]">{doc.name}</p>
                   <p className="flex items-center gap-1 text-xs text-[#64748b]">

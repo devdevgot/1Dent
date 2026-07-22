@@ -105,7 +105,13 @@ export class TabletService {
   }
 
   private buildDoctorPublic(
-    doc: { id: string; name: string; role: UserRole; specialty: string | null },
+    doc: {
+      id: string;
+      name: string;
+      role: UserRole;
+      specialty: string | null;
+      photoUrl?: string | null;
+    },
     role?: UserRole,
   ) {
     return {
@@ -113,6 +119,7 @@ export class TabletService {
       name: doc.name,
       specialty: doc.specialty ?? (role === "owner" ? "Владелец · врач" : "Врач"),
       avatarColor: ROLE_COLORS[doc.role] ?? "#1f75fe",
+      photoUrl: doc.photoUrl ?? null,
     };
   }
 
