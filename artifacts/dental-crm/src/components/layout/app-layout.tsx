@@ -18,22 +18,27 @@ import { BottomTabBar } from "./bottom-tab-bar";
 import { OverlayNavigationProvider } from "@/hooks/use-overlay-navigation";
 import { MenuServiceOverlay } from "./menu-service-overlay";
 import { isGeoRestrictedPath } from "@/lib/geo-restriction";
-import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
+import { lazyNamedWithChunkRecovery } from "@/lib/chunk-reload";
 
-const GlobalSearch = lazyWithChunkRecovery(() =>
-  import("./global-search").then((m) => ({ default: m.GlobalSearch })),
+const GlobalSearch = lazyNamedWithChunkRecovery(
+  () => import("./global-search"),
+  "GlobalSearch",
 );
-const NotificationBell = lazyWithChunkRecovery(() =>
-  import("./notification-bell").then((m) => ({ default: m.NotificationBell })),
+const NotificationBell = lazyNamedWithChunkRecovery(
+  () => import("./notification-bell"),
+  "NotificationBell",
 );
-const AppointmentReminderModal = lazyWithChunkRecovery(() =>
-  import("./appointment-reminder-modal").then((m) => ({ default: m.AppointmentReminderModal })),
+const AppointmentReminderModal = lazyNamedWithChunkRecovery(
+  () => import("./appointment-reminder-modal"),
+  "AppointmentReminderModal",
 );
-const AttendanceCheckModal = lazyWithChunkRecovery(() =>
-  import("./attendance-check-modal").then((m) => ({ default: m.AttendanceCheckModal })),
+const AttendanceCheckModal = lazyNamedWithChunkRecovery(
+  () => import("./attendance-check-modal"),
+  "AttendanceCheckModal",
 );
-const TabletScannerSlot = lazyWithChunkRecovery(() =>
-  import("@/components/tablet/tablet-scanner-slot").then((m) => ({ default: m.TabletScannerSlot })),
+const TabletScannerSlot = lazyNamedWithChunkRecovery(
+  () => import("@/components/tablet/tablet-scanner-slot"),
+  "TabletScannerSlot",
 );
 
 const ROLE_DASHBOARD_HREF: Record<string, string> = {

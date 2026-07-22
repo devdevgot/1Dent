@@ -15,10 +15,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TabletDentalChart } from "./tablet-dental-chart";
-import { lazyWithChunkRecovery } from "@/lib/chunk-reload";
+import { lazyNamedWithChunkRecovery } from "@/lib/chunk-reload";
 import type { VoiceDiagnosisApplyResult } from "@/components/dental-chart/voice-diagnosis-modal";
-const VoiceDiagnosisModal = lazyWithChunkRecovery(() =>
-  import("@/components/dental-chart/voice-diagnosis-modal").then((m) => ({ default: m.VoiceDiagnosisModal })),
+const VoiceDiagnosisModal = lazyNamedWithChunkRecovery(
+  () => import("@/components/dental-chart/voice-diagnosis-modal"),
+  "VoiceDiagnosisModal",
 );
 import {
   CONDITION_META, type TabletPatient, type ToothCondition,
