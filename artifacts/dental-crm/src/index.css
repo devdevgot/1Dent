@@ -111,9 +111,9 @@
   --ds-border: rgba(255, 255, 255, 0.12);
   --border-strong: rgba(255, 255, 255, 0.22);
   --text: #f1f5f9;
-  /* Keep secondary/subtle above WCAG AA on --bg / --ds-surface */
-  --text-secondary: #cbd5e1;
-  --text-subtle: #94a3b8;
+  /* Bright enough on --bg / --ds-surface (avoid #64748b / #94a3b8 on dark cards). */
+  --text-secondary: #e2e8f0;
+  --text-subtle: #cbd5e1;
   --primary-light: rgba(31, 117, 254, 0.18);
   --success-light: rgba(22, 163, 74, 0.18);
   --warning-light: rgba(217, 119, 6, 0.2);

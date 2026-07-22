@@ -2,7 +2,8 @@ import { cn } from "@/lib/utils";
 import { WA_ICON_PATH } from "@/components/whatsapp/whatsapp-connect-modal";
 
 export const TAB_ACTIVE = "#22c55e";
-export const TAB_INACTIVE = "#94a3b8";
+/** Theme-aware muted tab chrome (light + dark). */
+export const TAB_INACTIVE = "var(--text-subtle)";
 
 type TabIconProps = {
   active?: boolean;

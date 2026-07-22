@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
 import {
   TabCalendarIcon,
   TabFinanceIcon,
@@ -195,7 +194,10 @@ export function BottomTabBar({
                 className="flex-1 flex flex-col items-center justify-center gap-1 min-w-0 px-1 select-none opacity-35"
               >
                 <Icon active={false} />
-                <span className="text-[11px] font-medium leading-none text-[var(--text-subtle)] truncate max-w-full">
+                <span
+                  className="text-[11px] font-medium leading-none truncate max-w-full"
+                  style={{ color: "var(--text-subtle)" }}
+                >
                   {label}
                 </span>
               </div>
@@ -206,11 +208,8 @@ export function BottomTabBar({
             <>
               <Icon active={tab.isActive} />
               <span
-                className={cn(
-                  "text-[11px] font-medium leading-none truncate max-w-full",
-                  tab.isActive ? "text-[#22c55e]" : "text-[var(--text-subtle)]",
-                )}
-                style={tab.isActive ? { color: TAB_ACTIVE } : undefined}
+                className="text-[11px] font-medium leading-none truncate max-w-full"
+                style={{ color: tab.isActive ? TAB_ACTIVE : "var(--text-subtle)" }}
               >
                 {label}
               </span>
