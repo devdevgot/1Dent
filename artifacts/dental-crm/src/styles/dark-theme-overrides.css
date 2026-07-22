@@ -8,6 +8,12 @@
   color-scheme: dark;
 }
 
+/* Theme-aware search placeholder (used by GlobalSearch). */
+.global-search-input::placeholder {
+  color: var(--text-subtle);
+  opacity: 1;
+}
+
 /* —— Surfaces & text (solid) —— */
 html.dark .bg-\[\#faf8f4\],
 html.dark .bg-\[\#FAF8F4\] {
@@ -32,23 +38,27 @@ html.dark .bg-white {
 }
 
 html.dark .text-\[\#0f172a\] {
-  color: var(--text);
+  color: var(--text) !important;
 }
 html.dark .text-\[\#64748b\] {
-  color: var(--text-secondary);
+  color: var(--text-secondary) !important;
 }
 html.dark .text-\[\#94a3b8\] {
-  color: var(--text-subtle);
+  color: var(--text-subtle) !important;
 }
 html.dark .text-\[\#475569\],
 html.dark .text-\[\#334155\] {
-  color: var(--text-secondary);
+  color: var(--text-secondary) !important;
 }
 html.dark .text-\[\#e8e3d9\] {
-  color: var(--ds-border);
+  color: var(--ds-border) !important;
 }
+/* Light-palette slate used as muted UI chrome — keep readable in dark. */
 html.dark .text-\[\#cbd5e1\] {
-  color: var(--text-subtle);
+  color: var(--text-subtle) !important;
+}
+html.dark .text-\[\#e2e8f0\] {
+  color: var(--text-secondary) !important;
 }
 
 html.dark .border-\[\#e8e3d9\],
@@ -207,6 +217,11 @@ html.dark .text-\[\#64748b\]\/50 {
 }
 html.dark .text-\[\#64748b\]\/40 {
   color: color-mix(in srgb, var(--text-secondary) 40%, transparent);
+}
+html.dark .placeholder\:text-\[\#94a3b8\]::placeholder,
+html.dark .placeholder\:text-\[\#64748b\]::placeholder {
+  color: var(--text-subtle) !important;
+  opacity: 1;
 }
 html.dark .text-\[\#94a3b8\]\/70 {
   color: color-mix(in srgb, var(--text-subtle) 70%, transparent);

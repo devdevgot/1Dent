@@ -283,7 +283,10 @@ export function GlobalSearch() {
     <div ref={rootRef} className="relative flex-1 min-w-0">
       {/* Inline search — same interaction model as Patients */}
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 z-[1] h-4 w-4 -translate-y-1/2"
+          style={{ color: "var(--text-subtle)" }}
+        />
         <input
           ref={inputRef}
           type="search"
@@ -297,10 +300,10 @@ export function GlobalSearch() {
           placeholder={placeholder}
           title={placeholder}
           className={cn(
-            "w-full rounded-xl border border-[#e8e3d9] bg-white py-2 pl-9 pr-9 text-sm text-[#0f172a]",
-            "placeholder:text-[#94a3b8] font-manrope",
+            "global-search-input w-full rounded-xl border border-[#e8e3d9] bg-white py-2 pl-9 pr-9 text-sm font-manrope",
             "focus:outline-none focus:border-[var(--ds-primary)] focus:ring-2 focus:ring-[var(--ds-primary)]/20",
           )}
+          style={{ color: "var(--text)" }}
         />
         {query ? (
           <button
@@ -310,7 +313,8 @@ export function GlobalSearch() {
               setQuery("");
               inputRef.current?.focus();
             }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b]"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--text-subtle)" }}
           >
             <X className="h-4 w-4" />
           </button>

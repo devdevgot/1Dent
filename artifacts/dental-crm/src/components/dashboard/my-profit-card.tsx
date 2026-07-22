@@ -157,7 +157,12 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-[#0f172a] truncate">{row.name}</p>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{row.subtitle}</p>
+              <p
+                className="text-xs mt-0.5 truncate"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {row.subtitle}
+              </p>
             </div>
             <div className="shrink-0 text-right">
               {loadingRevenues || row.revenue === null ? (
@@ -172,7 +177,10 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
         ))}
 
         {hasFetched && branches.length === 0 && (
-          <p className="px-5 py-4 text-xs text-[var(--text-secondary)] text-center">
+          <p
+            className="px-5 py-4 text-xs text-center"
+            style={{ color: "var(--text-secondary)" }}
+          >
             Добавьте филиалы, чтобы видеть прибыль по каждой точке
           </p>
         )}
@@ -184,7 +192,7 @@ export function MyProfitCard({ listPreset, onListPresetChange, onSelectBranch }:
         className="mx-4 my-4 w-[calc(100%-2rem)] py-3.5 rounded-2xl bg-[#f1ede4] hover:bg-[#e8e3d9] text-[#0f172a] text-sm font-semibold transition-colors flex items-center justify-center gap-1"
       >
         Управление филиалами
-        <ChevronRight className="w-4 h-4 text-[#64748b]" />
+        <ChevronRight className="w-4 h-4" style={{ color: "var(--text-secondary)" }} />
       </button>
     </div>
   );

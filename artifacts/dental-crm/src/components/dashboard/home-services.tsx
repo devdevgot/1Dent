@@ -55,7 +55,10 @@ function AllServicesTile() {
           ))}
         </div>
       </div>
-      <span className="w-full text-xs font-semibold text-[#0f172a] text-center leading-[1.2] line-clamp-2">
+      <span
+        className="w-full text-xs font-semibold text-center leading-[1.2] line-clamp-2"
+        style={{ color: "var(--text)" }}
+      >
         Все сервисы
       </span>
     </Link>
@@ -92,8 +95,9 @@ function PromoBanner({ slug, title, subtitle, img, variant = "light" }: PromoBan
           className={
             isGradient
               ? "text-white font-extrabold text-[17px] leading-[1.2]"
-              : "text-[#0f172a] font-extrabold text-[17px] leading-[1.2]"
+              : "font-extrabold text-[17px] leading-[1.2]"
           }
+          style={isGradient ? undefined : { color: "var(--text)" }}
         >
           {title}
         </p>
@@ -101,8 +105,9 @@ function PromoBanner({ slug, title, subtitle, img, variant = "light" }: PromoBan
           className={
             isGradient
               ? "text-white/70 text-xs font-medium mt-1"
-              : "text-[#64748b] text-xs font-medium mt-1"
+              : "text-xs font-medium mt-1"
           }
+          style={isGradient ? undefined : { color: "var(--text-secondary)" }}
         >
           {subtitle}
         </p>
@@ -158,7 +163,10 @@ export function HomeServiceTiles() {
             eager
             className="w-[56px] h-[56px]"
           />
-          <span className="w-full text-xs font-semibold text-[#0f172a] text-center leading-[1.2] line-clamp-2">
+          <span
+            className="w-full text-xs font-semibold text-center leading-[1.2] line-clamp-2"
+            style={{ color: "var(--text)" }}
+          >
             {tile.label}
           </span>
         </button>
