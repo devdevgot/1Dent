@@ -5,20 +5,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  useUpdateTooth,
-  getListTeethQueryKey,
   useListProcedureTemplates,
-  useCreateProcedure,
-  getListProceduresQueryKey,
-  useAddTreatmentPlanItem,
-  getGetActiveTreatmentPlanQueryKey,
-  getListTreatmentPlansQueryKey,
 } from "@workspace/api-client-react";
 import type { ProcedureTemplate } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { requestMicrophoneAccess } from "@/lib/device-permissions";
-import { useAuthStore } from "@/hooks/use-auth";
 import { useIsSlashTablet } from "@/hooks/use-slash-tablet";
 import { getBaseUrl } from "@/lib/base-url";
 import { cn } from "@/lib/utils";
@@ -33,7 +24,8 @@ const MIN_AUDIO_BYTES = 2_000;
 // Long exams (20-30 teeth) can take up to ~110s on the server (two STT model
 // attempts at 55s each) plus upload time — keep the client budget above that.
 const UPLOAD_TIMEOUT_MS = 150_000;
-const APPLY_CONCURRENCY = 6;
+const APPLY_TIMEOUT_MS = 60_000;
+const VOICE_AUDIO_BITS_PER_SECOND = 32_000;
 
 const CONDITION_VALUES: ToothCondition[] = [
   "healthy", "cavity", "treated", "crown",
@@ -122,9 +114,15 @@ async function voiceApiFetch<T>(
   url: string,
   init: RequestInit,
   timeoutMs = UPLOAD_TIMEOUT_MS,
+  externalSignal?: AbortSignal,
 ): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort();
+    else externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+  }
   try {
     const res = await fetch(url, { ...init, signal: controller.signal });
     const json = (await res.json().catch(() => ({}))) as {
@@ -143,23 +141,8 @@ async function voiceApiFetch<T>(
     throw new Error(formatVoiceApiError(err));
   } finally {
     clearTimeout(timeoutId);
+    externalSignal?.removeEventListener("abort", onExternalAbort);
   }
-}
-
-async function runWithConcurrency<T>(
-  items: T[],
-  limit: number,
-  worker: (item: T) => Promise<void>,
-): Promise<void> {
-  let index = 0;
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (index < items.length) {
-      const current = items[index];
-      index += 1;
-      if (current !== undefined) await worker(current);
-    }
-  });
-  await Promise.all(runners);
 }
 
 function normalizeDraftSelections(
@@ -203,11 +186,6 @@ function rematchEntryServices(
 
 export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplied, initialRestoreDraft }: Props) {
   const { toast } = useToast();
-  const qc = useQueryClient();
-  const { user } = useAuthStore();
-  const updateToothMutation = useUpdateTooth();
-  const createProcedureMutation = useCreateProcedure();
-  const addPlanItemMutation = useAddTreatmentPlanItem();
 
   const [phase, setPhase] = useState<Phase>("idle");
   const [transcript, setTranscript] = useState("");
@@ -219,6 +197,8 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
   const [recordingAudioCtx, setRecordingAudioCtx] = useState<AudioContext | null>(null);
   const [processingStep, setProcessingStep] = useState<"transcribing" | "parsing">("transcribing");
+  const [processingSeconds, setProcessingSeconds] = useState(0);
+  const [applySummary, setApplySummary] = useState<{ teeth: number; services: number } | null>(null);
 
   // Per-tooth: one selected service from relevant transcript matches
   const [selectedServiceIds, setSelectedServiceIds] = useState<Record<number, string>>({});
@@ -231,6 +211,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
+  const processingAbortRef = useRef<AbortController | null>(null);
 
   // Fetch all procedure templates for the service picker
   const { data: allTemplatesData } = useListProcedureTemplates(undefined, {
@@ -318,10 +299,13 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   }, [phase]);
 
   useEffect(() => {
-    if (phase !== "processing") return;
-    setProcessingStep("transcribing");
-    const id = setTimeout(() => setProcessingStep("parsing"), 5_000);
-    return () => clearTimeout(id);
+    if (phase !== "processing") {
+      setProcessingSeconds(0);
+      return;
+    }
+    setProcessingSeconds(0);
+    const id = setInterval(() => setProcessingSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
   }, [phase]);
 
   const clearRecordingAudio = useCallback(() => {
@@ -353,7 +337,16 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         return "";
       };
       const mimeType = pickMimeType();
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const recorderOptions: MediaRecorderOptions = {
+        audioBitsPerSecond: VOICE_AUDIO_BITS_PER_SECOND,
+      };
+      if (mimeType) recorderOptions.mimeType = mimeType;
+      let mr: MediaRecorder;
+      try {
+        mr = new MediaRecorder(stream, recorderOptions);
+      } catch {
+        mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      }
       const actualMime = mr.mimeType || mimeType || "audio/webm";
       mediaRecorderRef.current = mr;
       chunksRef.current = [];
@@ -393,6 +386,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    processingAbortRef.current?.abort();
     setRecordingStream(null);
     setRecordingAudioCtx((prev) => {
       if (prev && prev.state !== "closed") void prev.close();
@@ -405,6 +399,13 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     if (mime.includes("mp4") || mime.includes("m4a") || mime.includes("mpeg")) return "mp4";
     return "webm";
   };
+
+  const cancelProcessing = useCallback(() => {
+    processingAbortRef.current?.abort();
+    processingAbortRef.current = null;
+    setError("Обработка отменена");
+    setPhase("idle");
+  }, []);
 
   const sendAudio = async (blob: Blob, mimeType: string) => {
     if (blob.size < MIN_AUDIO_BYTES) {
@@ -421,6 +422,8 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
     const baseUrl = getBaseUrl();
     const authHeaders = { Authorization: `Bearer ${token}` };
 
+    const abort = new AbortController();
+    processingAbortRef.current = abort;
     setProcessingStep("transcribing");
 
     try {
@@ -431,7 +434,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         method: "POST",
         headers: authHeaders,
         body: formData,
-      });
+      }, UPLOAD_TIMEOUT_MS, abort.signal);
 
       const nextTranscript = transcribeJson.data?.transcript ?? "";
       if (!nextTranscript.trim()) {
@@ -448,7 +451,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         method: "POST",
         headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: nextTranscript }),
-      });
+      }, UPLOAD_TIMEOUT_MS, abort.signal);
 
       const diagEntries = parseJson.data?.diagnoses ?? [];
       setTranscript(parseJson.data?.transcript ?? nextTranscript);
@@ -461,16 +464,21 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
       setSelectedServiceIds(autoSelected);
       setPhase("review");
     } catch (err) {
+      if (abort.signal.aborted) {
+        setError("Обработка отменена");
+        setPhase("idle");
+        return;
+      }
       setError(formatVoiceApiError(err));
       setPhase("idle");
+    } finally {
+      if (processingAbortRef.current === abort) {
+        processingAbortRef.current = null;
+      }
     }
   };
 
   // ── Entry editing ────────────────────────────────────────────────────────────
-
-  const updateEntry = (idx: number, patch: Partial<VoiceDiagnosisEntry>) => {
-    setEntries((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
-  };
 
   const removeEntry = (idx: number) => {
     setEntries((prev) => {
@@ -525,121 +533,88 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
   const applyAll = async () => {
     if (entries.length === 0) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      toast({
+        title: "Нет сети",
+        description: "Голосовую диагностику можно применить только онлайн",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const serviceJobs = Object.entries(selectedServiceIds)
+      .filter(([, id]) => Boolean(id))
+      .map(([fdiStr, id]) => ({ fdi: Number(fdiStr), templateId: id! }));
+
+    setApplySummary({ teeth: entries.length, services: serviceJobs.length });
     setPhase("applying");
 
     try {
-      let appliedTeeth = 0;
-      const appliedFdis: number[] = [];
-      const toothErrors: string[] = [];
-      const failedEntries: VoiceDiagnosisEntry[] = [];
-
-      const saveTooth = async (entry: VoiceDiagnosisEntry) => {
-        await updateToothMutation.mutateAsync({
-          id: patientId,
-          toothFdi: entry.fdi,
-          data: {
-            condition: entry.condition as ToothCondition,
-            notes: entry.notes || undefined,
-          },
-        });
-        appliedTeeth += 1;
-        appliedFdis.push(entry.fdi);
+      const token = localStorage.getItem(AUTH_TOKEN_KEY) ?? "";
+      const baseUrl = getBaseUrl();
+      const payload = {
+        entries: entries.map((e) => ({
+          fdi: e.fdi,
+          condition: e.condition,
+          notes: e.notes || undefined,
+          mkb10Code: e.mkb10Code || undefined,
+        })),
+        services: serviceJobs,
+        activePlanId: activePlanId || undefined,
       };
 
-      await runWithConcurrency(entries, APPLY_CONCURRENCY, async (entry) => {
-        try {
-          await saveTooth(entry);
-        } catch {
-          failedEntries.push(entry);
-        }
-      });
+      const applyJson = await voiceApiFetch<{
+        success: boolean;
+        data: {
+          appliedTeeth: number;
+          appliedServices: number;
+          appliedFdis: number[];
+          errors: Array<{ fdi: number; kind: string; message: string }>;
+        };
+      }>(`${baseUrl}/api/patients/${patientId}/teeth/voice-diagnose/apply`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      }, APPLY_TIMEOUT_MS);
 
-      // With 20-30 parallel saves a couple of requests may fail transiently —
-      // retry the failed teeth once, slower, before reporting errors.
-      if (failedEntries.length > 0) {
-        await runWithConcurrency(failedEntries, 2, async (entry) => {
-          try {
-            await saveTooth(entry);
-          } catch {
-            toothErrors.push(`Зуб ${entry.fdi}`);
-          }
-        });
-      }
+      const result = applyJson.data;
+      const appliedTeeth = result?.appliedTeeth ?? 0;
+      const appliedServices = result?.appliedServices ?? 0;
+      const appliedFdis = result?.appliedFdis ?? [];
+      const applyErrors = result?.errors ?? [];
 
-      await qc.invalidateQueries({ queryKey: getListTeethQueryKey(patientId) });
-
-      // Create procedures for selected services
-      let appliedServices = 0;
-      const serviceErrors: string[] = [];
-
-      const serviceJobs = Object.entries(selectedServiceIds)
-        .filter(([, id]) => Boolean(id))
-        .map(([fdiStr, id]) => ({ fdi: Number(fdiStr), id: id! }));
-
-      await runWithConcurrency(serviceJobs, APPLY_CONCURRENCY, async ({ fdi, id }) => {
-        const entry = entries.find((e) => e.fdi === fdi);
-        const tpl = allTemplates.find((t) => t.id === id)
-          ?? entry?.suggestedTemplates?.find((s) => s.id === id);
-        if (!tpl) return;
-        const price = "defaultPrice" in tpl ? tpl.defaultPrice : 0;
-        const name = tpl.name;
-        try {
-          await createProcedureMutation.mutateAsync({
-            data: {
-              patientId,
-              doctorId: user?.id,
-              templateId: tpl.id,
-              name: `[Зуб ${fdi}] ${name}`,
-              price,
-            },
-          });
-          appliedServices += 1;
-        } catch {
-          serviceErrors.push(name);
-        }
-
-        if (activePlanId) {
-          try {
-            await addPlanItemMutation.mutateAsync({
-              id: patientId,
-              planId: activePlanId,
-              data: {
-                toothFdi: fdi,
-                condition: entry?.condition,
-                mkb10Code: entry?.mkb10Code,
-                title: `[Зуб ${fdi}] ${name}`,
-                price,
-              },
-            });
-          } catch {
-            // Non-critical: plan might be locked or already have this item
-          }
-        }
-      });
-
-      if (appliedServices > 0) {
-        await qc.invalidateQueries({ queryKey: getListProceduresQueryKey() });
-        if (activePlanId) {
-          await qc.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(patientId) });
-          await qc.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(patientId) });
-        }
-      }
+      const toothErrors = applyErrors
+        .filter((e) => e.kind === "tooth")
+        .map((e) => `Зуб ${e.fdi}`);
+      const serviceErrors = applyErrors
+        .filter((e) => e.kind === "service")
+        .map((e) => `Услуга (зуб ${e.fdi})`);
+      // planItem failures are non-critical (same as before) — mention only if nothing else failed
+      const planErrors = applyErrors
+        .filter((e) => e.kind === "planItem")
+        .map((e) => `План (зуб ${e.fdi})`);
 
       const parts: string[] = [];
       if (appliedTeeth > 0) parts.push(`${appliedTeeth} ${plural(appliedTeeth, "зуб", "зуба", "зубов")}`);
       if (appliedServices > 0) parts.push(`${appliedServices} ${plural(appliedServices, "услуга", "услуги", "услуг")} добавлено`);
 
-      if (toothErrors.length === 0 && serviceErrors.length === 0) {
+      const criticalErrors = [...toothErrors, ...serviceErrors];
+      if (criticalErrors.length === 0) {
         clearDraft();
-        toast({ title: `Диагностика применена: ${parts.join(", ")}` });
+        toast({
+          title: `Диагностика применена: ${parts.join(", ") || "готово"}`,
+          description: planErrors.length > 0 ? `План: ${planErrors.join(", ")}` : undefined,
+        });
       } else {
         // Keep the draft so the doctor can reopen the modal and re-apply
         // (tooth saves are idempotent upserts).
         saveDraft();
-        const errParts = [...toothErrors, ...serviceErrors].join(", ");
         toast({
-          title: `Применено частично: ${parts.join(", ")}`,
-          description: `Ошибки: ${errParts}`,
+          title: `Применено частично: ${parts.join(", ") || "0"}`,
+          description: `Ошибки: ${[...criticalErrors, ...planErrors].join(", ")}`,
           variant: "destructive",
         });
       }
@@ -661,6 +636,8 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
         description: err instanceof Error ? err.message : "Попробуйте ещё раз",
         variant: "destructive",
       });
+    } finally {
+      setApplySummary(null);
     }
   };
 
@@ -816,7 +793,7 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
           {/* Processing */}
           {phase === "processing" && (
-            <div className="flex flex-col items-center justify-center gap-4 py-16">
+            <div className="flex flex-col items-center justify-center gap-4 py-16 px-6">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <div className="text-center space-y-2">
                 <p className="text-sm font-medium text-[#0f172a]">
@@ -827,7 +804,20 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
                     ? "Многоязычное распознавание (RU · KK · UZ · KY · EN)"
                     : "Определение зубов FDI и услуг"}
                 </p>
+                <p className="text-xs text-[#94a3b8] tabular-nums">
+                  {String(Math.floor(processingSeconds / 60)).padStart(2, "0")}
+                  :
+                  {String(processingSeconds % 60).padStart(2, "0")}
+                </p>
+                {processingSeconds >= 30 && (
+                  <p className="text-xs text-[#64748b] max-w-xs leading-relaxed">
+                    Длинная запись, обработка может занять до 2 минут
+                  </p>
+                )}
               </div>
+              <Button variant="outline" size="sm" onClick={cancelProcessing}>
+                Отменить
+              </Button>
             </div>
           )}
 
@@ -990,9 +980,17 @@ export function VoiceDiagnosisModal({ patientId, activePlanId, onClose, onApplie
 
           {/* Applying */}
           {phase === "applying" && (
-            <div className="flex flex-col items-center justify-center gap-4 py-14">
+            <div className="flex flex-col items-center justify-center gap-4 py-14 px-6">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p className="text-sm font-medium">Применяем диагнозы и услуги...</p>
+              <p className="text-sm font-medium text-center">
+                {applySummary
+                  ? `Сохраняем ${applySummary.teeth} ${plural(applySummary.teeth, "зуб", "зуба", "зубов")}${
+                      applySummary.services > 0
+                        ? ` и ${applySummary.services} ${plural(applySummary.services, "услугу", "услуги", "услуг")}`
+                        : ""
+                    }…`
+                  : "Применяем диагнозы и услуги…"}
+              </p>
             </div>
           )}
         </div>
