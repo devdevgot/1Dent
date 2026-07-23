@@ -251,7 +251,7 @@ function MessageBubble({ message, isOutbound }: { message: Message; isOutbound: 
   return (
     <div
       className={cn(
-        "flex mb-1 overflow-visible",
+        "flex mb-1 min-w-0 w-full overflow-visible",
         isOutbound ? "justify-end pl-10 pr-3" : "justify-start pr-10 pl-3",
       )}
     >
@@ -536,7 +536,7 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
         sticky={false}
         icon={<Avatar name={patient.name} size={36} />}
         badge={
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
             {chatbotSession?.humanTakeover && (
               <Badge className="flex items-center gap-1 text-xs bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-50">
                 Бот на паузе
@@ -548,8 +548,8 @@ function ChatPanel({ patient, onBack }: { patient: Patient; onBack?: () => void 
               </Badge>
             )}
             {hasRedAlert ? (
-              <Badge variant="destructive" className="flex items-center gap-1 shrink-0 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
-                <AlertTriangle className="w-3 h-3" />
+              <Badge variant="destructive" className="flex items-center gap-1 text-xs bg-[#fef2f2] text-[#dc2626] border border-[#dc2626]/20 hover:bg-[#fef2f2]">
+                <AlertTriangle className="w-3 h-3 shrink-0" />
                 {t("chat.redAlert")}
               </Badge>
             ) : null}
@@ -885,7 +885,7 @@ export default function ChatPage() {
 
       <main
         className={cn(
-          "flex-1 flex flex-col",
+          "flex-1 flex flex-col min-w-0 overflow-hidden",
           selectedPatientId ? "flex" : "hidden md:flex",
         )}
       >
