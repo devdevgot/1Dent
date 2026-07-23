@@ -12,27 +12,133 @@ import {
 import { ObjectStorageService } from "../../lib/objectStorage";
 import { NotFoundError, ValidationError } from "../../shared/errors";
 
-export const TABLET_VIDEO_SECTIONS: Array<{
+/** Disease / topic inside a specialty category */
+export type TabletVideoTopic = {
   id: TabletVideoSection;
   label: string;
   icon: string;
   relatedConditions: string[];
-}> = [
-  { id: "cavity", label: "Кариес", icon: "🦷", relatedConditions: ["cavity"] },
-  { id: "root_canal", label: "Пульпит / Каналы", icon: "🔴", relatedConditions: ["root_canal"] },
-  { id: "hygiene", label: "Гигиена", icon: "✨", relatedConditions: ["healthy", "treated"] },
-  { id: "crown", label: "Коронки", icon: "👑", relatedConditions: ["crown"] },
-  { id: "implant", label: "Имплантация", icon: "🔩", relatedConditions: ["implant", "missing"] },
-  { id: "extraction_needed", label: "Удаление", icon: "🩺", relatedConditions: ["extraction_needed"] },
-  { id: "treated", label: "Лечение", icon: "💊", relatedConditions: ["treated"] },
-  { id: "general", label: "Общее", icon: "📺", relatedConditions: [] },
+};
+
+/** Specialty sections — aligned with CRM «Услуги» / прейскурант (+ Ортодонтия) */
+export type TabletVideoCategory = {
+  id: string;
+  label: string;
+  topics: TabletVideoTopic[];
+};
+
+export const TABLET_VIDEO_CATEGORIES: TabletVideoCategory[] = [
+  {
+    id: "therapy",
+    label: "Терапия",
+    topics: [
+      { id: "cavity", label: "Кариес", icon: "🦷", relatedConditions: ["cavity"] },
+      { id: "root_canal", label: "Пульпит", icon: "🔴", relatedConditions: ["root_canal"] },
+      { id: "periodontitis", label: "Периодонтит", icon: "🟣", relatedConditions: ["root_canal", "extraction_needed"] },
+      { id: "treated", label: "Лечение", icon: "💊", relatedConditions: ["treated"] },
+    ],
+  },
+  {
+    id: "surgery",
+    label: "Хирургия",
+    topics: [
+      { id: "extraction_needed", label: "Удаление", icon: "🩺", relatedConditions: ["extraction_needed"] },
+    ],
+  },
+  {
+    id: "orthopedics",
+    label: "Ортопедия",
+    topics: [
+      { id: "crown", label: "Коронки", icon: "👑", relatedConditions: ["crown"] },
+    ],
+  },
+  {
+    id: "implantation",
+    label: "Имплантация",
+    topics: [
+      { id: "implant", label: "Имплантация", icon: "🔩", relatedConditions: ["implant", "missing"] },
+    ],
+  },
+  {
+    id: "orthodontics",
+    label: "Ортодонтия",
+    topics: [
+      { id: "braces", label: "Брекеты", icon: "😁", relatedConditions: [] },
+      { id: "aligners", label: "Элайнеры", icon: "✨", relatedConditions: [] },
+    ],
+  },
+  {
+    id: "pediatric",
+    label: "Детский прайс",
+    topics: [
+      { id: "cavity", label: "Кариес", icon: "🦷", relatedConditions: ["cavity"] },
+      { id: "general", label: "Общее", icon: "👶", relatedConditions: [] },
+    ],
+  },
+  {
+    id: "hygiene",
+    label: "Гигиена",
+    topics: [
+      { id: "hygiene", label: "Гигиена", icon: "✨", relatedConditions: ["healthy", "treated"] },
+    ],
+  },
+  {
+    id: "periodontology",
+    label: "Пародонтология",
+    topics: [
+      { id: "periodontitis", label: "Пародонтит", icon: "🦠", relatedConditions: ["extraction_needed", "treated"] },
+      { id: "hygiene", label: "Гигиена пародонта", icon: "✨", relatedConditions: ["healthy", "treated"] },
+    ],
+  },
+  {
+    id: "radiology",
+    label: "Рентген",
+    topics: [
+      { id: "general", label: "Общее", icon: "📷", relatedConditions: [] },
+    ],
+  },
+  {
+    id: "restoration",
+    label: "Реставрация",
+    topics: [
+      { id: "restoration", label: "Реставрация", icon: "💎", relatedConditions: ["cavity", "treated"] },
+      { id: "cavity", label: "Кариес", icon: "🦷", relatedConditions: ["cavity"] },
+    ],
+  },
+  {
+    id: "other",
+    label: "Прочее",
+    topics: [
+      { id: "general", label: "Общее", icon: "📺", relatedConditions: [] },
+    ],
+  },
 ];
 
+/** Flat topic list for backward-compatible public clients */
+export const TABLET_VIDEO_SECTIONS: Array<TabletVideoTopic & { categoryIds: string[] }> =
+  (() => {
+    const map = new Map<string, TabletVideoTopic & { categoryIds: string[] }>();
+    for (const cat of TABLET_VIDEO_CATEGORIES) {
+      for (const topic of cat.topics) {
+        const existing = map.get(topic.id);
+        if (existing) {
+          if (!existing.categoryIds.includes(cat.id)) existing.categoryIds.push(cat.id);
+        } else {
+          map.set(topic.id, { ...topic, categoryIds: [cat.id] });
+        }
+      }
+    }
+    return Array.from(map.values());
+  })();
+
+const CATEGORY_IDS = new Set(TABLET_VIDEO_CATEGORIES.map((c) => c.id));
 const SECTION_IDS = new Set<string>(TABLET_VIDEO_SECTIONS.map((s) => s.id));
 const objectStorage = new ObjectStorageService();
 
 export type TabletVideoDto = {
   id: string;
+  category: string;
+  categoryLabel: string;
   section: TabletVideoSection;
   sectionLabel: string;
   title: string;
@@ -47,8 +153,28 @@ export type TabletVideoDto = {
   updatedAt: string;
 };
 
-function sectionLabel(section: TabletVideoSection): string {
+function categoryLabel(category: string): string {
+  return TABLET_VIDEO_CATEGORIES.find((c) => c.id === category)?.label ?? category;
+}
+
+function sectionLabel(section: TabletVideoSection, category?: string): string {
+  if (category) {
+    const inCat = topicInCategory(category, section)?.label;
+    if (inCat) return inCat;
+  }
   return TABLET_VIDEO_SECTIONS.find((s) => s.id === section)?.label ?? section;
+}
+
+function topicInCategory(category: string, section: TabletVideoSection): TabletVideoTopic | undefined {
+  return TABLET_VIDEO_CATEGORIES.find((c) => c.id === category)?.topics.find((t) => t.id === section);
+}
+
+function relatedConditionsFor(category: string, section: TabletVideoSection): string[] {
+  return (
+    topicInCategory(category, section)?.relatedConditions ??
+    TABLET_VIDEO_SECTIONS.find((s) => s.id === section)?.relatedConditions ??
+    []
+  );
 }
 
 function buildVideoUrl(video: TabletVideo, reqBaseUrl?: string): string {
@@ -61,8 +187,10 @@ function buildVideoUrl(video: TabletVideo, reqBaseUrl?: string): string {
 function toDto(video: TabletVideo, reqBaseUrl?: string): TabletVideoDto {
   return {
     id: video.id,
+    category: video.category,
+    categoryLabel: categoryLabel(video.category),
     section: video.section,
-    sectionLabel: sectionLabel(video.section),
+    sectionLabel: sectionLabel(video.section, video.category),
     title: video.title,
     description: video.description,
     mimeType: video.mimeType,
@@ -76,11 +204,30 @@ function toDto(video: TabletVideo, reqBaseUrl?: string): TabletVideoDto {
   };
 }
 
+function assertCategory(category: string): string {
+  if (!CATEGORY_IDS.has(category)) {
+    throw new ValidationError(`Unknown category: ${category}`);
+  }
+  return category;
+}
+
 function assertSection(section: string): TabletVideoSection {
   if (!SECTION_IDS.has(section as TabletVideoSection)) {
     throw new ValidationError(`Unknown section: ${section}`);
   }
   return section as TabletVideoSection;
+}
+
+function assertCategorySection(category: string, section: string): {
+  category: string;
+  section: TabletVideoSection;
+} {
+  const cat = assertCategory(category);
+  const sec = assertSection(section);
+  if (!topicInCategory(cat, sec)) {
+    throw new ValidationError(`Section "${section}" is not available in category "${category}"`);
+  }
+  return { category: cat, section: sec };
 }
 
 function formatDuration(sec: number | null): string {
@@ -90,35 +237,56 @@ function formatDuration(sec: number | null): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/** Infer specialty for legacy rows / clients that only send section */
+function defaultCategoryForSection(section: TabletVideoSection): string {
+  const found = TABLET_VIDEO_SECTIONS.find((s) => s.id === section);
+  return found?.categoryIds[0] ?? "other";
+}
+
 export class TabletVideosService {
-  async listPublic(opts?: { section?: string; reqBaseUrl?: string }) {
-    const where = opts?.section
-      ? and(eq(tabletVideosTable.isActive, true), eq(tabletVideosTable.section, assertSection(opts.section)))
-      : eq(tabletVideosTable.isActive, true);
+  async listPublic(opts?: { section?: string; category?: string; reqBaseUrl?: string }) {
+    const filters = [eq(tabletVideosTable.isActive, true)];
+    if (opts?.section) {
+      filters.push(eq(tabletVideosTable.section, assertSection(opts.section)));
+    }
+    if (opts?.category) {
+      filters.push(eq(tabletVideosTable.category, assertCategory(opts.category)));
+    }
 
     const rows = await db
       .select()
       .from(tabletVideosTable)
-      .where(where)
+      .where(and(...filters))
       .orderBy(asc(tabletVideosTable.sortOrder), desc(tabletVideosTable.createdAt));
 
-    return rows.map((v) => ({
-      ...toDto(v, opts?.reqBaseUrl),
-      duration: formatDuration(v.durationSec),
-      relatedConditions:
-        TABLET_VIDEO_SECTIONS.find((s) => s.id === v.section)?.relatedConditions ?? [],
-    }));
+    return rows.map((v) => {
+      const dto = toDto(v, opts?.reqBaseUrl);
+      return {
+        ...dto,
+        duration: formatDuration(v.durationSec),
+        /** Russian specialty label for tablet UI grouping */
+        category: dto.categoryLabel,
+        categoryId: dto.category,
+        relatedConditions: relatedConditionsFor(v.category, v.section),
+      };
+    });
   }
 
   async listAdmin(reqBaseUrl?: string) {
     const rows = await db
       .select()
       .from(tabletVideosTable)
-      .orderBy(asc(tabletVideosTable.section), asc(tabletVideosTable.sortOrder), desc(tabletVideosTable.createdAt));
+      .orderBy(
+        asc(tabletVideosTable.category),
+        asc(tabletVideosTable.section),
+        asc(tabletVideosTable.sortOrder),
+        desc(tabletVideosTable.createdAt),
+      );
     return rows.map((v) => toDto(v, reqBaseUrl));
   }
 
   async createFromUpload(input: {
+    category?: string;
     section: string;
     title: string;
     description?: string;
@@ -129,6 +297,10 @@ export class TabletVideosService {
     reqBaseUrl?: string;
   }) {
     const section = assertSection(input.section);
+    const category = input.category
+      ? assertCategorySection(input.category, section).category
+      : defaultCategoryForSection(section);
+
     if (!input.title.trim()) throw new ValidationError("Title is required");
     if (!input.mimeType.startsWith("video/")) {
       throw new ValidationError("Only video files are allowed");
@@ -141,7 +313,7 @@ export class TabletVideosService {
     let storageKey: string;
 
     if (isR2StorageEnabled()) {
-      storageKey = `tablet-videos/${section}/${id}`;
+      storageKey = `tablet-videos/${category}/${section}/${id}`;
       await uploadR2Object(storageKey, input.buffer, input.mimeType);
     } else {
       const uploadURL = await objectStorage.getObjectEntityUploadURL();
@@ -160,6 +332,7 @@ export class TabletVideosService {
       .insert(tabletVideosTable)
       .values({
         id,
+        category,
         section,
         title: input.title.trim(),
         description: input.description?.trim() || null,
@@ -179,6 +352,7 @@ export class TabletVideosService {
     patch: {
       title?: string;
       description?: string | null;
+      category?: string;
       section?: string;
       sortOrder?: number;
       isActive?: boolean;
@@ -189,12 +363,26 @@ export class TabletVideosService {
     const [existing] = await db.select().from(tabletVideosTable).where(eq(tabletVideosTable.id, id)).limit(1);
     if (!existing) throw new NotFoundError("Video not found");
 
+    const nextSection = patch.section ? assertSection(patch.section) : existing.section;
+    const nextCategory = patch.category
+      ? assertCategorySection(patch.category, nextSection).category
+      : patch.section
+        ? (topicInCategory(existing.category, nextSection)
+            ? existing.category
+            : defaultCategoryForSection(nextSection))
+        : existing.category;
+
+    if (patch.category || patch.section) {
+      assertCategorySection(nextCategory, nextSection);
+    }
+
     const [updated] = await db
       .update(tabletVideosTable)
       .set({
         title: patch.title?.trim() ?? existing.title,
         description: patch.description === undefined ? existing.description : patch.description,
-        section: patch.section ? assertSection(patch.section) : existing.section,
+        category: nextCategory,
+        section: nextSection,
         sortOrder: patch.sortOrder ?? existing.sortOrder,
         isActive: patch.isActive ?? existing.isActive,
         durationSec: patch.durationSec === undefined ? existing.durationSec : patch.durationSec,
@@ -245,6 +433,10 @@ export class TabletVideosService {
 
   getSections() {
     return TABLET_VIDEO_SECTIONS;
+  }
+
+  getCategories() {
+    return TABLET_VIDEO_CATEGORIES;
   }
 }
 

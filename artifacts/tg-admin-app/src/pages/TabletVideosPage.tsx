@@ -1,8 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Play, Plus } from "lucide-react";
-import { api, apiUpload, type TabletVideo, type TabletVideoSection } from "../lib/api";
+import {
+  api,
+  apiUpload,
+  type TabletVideo,
+  type TabletVideoCategory,
+  type TabletVideoTopic,
+} from "../lib/api";
 import { haptic, hapticNotify } from "../hooks/useTgBackButton";
 import { TmaPage } from "@/components/layout/tma-page";
 import { EmptyState } from "@/components/empty-state";
@@ -71,7 +77,7 @@ function VideoCard({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground leading-snug">{video.title}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {video.sectionLabel} · {formatDuration(video.durationSec)} · {formatSize(video.fileSize)}
+            {video.categoryLabel} · {video.sectionLabel} · {formatDuration(video.durationSec)} · {formatSize(video.fileSize)}
           </p>
           {video.description && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{video.description}</p>
@@ -105,22 +111,34 @@ function VideoCard({
   );
 }
 
+function firstTopicId(categories: TabletVideoCategory[], categoryId: string): string {
+  return categories.find((c) => c.id === categoryId)?.topics[0]?.id ?? "general";
+}
+
 export default function TabletVideosPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [section, setSection] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [topicFilter, setTopicFilter] = useState<string>("all");
   const [showUpload, setShowUpload] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [uploadCategory, setUploadCategory] = useState<string>("therapy");
   const [uploadSection, setUploadSection] = useState<string>("cavity");
   const [durationMin, setDurationMin] = useState("");
   const [durationSecPart, setDurationSecPart] = useState("");
   const [editing, setEditing] = useState<TabletVideo | null>(null);
+  const [editCategory, setEditCategory] = useState<string>("therapy");
+  const [editSection, setEditSection] = useState<string>("cavity");
 
   const { data: sectionsData } = useQuery({
     queryKey: ["tma-tablet-sections"],
-    queryFn: () => api.get<{ success: boolean; data: { sections: TabletVideoSection[] } }>("/tablet/sections"),
+    queryFn: () =>
+      api.get<{
+        success: boolean;
+        data: { categories: TabletVideoCategory[]; sections: TabletVideoTopic[] };
+      }>("/tablet/sections"),
   });
 
   const { data, isLoading } = useQuery({
@@ -128,12 +146,47 @@ export default function TabletVideosPage() {
     queryFn: () => api.get<{ success: boolean; data: { videos: TabletVideo[] } }>("/tablet/videos"),
   });
 
-  const sections = sectionsData?.data?.sections ?? [];
+  const categories = sectionsData?.data?.categories ?? [];
   const videos = data?.data?.videos ?? [];
-  const filtered = section === "all" ? videos : videos.filter((v) => v.section === section);
 
-  const counts = Object.fromEntries(
-    sections.map((s) => [s.id, videos.filter((v) => v.section === s.id).length]),
+  useEffect(() => {
+    if (categories.length === 0) return;
+    if (!categories.some((c) => c.id === uploadCategory)) {
+      setUploadCategory(categories[0]!.id);
+      setUploadSection(firstTopicId(categories, categories[0]!.id));
+    }
+  }, [categories, uploadCategory]);
+
+  const uploadTopics = useMemo(
+    () => categories.find((c) => c.id === uploadCategory)?.topics ?? [],
+    [categories, uploadCategory],
+  );
+
+  const editTopics = useMemo(
+    () => categories.find((c) => c.id === editCategory)?.topics ?? [],
+    [categories, editCategory],
+  );
+
+  const filterTopics = useMemo(
+    () => (categoryFilter === "all" ? [] : categories.find((c) => c.id === categoryFilter)?.topics ?? []),
+    [categories, categoryFilter],
+  );
+
+  const filtered = videos.filter((v) => {
+    if (categoryFilter !== "all" && v.category !== categoryFilter) return false;
+    if (topicFilter !== "all" && v.section !== topicFilter) return false;
+    return true;
+  });
+
+  const categoryCounts = Object.fromEntries(
+    categories.map((c) => [c.id, videos.filter((v) => v.category === c.id).length]),
+  );
+
+  const topicCounts = Object.fromEntries(
+    filterTopics.map((t) => [
+      t.id,
+      videos.filter((v) => v.category === categoryFilter && v.section === t.id).length,
+    ]),
   );
 
   const invalidate = () => {
@@ -144,6 +197,7 @@ export default function TabletVideosPage() {
     mutationFn: async (file: File) => {
       const fd = new FormData();
       fd.append("file", file);
+      fd.append("category", uploadCategory);
       fd.append("section", uploadSection);
       fd.append("title", title.trim());
       if (description.trim()) fd.append("description", description.trim());
@@ -202,10 +256,16 @@ export default function TabletVideosPage() {
     uploadMutation.mutate(file);
   };
 
+  const openEdit = (video: TabletVideo) => {
+    setEditing(video);
+    setEditCategory(video.category || "other");
+    setEditSection(video.section);
+  };
+
   return (
     <TmaPage
       title="Видео планшета"
-      subtitle="Обучающие ролики по разделам"
+      subtitle="Ролики по разделам и заболеваниям"
       onBack={() => navigate("/content")}
       right={
         <button
@@ -223,12 +283,26 @@ export default function TabletVideosPage() {
           <p className="text-sm font-semibold text-foreground">Новое видео</p>
           <label className="block text-xs text-muted-foreground">Раздел</label>
           <select
+            value={uploadCategory}
+            onChange={(e) => {
+              const next = e.target.value;
+              setUploadCategory(next);
+              setUploadSection(firstTopicId(categories, next));
+            }}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
+          >
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+          </select>
+          <label className="block text-xs text-muted-foreground">Заболевание / тема</label>
+          <select
             value={uploadSection}
             onChange={(e) => setUploadSection(e.target.value)}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
           >
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
+            {uploadTopics.map((t) => (
+              <option key={t.id} value={t.id}>{t.label}</option>
             ))}
           </select>
           <input
@@ -264,7 +338,7 @@ export default function TabletVideosPage() {
           <button
             type="button"
             onClick={onPickFile}
-            disabled={!title.trim() || uploadMutation.isPending}
+            disabled={!title.trim() || uploadMutation.isPending || uploadTopics.length === 0}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50"
           >
             {uploadMutation.isPending ? "Загрузка..." : "Выбрать видеофайл"}
@@ -283,13 +357,28 @@ export default function TabletVideosPage() {
             id="edit-title"
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
           />
+          <label className="block text-xs text-muted-foreground">Раздел</label>
           <select
-            defaultValue={editing.section}
-            id="edit-section"
+            value={editCategory}
+            onChange={(e) => {
+              const next = e.target.value;
+              setEditCategory(next);
+              setEditSection(firstTopicId(categories, next));
+            }}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
           >
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+          </select>
+          <label className="block text-xs text-muted-foreground">Заболевание / тема</label>
+          <select
+            value={editSection}
+            onChange={(e) => setEditSection(e.target.value)}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
+          >
+            {editTopics.map((t) => (
+              <option key={t.id} value={t.id}>{t.label}</option>
             ))}
           </select>
           <div className="flex gap-2">
@@ -304,10 +393,9 @@ export default function TabletVideosPage() {
               type="button"
               onClick={() => {
                 const newTitle = (document.getElementById("edit-title") as HTMLInputElement).value;
-                const newSection = (document.getElementById("edit-section") as HTMLSelectElement).value;
                 patchMutation.mutate({
                   id: editing.id,
-                  body: { title: newTitle, section: newSection },
+                  body: { title: newTitle, category: editCategory, section: editSection },
                 });
               }}
               className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
@@ -320,21 +408,48 @@ export default function TabletVideosPage() {
 
       <div className="chips-scroll">
         <SectionChip
-          active={section === "all"}
+          active={categoryFilter === "all"}
           label="Все"
           count={videos.length}
-          onClick={() => { haptic("light"); setSection("all"); }}
+          onClick={() => {
+            haptic("light");
+            setCategoryFilter("all");
+            setTopicFilter("all");
+          }}
         />
-        {sections.map((s) => (
+        {categories.map((c) => (
           <SectionChip
-            key={s.id}
-            active={section === s.id}
-            label={s.label}
-            count={counts[s.id] ?? 0}
-            onClick={() => { haptic("light"); setSection(s.id); }}
+            key={c.id}
+            active={categoryFilter === c.id}
+            label={c.label}
+            count={categoryCounts[c.id] ?? 0}
+            onClick={() => {
+              haptic("light");
+              setCategoryFilter(c.id);
+              setTopicFilter("all");
+            }}
           />
         ))}
       </div>
+
+      {categoryFilter !== "all" && filterTopics.length > 0 && (
+        <div className="chips-scroll">
+          <SectionChip
+            active={topicFilter === "all"}
+            label="Все темы"
+            onClick={() => { haptic("light"); setTopicFilter("all"); }}
+          />
+          {filterTopics.map((t) => (
+            <SectionChip
+              key={t.id}
+              active={topicFilter === t.id}
+              label={t.label}
+              count={topicCounts[t.id] ?? 0}
+              onClick={() => { haptic("light"); setTopicFilter(t.id); }}
+            />
+          ))}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -350,7 +465,7 @@ export default function TabletVideosPage() {
             <VideoCard
               key={v.id}
               video={v}
-              onEdit={setEditing}
+              onEdit={openEdit}
               onToggle={(id, isActive) => patchMutation.mutate({ id, body: { isActive } })}
               onDelete={(id) => deleteMutation.mutate(id)}
             />

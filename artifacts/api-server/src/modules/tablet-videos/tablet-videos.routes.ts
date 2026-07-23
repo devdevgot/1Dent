@@ -19,7 +19,13 @@ export function createTabletVideosTmaRouter(): IRouter {
   const router = Router();
 
   router.get("/tablet/sections", (_req: Request, res: Response) => {
-    res.json({ success: true, data: { sections: tabletVideosService.getSections() } });
+    res.json({
+      success: true,
+      data: {
+        categories: tabletVideosService.getCategories(),
+        sections: tabletVideosService.getSections(),
+      },
+    });
   });
 
   router.get("/tablet/videos", async (req: Request, res: Response, next: NextFunction) => {
@@ -38,6 +44,7 @@ export function createTabletVideosTmaRouter(): IRouter {
       try {
         const parsed = z
           .object({
+            category: z.string().min(1).optional(),
             section: z.string().min(1),
             title: z.string().min(1).max(200),
             description: z.string().max(1000).optional(),
@@ -54,6 +61,7 @@ export function createTabletVideosTmaRouter(): IRouter {
         }
 
         const video = await tabletVideosService.createFromUpload({
+          category: parsed.data.category,
           section: parsed.data.section,
           title: parsed.data.title,
           description: parsed.data.description,
@@ -77,6 +85,7 @@ export function createTabletVideosTmaRouter(): IRouter {
         .object({
           title: z.string().min(1).max(200).optional(),
           description: z.string().max(1000).nullable().optional(),
+          category: z.string().optional(),
           section: z.string().optional(),
           sortOrder: z.coerce.number().int().optional(),
           isActive: z.coerce.boolean().optional(),
@@ -115,11 +124,20 @@ export function registerTabletVideosPublicRoutes(router: IRouter): void {
   router.get("/videos", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const section = req.query["section"] as string | undefined;
+      const category = req.query["category"] as string | undefined;
       const videos = await tabletVideosService.listPublic({
         section,
+        category,
         reqBaseUrl: reqBaseUrl(req),
       });
-      res.json({ success: true, data: { videos, sections: tabletVideosService.getSections() } });
+      res.json({
+        success: true,
+        data: {
+          videos,
+          categories: tabletVideosService.getCategories(),
+          sections: tabletVideosService.getSections(),
+        },
+      });
     } catch (err) {
       next(err);
     }
