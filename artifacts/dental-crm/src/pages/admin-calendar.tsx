@@ -46,6 +46,7 @@ import {
 } from "@/components/appointment-modal";
 import { useAppointmentSave } from "@/hooks/use-appointment-save";
 import { isCalendarProcedure, isScheduleLockedProcedure } from "@/lib/calendar-procedures";
+import { clinicTimeMins, toClinicDateStr } from "@/lib/clinic-timezone";
 import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { useToast } from "@/hooks/use-toast";
@@ -75,7 +76,10 @@ function buildGroups(
 
   for (const proc of procedures) {
     const timeLabel = proc.scheduledAt
-      ? format(parseISO(proc.scheduledAt), "HH:mm")
+      ? (() => {
+          const mins = clinicTimeMins(proc.scheduledAt);
+          return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+        })()
       : null;
     const key = `${proc.patientId ?? "unknown"}-${proc.doctorId ?? "nodoc"}-${timeLabel ?? "notime"}`;
 
@@ -281,9 +285,10 @@ export default function AdminCalendar() {
   }, [allProcedures, filterDoctorId]);
 
   function getGroupsForDay(day: Date): AppointmentGroup[] {
+    const dayKey = toClinicDateStr(day);
     const procs = filteredProcedures.filter((p) => {
       if (!p.scheduledAt) return false;
-      return isSameDay(parseISO(p.scheduledAt), day);
+      return toClinicDateStr(parseISO(p.scheduledAt)) === dayKey;
     });
     return buildGroups(procs, patients, doctors);
   }

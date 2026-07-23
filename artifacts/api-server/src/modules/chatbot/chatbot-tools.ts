@@ -13,6 +13,7 @@ import {
   formatAlmatyDateTimeLong,
   formatAlmatyIso,
   formatAlmatySlotCompact,
+  parseAlmatyDatetime,
   tryParseAppointmentDatetimeLocal,
 } from "./almaty-time";
 import { resolveBranchFromMessage } from "./clinic-knowledge";
@@ -50,7 +51,12 @@ function mergeIntent(data: ChatbotSessionData, intent?: ChatbotAgentIntent): Cha
   if (intent.urgency) next.urgency = intent.urgency;
   if (intent.selectedBranch) next.selectedBranch = intent.selectedBranch;
   if (intent.patientName) next.patientName = intent.patientName;
-  if (intent.preferredDatetime) next.preferredDatetime = intent.preferredDatetime;
+  // Never store raw LLM datetime text — only a parseable Almaty ISO, otherwise schedule
+  // inserts get Invalid Date / null scheduledAt and disappear from the calendar.
+  if (intent.preferredDatetime) {
+    const parsed = parseAlmatyDatetime(intent.preferredDatetime);
+    if (parsed) next.preferredDatetime = formatAlmatyIso(parsed);
+  }
   if (intent.problemDescription) {
     next.problemDescription = next.problemDescription
       ? `${next.problemDescription} ${intent.problemDescription}`.slice(0, 400)
@@ -90,11 +96,14 @@ async function validateParsedDatetime(
     return { data: sessionData, feedback: "", slotOk: true };
   }
 
-  const datetime = new Date(sessionData.preferredDatetime);
+  const datetime =
+    parseAlmatyDatetime(sessionData.preferredDatetime) ??
+    new Date(sessionData.preferredDatetime);
   if (Number.isNaN(datetime.getTime())) {
     const cleared = { ...sessionData, preferredDatetime: undefined };
     return { data: cleared, feedback: "Не удалось распознать дату и время. Укажите, пожалуйста, ещё раз.", slotOk: false };
   }
+  sessionData = { ...sessionData, preferredDatetime: formatAlmatyIso(datetime) };
 
   const validation = await validateAppointmentSlot(
     ctx.clinicId,
@@ -226,6 +235,13 @@ export async function executeChatbotAgentTools(
       }
       case "book_appointment": {
         if (sessionData.suggestedDoctorId && sessionData.preferredDatetime && sessionData.selectedBranch) {
+          const parsed = parseAlmatyDatetime(sessionData.preferredDatetime);
+          if (!parsed) {
+            sessionData.preferredDatetime = undefined;
+            toolNotes.push("book_appointment: невалидная дата/время — нужна parse_datetime");
+            break;
+          }
+          sessionData.preferredDatetime = formatAlmatyIso(parsed);
           if (!hasPatientIdentity(sessionData)) {
             needsPatientName = true;
             toolNotes.push("book_appointment: нужно имя пациента");

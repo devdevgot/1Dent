@@ -69,10 +69,12 @@ import {
   formatAlmatyDateTimeLong,
   formatAlmatyDateTimeShort,
   formatAlmatyDayMonth,
+  formatAlmatyIso,
   formatAlmatyNowContext,
   formatAlmatySlotCompact,
   formatAlmatyTime,
   getAlmatyYmd,
+  parseAlmatyDatetime,
   KZ_UTC_OFFSET_LABEL,
 } from "./almaty-time";
 import { deliverChatbotReply } from "./chatbot-reply";
@@ -1545,7 +1547,21 @@ async function finalizeBookingAppointment(params: {
     };
   }
 
-  const preferredDate = data.preferredDatetime ? new Date(data.preferredDatetime) : new Date();
+  // Prefer Almaty-aware parse so LLM/ISO strings without Z land on the clinic calendar day.
+  const preferredDate =
+    parseAlmatyDatetime(data.preferredDatetime) ??
+    (data.preferredDatetime ? new Date(data.preferredDatetime) : new Date());
+  if (Number.isNaN(preferredDate.getTime())) {
+    logger.warn({ clinicId, phone, preferredDatetime: data.preferredDatetime }, "ChatbotService: invalid preferredDatetime in finalizeBooking");
+    data.preferredDatetime = undefined;
+    return {
+      data,
+      response: replyFromText(
+        "Не удалось распознать дату и время записи. Напишите, пожалуйста, ещё раз — например: «завтра в 11:00».",
+      ),
+    };
+  }
+  data.preferredDatetime = formatAlmatyIso(preferredDate);
 
   try {
     if (dryRun) {
