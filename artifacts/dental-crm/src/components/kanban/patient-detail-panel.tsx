@@ -1634,10 +1634,15 @@ export function PatientDetailPanel() {
 
     void triggerAnalysisMutation.mutateAsync(selectedPatientId);
     void completeDiagnosisMutation.mutateAsync(selectedPatientId);
-    const refetchResult = await refetchTeeth();
+    // Parallelize: teeth refetch (needed for diagnosisComplete) + plan cache refresh.
+    // Voice modal no longer invalidates teeth itself — this is the single source of truth.
+    const [refetchResult] = await Promise.all([
+      refetchTeeth(),
+      queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId) }),
+      queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId) }),
+      queryClient.invalidateQueries({ queryKey: getListProceduresQueryKey() }),
+    ]);
     const diagnosisComplete = (refetchResult.data?.data?.teeth ?? []).length > 0;
-    await queryClient.invalidateQueries({ queryKey: getGetActiveTreatmentPlanQueryKey(selectedPatientId) });
-    await queryClient.invalidateQueries({ queryKey: getListTreatmentPlansQueryKey(selectedPatientId) });
 
     setDiagnosisMap(new Map());
     setDiagnosisNotesMap(new Map());
