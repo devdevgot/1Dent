@@ -66,14 +66,6 @@ function buildKnowledgeFallbackReply(data: ChatbotSessionData): string {
   return "Подскажите, чем могу помочь?";
 }
 
-/**
- * Playground has a hard ~55s turn budget. Gemini 2.5 Pro often needs 20–30s+ and
- * previously we tried it twice (json + plain, 28s each = 56s) BEFORE the FAST
- * fallback — so the playground race always fired `[internal] timeout` first.
- *
- * Order: primary CHAT_MODEL once → FAST_MODEL → optional plain CHAT_MODEL.
- * Playground timeouts stay well under the race budget so FAST can still answer.
- */
 async function fetchAgentLlmRaw(messages: AgentLlmMessage[], dryRun: boolean): Promise<string | null> {
   const label = dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn";
   const attempts: Array<{
@@ -82,17 +74,11 @@ async function fetchAgentLlmRaw(messages: AgentLlmMessage[], dryRun: boolean): P
     disableReasoning?: boolean;
     timeoutMs: number;
     attemptLabel: string;
-  }> = dryRun
-    ? [
-        { model: CHAT_MODEL, jsonMode: true, timeoutMs: 18_000, attemptLabel: label },
-        { model: FAST_MODEL, jsonMode: true, disableReasoning: true, timeoutMs: 16_000, attemptLabel: `${label}FastJson` },
-        { model: CHAT_MODEL, jsonMode: false, timeoutMs: 14_000, attemptLabel: `${label}Plain` },
-      ]
-    : [
-        { model: CHAT_MODEL, jsonMode: true, timeoutMs: 28_000, attemptLabel: label },
-        { model: FAST_MODEL, jsonMode: true, disableReasoning: true, timeoutMs: 20_000, attemptLabel: `${label}FastJson` },
-        { model: CHAT_MODEL, jsonMode: false, timeoutMs: 20_000, attemptLabel: `${label}Plain` },
-      ];
+  }> = [
+    { model: CHAT_MODEL, jsonMode: true, timeoutMs: 28_000, attemptLabel: label },
+    { model: CHAT_MODEL, jsonMode: false, timeoutMs: 28_000, attemptLabel: `${label}Plain` },
+    { model: FAST_MODEL, jsonMode: true, disableReasoning: true, timeoutMs: 20_000, attemptLabel: `${label}FastJson` },
+  ];
 
   for (const attempt of attempts) {
     try {
@@ -212,22 +198,16 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     data = toolResult.data;
     state = deriveFsmStateFromAgent(data, state);
 
+    const plainPrompt = [
+      composedSystemPrompt,
+      "",
+      "Отвечай как живой менеджер в WhatsApp.",
+      "Коротко, 1–3 сообщения. Разделяй смысл абзацами — каждый абзац отдельное сообщение.",
+      "Не используй JSON и не упоминай технические ошибки.",
+    ].join("\n");
+
     const recoveredTurn = raw ? parseChatbotAgentTurn(raw) : null;
-
-    // Playground already spent its LLM budget in fetchAgentLlmRaw — don't start
-    // another 25s Gemini call that would race the 55s turn timeout again.
-    let aiReply: ChatbotReply | null = null;
-    if (!dryRun) {
-      const plainPrompt = [
-        composedSystemPrompt,
-        "",
-        "Отвечай как живой менеджер в WhatsApp.",
-        "Коротко, 1–3 сообщения. Разделяй смысл абзацами — каждый абзац отдельное сообщение.",
-        "Не используй JSON и не упоминай технические ошибки.",
-      ].join("\n");
-      aiReply = await generateChatbotResponse(plainPrompt, recentMessages, messageText);
-    }
-
+    const aiReply = await generateChatbotResponse(plainPrompt, recentMessages, messageText);
     const baseReply =
       aiReply?.parts.length
         ? aiReply

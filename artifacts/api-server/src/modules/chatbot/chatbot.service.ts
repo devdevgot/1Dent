@@ -1797,8 +1797,7 @@ function formatSimulateMessageResult(
   };
 }
 
-/** Hard budget for Playground turns. Agent LLM attempts must finish well under this. */
-const PLAYGROUND_TURN_TIMEOUT_MS = 65_000;
+const PLAYGROUND_TURN_TIMEOUT_MS = 55_000;
 
 const PATIENT_SAFE_FALLBACK_TEXT =
   "Сейчас не могу обработать запрос. Попробуйте через минуту или напишите «оператор» — администратор поможет.";
