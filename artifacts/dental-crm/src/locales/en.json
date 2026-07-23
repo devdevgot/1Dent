@@ -1272,6 +1272,8 @@
     "trackingTestSentDesc": "Check the notification on this device",
     "trackingTestFailed": "Failed to send push",
     "prefsTitle": "Notification types",
+    "prefsDesc": "Choose which push alerts reach this device",
+    "prefsAria": "Notification type settings",
     "prefsError": "Could not save notification preferences",
     "groups": {
       "chats": "Chats",

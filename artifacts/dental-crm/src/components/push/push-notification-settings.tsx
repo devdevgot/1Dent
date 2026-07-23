@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { BellRing } from "lucide-react";
+import { BellRing, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 import { IosGroup, IosGroupRow, IosSection } from "@/components/layout/ios-group";
+import { AppDialog } from "@/components/layout/app-dialog";
 import { SettingsRowIcon } from "@/components/account/settings-row-icon";
 import { PROFILE_ICONS, PROFILE_CARD_CLASS } from "@/lib/profile-icons";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +46,7 @@ function PushNotificationSettingsInner() {
   const [hint, setHint] = useState<string | null>(null);
   const [mutedGroups, setMutedGroups] = useState<NotificationPrefGroup[]>([]);
   const [prefsBusy, setPrefsBusy] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -71,6 +73,16 @@ function PushNotificationSettingsInner() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const openPrefs = async () => {
+    try {
+      const prefs = await fetchPushPreferences();
+      setMutedGroups(prefs.mutedGroups);
+    } catch {
+      // keep last known mutedGroups
+    }
+    setPrefsOpen(true);
+  };
 
   const handleToggle = async (checked: boolean) => {
     setBusy(true);
@@ -106,6 +118,7 @@ function PushNotificationSettingsInner() {
         await unsubscribeFromPushNotifications();
         setEnabled(false);
         setHint(null);
+        setPrefsOpen(false);
         toast({ title: t("push.disabled") });
       }
     } catch (err) {
@@ -161,46 +174,68 @@ function PushNotificationSettingsInner() {
                 )}
               </div>
             </div>
-            <Switch
-              className="self-center"
-              checked={enabled}
-              onCheckedChange={(v) => void handleToggle(v)}
-              disabled={loading || busy || permission === "denied"}
-            />
+            <div className="flex shrink-0 items-center gap-2 self-center">
+              {enabled && (
+                <button
+                  type="button"
+                  onClick={() => void openPrefs()}
+                  aria-label={t("push.prefsAria")}
+                  title={t("push.prefsTitle")}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-[#64748b] transition-colors hover:bg-[#f1ede4] hover:text-[#0f172a] active:scale-95"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              )}
+              <Switch
+                className="self-center"
+                checked={enabled}
+                onCheckedChange={(v) => void handleToggle(v)}
+                disabled={loading || busy || permission === "denied"}
+              />
+            </div>
           </IosGroupRow>
         </IosGroup>
       </IosSection>
 
-      {enabled && (
-        <IosSection title={t("push.prefsTitle")}>
-          <IosGroup className={PROFILE_CARD_CLASS}>
-            {PREF_GROUPS.map((group) => {
-              const on = !mutedGroups.includes(group);
-              return (
-                <IosGroupRow key={group} className="gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-[#0f172a]">{t(`push.groups.${group}`)}</p>
-                    <p className="text-xs text-[#64748b]">{t(`push.groups.${group}Desc`)}</p>
-                  </div>
-                  <Switch
-                    className="self-center"
-                    checked={on}
-                    onCheckedChange={(v) => void handleGroupToggle(group, v)}
-                    disabled={prefsBusy || loading}
-                  />
-                </IosGroupRow>
-              );
-            })}
-            <IosGroupRow className="gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-[#0f172a]">{t("push.groups.alerts")}</p>
-                <p className="text-xs text-[#64748b]">{t("push.groups.alertsDesc")}</p>
+      <AppDialog
+        open={prefsOpen}
+        onOpenChange={setPrefsOpen}
+        title={t("push.prefsTitle")}
+        description={t("push.prefsDesc")}
+        size="md"
+        className="max-sm:!bottom-10 max-sm:!rounded-3xl max-sm:mx-3 max-sm:!w-[calc(100%-1.5rem)] max-sm:!max-w-none"
+        bodyClassName="max-h-[min(70vh,520px)] overflow-y-auto"
+      >
+        <div className="space-y-1">
+          {PREF_GROUPS.map((group) => {
+            const on = !mutedGroups.includes(group);
+            return (
+              <div
+                key={group}
+                className="flex items-center gap-3 rounded-xl px-1 py-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-[#0f172a]">{t(`push.groups.${group}`)}</p>
+                  <p className="text-xs text-[#64748b]">{t(`push.groups.${group}Desc`)}</p>
+                </div>
+                <Switch
+                  className="self-center shrink-0"
+                  checked={on}
+                  onCheckedChange={(v) => void handleGroupToggle(group, v)}
+                  disabled={prefsBusy || loading}
+                />
               </div>
-              <Switch className="self-center" checked disabled />
-            </IosGroupRow>
-          </IosGroup>
-        </IosSection>
-      )}
+            );
+          })}
+          <div className="flex items-center gap-3 rounded-xl px-1 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-[#0f172a]">{t("push.groups.alerts")}</p>
+              <p className="text-xs text-[#64748b]">{t("push.groups.alertsDesc")}</p>
+            </div>
+            <Switch className="self-center shrink-0" checked disabled />
+          </div>
+        </div>
+      </AppDialog>
     </>
   );
 }
