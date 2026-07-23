@@ -7,6 +7,9 @@ import {
   joinChatbotReply,
   conciseReply,
   estimateTypingPause,
+  splitSentencesSafe,
+  stripPromoFromText,
+  splitTextToReply,
 } from "./chatbot-reply-format.ts";
 import {
   enrichReplyWithFsmFollowUp,
@@ -134,6 +137,45 @@ describe("chatbot-reply", () => {
     });
     assert.match(enriched.parts[0]!, /Спасибо/i);
     assert.match(enriched.parts[0]!, /ул\. B 2/);
+  });
+
+  it("splitSentencesSafe does not break after address abbreviations", () => {
+    const sentences = splitSentencesSafe(
+      "У нас 4 филиала в Алматы. Наш главный находится по адресу: ул. Абая 10. Какой вам удобнее?",
+    );
+    assert.deepEqual(sentences, [
+      "У нас 4 филиала в Алматы.",
+      "Наш главный находится по адресу: ул. Абая 10.",
+      "Какой вам удобнее?",
+    ]);
+  });
+
+  it("splitSentencesSafe keeps «г.» and «мкр.» inside one sentence", () => {
+    const sentences = splitSentencesSafe("Мы находимся в г. Алматы, мкр. Самал-2, д. 33. Ждём вас!");
+    assert.deepEqual(sentences, ["Мы находимся в г. Алматы, мкр. Самал-2, д. 33.", "Ждём вас!"]);
+  });
+
+  it("stripPromoFromText keeps the street address after «ул.»", () => {
+    const text = "У нас 4 филиала в Алматы. Наш главный находится по адресу: ул. Абая 10.";
+    assert.equal(stripPromoFromText(text), text);
+  });
+
+  it("conciseReply does not cut the address in a bubble", () => {
+    const reply = conciseReply({
+      parts: ["У нас 4 филиала в Алматы. Наш главный находится по адресу: ул. Абая 10."],
+    });
+    assert.match(reply.parts[0]!, /ул\. Абая 10/);
+  });
+
+  it("splitTextToReply does not split a bubble right after «ул.»", () => {
+    const reply = splitTextToReply(
+      "Наш главный филиал находится по адресу: ул. Абая 10, рядом с метро и парковкой. Подскажите, когда вам удобно прийти на консультацию к врачу?",
+      2,
+    );
+    for (const part of reply.parts) {
+      assert.doesNotMatch(part, /ул\.$/);
+    }
+    assert.match(reply.parts.join("\n"), /ул\. Абая 10/);
   });
 
   it("conciseReply strips marketing filler but keeps clean questions", () => {
