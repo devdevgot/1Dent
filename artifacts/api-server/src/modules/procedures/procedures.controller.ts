@@ -292,6 +292,17 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
   analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
 
   if (procedure.patientId) {
+    if (procedure.doctorId) {
+      await patientsRepo
+        .assignTreatingDoctorIfEmpty(procedure.patientId, clinicId, procedure.doctorId)
+        .catch((err) => {
+          logger.warn(
+            { err, patientId: procedure.patientId, doctorId: procedure.doctorId },
+            "Failed to assign treating doctor from new procedure",
+          );
+        });
+    }
+
     const patient = await patientsRepo.findById(procedure.patientId, clinicId).catch(() => undefined);
     if (patient?.status === "new_request") {
       await transitionPatientStage({
@@ -556,6 +567,17 @@ router.put(
     if (!procedure) return next(new NotFoundError("Procedure not found"));
 
     analyticsRepo.invalidateClinicCache(clinicId).catch(() => {});
+
+    if (procedure.patientId && procedure.doctorId) {
+      await patientsRepo
+        .assignTreatingDoctorIfEmpty(procedure.patientId, clinicId, procedure.doctorId)
+        .catch((err) => {
+          logger.warn(
+            { err, patientId: procedure.patientId, doctorId: procedure.doctorId },
+            "Failed to assign treating doctor from updated procedure",
+          );
+        });
+    }
 
     if (nextScheduledAt !== undefined && procedure.patientId) {
       cancelAppointmentReminders(procedure.id, clinicId).catch(() => {});
