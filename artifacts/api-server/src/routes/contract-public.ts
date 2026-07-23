@@ -143,7 +143,7 @@ function buildContractPage(opts: {
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f2f2f7; min-height: 100vh; color: #1c1c1e; }
     .header { background: #fff; border-bottom: 1px solid #e5e5ea; padding: 16px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-    .logo { width: 36px; height: 36px; background: #6bcb3a; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo { width: 36px; height: 36px; background: #1f75fe; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .logo svg { width: 22px; height: 22px; }
     .header-text h1 { font-size: 15px; font-weight: 700; color: #1c1c1e; line-height: 1.2; }
     .header-text p { font-size: 12px; color: #6e6e73; margin-top: 2px; }
@@ -162,7 +162,7 @@ function buildContractPage(opts: {
     .actions { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e5ea; padding: 16px 20px; display: flex; gap: 12px; }
     .btn { flex: 1; height: 50px; border-radius: 14px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; text-decoration: none; }
     .btn:active { opacity: 0.8; }
-    .btn-primary { background: #6bcb3a; color: #fff; }
+    .btn-primary { background: #1f75fe; color: #fff; }
     .btn-secondary { background: #f2f2f7; color: #3a3a3c; }
     .signed-banner { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 14px; padding: 16px 20px; text-align: center; margin-bottom: 16px; }
     .signed-banner h3 { font-size: 16px; font-weight: 700; color: #155724; margin-bottom: 4px; }
@@ -183,15 +183,15 @@ function buildContractPage(opts: {
     .otp-sub { font-size: 14px; color: #6e6e73; margin-bottom: 24px; line-height: 1.5; }
     .otp-inputs { display: flex; justify-content: center; margin-bottom: 20px; }
     .otp-input { width: 100%; max-width: 280px; height: 58px; border: 2px solid #e5e5ea; border-radius: 12px; font-size: 24px; font-weight: 700; text-align: center; letter-spacing: 0.45em; color: #1c1c1e; background: #f9f9f9; transition: border-color 0.15s, background 0.15s; outline: none; -webkit-appearance: none; appearance: none; padding-left: 0.45em; }
-    .otp-input:focus { border-color: #6bcb3a; background: #fff; }
+    .otp-input:focus { border-color: #1f75fe; background: #fff; }
     .otp-input.error { border-color: #ff3b30; background: #fff0ee; animation: shake 0.3s; }
     @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
     .otp-error { color: #ff3b30; font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 14px; }
-    .otp-submit { width: 100%; height: 52px; border-radius: 14px; border: none; background: #6bcb3a; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; transition: opacity 0.15s; }
+    .otp-submit { width: 100%; height: 52px; border-radius: 14px; border: none; background: #1f75fe; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; transition: opacity 0.15s; }
     .otp-submit:active { opacity: 0.85; }
     .otp-submit.loading { opacity: 0.65; pointer-events: none; }
     .otp-footer { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; color: #6e6e73; }
-    .otp-resend { background: none; border: none; color: #6bcb3a; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
+    .otp-resend { background: none; border: none; color: #1f75fe; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
     .otp-resend:disabled { color: #aaa; cursor: default; }
   </style>
 </head>
@@ -687,7 +687,7 @@ function buildBundlePage(opts: {
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f2f2f7;min-height:100vh;color:#1c1c1e}
     .header{background:#fff;border-bottom:1px solid #e5e5ea;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20}
-    .logo{width:34px;height:34px;background:#6bcb3a;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .logo{width:34px;height:34px;background:#1f75fe;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .logo svg{width:20px;height:20px}
     .htext h1{font-size:14px;font-weight:700;color:#1c1c1e;line-height:1.2}
     .htext p{font-size:11px;color:#6e6e73;margin-top:1px}
@@ -697,11 +697,11 @@ function buildBundlePage(opts: {
     .tab-bar{background:#fff;border-bottom:1px solid #e5e5ea;display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:sticky;top:62px;z-index:15}
     .tab-bar::-webkit-scrollbar{display:none}
     .tab-btn{flex:1;min-width:72px;padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:transparent;cursor:pointer;position:relative;color:#6e6e73;font-size:10px;font-weight:600;border-bottom:2px solid transparent;transition:color .15s}
-    .tab-btn.active{color:#6bcb3a;border-bottom-color:#6bcb3a}
+    .tab-btn.active{color:#1f75fe;border-bottom-color:#1f75fe}
     .tab-num{width:22px;height:22px;border-radius:50%;background:#f2f2f7;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;transition:background .15s,color .15s}
-    .tab-btn.active .tab-num{background:#6bcb3a;color:#fff}
+    .tab-btn.active .tab-num{background:#1f75fe;color:#fff}
     .tab-label{line-height:1}
-    .tab-check{position:absolute;top:6px;right:6px;font-size:9px;color:#6bcb3a;font-weight:700}
+    .tab-check{position:absolute;top:6px;right:6px;font-size:9px;color:#1f75fe;font-weight:700}
     .container{max-width:720px;margin:0 auto;padding:16px 14px ${embed ? "16px" : "130px"}}
     .signed-banner{background:#d4edda;border:1px solid #c3e6cb;border-radius:14px;padding:14px 18px;text-align:center;margin-bottom:14px}
     .signed-banner h3{font-size:15px;font-weight:700;color:#155724;margin-bottom:3px}
@@ -716,7 +716,7 @@ function buildBundlePage(opts: {
     .actions{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e5ea;padding:14px 16px;display:flex;gap:10px;z-index:20}
     .btn{flex:1;height:48px;border-radius:14px;border:none;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;text-decoration:none}
     .btn:active{opacity:.8}
-    .btn-primary{background:#6bcb3a;color:#fff}
+    .btn-primary{background:#1f75fe;color:#fff}
     .btn-secondary{background:#f2f2f7;color:#3a3a3c;font-size:13px}
     .btn.loading{opacity:.65;pointer-events:none}
     .spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
@@ -734,15 +734,15 @@ function buildBundlePage(opts: {
     .otp-sub{font-size:14px;color:#6e6e73;margin-bottom:24px;line-height:1.5}
     .otp-inputs{display:flex;justify-content:center;margin-bottom:20px}
     .otp-input{width:100%;max-width:280px;height:58px;border:2px solid #e5e5ea;border-radius:12px;font-size:24px;font-weight:700;text-align:center;letter-spacing:.45em;color:#1c1c1e;background:#f9f9f9;transition:border-color .15s,background .15s;outline:none;-webkit-appearance:none;appearance:none;padding-left:.45em}
-    .otp-input:focus{border-color:#6bcb3a;background:#fff}
+    .otp-input:focus{border-color:#1f75fe;background:#fff}
     .otp-input.error{border-color:#ff3b30;background:#fff0ee;animation:shake .3s}
     @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
     .otp-error{color:#ff3b30;font-size:13px;text-align:center;min-height:18px;margin-bottom:14px}
-    .otp-submit{width:100%;height:52px;border-radius:14px;border:none;background:#6bcb3a;color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;transition:opacity .15s}
+    .otp-submit{width:100%;height:52px;border-radius:14px;border:none;background:#1f75fe;color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;transition:opacity .15s}
     .otp-submit:active{opacity:.85}
     .otp-submit.loading{opacity:.65;pointer-events:none}
     .otp-footer{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:#6e6e73}
-    .otp-resend{background:none;border:none;color:#6bcb3a;font-size:13px;font-weight:600;cursor:pointer;padding:0}
+    .otp-resend{background:none;border:none;color:#1f75fe;font-size:13px;font-weight:600;cursor:pointer;padding:0}
     .otp-resend:disabled{color:#aaa;cursor:default}
   </style>
 </head>
