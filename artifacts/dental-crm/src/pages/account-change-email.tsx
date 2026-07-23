@@ -152,6 +152,7 @@ export default function AccountChangeEmail() {
                   className="text-[22px] font-bold tracking-[0.3em] text-[#0f172a] bg-transparent outline-none placeholder:text-[#e8e3d9] mt-1"
                   placeholder="------"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   autoFocus
                 />
               </label>

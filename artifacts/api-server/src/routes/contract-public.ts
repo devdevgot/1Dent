@@ -4,6 +4,7 @@ import path from "path";
 import { ContractsRepository } from "../modules/contracts/contracts.repository";
 import { CONTRACT_TABLE_CSS, htmlToPdfmakeContent } from "../modules/contracts/contract-render";
 import { sendPlatformWhatsApp } from "../shared/platform-whatsapp";
+import { appendOtpAutofillHint } from "../shared/otp-message";
 import { notifyClinicStaff, NOTIFY_KINDS } from "../shared/clinic-notify";
 import { logger } from "../lib/logger";
 
@@ -180,8 +181,8 @@ function buildContractPage(opts: {
     .otp-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 20px; }
     .otp-title { font-size: 18px; font-weight: 700; color: #1c1c1e; margin-bottom: 6px; }
     .otp-sub { font-size: 14px; color: #6e6e73; margin-bottom: 24px; line-height: 1.5; }
-    .otp-inputs { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
-    .otp-input { width: 46px; height: 58px; border: 2px solid #e5e5ea; border-radius: 12px; font-size: 24px; font-weight: 700; text-align: center; color: #1c1c1e; background: #f9f9f9; transition: border-color 0.15s, background 0.15s; outline: none; -webkit-appearance: none; appearance: none; }
+    .otp-inputs { display: flex; justify-content: center; margin-bottom: 20px; }
+    .otp-input { width: 100%; max-width: 280px; height: 58px; border: 2px solid #e5e5ea; border-radius: 12px; font-size: 24px; font-weight: 700; text-align: center; letter-spacing: 0.45em; color: #1c1c1e; background: #f9f9f9; transition: border-color 0.15s, background 0.15s; outline: none; -webkit-appearance: none; appearance: none; padding-left: 0.45em; }
     .otp-input:focus { border-color: #6bcb3a; background: #fff; }
     .otp-input.error { border-color: #ff3b30; background: #fff0ee; animation: shake 0.3s; }
     @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
@@ -243,12 +244,7 @@ function buildContractPage(opts: {
       <div class="otp-title">Подтверждение подписи</div>
       <div class="otp-sub">Введите 6-значный код, который мы отправили вам в WhatsApp.</div>
       <div class="otp-inputs" id="otp-inputs">
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" />
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" />
+        <input id="otp-code" class="otp-input" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" />
       </div>
       <div class="otp-error" id="otp-error"></div>
       <button class="otp-submit" id="otp-submit" onclick="submitOtp()">
@@ -302,24 +298,27 @@ function buildContractPage(opts: {
     }
 
     function focusFirst() {
-      var inputs = document.querySelectorAll('.otp-input');
-      if (inputs[0]) inputs[0].focus();
+      var inp = document.getElementById('otp-code');
+      if (inp) inp.focus();
     }
 
     function clearInputs() {
-      document.querySelectorAll('.otp-input').forEach(function(i){ i.value = ''; });
+      var inp = document.getElementById('otp-code');
+      if (inp) inp.value = '';
     }
 
     function setError(msg) {
       document.getElementById('otp-error').textContent = msg;
-      if (msg) {
-        document.querySelectorAll('.otp-input').forEach(function(i){ i.classList.add('error'); });
-        setTimeout(function(){ document.querySelectorAll('.otp-input').forEach(function(i){ i.classList.remove('error'); }); }, 600);
+      var inp = document.getElementById('otp-code');
+      if (msg && inp) {
+        inp.classList.add('error');
+        setTimeout(function(){ inp.classList.remove('error'); }, 600);
       }
     }
 
     function getCode() {
-      return Array.from(document.querySelectorAll('.otp-input')).map(function(i){ return i.value; }).join('');
+      var inp = document.getElementById('otp-code');
+      return inp ? inp.value.replace(/[^0-9]/g, '') : '';
     }
 
     function startTimer(seconds) {
@@ -392,40 +391,19 @@ function buildContractPage(opts: {
         });
     }
 
-    // OTP input keyboard navigation
+    // OTP input — single field for iOS one-time-code autofill
     (function() {
-      var inputs = Array.from(document.querySelectorAll('.otp-input'));
-      inputs.forEach(function(inp, idx) {
-        inp.addEventListener('input', function(e) {
-          var val = inp.value.replace(/[^0-9]/g, '');
-          // Handle paste of multiple digits
-          if (val.length > 1) {
-            val.split('').slice(0, 6 - idx).forEach(function(ch, i) {
-              if (inputs[idx + i]) inputs[idx + i].value = ch;
-            });
-            var next = inputs[Math.min(idx + val.length, 5)];
-            if (next) next.focus();
-          } else {
-            inp.value = val;
-            if (val && inputs[idx + 1]) inputs[idx + 1].focus();
-          }
-          if (getCode().length === 6) submitOtp();
-        });
-        inp.addEventListener('keydown', function(e) {
-          if (e.key === 'Backspace' && !inp.value && inputs[idx - 1]) {
-            inputs[idx - 1].focus();
-            inputs[idx - 1].value = '';
-          }
-        });
-        inp.addEventListener('paste', function(e) {
-          var text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
-          e.preventDefault();
-          if (text.length >= 6) {
-            text.slice(0, 6).split('').forEach(function(ch, i){ if (inputs[i]) inputs[i].value = ch; });
-            inputs[5].focus();
-            if (getCode().length === 6) submitOtp();
-          }
-        });
+      var inp = document.getElementById('otp-code');
+      if (!inp) return;
+      inp.addEventListener('input', function() {
+        inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 6);
+        if (getCode().length === 6) submitOtp();
+      });
+      inp.addEventListener('paste', function(e) {
+        e.preventDefault();
+        var text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        inp.value = text;
+        if (text.length === 6) submitOtp();
       });
       // Close modal when clicking overlay background
       document.getElementById('otp-overlay').addEventListener('click', function(e) {
@@ -515,10 +493,12 @@ router.post("/p/contract/:token/request-otp", async (req: Request, res: Response
     const code = generateOtpCode();
     await repo.saveOtpForToken(token, code, otpExpiry());
 
-    const message =
+    const message = appendOtpAutofillHint(
       `${code} — Ваш код для подписания договоров.\n\n` +
       `Договор «${result.templateName}» клиники ${result.clinicName}.\n` +
-      `Код действителен 5 минут. Не передавайте его третьим лицам.`;
+      `Код действителен 5 минут. Не передавайте его третьим лицам.`,
+      code,
+    );
     // OTP via platform 1Dent WhatsApp (same channel as login OTP / staff invites)
     sendPlatformWhatsApp(result.patientPhone, message).catch((err: unknown) => {
       logger.warn({ err }, "[contract] Failed to send OTP WhatsApp");
@@ -752,8 +732,8 @@ function buildBundlePage(opts: {
     .otp-handle{width:36px;height:4px;background:#e5e5ea;border-radius:2px;margin:0 auto 20px}
     .otp-title{font-size:18px;font-weight:700;color:#1c1c1e;margin-bottom:6px}
     .otp-sub{font-size:14px;color:#6e6e73;margin-bottom:24px;line-height:1.5}
-    .otp-inputs{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
-    .otp-input{width:46px;height:58px;border:2px solid #e5e5ea;border-radius:12px;font-size:24px;font-weight:700;text-align:center;color:#1c1c1e;background:#f9f9f9;transition:border-color .15s,background .15s;outline:none;-webkit-appearance:none;appearance:none}
+    .otp-inputs{display:flex;justify-content:center;margin-bottom:20px}
+    .otp-input{width:100%;max-width:280px;height:58px;border:2px solid #e5e5ea;border-radius:12px;font-size:24px;font-weight:700;text-align:center;letter-spacing:.45em;color:#1c1c1e;background:#f9f9f9;transition:border-color .15s,background .15s;outline:none;-webkit-appearance:none;appearance:none;padding-left:.45em}
     .otp-input:focus{border-color:#6bcb3a;background:#fff}
     .otp-input.error{border-color:#ff3b30;background:#fff0ee;animation:shake .3s}
     @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
@@ -805,12 +785,7 @@ function buildBundlePage(opts: {
       <div class="otp-title">Подтверждение подписи</div>
       <div class="otp-sub">Введите 6-значный код, который мы отправили вам в WhatsApp.</div>
       <div class="otp-inputs" id="otp-inputs">
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code"/>
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
-        <input class="otp-input" type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]"/>
+        <input id="otp-code" class="otp-input" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       </div>
       <div class="otp-error" id="otp-error"></div>
       <button class="otp-submit" id="otp-submit" onclick="submitOtp()">
@@ -852,20 +827,21 @@ function buildBundlePage(opts: {
     function openOtpModal(){
       document.getElementById('otp-overlay').classList.add('open');
       clearInputs(); setError(''); startTimer(300);
-      setTimeout(function(){var f=document.querySelector('.otp-input');if(f)f.focus();},300);
+      setTimeout(function(){var f=document.getElementById('otp-code');if(f)f.focus();},300);
     }
 
-    function clearInputs(){document.querySelectorAll('.otp-input').forEach(function(i){i.value='';})}
+    function clearInputs(){var inp=document.getElementById('otp-code');if(inp)inp.value='';}
 
     function setError(msg){
       document.getElementById('otp-error').textContent=msg;
-      if(msg){
-        document.querySelectorAll('.otp-input').forEach(function(i){i.classList.add('error');});
-        setTimeout(function(){document.querySelectorAll('.otp-input').forEach(function(i){i.classList.remove('error');});},600);
+      var inp=document.getElementById('otp-code');
+      if(msg&&inp){
+        inp.classList.add('error');
+        setTimeout(function(){inp.classList.remove('error');},600);
       }
     }
 
-    function getCode(){return Array.from(document.querySelectorAll('.otp-input')).map(function(i){return i.value;}).join('');}
+    function getCode(){var inp=document.getElementById('otp-code');return inp?inp.value.replace(/[^0-9]/g,''):'';}
 
     function startTimer(seconds){
       secondsLeft=seconds;
@@ -890,7 +866,7 @@ function buildBundlePage(opts: {
       fetch('/p/bundle/'+BUNDLE+'/request-otp',{method:'POST'})
         .then(function(r){return r.json();})
         .then(function(data){
-          if(data.success){startTimer(300);var f=document.querySelector('.otp-input');if(f)f.focus();}
+          if(data.success){startTimer(300);var f=document.getElementById('otp-code');if(f)f.focus();}
           else{setError(data.error||'Не удалось отправить код');document.getElementById('otp-resend').disabled=false;}
         })
         .catch(function(){setError('Ошибка сети');document.getElementById('otp-resend').disabled=false;});
@@ -922,27 +898,17 @@ function buildBundlePage(opts: {
     }
 
     (function(){
-      var inputs=Array.from(document.querySelectorAll('.otp-input'));
-      inputs.forEach(function(inp,idx){
-        inp.addEventListener('input',function(){
-          var val=inp.value.replace(/[^0-9]/g,'');
-          if(val.length>1){
-            val.split('').slice(0,6-idx).forEach(function(ch,i){if(inputs[idx+i])inputs[idx+i].value=ch;});
-            var next=inputs[Math.min(idx+val.length,5)];if(next)next.focus();
-          } else {
-            inp.value=val;
-            if(val&&inputs[idx+1])inputs[idx+1].focus();
-          }
-          if(getCode().length===6)submitOtp();
-        });
-        inp.addEventListener('keydown',function(e){
-          if(e.key==='Backspace'&&!inp.value&&inputs[idx-1]){inputs[idx-1].focus();inputs[idx-1].value='';}
-        });
-        inp.addEventListener('paste',function(e){
-          var text=(e.clipboardData||window.clipboardData).getData('text').replace(/[^0-9]/g,'');
-          e.preventDefault();
-          if(text.length>=6){text.slice(0,6).split('').forEach(function(ch,i){if(inputs[i])inputs[i].value=ch;});inputs[5].focus();if(getCode().length===6)submitOtp();}
-        });
+      var inp=document.getElementById('otp-code');
+      if(!inp)return;
+      inp.addEventListener('input',function(){
+        inp.value=inp.value.replace(/[^0-9]/g,'').slice(0,6);
+        if(getCode().length===6)submitOtp();
+      });
+      inp.addEventListener('paste',function(e){
+        e.preventDefault();
+        var text=(e.clipboardData||window.clipboardData).getData('text').replace(/[^0-9]/g,'').slice(0,6);
+        inp.value=text;
+        if(text.length===6)submitOtp();
       });
       document.getElementById('otp-overlay').addEventListener('click',function(e){if(e.target===this)document.getElementById('otp-overlay').classList.remove('open');});
     })();`}
@@ -1010,10 +976,12 @@ router.post("/p/bundle/:bundleToken/request-otp", async (req: Request, res: Resp
     await repo.saveOtpForBundle(bundleToken, code, otpExpiry());
 
     const first = results[0]!;
-    const message =
+    const message = appendOtpAutofillHint(
       `${code} — Ваш код для подписания договоров.\n\n` +
       `Подпишите ${results.length} документа клиники ${first.clinicName}.\n` +
-      `Код действителен 5 минут. Не передавайте его третьим лицам.`;
+      `Код действителен 5 минут. Не передавайте его третьим лицам.`,
+      code,
+    );
     sendPlatformWhatsApp(first.patientPhone, message).catch((err: unknown) => {
       logger.warn({ err }, "[bundle] Failed to send OTP WhatsApp");
     });

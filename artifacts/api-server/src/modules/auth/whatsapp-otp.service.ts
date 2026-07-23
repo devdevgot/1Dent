@@ -3,6 +3,7 @@ import { normalizePhoneDigits, phonesMatch, normalizeAuthPhone } from "../../sha
 import { sendPlatformWhatsApp } from "../../shared/platform-whatsapp";
 import { ValidationError, UnauthorizedError, NotFoundError, TooManyRequestsError } from "../../shared/errors";
 import { logger } from "../../lib/logger";
+import { appendOtpAutofillHint } from "../../shared/otp-message";
 
 export type WhatsappOtpPurpose = "login" | "register" | "staff_invite" | "reset_password";
 
@@ -50,7 +51,7 @@ function otpMessage(code: string, purpose: WhatsappOtpPurpose): string {
           ? "Ваш код для сброса пароля"
           : "Ваш код подтверждения 1Dent";
 
-  return `${code} - ${label}. ${suffix}`;
+  return appendOtpAutofillHint(`${code} - ${label}. ${suffix}`, code);
 }
 
 export function formatPhoneForDisplay(phone: string): string {
