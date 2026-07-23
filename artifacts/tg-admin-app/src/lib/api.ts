@@ -175,15 +175,26 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
   return res.json() as Promise<T>;
 }
 
-export interface TabletVideoSection {
+export interface TabletVideoTopic {
   id: string;
   label: string;
   icon: string;
   relatedConditions: string[];
 }
 
+export interface TabletVideoCategory {
+  id: string;
+  label: string;
+  topics: TabletVideoTopic[];
+}
+
+/** @deprecated flat topic — prefer TabletVideoCategory.topics */
+export type TabletVideoSection = TabletVideoTopic;
+
 export interface TabletVideo {
   id: string;
+  category: string;
+  categoryLabel: string;
   section: string;
   sectionLabel: string;
   title: string;

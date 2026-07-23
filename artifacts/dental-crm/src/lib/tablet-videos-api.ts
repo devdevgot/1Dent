@@ -1,7 +1,10 @@
 export interface TabletVideoItem {
   id: string;
   title: string;
+  /** Russian specialty label (Терапия, Хирургия, …) */
   category: string;
+  categoryId?: string;
+  categoryLabel?: string;
   duration: string;
   relatedConditions: string[];
   videoUrl: string;

@@ -9,10 +9,17 @@ export const tabletVideoSectionEnum = pgEnum("tablet_video_section", [
   "extraction_needed",
   "treated",
   "general",
+  "periodontitis",
+  "braces",
+  "aligners",
+  "restoration",
 ]);
 
 export const tabletVideosTable = pgTable("tablet_videos", {
   id: text("id").primaryKey(),
+  /** Specialty from CRM services: therapy, surgery, orthopedics, … */
+  category: text("category").notNull().default("other"),
+  /** Disease / topic inside the specialty */
   section: tabletVideoSectionEnum("section").notNull(),
   title: text("title").notNull(),
   description: text("description"),
