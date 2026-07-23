@@ -67,12 +67,13 @@ function buildKnowledgeFallbackReply(data: ChatbotSessionData): string {
 }
 
 /**
- * Playground has a hard ~55s turn budget. Gemini 2.5 Pro often needs 20–30s+ and
- * previously we tried it twice (json + plain, 28s each = 56s) BEFORE the FAST
- * fallback — so the playground race always fired `[internal] timeout` first.
+ * Playground has a hard ~65s turn budget. Gemini 2.5 Pro often needs 20–30s+,
+ * so in Playground the FAST fallback goes right after the first Gemini attempt
+ * with short per-attempt timeouts — otherwise the turn race fires
+ * `[internal] timeout` before any fallback can answer.
  *
- * Order: primary CHAT_MODEL once → FAST_MODEL → optional plain CHAT_MODEL.
- * Playground timeouts stay well under the race budget so FAST can still answer.
+ * Real WhatsApp chat has no such race: quality matters more than latency,
+ * so production keeps the primary CHAT_MODEL (json → plain) before FAST.
  */
 async function fetchAgentLlmRaw(messages: AgentLlmMessage[], dryRun: boolean): Promise<string | null> {
   const label = dryRun ? "chatbotAgentTurnPlayground" : "chatbotAgentTurn";
@@ -90,8 +91,8 @@ async function fetchAgentLlmRaw(messages: AgentLlmMessage[], dryRun: boolean): P
       ]
     : [
         { model: CHAT_MODEL, jsonMode: true, timeoutMs: 28_000, attemptLabel: label },
+        { model: CHAT_MODEL, jsonMode: false, timeoutMs: 28_000, attemptLabel: `${label}Plain` },
         { model: FAST_MODEL, jsonMode: true, disableReasoning: true, timeoutMs: 20_000, attemptLabel: `${label}FastJson` },
-        { model: CHAT_MODEL, jsonMode: false, timeoutMs: 20_000, attemptLabel: `${label}Plain` },
       ];
 
   for (const attempt of attempts) {
