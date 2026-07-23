@@ -108,14 +108,32 @@ function PatientsListView({
     return m;
   }, [usersData, user?.id, user?.name]);
 
+  /** Fallback when patient.doctorId was never set but appointments already have a doctor. */
+  const procedureDoctorByPatient = useMemo(() => {
+    const m: Record<string, string> = {};
+    const procs = [...(proceduresData?.data?.procedures ?? [])]
+      .filter((p) => p.doctorId && p.status !== "cancelled")
+      .sort((a, b) => {
+        const aAt = new Date(a.scheduledAt ?? a.createdAt).getTime();
+        const bAt = new Date(b.scheduledAt ?? b.createdAt).getTime();
+        return bAt - aAt;
+      });
+    for (const p of procs) {
+      if (!p.patientId || !p.doctorId || m[p.patientId]) continue;
+      const name = p.doctorName ?? doctorMap[p.doctorId] ?? null;
+      if (name) m[p.patientId] = name;
+    }
+    return m;
+  }, [proceduresData, doctorMap]);
+
   const doctorLabel = useCallback(
     (patient: Patient) => {
-      const fromApi = (patient as Patient & { doctorName?: string | null }).doctorName;
+      const fromApi = patient.doctorName;
       if (fromApi) return fromApi;
       if (patient.doctorId && doctorMap[patient.doctorId]) return doctorMap[patient.doctorId]!;
-      return null;
+      return procedureDoctorByPatient[patient.id] ?? null;
     },
-    [doctorMap],
+    [doctorMap, procedureDoctorByPatient],
   );
 
   const patientTotals = useMemo(() => {

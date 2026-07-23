@@ -1,5 +1,5 @@
 import { db, patientsTable, patientInteractionsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import type {
   Patient,
   InsertPatient,
@@ -16,6 +16,28 @@ export class PatientsRepository {
       .select()
       .from(patientsTable)
       .where(eq(patientsTable.clinicId, clinicId));
+  }
+
+  /**
+   * Assign treating physician when the patient has none yet.
+   * Used when a procedure/appointment is created with a doctor so the
+   * Patients page can show the same doctor as the schedule.
+   */
+  async assignTreatingDoctorIfEmpty(
+    patientId: string,
+    clinicId: string,
+    doctorId: string,
+  ): Promise<void> {
+    await db
+      .update(patientsTable)
+      .set({ doctorId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(patientsTable.id, patientId),
+          eq(patientsTable.clinicId, clinicId),
+          isNull(patientsTable.doctorId),
+        ),
+      );
   }
 
   async findById(id: string, clinicId: string): Promise<Patient | undefined> {

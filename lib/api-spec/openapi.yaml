@@ -3143,6 +3143,10 @@ components:
         doctorId:
           type: string
           nullable: true
+        doctorName:
+          type: string
+          nullable: true
+          description: Resolved treating-physician display name (doctor or owner)
         name:
           type: string
         phone:

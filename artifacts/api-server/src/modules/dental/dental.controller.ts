@@ -26,6 +26,10 @@ import {
   transcribeVoiceAudio,
   VoiceTranscriptionError,
 } from "./voice-diagnose.service";
+import {
+  applyVoiceDiagnoses,
+  voiceApplyBodySchema,
+} from "./voice-diagnose-apply.service";
 import { aiCreditsService } from "../../shared/ai-credits";
 import { InsufficientAiCreditsError } from "../../shared/errors";
 
@@ -498,6 +502,52 @@ router.post(
       logger.error({ err }, "[VoiceDiagnose] LLM parse error");
       const timeoutMsg = voiceParseTimeoutMessage(err);
       if (timeoutMsg) return next(new ValidationError(timeoutMsg));
+      return next(err);
+    }
+  },
+);
+
+// POST /patients/:id/teeth/voice-diagnose/apply — bulk save teeth + services + plan items
+router.post(
+  "/voice-diagnose/apply",
+  writeRoles,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const patientId = String(req.params["id"]);
+    const ok = await assertPatientAccess(patientId, req.user!.clinicId, next).catch(next);
+    if (!ok) return;
+
+    const parsedBody = voiceApplyBodySchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return next(new ValidationError(parsedBody.error.errors[0]?.message ?? "Validation failed"));
+    }
+
+    const { clinicId, userId } = req.user!;
+    const started = Date.now();
+
+    try {
+      const result = await applyVoiceDiagnoses(parsedBody.data, {
+        clinicId,
+        patientId,
+        userId,
+        // Mirror previous client behavior: assign procedures to the acting user.
+        doctorId: userId,
+      });
+
+      logger.info(
+        {
+          patientId,
+          clinicId,
+          appliedTeeth: result.appliedTeeth,
+          appliedServices: result.appliedServices,
+          errorCount: result.errors.length,
+          totalMs: Date.now() - started,
+        },
+        "[VoiceDiagnose] Bulk apply ok",
+      );
+
+      res.json({ success: true, data: result });
+    } catch (err) {
+      logger.error({ err, patientId }, "[VoiceDiagnose] Bulk apply failed");
       return next(err);
     }
   },

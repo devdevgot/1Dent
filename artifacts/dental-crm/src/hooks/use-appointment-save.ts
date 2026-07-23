@@ -68,6 +68,8 @@ export function useAppointmentSave({ onDone }: { onDone: () => void }) {
             ...(data.newPatient.iin ? { iin: data.newPatient.iin } : {}),
             ...(data.newPatient.dateOfBirth ? { dateOfBirth: data.newPatient.dateOfBirth } : {}),
             ...(data.newPatient.gender ? { gender: data.newPatient.gender as "male" | "female" | "other" } : {}),
+            // Keep treating physician in sync with the appointment doctor.
+            ...(data.doctorId ? { doctorId: data.doctorId } : {}),
           },
         });
         const newId = (createdPatient?.data as any)?.patient?.id ?? (createdPatient?.data as any)?.id;

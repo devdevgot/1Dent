@@ -10,7 +10,7 @@ import {
 } from "@workspace/db";
 import { insertNotifications } from "../../shared/notifications-dispatch";
 import { eq, and, lte, inArray } from "drizzle-orm";
-import { sendToPatient } from "../../shared/messaging";
+import { sendWhatsAppMessage } from "../../shared/whatsapp";
 import { logger } from "../../lib/logger";
 import { attachWorkerFailedHandler } from "../error-events/error-events.worker-capture";
 
@@ -190,41 +190,18 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
     const messageText =
       reminderType === "24h"
         ? `Здравствуйте, ${patientName}! Напоминаем: ваш приём «${procedureName}»${clinicInfo} запланирован на завтра, ${dateStr} в ${timeStr}. Ждём вас! По вопросам — пишите нам.`
-        : `Здравствуйте, ${patientName}! Напоминаем: ваш приём «${procedureName}»${clinicInfo} начнётся через 1 час — сегодня в ${timeStr}. Подскажите, пожалуйста, всё в силе — вы придёте? 😊 Если не получается — напишите, подберём другое время.`;
+        : `Здравствуйте, ${patientName}! Напоминаем: ваш приём «${procedureName}»${clinicInfo} начнётся через 1 час — сегодня в ${timeStr}. Ждём вас! Если не сможете прийти — пожалуйста, сообщите нам.`;
 
-    // Deliver via the clinic's configured WhatsApp provider (Green API or Meta Cloud API).
-    const sentMessageId = await sendToPatient(clinicId, patient.phone, messageText).catch((err) => {
-      logger.error({ err, reminderId, patientId }, "[AppointmentReminders] WhatsApp send failed");
-      return "";
-    });
-    if (sentMessageId) {
+    if (whatsappEnabled) {
+      await sendWhatsAppMessage(patient.phone, messageText).catch((err) => {
+        logger.error({ err, reminderId, patientId }, "[AppointmentReminders] WhatsApp send failed");
+      });
       logger.info({ reminderId, patientId, reminderType }, "[AppointmentReminders] WhatsApp reminder sent");
-    } else if (whatsappEnabled) {
-      // Legacy Meta path already attempted inside sendToPatient; nothing more to do.
-      logger.info({ reminderId, patientId, reminderType }, "[AppointmentReminders] WhatsApp reminder dispatched");
     } else {
       logger.info(
         { reminderId, patientId, reminderType, messageText },
-        "[AppointmentReminders] No WhatsApp provider — reminder would have been sent",
+        "[AppointmentReminders] WhatsApp disabled — reminder would have been sent",
       );
-    }
-
-    if (reminderType === "1h") {
-      // Arm the chatbot so the patient's «да» / «не смогу» reply gets a warm deterministic answer.
-      // Dynamic import avoids a circular dependency (chatbot.service imports this queue).
-      try {
-        const { armVisitConfirmation } = await import("../chatbot/chatbot.service");
-        await armVisitConfirmation({
-          clinicId,
-          phone: patient.phone,
-          procedureId: data.procedureId,
-          scheduledAt: scheduledDate,
-          doctorName,
-          procedureName,
-        });
-      } catch (err) {
-        logger.error({ err, reminderId, patientId }, "[AppointmentReminders] Failed to arm visit confirmation");
-      }
     }
   } else {
     logger.warn({ reminderId, patientId }, "[AppointmentReminders] Patient has no phone, skipping WhatsApp");
