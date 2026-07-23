@@ -5,11 +5,18 @@ import { ContractsRepository } from "../modules/contracts/contracts.repository";
 import { CONTRACT_TABLE_CSS, htmlToPdfmakeContent } from "../modules/contracts/contract-render";
 import { sendPlatformWhatsApp } from "../shared/platform-whatsapp";
 import { appendOtpAutofillHint } from "../shared/otp-message";
+import { getPublicAppBaseUrl } from "../shared/public-url";
 import { notifyClinicStaff, NOTIFY_KINDS } from "../shared/clinic-notify";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 const repo = new ContractsRepository();
+
+/** Same brand mark as CRM auth / app shell (`/logo.png`). */
+function brandLogoHtml(): string {
+  const src = `${getPublicAppBaseUrl()}/logo.png`;
+  return `<img class="logo" src="${src}" alt="1Dent" width="36" height="36" />`;
+}
 
 // ── PDF generation setup ───────────────────────────────────────────────────
 // pdfmake 0.3.x exports a singleton instance (not a constructor).
@@ -143,8 +150,7 @@ function buildContractPage(opts: {
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f2f2f7; min-height: 100vh; color: #1c1c1e; }
     .header { background: #fff; border-bottom: 1px solid #e5e5ea; padding: 16px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
-    .logo { width: 36px; height: 36px; background: #1f75fe; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .logo svg { width: 22px; height: 22px; }
+    .logo { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex-shrink: 0; display: block; }
     .header-text h1 { font-size: 15px; font-weight: 700; color: #1c1c1e; line-height: 1.2; }
     .header-text p { font-size: 12px; color: #6e6e73; margin-top: 2px; }
     .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-left: auto; flex-shrink: 0; }
@@ -197,11 +203,7 @@ function buildContractPage(opts: {
 </head>
 <body>
   <div class="header">
-    <div class="logo">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C8.5 2 7 4.5 7 6.5c0 1.5.5 3 1.5 4C9.5 11.5 10 13 10 14.5c0 1-.5 2-1 2.5-.5.5-1 .5-1 1.5 0 1.5 1.5 3.5 4 3.5s4-2 4-3.5c0-1-.5-1-.5-1.5-.5-.5-1-1.5-1-2.5 0-1.5.5-3 1.5-4 1-1 1.5-2.5 1.5-4C19 4.5 15.5 2 12 2Z" fill="white"/>
-      </svg>
-    </div>
+    ${brandLogoHtml()}
     <div class="header-text">
       <h1>${escHtml(templateName)}</h1>
       <p>${escHtml(clinicName)}</p>
@@ -687,8 +689,7 @@ function buildBundlePage(opts: {
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f2f2f7;min-height:100vh;color:#1c1c1e}
     .header{background:#fff;border-bottom:1px solid #e5e5ea;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20}
-    .logo{width:34px;height:34px;background:#1f75fe;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .logo svg{width:20px;height:20px}
+    .logo{width:34px;height:34px;border-radius:9px;object-fit:cover;flex-shrink:0;display:block}
     .htext h1{font-size:14px;font-weight:700;color:#1c1c1e;line-height:1.2}
     .htext p{font-size:11px;color:#6e6e73;margin-top:1px}
     .hbadge{margin-left:auto;flex-shrink:0;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
@@ -748,7 +749,7 @@ function buildBundlePage(opts: {
 </head>
 <body>
   <div class="header">
-    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8.5 2 7 4.5 7 6.5c0 1.5.5 3 1.5 4C9.5 11.5 10 13 10 14.5c0 1-.5 2-1 2.5-.5.5-1 .5-1 1.5 0 1.5 1.5 3.5 4 3.5s4-2 4-3.5c0-1-.5-1-.5-1.5-.5-.5-1-1.5-1-2.5 0-1.5.5-3 1.5-4 1-1 1.5-2.5 1.5-4C19 4.5 15.5 2 12 2Z" fill="white"/></svg></div>
+    ${brandLogoHtml()}
     <div class="htext"><h1>Пакет документов</h1><p>${escHtml(clinicName)}</p></div>
     <span class="hbadge ${allSigned ? "signed" : "pending"}">${allSigned ? "✅ Подписано" : "Ожидает подписи"}</span>
   </div>
