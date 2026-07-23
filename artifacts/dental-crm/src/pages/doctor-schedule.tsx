@@ -18,6 +18,7 @@ import { PageShell } from "@/components/layout/page-shell";
 import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-header";
 import { ScheduleMonthSkeleton } from "@/components/skeletons";
 import { filterTreatingDoctors, seesClinicSchedule, treatingDoctorLabel } from "@/lib/role-groups";
+import { toClinicDateStr } from "@/lib/clinic-timezone";
 
 /** Solid blue used for day markers (dot / multi-line) — no per-status colors. */
 const MARKER_BLUE = "bg-[#1f75fe]";
@@ -31,9 +32,7 @@ const MONTHS = [
 const DOW = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 
 /* ─── Helpers ───────────────────────────────────────────────────────────────── */
-function toStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
+const toStr = toClinicDateStr;
 
 /* ─── Component ─────────────────────────────────────────────────────────────── */
 export default function DoctorSchedulePage() {

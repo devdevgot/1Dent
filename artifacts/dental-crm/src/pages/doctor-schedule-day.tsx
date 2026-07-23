@@ -22,6 +22,7 @@ import { PageHeader, PageHeaderIconButton } from "@/components/layout/page-heade
 import { PageShell } from "@/components/layout/page-shell";
 import { Bone } from "@/components/skeletons";
 import { filterTreatingDoctors, seesClinicSchedule, treatingDoctorLabel } from "@/lib/role-groups";
+import { clinicTimeMins, toClinicDateStr } from "@/lib/clinic-timezone";
 import { useOverlayNavigation } from "@/hooks/use-overlay-navigation";
 import { usePageBack } from "@/hooks/use-page-back";
 import { haptic, hapticNotify } from "@/lib/haptics";
@@ -91,9 +92,7 @@ const MONTH_GEN = [
 const DOW_FULL = ["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 
 /* ─── Helpers ───────────────────────────────────────────────────────────────── */
-function toStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
+const toStr = toClinicDateStr;
 
 function parseDateParam(dateStr: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
@@ -113,8 +112,7 @@ function getWeek(date: Date): Date[] {
 function minToPx(min: number) { return (min / 60) * HOUR_H; }
 
 function timeMins(iso: string) {
-  const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes();
+  return clinicTimeMins(iso);
 }
 
 /** iPhone-calendar-style overlap layout: column index + column count per event. */
@@ -231,7 +229,7 @@ function DoctorScheduleDayContent({ dateStr, selDate }: { dateStr: string; selDa
     return () => clearInterval(id);
   }, []);
 
-  const nowMins   = nowDate.getHours() * 60 + nowDate.getMinutes();
+  const nowMins   = clinicTimeMins(nowDate.toISOString());
   const nowPx     = minToPx(nowMins - START_H * 60);
   const isToday   = dateStr === todayStr;
   const showNow   = isToday;

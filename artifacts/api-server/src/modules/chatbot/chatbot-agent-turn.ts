@@ -310,6 +310,15 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     } catch (err) {
       logger.error({ err }, "[AgentTurn] finalizeBooking failed");
       noteAction("Ошибка создания записи");
+      // Do not fall through to the LLM reply — it often claims the booking succeeded.
+      return {
+        state,
+        data,
+        response: replyFromText(
+          "Не удалось оформить запись в системе. Напишите удобное время ещё раз — или «оператор», чтобы связаться с администратором.",
+        ),
+        humanTakeover: false,
+      };
     }
   }
 

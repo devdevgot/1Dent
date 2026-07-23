@@ -7,12 +7,13 @@ import {
   doctorCapacityTable,
   chatbotSettingsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL, ne } from "drizzle-orm";
+import { eq, and, gte, lte, count, sum, sql, isNotNull, SQL, ne, inArray } from "drizzle-orm";
 import { analyticsCache } from "../../shared/analytics-cache";
 import { findNearestSlotMinutes } from "../chatbot/calendar-slots";
 import { getDoctorNpsMap } from "../../shared/patient-reviews";
 import type { ScoringConfig } from "@workspace/db";
 import { compareDoctorCandidates, specialtyMatchesService } from "./doctor-ranking";
+import { TREATING_DOCTOR_ROLES } from "../../lib/clinical-roles";
 
 export { compareDoctorCandidates } from "./doctor-ranking";
 
@@ -345,7 +346,11 @@ export async function rankDoctorCandidates(
   const doctors = await db
     .select({ id: usersTable.id, specialty: usersTable.specialty })
     .from(usersTable)
-    .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")));
+    .where(and(
+      eq(usersTable.clinicId, clinicId),
+      inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
+      eq(usersTable.isActive, true),
+    ));
   const specialtyMap = new Map(doctors.map((d) => [d.id, d.specialty ?? null]));
 
   const pool = kpis.filter((k) => !excludeIds.has(k.doctorId));
@@ -979,10 +984,15 @@ export class AnalyticsRepository {
   async getDoctorKpisRaw(clinicId: string): Promise<RawDoctorKpi[]> {
     // Leverage the getDoctorKpis cache path to build rawKpis fresh each call
     // (the public method caches DoctorKpi which omits cancelledCount & nearestSlotMinutes)
+    // Must match chatbot slot listing / CRM treating-doctor pickers: active doctor + owner.
     const doctors = await db
       .select()
       .from(usersTable)
-      .where(and(eq(usersTable.clinicId, clinicId), eq(usersTable.role, "doctor")));
+      .where(and(
+        eq(usersTable.clinicId, clinicId),
+        inArray(usersTable.role, [...TREATING_DOCTOR_ROLES]),
+        eq(usersTable.isActive, true),
+      ));
 
     if (doctors.length === 0) return [];
 

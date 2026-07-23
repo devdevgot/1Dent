@@ -5,6 +5,7 @@ import {
   buildBranchPromptFallback,
   buildSymptomsPromptFallback,
 } from "./clinic-knowledge";
+import { getClinicDoctorsLightweight } from "./calendar-slots";
 
 export type QualificationPhase = "symptoms" | "branch";
 
@@ -46,6 +47,27 @@ export function buildScoringOptionsFromSession(
   };
 }
 
+/** When KPI ranking is empty, fall back to the same active treating-doctor pool used for slots. */
+async function fallbackTreatingDoctorCandidate(
+  clinicId: string,
+  excludeIds: string[],
+): Promise<DoctorCandidate | null> {
+  const excluded = new Set(excludeIds);
+  const doctors = await getClinicDoctorsLightweight(clinicId);
+  const pick = doctors.find((d) => !excluded.has(d.id));
+  if (!pick) return null;
+  return {
+    id: pick.id,
+    name: pick.name,
+    specialty: pick.specialty,
+    finalScore: 50,
+    rankPercent: 50,
+    hasCapacity: true,
+    nearestSlotMinutes: null,
+    reasons: ["доступен для записи"],
+  };
+}
+
 export async function assignRankedDoctor(
   clinicId: string,
   data: ChatbotSessionData,
@@ -53,12 +75,17 @@ export async function assignRankedDoctor(
 ): Promise<{ data: ChatbotSessionData; top: DoctorCandidate | null }> {
   // Playground and WhatsApp must recommend the same top-ranked doctor.
   const scoringOpts = buildScoringOptionsFromSession(data, true);
-  const candidates = await rankDoctorCandidates(clinicId, scoringOpts, {
+  const excludeIds = data.excludedDoctorIds ?? [];
+  let candidates = await rankDoctorCandidates(clinicId, scoringOpts, {
     limit: 3,
-    excludeIds: data.excludedDoctorIds ?? [],
+    excludeIds,
   });
   if (candidates.length === 0) {
-    return { data, top: null };
+    const fallback = await fallbackTreatingDoctorCandidate(clinicId, excludeIds);
+    if (!fallback) {
+      return { data, top: null };
+    }
+    candidates = [fallback];
   }
   const nextData = {
     ...applyDoctorCandidate(data, candidates[0]!),
