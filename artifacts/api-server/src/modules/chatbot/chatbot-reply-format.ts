@@ -29,6 +29,38 @@ export function replyFromText(text: string): ChatbotReply {
   return trimmed ? { parts: [trimmed], pausesMs: [0] } : { parts: [], pausesMs: [0] };
 }
 
+const SENTENCE_SPLIT_RE = /(?<=[.!?…])\s+/u;
+
+/** Common Russian abbreviations that end with a period but do NOT end a sentence. */
+const ABBREVIATION_END_RE =
+  /(?:^|[\s(«"'])(?:ул|пр|пр-т|просп|пер|бул|б-р|наб|ш|мкр|мкрн|м-н|д|дом|кв|оф|г|гор|обл|р-н|пос|с|ст|им|стр|корп|к|каб|эт|тел|моб|см|напр|т\.д|т\.е|т\.к|т\.п)\.$/i;
+
+/** Single uppercase initial («А.», «B.») — likely part of a name, not a sentence end. */
+const INITIAL_END_RE = /(?:^|\s)[А-ЯЁA-Z]\.$/;
+
+/**
+ * Split text into sentences without breaking after abbreviations like
+ * «ул. Абая 10» or «г. Алматы» — a naive split on `[.!?] ` treats «ул.»
+ * as a sentence end and downstream caps drop the actual address.
+ */
+export function splitSentencesSafe(text: string): string[] {
+  const rawChunks = text
+    .split(SENTENCE_SPLIT_RE)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const sentences: string[] = [];
+  for (const chunk of rawChunks) {
+    const prev = sentences[sentences.length - 1];
+    if (prev && (ABBREVIATION_END_RE.test(prev) || INITIAL_END_RE.test(prev))) {
+      sentences[sentences.length - 1] = `${prev} ${chunk}`;
+    } else {
+      sentences.push(chunk);
+    }
+  }
+  return sentences;
+}
+
 /** Split plain-text LLM output into up to maxParts WhatsApp bubbles at sentence boundaries. */
 export function splitTextToReply(text: string, maxParts = 2): ChatbotReply {
   const trimmed = text.trim();
@@ -37,10 +69,7 @@ export function splitTextToReply(text: string, maxParts = 2): ChatbotReply {
   const cap = Math.max(1, maxParts);
   if (cap === 1) return replyFromText(trimmed);
 
-  const sentences = trimmed
-    .split(/(?<=[.!?…])\s+/u)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const sentences = splitSentencesSafe(trimmed);
 
   if (sentences.length <= 1 || trimmed.length <= 180) {
     return replyFromText(trimmed);
@@ -141,10 +170,7 @@ function sanitizeAssistantIdentity(text: string, clinicName?: string): string {
 }
 
 function collapseRepeatedSentences(text: string): string {
-  const sentences = text
-    .split(/(?<=[.!?…])\s+/u)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const sentences = splitSentencesSafe(text);
   if (sentences.length <= 1) return text;
 
   const unique: string[] = [];
@@ -239,10 +265,7 @@ export function isPromoOrFillerText(text: string): boolean {
 
 /** Remove promo sentences; returns empty string if nothing usable remains. */
 export function stripPromoFromText(text: string): string {
-  const sentences = text
-    .split(/(?<=[.!?…])\s+/u)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !isPromoOrFillerText(s));
+  const sentences = splitSentencesSafe(text).filter((s) => !isPromoOrFillerText(s));
   return sentences.slice(0, 2).join(" ").trim();
 }
 
