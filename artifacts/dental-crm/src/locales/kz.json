@@ -1270,7 +1270,31 @@
     "trackingTestButton": "Push-хабарландыруды тестілеу",
     "trackingTestSent": "Push жіберілді!",
     "trackingTestSentDesc": "Осы құрылғыда хабарландыруды тексеріңіз",
-    "trackingTestFailed": "Push жіберу сәтсіз аяқталды"
+    "trackingTestFailed": "Push жіберу сәтсіз аяқталды",
+    "prefsTitle": "Хабарландыру түрлері",
+    "prefsError": "Хабарландыру баптауларын сақтау мүмкін болмады",
+    "groups": {
+      "chats": "Чаттар",
+      "chatsDesc": "Кіріс WhatsApp және оператор сұраулары",
+      "appointments": "Жазбалар",
+      "appointmentsDesc": "Қабылдауды құру, ауыстыру, болдырмау",
+      "payments": "Төлемдер",
+      "paymentsDesc": "Төлем күту, қарыз, мерзімі өту",
+      "stages": "Воронка",
+      "stagesDesc": "Пациент статусының өзгеруі",
+      "treatment": "Емдеу",
+      "treatmentDesc": "Емдеу жоспарлары және AI-диагноз",
+      "reviews": "Пікірлер",
+      "reviewsDesc": "Төмен және жоғары бағалар",
+      "contracts": "Шарттар",
+      "contractsDesc": "Пациент қарау/қол қою",
+      "broadcasts": "Таратулар",
+      "broadcastsDesc": "Dental broadcast аяқталуы немесе қатесі",
+      "operations": "Операциялар",
+      "operationsDesc": "Планшет, қойма, AI-кредиттер",
+      "alerts": "Red Alert",
+      "alertsDesc": "Критикалық ескертулер — әрқашан қосулы"
+    }
   },
   "permissions": {
     "geoPromptTitle": "Трекинг үшін рұқсат",

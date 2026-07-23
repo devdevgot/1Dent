@@ -1278,7 +1278,31 @@
     "trackingTestButton": "Тест push-уведомления",
     "trackingTestSent": "Push отправлен!",
     "trackingTestSentDesc": "Проверьте уведомление на этом устройстве",
-    "trackingTestFailed": "Не удалось отправить push"
+    "trackingTestFailed": "Не удалось отправить push",
+    "prefsTitle": "Типы уведомлений",
+    "prefsError": "Не удалось сохранить настройки уведомлений",
+    "groups": {
+      "chats": "Чаты",
+      "chatsDesc": "Входящие WhatsApp и запросы оператора",
+      "appointments": "Записи",
+      "appointmentsDesc": "Создание, перенос и отмена приёмов",
+      "payments": "Оплаты",
+      "paymentsDesc": "Ожидает оплаты, долг, просрочка",
+      "stages": "Воронка",
+      "stagesDesc": "Смена статуса пациента в Kanban",
+      "treatment": "Лечение",
+      "treatmentDesc": "Планы лечения и AI-диагноз",
+      "reviews": "Отзывы",
+      "reviewsDesc": "Низкие и высокие оценки пациентов",
+      "contracts": "Договоры",
+      "contractsDesc": "Просмотр и подписание пациентом",
+      "broadcasts": "Рассылки",
+      "broadcastsDesc": "Завершение и ошибки dental broadcast",
+      "operations": "Операции",
+      "operationsDesc": "Планшет, склад, AI-кредиты",
+      "alerts": "Red Alert",
+      "alertsDesc": "Критические алерты — всегда включены"
+    }
   },
   "permissions": {
     "geoPromptTitle": "Доступ для трекинга",

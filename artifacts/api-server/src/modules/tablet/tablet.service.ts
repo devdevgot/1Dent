@@ -12,6 +12,7 @@ import {
   TabletNotPairedByOwnerError,
 } from "../../shared/errors";
 import { getPublicAppBaseUrl } from "../../shared/public-url";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 import type { UserRole } from "@workspace/db";
 
 const SALT_ROUNDS = 10;
@@ -288,7 +289,24 @@ export class TabletService {
       session.status === "pending" || session.status === "awaiting_pairing";
 
     if (isActive && session.expiresAt < new Date()) {
+      const wasAwaitingPairing = session.status === "awaiting_pairing";
       await this.repo.expireSession(session.id);
+      if (wasAwaitingPairing && session.clinicId) {
+        const cabinetName = session.cabinetId
+          ? (await this.repo.findCabinetById(session.cabinetId))?.name
+          : null;
+        void notifyClinicStaff({
+          clinicId: session.clinicId,
+          kind: NOTIFY_KINDS.tablet_pairing_expired,
+          message: `⏱ Подключение планшета истекло${cabinetName ? `: ${cabinetName}` : ""}`,
+          payload: {
+            sessionId: session.id,
+            cabinetName: cabinetName ?? null,
+          },
+          dedupKey: `${session.clinicId}:tablet_pairing_expired:${session.id}`,
+          dedupTtlMs: 60 * 60_000,
+        }).catch(() => {});
+      }
       return {
         sessionId: session.id,
         status: "expired" as const,
@@ -500,6 +518,20 @@ export class TabletService {
         userId,
       );
       if (!assigned) throw new NotFoundError("Не удалось начать подключение планшета");
+
+      void notifyClinicStaff({
+        clinicId: user.clinicId,
+        kind: NOTIFY_KINDS.tablet_pairing,
+        message: `📱 Планшет ждёт подключения: ${cabinet.name}`,
+        payload: {
+          sessionId: session.id,
+          cabinetName: cabinet.name,
+          cabinetId: cabinet.id,
+        },
+        skipUserId: userId,
+        dedupKey: `${user.clinicId}:tablet_pairing:${session.id}`,
+        dedupTtlMs: 5 * 60_000,
+      }).catch(() => {});
 
       const doctor = await this.repo.getDoctorPublic(userId);
 

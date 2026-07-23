@@ -33,6 +33,7 @@ import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.
 import { sendToPatient, sendTypingToPatient, startTypingKeepalive } from "../../shared/messaging";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { insertNotifications } from "../../shared/notifications-dispatch";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 import { logger } from "../../lib/logger";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 import { ChannelsRepository } from "../channels/channels.repository";
@@ -1655,25 +1656,26 @@ async function finalizeBookingAppointment(params: {
           logger.warn({ err: schedErr, procedureId }, "ChatbotService: failed to schedule reminders after booking");
         }
 
-        const staffRecipients = await db
-          .select({ id: usersTable.id })
-          .from(usersTable)
-          .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin"])));
-        if (staffRecipients.length > 0) {
+        {
           const apptDateStr = formatAlmatyDateTimeShort(preferredDate);
           const notifMsg = `📅 Новая запись: ${data.patientName ?? phone} → ${data.suggestedDoctorName ?? "врач"} (${serviceLabel}), ${apptDateStr}. Филиал: ${branchToSave}`;
-          await insertNotifications(
-              staffRecipients.map((r) => ({
-                id: randomUUID(),
-                clinicId,
-                userId: r.id,
-                type: "system" as const,
-                message: notifMsg,
-                read: false,
-                patientId: patientId ?? null,
-                messageId: null,
-              })),
-            ).catch((err) => logger.warn({ err }, "ChatbotService: failed to insert notification"));
+          await notifyClinicStaff({
+            clinicId,
+            kind: data.isReschedule
+              ? NOTIFY_KINDS.appointment_rescheduled
+              : NOTIFY_KINDS.appointment_created,
+            message: notifMsg,
+            patientId: patientId ?? null,
+            payload: {
+              procedureId,
+              doctorId: data.suggestedDoctorId ?? null,
+              scheduledAt: preferredDate.toISOString(),
+              branch: branchToSave,
+              source: "chatbot",
+            },
+            extraUserIds: data.suggestedDoctorId ? [data.suggestedDoctorId] : [],
+            dedupKey: `${clinicId}:chatbot_appt:${procedureId}`,
+          }).catch((err) => logger.warn({ err }, "ChatbotService: failed to notify appointment"));
         }
       }
     }
@@ -4309,30 +4311,19 @@ export class ChatbotService {
   }
 
   private async notifyHumanTakeover(clinicId: string, phone: string, patientName?: string, handoffSummary?: string) {
-    const recipients = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(and(eq(usersTable.clinicId, clinicId), inArray(usersTable.role, ["owner", "admin"])));
-
-    if (recipients.length === 0) return;
-
     const name = patientName ?? phone;
     const msg = handoffSummary
       ? `${handoffSummary}\n\n👤 Пациент ${name} (${phone}) ждёт ответа оператора.`
       : `👤 Пациент ${name} (${phone}) запросил переключение на оператора в чат-боте.`;
 
-    await insertNotifications(
-      recipients.map((r) => ({
-        id: randomUUID(),
-        clinicId,
-        userId: r.id,
-        type: "system" as const,
-        message: msg,
-        read: false,
-        patientId: null,
-        messageId: null,
-      })),
-    );
+    await notifyClinicStaff({
+      clinicId,
+      kind: NOTIFY_KINDS.human_takeover,
+      message: msg,
+      payload: { phone, source: "chatbot" },
+      dedupKey: `${clinicId}:human_takeover:${phone}`,
+      dedupTtlMs: 120_000,
+    });
   }
 
   async getSettings(clinicId: string) {

@@ -12,6 +12,7 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError } from "../../shared/errors";
 import { db, procedureMaterialsTable, inventoryItemsTable, proceduresTable } from "@workspace/db";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 
 const router: IRouter = Router();
 const repo = new InventoryRepository();
@@ -118,6 +119,23 @@ router.patch("/:id/stock", writeRoles, async (req: Request, res: Response, next:
   const id = String(req.params["id"]);
   const item = await repo.updateStock(id, req.user!.clinicId, parsed.data.quantity).catch(next);
   if (!item) return next(new NotFoundError("Inventory item not found"));
+
+  if (
+    typeof item.minQuantity === "number" &&
+    item.minQuantity > 0 &&
+    item.quantity <= item.minQuantity
+  ) {
+    void notifyClinicStaff({
+      clinicId: req.user!.clinicId,
+      kind: NOTIFY_KINDS.low_stock,
+      message: `📦 Низкий остаток: ${item.name} (${item.quantity}, мин. ${item.minQuantity})`,
+      payload: { itemId: item.id, quantity: item.quantity, minQuantity: item.minQuantity },
+      skipUserId: req.user!.userId,
+      dedupKey: `${req.user!.clinicId}:low_stock:${item.id}`,
+      dedupTtlMs: 6 * 60 * 60_000,
+    }).catch(() => {});
+  }
+
   res.json({ success: true, data: { item } });
 });
 

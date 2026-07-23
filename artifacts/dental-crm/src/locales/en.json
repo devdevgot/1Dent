@@ -1270,7 +1270,31 @@
     "trackingTestButton": "Test push notification",
     "trackingTestSent": "Push sent!",
     "trackingTestSentDesc": "Check the notification on this device",
-    "trackingTestFailed": "Failed to send push"
+    "trackingTestFailed": "Failed to send push",
+    "prefsTitle": "Notification types",
+    "prefsError": "Could not save notification preferences",
+    "groups": {
+      "chats": "Chats",
+      "chatsDesc": "Inbound WhatsApp and operator handoffs",
+      "appointments": "Appointments",
+      "appointmentsDesc": "Created, rescheduled, and cancelled visits",
+      "payments": "Payments",
+      "paymentsDesc": "Pending payment, debt, overdue",
+      "stages": "Pipeline",
+      "stagesDesc": "Patient Kanban stage changes",
+      "treatment": "Treatment",
+      "treatmentDesc": "Treatment plans and AI diagnosis",
+      "reviews": "Reviews",
+      "reviewsDesc": "Low and high patient ratings",
+      "contracts": "Contracts",
+      "contractsDesc": "Patient viewed or signed a contract",
+      "broadcasts": "Broadcasts",
+      "broadcastsDesc": "Dental broadcast finished or failed",
+      "operations": "Operations",
+      "operationsDesc": "Tablet pairing, stock, AI credits",
+      "alerts": "Red Alert",
+      "alertsDesc": "Critical alerts — always on"
+    }
   },
   "permissions": {
     "geoPromptTitle": "Access for tracking",

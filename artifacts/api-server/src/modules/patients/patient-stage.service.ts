@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import type { PatientStatus } from "@workspace/db";
 import type { PatientsRepository } from "./patients.repository";
 import { logger } from "../../lib/logger";
+import { NOTIFY_KINDS, NOTIFY_STAGE_STATUSES, stageLabel } from "../../shared/clinic-notify-kinds";
 
 export const PATIENT_STAGE_TRIGGERS = {
   APPOINTMENT_CREATED: "appointment_created",
@@ -166,6 +167,32 @@ export async function transitionPatientStage(params: {
         "[PatientStage] Failed to lock schedule visits after diagnostics transition",
       );
     }
+  }
+
+  if (NOTIFY_STAGE_STATUSES.has(params.toStatus)) {
+    const doctorId = existing.doctorId ?? null;
+    const patientName = existing.name ?? "Пациент";
+    void import("../../shared/clinic-notify")
+      .then(({ notifyClinicStaff }) =>
+        notifyClinicStaff({
+          clinicId: params.clinicId,
+          kind: NOTIFY_KINDS.patient_stage_changed,
+          message: `📌 ${patientName}: ${stageLabel(existing.status)} → ${stageLabel(params.toStatus)}`,
+          patientId: params.patientId,
+          payload: {
+            from: existing.status,
+            to: params.toStatus,
+            trigger: params.trigger,
+          },
+          extraUserIds: doctorId ? [doctorId] : [],
+          skipUserId: params.actorId,
+          dedupKey: `${params.clinicId}:stage:${params.patientId}:${params.toStatus}`,
+          dedupTtlMs: 120_000,
+        }),
+      )
+      .catch((err) =>
+        logger.warn({ err, patientId: params.patientId }, "[PatientStage] Failed to notify stage change"),
+      );
   }
 
   return {

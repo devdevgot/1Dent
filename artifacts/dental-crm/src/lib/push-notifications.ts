@@ -223,3 +223,47 @@ export async function getPushSettingsState(): Promise<{
     serverEnabled: Boolean(status.enabled && status.publicKey),
   };
 }
+
+export type NotificationPrefGroup =
+  | "chats"
+  | "appointments"
+  | "payments"
+  | "alerts"
+  | "operations"
+  | "reviews"
+  | "contracts"
+  | "broadcasts"
+  | "stages"
+  | "treatment";
+
+export async function fetchPushPreferences(): Promise<{
+  groups: NotificationPrefGroup[];
+  mutedGroups: NotificationPrefGroup[];
+}> {
+  const res = await fetch(`${getBaseUrl()}/api/push/preferences`, {
+    headers: getAuthHeaders(),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    return { groups: [], mutedGroups: [] };
+  }
+  const json = (await res.json()) as {
+    data?: { groups?: NotificationPrefGroup[]; mutedGroups?: NotificationPrefGroup[] };
+  };
+  return {
+    groups: json.data?.groups ?? [],
+    mutedGroups: json.data?.mutedGroups ?? [],
+  };
+}
+
+export async function savePushPreferences(mutedGroups: NotificationPrefGroup[]): Promise<void> {
+  const res = await fetch(`${getBaseUrl()}/api/push/preferences`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    credentials: "include",
+    body: JSON.stringify({ mutedGroups }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseApiError(res));
+  }
+}

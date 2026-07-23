@@ -188,15 +188,29 @@ export async function promptInstall(): Promise<
   }
 }
 
-type ServiceWorkerMessageHandler = (data: { type?: string }) => void;
+type ServiceWorkerMessageHandler = (data: { type?: string; url?: string }) => void;
 
-let swMessageHandler: ServiceWorkerMessageHandler | null = null;
+const swMessageHandlers = new Set<ServiceWorkerMessageHandler>();
 
-/** Listen for service-worker messages (e.g. Background Sync → flush outbox). */
+/**
+ * Listen for service-worker messages (Background Sync, push navigate, etc.).
+ * Pass null to no-op (legacy); prefer add/remove for multiple listeners.
+ */
 export function setServiceWorkerMessageHandler(
   handler: ServiceWorkerMessageHandler | null,
 ): void {
-  swMessageHandler = handler;
+  swMessageHandlers.clear();
+  if (handler) swMessageHandlers.add(handler);
+}
+
+/** Register an additional SW message listener (does not replace others). */
+export function addServiceWorkerMessageHandler(
+  handler: ServiceWorkerMessageHandler,
+): () => void {
+  swMessageHandlers.add(handler);
+  return () => {
+    swMessageHandlers.delete(handler);
+  };
 }
 
 /** Ask the service worker to register a Background Sync tag for the outbox. */
@@ -220,9 +234,15 @@ export function registerServiceWorker(): void {
   };
 
   navigator.serviceWorker.addEventListener("message", (event) => {
-    const data = event.data as { type?: string } | null;
+    const data = event.data as { type?: string; url?: string } | null;
     if (!data?.type) return;
-    swMessageHandler?.(data);
+    for (const handler of swMessageHandlers) {
+      try {
+        handler(data);
+      } catch {
+        // Listener errors must never break other handlers.
+      }
+    }
   });
 
   if (document.readyState === "complete") {

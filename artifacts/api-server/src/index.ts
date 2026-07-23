@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
 import { startDentalBroadcastScheduler } from "./modules/dental-broadcast/dental-broadcast.scheduler";
 import { startChatbotInactivityScheduler } from "./modules/chatbot/chatbot-inactivity.scheduler";
+import { startPaymentOverduePoller } from "./shared/payment-overdue-notify";
 import { errorEventsService } from "./modules/error-events/error-events.service";
 import { getServerBaseUrl } from "./shared/green-api";
 import { registerPlatformBot } from "./shared/platform-bot";
@@ -286,6 +287,12 @@ function onServerReady(): void {
     startChatbotInactivityScheduler();
   } catch (err) {
     logger.warn({ err }, "Chatbot inactivity scheduler failed to start");
+  }
+
+  try {
+    startPaymentOverduePoller();
+  } catch (err) {
+    logger.warn({ err }, "Payment overdue poller failed to start");
   }
 
   // Start BullMQ worker only if Redis is configured

@@ -3,6 +3,7 @@ import { db, dentalAiAnalysesTable, toothRecordsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { openrouter, DEEPSEEK_MODEL } from "../../lib/openrouter-client";
 import { aiCreditsService } from "../../shared/ai-credits";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 import { logger } from "../../lib/logger";
 
 const FALLBACK_MODEL = "openai/gpt-4o-mini";
@@ -188,6 +189,16 @@ export async function triggerDentalAiAnalysis(
       });
 
     logger.info({ clinicId, patientId }, "[DentalAI] Analysis saved successfully");
+
+    void notifyClinicStaff({
+      clinicId,
+      kind: NOTIFY_KINDS.ai_diagnosis_ready,
+      message: "🦷 AI-диагноз готов — откройте карту пациента",
+      patientId,
+      payload: {},
+      dedupKey: `${clinicId}:ai_diagnosis_ready:${patientId}`,
+      dedupTtlMs: 10 * 60_000,
+    }).catch(() => {});
   } catch (err) {
     // On failure, evict cache entry so a retry is allowed
     analysisDeupCache.delete(`${clinicId}:${patientId}`);

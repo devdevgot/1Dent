@@ -435,6 +435,13 @@
       "when": 1783602600000,
       "tag": "0060_backfill_patient_treating_doctor",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1783689000000,
+      "tag": "0061_notification_preferences",
+      "breakpoints": true
     }
   ]
 }

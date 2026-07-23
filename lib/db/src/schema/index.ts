@@ -22,3 +22,4 @@ export * from "./reviews";
 export * from "./landing-leads";
 export * from "./push-subscriptions";
 export * from "./platform-push-broadcasts";
+export * from "./notification-preferences";
