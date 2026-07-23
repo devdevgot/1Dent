@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import {
   AuthField,
@@ -52,6 +52,13 @@ export function WhatsappOtpFlow({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const otpInputRef = useRef<React.ElementRef<typeof InputOTP>>(null);
+
+  useEffect(() => {
+    if (step !== "otp") return;
+    const t = setTimeout(() => otpInputRef.current?.focus(), 150);
+    return () => clearTimeout(t);
+  }, [step]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -177,7 +184,10 @@ export function WhatsappOtpFlow({
 
       <div className="flex flex-col items-center gap-4">
         <InputOTP
+          ref={otpInputRef}
           maxLength={6}
+          autoComplete="one-time-code"
+          autoFocus
           value={code}
           onChange={(v) => {
             setCode(v);
