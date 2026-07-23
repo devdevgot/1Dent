@@ -426,7 +426,14 @@
       "idx": 59,
       "version": "7",
       "when": 1783516200000,
-      "tag": "0059_notification_preferences",
+      "tag": "0059_tablet_video_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1783602600000,
+      "tag": "0060_notification_preferences",
       "breakpoints": true
     }
   ]
