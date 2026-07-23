@@ -216,25 +216,6 @@ function isNo(text: string): boolean {
   return CONFIRM_NO.some((kw) => lower === kw || lower.startsWith(kw + " "));
 }
 
-/** Patient confirms he will come to the appointment («да», «буду», «приду»...). */
-function isVisitConfirmYes(text: string): boolean {
-  const lower = text.toLowerCase().trim();
-  // «не приду», «не буду», «не успею» — this is a refusal, not a confirmation.
-  if (/не\s+(буду|приду|придем|придём|подойду|подъеду|успею|смогу|получится)/i.test(lower)) return false;
-  if (isYes(lower)) return true;
-  return /(^|[\s,])(буду|приду|придем|придём|подойду|подъеду|успею|в силе|барамын|келемін|келем)(?=$|[\s.,!?)»"']|👍)/i.test(
-    lower,
-  );
-}
-
-/** Patient says he will not make it to the appointment. */
-function isVisitConfirmNo(text: string): boolean {
-  if (isNo(text)) return true;
-  const lower = text.toLowerCase().trim();
-  if (/не\s+(смогу|приду|придем|придём|успею|успеваю|получится|подойду|подъеду)/i.test(lower)) return true;
-  return RESCHEDULE_KEYWORDS.some((kw) => lower.includes(kw)) || CANCEL_KEYWORDS.some((kw) => lower.includes(kw));
-}
-
 function symptomsAnswered(data: ChatbotSessionData, messageText: string): boolean {
   const desc = data.problemDescription?.trim() ?? "";
   if (desc.length > 12) return true;
@@ -1305,17 +1286,7 @@ function renderScriptBlocks(
   return out;
 }
 
-/**
- * Lead-nurture cadence: 4 touches over 3 consecutive days.
- * Day 1 — two touches (morning-ish and evening-ish), days 2 and 3 — one touch each.
- * Hours are measured from the moment the patient went silent (leadNurtureAnchorAt).
- */
-const LEAD_NURTURE_TOUCHES = [
-  { hours: 3, label: "день 1, касание 1 из 2" },
-  { hours: 9, label: "день 1, касание 2 из 2" },
-  { hours: 27, label: "день 2, одно касание" },
-  { hours: 51, label: "день 3, финальное касание" },
-] as const;
+const LEAD_NURTURE_HOURS = [24, 72, 168] as const;
 const LEAD_NURTURE_STATES: ChatbotState[] = [
   "collect_problem",
   "collect_qualification",
@@ -1331,17 +1302,14 @@ const LEAD_NURTURE_STATES: ChatbotState[] = [
   "collect_phone",
 ];
 
-function getLeadNurtureTemplates(
-  settings: Awaited<ReturnType<typeof getSettings>>,
-): [string, string, string, string] {
+function getLeadNurtureTemplates(settings: Awaited<ReturnType<typeof getSettings>>): [string, string, string] {
   const savedBlocks = (settings.scriptBlocks ?? []) as ScriptBlock[];
   const activeBlocks = savedBlocks.length > 0 ? savedBlocks : STANDARD_SCRIPT_BLOCKS;
   const followup = activeBlocks.find((b) => b.id === "followup" && b.enabled);
-  const defaults: [string, string, string, string] = [
+  const defaults: [string, string, string] = [
     "Подобрать для вас удобное время? 😊 Есть свободные окна на сегодня и завтра.",
     "Напоминаю вам 😊 Могу записать вас без ожидания. Когда вам будет удобно?",
     "Здравствуйте 😊 Вы интересовались приёмом. Могу записать на удобное время — когда подойдёт?",
-    "Здравствуйте 😊 Не хочу быть навязчивым, поэтому пишу в последний раз. Если вопрос ещё актуален — с радостью подберу для вас удобное время, просто напишите 🤍",
   ];
   if (!followup?.content.trim()) return defaults;
 
@@ -1353,7 +1321,6 @@ function getLeadNurtureTemplates(
     parts[0] ?? defaults[0],
     parts[1] ?? defaults[1],
     parts[2] ?? defaults[2],
-    parts[3] ?? defaults[3],
   ];
 }
 
@@ -1797,8 +1764,7 @@ function formatSimulateMessageResult(
   };
 }
 
-/** Hard budget for Playground turns. Agent LLM attempts must finish well under this. */
-const PLAYGROUND_TURN_TIMEOUT_MS = 65_000;
+const PLAYGROUND_TURN_TIMEOUT_MS = 55_000;
 
 const PATIENT_SAFE_FALLBACK_TEXT =
   "Сейчас не могу обработать запрос. Попробуйте через минуту или напишите «оператор» — администратор поможет.";
@@ -2207,13 +2173,8 @@ export class ChatbotService {
     let state = session.state;
     let data = { ...session.data };
 
-    if (LEAD_NURTURE_STATES.includes(state)) {
-      // Patient wrote to us — restart the silence timer and the 3-day touch cadence.
+    if (LEAD_NURTURE_STATES.includes(state) && !data.leadNurtureAnchorAt) {
       data.leadNurtureAnchorAt = new Date().toISOString();
-      data.leadNurtureTouchesSent = 0;
-      data.leadFollowup24Sent = false;
-      data.leadFollowup72Sent = false;
-      data.leadFollowup168Sent = false;
     }
 
     // Single-branch clinic — pre-select the branch so the funnel never asks about it
@@ -2270,47 +2231,6 @@ export class ChatbotService {
       }
       const takoverReply = "Соединяю вас с администратором. Пожалуйста, ожидайте — вам ответят в ближайшее время.";
       return finishTurn(session, takoverReply);
-    }
-
-    // Patient answers the 1-hour pre-appointment reminder («всё в силе — вы придёте?»)
-    if (data.pendingVisitConfirmation) {
-      const confirmation = data.pendingVisitConfirmation;
-      const apptMs = Date.parse(confirmation.scheduledAt);
-      const staleAfterMs = 3 * 60 * 60 * 1000;
-      if (Number.isFinite(apptMs) && Date.now() - apptMs > staleAfterMs) {
-        // Appointment is long past — the question is no longer relevant.
-        delete data.pendingVisitConfirmation;
-        session.data = data;
-      } else if (isVisitConfirmYes(messageText)) {
-        delete data.pendingVisitConfirmation;
-        session.data = data;
-        const timeStr = Number.isFinite(apptMs)
-          ? new Date(apptMs).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Almaty" })
-          : null;
-        const confirmReply =
-          `Отлично, ждём вас${timeStr ? ` в ${timeStr}` : ""}! 🤍 ` +
-          `Уже готовим всё к вашему приёму${confirmation.doctorName ? ` у врача ${confirmation.doctorName}` : ""} — до скорой встречи! 😊`;
-        noteAction("Пациент подтвердил визит за час до приёма");
-        return finishTurn(session, confirmReply);
-      } else if (isVisitConfirmNo(messageText)) {
-        delete data.pendingVisitConfirmation;
-        data.existingProcedureId = confirmation.procedureId;
-        data.existingProcedureDate = Number.isFinite(apptMs)
-          ? formatAlmatyDateTimeLong(new Date(apptMs))
-          : confirmation.scheduledAt;
-        data.existingProcedureDoctorName = confirmation.doctorName;
-        session.state = "manage_appointment";
-        session.data = data;
-        state = session.state;
-        const rescheduleReply =
-          "Ничего страшного 😊 Хотите перенести запись на другое время или отменить?\n• Перенести\n• Отменить";
-        noteAction("Пациент не сможет прийти — предложен перенос записи");
-        return finishTurn(session, rescheduleReply);
-      } else {
-        // Patient replied with something else — answer it normally, don't re-ask.
-        delete data.pendingVisitConfirmation;
-        session.data = data;
-      }
     }
 
     if (patientDb) {
@@ -4854,14 +4774,15 @@ export class ChatbotService {
       const anchorMs = new Date(data.leadNurtureAnchorAt ?? row.updatedAt).getTime();
       const hoursSince = (now - anchorMs) / (60 * 60 * 1000);
 
-      // Migrate in-flight sessions from the legacy 24/72/168h flags to the touch counter.
-      const legacyTouches = data.leadFollowup72Sent ? 3 : data.leadFollowup24Sent ? 2 : 0;
-      const touchesSent = Math.max(data.leadNurtureTouchesSent ?? 0, legacyTouches);
-      if (touchesSent >= LEAD_NURTURE_TOUCHES.length) continue;
-
-      const nextTouch = LEAD_NURTURE_TOUCHES[touchesSent]!;
-      if (hoursSince < nextTouch.hours) continue;
-      const stage = touchesSent as 0 | 1 | 2 | 3;
+      let stage: 0 | 1 | 2 | null = null;
+      if (hoursSince >= LEAD_NURTURE_HOURS[2] && !data.leadFollowup168Sent && data.leadFollowup72Sent) {
+        stage = 2;
+      } else if (hoursSince >= LEAD_NURTURE_HOURS[1] && !data.leadFollowup72Sent && data.leadFollowup24Sent) {
+        stage = 1;
+      } else if (hoursSince >= LEAD_NURTURE_HOURS[0] && !data.leadFollowup24Sent) {
+        stage = 0;
+      }
+      if (stage === null) continue;
 
       let settings: Awaited<ReturnType<typeof getSettings>>;
       try {
@@ -4877,11 +4798,9 @@ export class ChatbotService {
       if (!data.leadNurtureAnchorAt) {
         data.leadNurtureAnchorAt = new Date(anchorMs).toISOString();
       }
-      data.leadNurtureTouchesSent = stage + 1;
-      // Keep legacy flags in sync so older readers/deploys behave sanely.
-      if (stage + 1 >= 2) data.leadFollowup24Sent = true;
-      if (stage + 1 >= 3) data.leadFollowup72Sent = true;
-      if (stage + 1 >= 4) data.leadFollowup168Sent = true;
+      if (stage === 0) data.leadFollowup24Sent = true;
+      if (stage === 1) data.leadFollowup72Sent = true;
+      if (stage === 2) data.leadFollowup168Sent = true;
 
       await saveSession({
         id: row.id,
@@ -4892,10 +4811,7 @@ export class ChatbotService {
         humanTakeover: row.humanTakeover,
       });
 
-      logger.info(
-        { phone: row.phone, stage, touch: nextTouch.label, hoursSince },
-        "[ChatbotService] Sending lead nurture follow-up",
-      );
+      logger.info({ phone: row.phone, stage, hoursSince }, "[ChatbotService] Sending lead nurture follow-up");
 
       const recentRows = await db
         .select()
@@ -4931,7 +4847,7 @@ export class ChatbotService {
         continue;
       }
 
-      const nurtureGuidance = `Пациент не завершил запись (этап «${state}») и не отвечает. Это повторное касание ${stage + 1} из 4 (${nextTouch.label}). Одно короткое follow-up — новая формулировка, без повторения уже заданных вопросов и прошлых напоминаний.${stage === 3 ? " Это финальное касание: мягко попрощайся и оставь дверь открытой, без давления." : ""}`;
+      const nurtureGuidance = `Пациент не завершил запись (этап «${state}»). Одно короткое follow-up — без повторения уже заданных вопросов. Этап ${stage + 1} из 3.`;
 
       const helperPrompt = buildFollowUpMiniPrompt({
         clinicName: resolveClinicName(settings, clinicName),
@@ -4954,50 +4870,6 @@ export class ChatbotService {
       }
     }
   }
-}
-
-export interface ArmVisitConfirmationInput {
-  clinicId: string;
-  phone: string;
-  procedureId: string;
-  scheduledAt: Date;
-  doctorName?: string;
-  procedureName?: string;
-}
-
-/**
- * Arm the chatbot session after the 1-hour pre-appointment reminder is sent,
- * so the patient's reply («да» / «не смогу») gets a warm deterministic answer.
- */
-export async function armVisitConfirmation(input: ArmVisitConfirmationInput): Promise<void> {
-  const phone = canonicalChatbotPhone(input.phone);
-  const existing = await loadSession(input.clinicId, phone);
-  // Operator owns the dialog — don't intercept the patient's replies.
-  if (existing?.humanTakeover) return;
-
-  const session: SessionRecord = existing ?? {
-    id: randomUUID(),
-    clinicId: input.clinicId,
-    phone,
-    state: "done",
-    data: {},
-    humanTakeover: false,
-  };
-  session.data = {
-    ...session.data,
-    pendingVisitConfirmation: {
-      procedureId: input.procedureId,
-      scheduledAt: input.scheduledAt.toISOString(),
-      doctorName: input.doctorName || undefined,
-      procedureName: input.procedureName || undefined,
-      armedAt: new Date().toISOString(),
-    },
-  };
-  await saveSession(session);
-  logger.info(
-    { clinicId: input.clinicId, phone, procedureId: input.procedureId },
-    "[ChatbotService] Visit confirmation armed for 1h pre-appointment reminder",
-  );
 }
 
 export async function loadChatbotPromptComposeInputs(

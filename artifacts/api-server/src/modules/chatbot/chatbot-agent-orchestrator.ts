@@ -1,7 +1,7 @@
 import type { ChatbotSessionData, ChatbotState } from "./chatbot.types";
 import type { ChatbotAgentAction } from "./chatbot-agent.types";
 import type { AgentScriptContext } from "./chatbot-agent-context.ts";
-import { isPromoOrFillerText, stripPromoFromText, splitSentencesSafe } from "./chatbot-reply-format.ts";
+import { isPromoOrFillerText, stripPromoFromText } from "./chatbot-reply-format.ts";
 import {
   buildBranchPromptFallback,
   buildSymptomsPromptFallback,
@@ -256,7 +256,7 @@ export function buildAgentFallbackReply(opts: {
 function shortenNodePrompt(content: string): string {
   const cleaned = stripPromoFromText(content);
   if (cleaned && !isPromoOrFillerText(cleaned)) {
-    const first = splitSentencesSafe(cleaned)[0]?.trim() ?? cleaned;
+    const first = cleaned.split(/(?<=[.!?])\s+/)[0]?.trim() ?? cleaned;
     const clipped = first.slice(0, 160).trim();
     if (clipped) return clipped.endsWith("?") ? clipped : `${clipped.replace(/[.!]$/, "")}?`;
   }

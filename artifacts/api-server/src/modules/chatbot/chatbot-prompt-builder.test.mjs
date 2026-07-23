@@ -64,6 +64,6 @@ const mini = buildFollowUpMiniPrompt({
   contextBits: "Обсуждали врача Dr. Test.",
 });
 assert.match(mini, /Test Clinic/);
-assert.ok(mini.length < 800);
+assert.ok(mini.length < 600);
 
 console.log("chatbot-prompt-builder tests passed");
