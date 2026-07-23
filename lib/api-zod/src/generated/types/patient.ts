@@ -13,6 +13,8 @@ export interface Patient {
   id: string;
   clinicId: string;
   doctorId?: string | null;
+  /** Resolved treating-physician display name (doctor or owner) */
+  doctorName?: string | null;
   name: string;
   phone: string;
   /** @pattern ^\d{12}$ */

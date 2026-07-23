@@ -1768,33 +1768,52 @@ export function PatientDetailPanel() {
   ];
 
   const doctorUser = useMemo(() => {
-    if (!patient?.doctorId) return null;
-    const fromList = allUsers.find((u) => u.id === patient.doctorId);
-    if (fromList) return fromList;
-    // Owner/doctor viewing their own assigned patient when /users is unavailable.
-    if (user?.id === patient.doctorId) {
-      return {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        clinicId: user.clinicId,
-        createdAt: user.createdAt,
-      };
+    const resolveDoctor = (doctorId: string, doctorName?: string | null) => {
+      const fromList = allUsers.find((u) => u.id === doctorId);
+      if (fromList) return fromList;
+      // Owner/doctor viewing their own assigned patient when /users is unavailable.
+      if (user?.id === doctorId) {
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          clinicId: user.clinicId,
+          createdAt: user.createdAt,
+        };
+      }
+      if (doctorName) {
+        return {
+          id: doctorId,
+          name: doctorName,
+          email: "",
+          role: "doctor" as const,
+          clinicId: patient!.clinicId,
+          createdAt: patient!.createdAt,
+        };
+      }
+      return null;
+    };
+
+    if (patient?.doctorId) {
+      const assigned = resolveDoctor(patient.doctorId, patient.doctorName);
+      if (assigned) return assigned;
     }
-    const apiName = (patient as { doctorName?: string | null }).doctorName;
-    if (apiName) {
-      return {
-        id: patient.doctorId,
-        name: apiName,
-        email: "",
-        role: "doctor" as const,
-        clinicId: patient.clinicId,
-        createdAt: patient.createdAt,
-      };
+
+    // Fallback: latest appointment doctor (schedules store doctor on procedures).
+    const latestProc = [...patientProcedures]
+      .filter((p) => p.doctorId && p.status !== "cancelled")
+      .sort((a, b) => {
+        const aAt = new Date(a.scheduledAt ?? a.createdAt ?? 0).getTime();
+        const bAt = new Date(b.scheduledAt ?? b.createdAt ?? 0).getTime();
+        return bAt - aAt;
+      })[0];
+    if (latestProc?.doctorId) {
+      return resolveDoctor(String(latestProc.doctorId), latestProc.doctorName as string | null | undefined);
     }
+
     return null;
-  }, [patient, allUsers, user]);
+  }, [patient, allUsers, user, patientProcedures]);
 
   const PAYMENT_LABELS: Record<string, string> = {
     cash: "Наличные", kaspi_qr: "Kaspi QR",
@@ -2133,7 +2152,9 @@ export function PatientDetailPanel() {
                             .slice(0, 10)
                             .map((proc) => {
                               const docName = proc.doctorId
-                                ? (allUsers.find((u) => u.id === proc.doctorId)?.name ?? "—")
+                                ? (proc.doctorName
+                                  ?? allUsers.find((u) => u.id === proc.doctorId)?.name
+                                  ?? "—")
                                 : "—";
                               const payLabel = PAYMENT_LABELS[(proc as any).paymentMethod ?? ""] ?? "—";
                               return (

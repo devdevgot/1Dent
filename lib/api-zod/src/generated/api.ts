@@ -262,6 +262,7 @@ export const ListPatientsResponse = zod.object({
         id: zod.string(),
         clinicId: zod.string(),
         doctorId: zod.string().nullish(),
+        doctorName: zod.string().nullish(),
         name: zod.string(),
         phone: zod.string(),
         iin: zod
@@ -335,6 +336,7 @@ export const GetPatientResponse = zod.object({
       id: zod.string(),
       clinicId: zod.string(),
       doctorId: zod.string().nullish(),
+      doctorName: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
       iin: zod.string().regex(getPatientResponseDataPatientIinRegExp).nullish(),
@@ -420,6 +422,7 @@ export const UpdatePatientResponse = zod.object({
       id: zod.string(),
       clinicId: zod.string(),
       doctorId: zod.string().nullish(),
+      doctorName: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
       iin: zod
@@ -495,6 +498,7 @@ export const UpdatePatientStatusResponse = zod.object({
       id: zod.string(),
       clinicId: zod.string(),
       doctorId: zod.string().nullish(),
+      doctorName: zod.string().nullish(),
       name: zod.string(),
       phone: zod.string(),
       iin: zod
