@@ -21,8 +21,126 @@ import { scheduleAppointmentReminders, cancelAppointmentReminders } from "../fol
 import { PatientsRepository } from "../patients/patients.repository";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
 import { db, postopFollowupsTable, patientsTable, usersTable, clinicsTable, doctorKpisTable, proceduresTable } from "@workspace/db";
-import { insertNotifications } from "../../shared/notifications-dispatch";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
+import { eq, and, sql } from "drizzle-orm";
+
+function formatApptWhen(d: Date | string | null | undefined): string {
+  if (!d) return "без времени";
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (Number.isNaN(date.getTime())) return "без времени";
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Almaty",
+  });
+}
+
+async function notifyAppointmentEvent(opts: {
+  clinicId: string;
+  kind:
+    | typeof NOTIFY_KINDS.appointment_created
+    | typeof NOTIFY_KINDS.appointment_rescheduled
+    | typeof NOTIFY_KINDS.appointment_cancelled
+    | typeof NOTIFY_KINDS.appointment_reassigned;
+  patientId: string | null | undefined;
+  procedureId: string;
+  procedureName: string;
+  doctorId?: string | null;
+  scheduledAt?: Date | string | null;
+  skipUserId?: string | null;
+  previousDoctorId?: string | null;
+}): Promise<void> {
+  if (!opts.patientId) return;
+  try {
+    const [patientRow] = await db
+      .select({ name: patientsTable.name })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, opts.patientId))
+      .limit(1);
+    const patientName = patientRow?.name ?? "Пациент";
+    let doctorName = "";
+    if (opts.doctorId) {
+      const [doc] = await db
+        .select({ name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, opts.doctorId))
+        .limit(1);
+      doctorName = doc?.name ?? "";
+    }
+    const when = formatApptWhen(opts.scheduledAt);
+    const verb =
+      opts.kind === NOTIFY_KINDS.appointment_created
+        ? "Новая запись"
+        : opts.kind === NOTIFY_KINDS.appointment_rescheduled
+          ? "Запись перенесена"
+          : opts.kind === NOTIFY_KINDS.appointment_cancelled
+            ? "Запись отменена"
+            : "Запись переназначена";
+    const doctorPart = doctorName ? ` → ${doctorName}` : "";
+    const extraUserIds = [
+      ...(opts.doctorId ? [opts.doctorId] : []),
+      ...(opts.previousDoctorId && opts.previousDoctorId !== opts.doctorId
+        ? [opts.previousDoctorId]
+        : []),
+    ];
+    await notifyClinicStaff({
+      clinicId: opts.clinicId,
+      kind: opts.kind,
+      message: `📅 ${verb}: ${patientName}${doctorPart}, ${when}. ${opts.procedureName}`,
+      patientId: opts.patientId,
+      payload: {
+        procedureId: opts.procedureId,
+        doctorId: opts.doctorId ?? null,
+        scheduledAt:
+          opts.scheduledAt instanceof Date
+            ? opts.scheduledAt.toISOString()
+            : opts.scheduledAt ?? null,
+        previousDoctorId: opts.previousDoctorId ?? null,
+      },
+      extraUserIds,
+      skipUserId: opts.skipUserId,
+      dedupKey: `${opts.clinicId}:${opts.kind}:${opts.procedureId}`,
+      dedupTtlMs: 30_000,
+    });
+  } catch (err) {
+    logger.error({ err, kind: opts.kind }, "[Procedures] Failed to notify appointment event");
+  }
+}
+
+async function notifyPendingPayment(opts: {
+  clinicId: string;
+  procedureId: string;
+  procedureName: string;
+  patientId: string | null | undefined;
+  doctorId?: string | null;
+  doctorName?: string | null;
+  skipUserId?: string | null;
+}): Promise<void> {
+  if (!opts.patientId) return;
+  try {
+    const [patientRow] = await db
+      .select({ name: patientsTable.name })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, opts.patientId))
+      .limit(1);
+    const patientName = patientRow?.name ?? "Пациент";
+    const doctorDisplayName = opts.doctorName ? ` (${opts.doctorName})` : "";
+    await notifyClinicStaff({
+      clinicId: opts.clinicId,
+      kind: NOTIFY_KINDS.pending_payment,
+      message: `💳 Ожидает оплаты: ${opts.procedureName} — ${patientName}${doctorDisplayName}`,
+      patientId: opts.patientId,
+      payload: { procedureId: opts.procedureId, doctorId: opts.doctorId ?? null },
+      skipUserId: opts.skipUserId,
+      dedupKey: `${opts.clinicId}:pending_payment:${opts.procedureId}`,
+      dedupTtlMs: 120_000,
+    });
+  } catch (err) {
+    logger.error({ err }, "[Procedures] Failed to notify pending_payment");
+  }
+}
 
 const router: IRouter = Router();
 const repo = new ProceduresRepository();
@@ -332,6 +450,17 @@ router.post("/", writeRoles, async (req: Request, res: Response, next: NextFunct
     }).catch(() => {});
   }
 
+  void notifyAppointmentEvent({
+    clinicId,
+    kind: NOTIFY_KINDS.appointment_created,
+    patientId: procedure.patientId,
+    procedureId: procedure.id,
+    procedureName: procedure.name,
+    doctorId: procedure.doctorId,
+    scheduledAt: procedure.scheduledAt,
+    skipUserId: userId,
+  });
+
   res.status(201).json({ success: true, data: { procedure } });
 });
 
@@ -405,47 +534,28 @@ router.patch(
       chatbotService.triggerReactivation(clinicId, procedure.patientId, procedure.id).catch((err) => {
         logger.error({ err }, "[Procedures] Failed to trigger chatbot reactivation");
       });
+      void notifyAppointmentEvent({
+        clinicId,
+        kind: NOTIFY_KINDS.appointment_cancelled,
+        patientId: procedure.patientId,
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        doctorId: procedure.doctorId,
+        scheduledAt: procedure.scheduledAt,
+        skipUserId: userId,
+      });
     }
 
-    // Notify admins/owners when a procedure moves to pending_payment for the first time
     if (isFirstPendingPayment) {
-      (async () => {
-        try {
-          const [patientRow] = await db
-            .select({ name: patientsTable.name })
-            .from(patientsTable)
-            .where(eq(patientsTable.id, procedure.patientId!))
-            .limit(1);
-          const patientName = patientRow?.name ?? "Пациент";
-
-          const recipients = await db
-            .select({ id: usersTable.id })
-            .from(usersTable)
-            .where(
-              and(
-                eq(usersTable.clinicId, clinicId),
-                inArray(usersTable.role, ["owner", "admin"]),
-              ),
-            );
-          if (recipients.length === 0) return;
-
-          const doctorDisplayName = procedure.doctorName ? ` (${procedure.doctorName})` : "";
-          const notifMsg = `💳 Ожидает оплаты: ${procedure.name} — ${patientName}${doctorDisplayName}`;
-          await insertNotifications(
-            recipients.map((r) => ({
-              id: randomUUID(),
-              clinicId,
-              userId: r.id,
-              type: "pending_payment" as const,
-              message: notifMsg,
-              read: false,
-              patientId: procedure.patientId,
-            })),
-          );
-        } catch (err) {
-          logger.error({ err }, "[Procedures] Failed to write pending_payment notification");
-        }
-      })();
+      void notifyPendingPayment({
+        clinicId,
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        patientId: procedure.patientId,
+        doctorId: procedure.doctorId,
+        doctorName: procedure.doctorName,
+        skipUserId: userId,
+      });
     }
 
     res.json({ success: true, data: { procedure } });
@@ -499,6 +609,43 @@ router.patch(
         // Attribute to today — payment events don't have their own timestamp in schema
         eventAt: new Date(),
       }).catch((err) => logger.error({ err }, "[Procedures] Failed to increment doctor KPI on payment"));
+    }
+
+    if (procedure.patientId) {
+      const method = parsed.data.paymentMethod;
+      void (async () => {
+        try {
+          const [patientRow] = await db
+            .select({ name: patientsTable.name })
+            .from(patientsTable)
+            .where(eq(patientsTable.id, procedure.patientId!))
+            .limit(1);
+          const patientName = patientRow?.name ?? "Пациент";
+          if (method === "debt") {
+            await notifyClinicStaff({
+              clinicId,
+              kind: NOTIFY_KINDS.payment_debt,
+              message: `📝 Оформлен долг: ${procedure.name} — ${patientName}`,
+              patientId: procedure.patientId,
+              payload: { procedureId: procedure.id, paymentMethod: method },
+              skipUserId: req.user!.userId,
+              dedupKey: `${clinicId}:payment_debt:${procedure.id}`,
+            });
+          } else {
+            await notifyClinicStaff({
+              clinicId,
+              kind: NOTIFY_KINDS.payment_received,
+              message: `✅ Оплата получена: ${procedure.name} — ${patientName}`,
+              patientId: procedure.patientId,
+              payload: { procedureId: procedure.id, paymentMethod: method },
+              skipUserId: req.user!.userId,
+              dedupKey: `${clinicId}:payment_received:${procedure.id}`,
+            });
+          }
+        } catch (err) {
+          logger.error({ err }, "[Procedures] Failed to notify payment");
+        }
+      })();
     }
 
     res.json({ success: true, data: { procedure } });
@@ -585,6 +732,39 @@ router.put(
           });
         }).catch(() => {});
       }
+    }
+
+    const prevSchedMs = existing.scheduledAt ? new Date(existing.scheduledAt).getTime() : null;
+    const nextSchedMs = nextScheduledAt ? nextScheduledAt.getTime() : nextScheduledAt === null ? null : undefined;
+    const scheduleChanged =
+      nextScheduledAt !== undefined && prevSchedMs !== nextSchedMs;
+    const doctorChanged =
+      rest.doctorId !== undefined && rest.doctorId !== existing.doctorId;
+
+    if (scheduleChanged && procedure.patientId) {
+      void notifyAppointmentEvent({
+        clinicId,
+        kind: NOTIFY_KINDS.appointment_rescheduled,
+        patientId: procedure.patientId,
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        doctorId: procedure.doctorId,
+        scheduledAt: procedure.scheduledAt,
+        skipUserId: userId,
+        previousDoctorId: existing.doctorId,
+      });
+    } else if (doctorChanged && procedure.patientId) {
+      void notifyAppointmentEvent({
+        clinicId,
+        kind: NOTIFY_KINDS.appointment_reassigned,
+        patientId: procedure.patientId,
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        doctorId: procedure.doctorId,
+        scheduledAt: procedure.scheduledAt,
+        skipUserId: userId,
+        previousDoctorId: existing.doctorId,
+      });
     }
 
     res.json({ success: true, data: { procedure } });

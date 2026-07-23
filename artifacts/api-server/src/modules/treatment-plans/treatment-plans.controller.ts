@@ -15,6 +15,7 @@ import { MessagesRepository } from "../messages/messages.repository";
 import { logger } from "../../lib/logger";
 import { db, clinicsTable, usersTable, patientsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 
 const router = Router({ mergeParams: true });
 const repo = new TreatmentPlansRepository();
@@ -196,6 +197,17 @@ router.post(
       return next(new Error("Failed to create treatment plan"));
     }
 
+    void notifyClinicStaff({
+      clinicId: req.user!.clinicId,
+      kind: NOTIFY_KINDS.treatment_plan_created,
+      message: `📋 Создан план лечения №${plan.planNumber}`,
+      patientId: req.params["id"] as string,
+      payload: { planId: plan.id, doctorId: plan.doctorId },
+      extraUserIds: plan.doctorId ? [plan.doctorId] : [],
+      skipUserId: req.user!.userId,
+      dedupKey: `${req.user!.clinicId}:treatment_plan_created:${plan.id}`,
+    }).catch(() => {});
+
     res.status(201).json({ success: true, data: { plan } });
   },
 );
@@ -237,6 +249,17 @@ router.post(
       toStatus: "treatment_assigned",
       trigger: PATIENT_STAGE_TRIGGERS.TREATMENT_PLAN_APPROVED,
       actorId: req.user!.userId,
+    }).catch(() => {});
+
+    void notifyClinicStaff({
+      clinicId: req.user!.clinicId,
+      kind: NOTIFY_KINDS.treatment_plan_approved,
+      message: `✅ План лечения №${plan.planNumber} утверждён`,
+      patientId: req.params["id"] as string,
+      payload: { planId: plan.id, doctorId: plan.doctorId },
+      extraUserIds: plan.doctorId ? [plan.doctorId] : [],
+      skipUserId: req.user!.userId,
+      dedupKey: `${req.user!.clinicId}:treatment_plan_approved:${plan.id}`,
     }).catch(() => {});
 
     res.json({ success: true, data: { plan } });
@@ -340,6 +363,20 @@ router.post(
     }).catch((err) => {
       logger.warn({ err, patientId }, "Failed to transition patient to treatment_in_progress after item complete");
     });
+
+    void notifyClinicStaff({
+      clinicId,
+      kind: NOTIFY_KINDS.pending_payment,
+      message: `💳 Ожидает оплаты: пункт плана лечения завершён`,
+      patientId,
+      payload: {
+        planId: req.params["planId"],
+        itemId: req.params["itemId"],
+        doctorId: actorId,
+      },
+      skipUserId: actorId,
+      dedupKey: `${clinicId}:pending_payment:item:${req.params["itemId"]}`,
+    }).catch(() => {});
 
     await transitionPatientStage({
       patientId,
@@ -479,6 +516,17 @@ router.post(
         logger.warn({ err }, "[treatment-plan] Failed to persist outbound message record");
         return null;
       });
+
+    void notifyClinicStaff({
+      clinicId,
+      kind: NOTIFY_KINDS.treatment_plan_sent,
+      message: `📤 План лечения №${plan.planNumber} отправлен пациенту в WhatsApp`,
+      patientId,
+      payload: { planId: plan.id, doctorId: plan.doctorId },
+      extraUserIds: plan.doctorId ? [plan.doctorId] : [],
+      skipUserId: req.user!.userId,
+      dedupKey: `${clinicId}:treatment_plan_sent:${plan.id}`,
+    }).catch(() => {});
 
     logger.info(
       { patientId, clinicId, planId: plan.id, whatsappMessageId, fileName },

@@ -16,7 +16,7 @@
  *    chunks match the fresh shell (avoids blank Schedule / other lazy routes).
  */
 
-const VERSION = "1dent-pwa-v14";
+const VERSION = "1dent-pwa-v15";
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const STATIC_CACHE = `${VERSION}-static`;
@@ -272,11 +272,23 @@ self.addEventListener("notificationclick", (event) => {
       await askClientsToSyncAppBadge();
       const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
       const urlToOpen = new URL(targetUrl, self.location.origin).href;
+
       for (const client of windowClients) {
+        // Prefer navigating an existing window so deep-links work when PWA is already open.
+        if (typeof client.navigate === "function") {
+          try {
+            const navigated = await client.navigate(urlToOpen);
+            if (navigated && "focus" in navigated) return navigated.focus();
+          } catch {
+            // navigate() can fail on some browsers — fall through to postMessage + focus.
+          }
+        }
+        client.postMessage({ type: "1DENT_PUSH_NAVIGATE", url: targetUrl });
         if ("focus" in client) {
           return client.focus();
         }
       }
+
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }

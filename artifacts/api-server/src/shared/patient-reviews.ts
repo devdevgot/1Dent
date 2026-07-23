@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
-import { db, patientReviewsTable, doctorKpisTable } from "@workspace/db";
+import { db, patientReviewsTable, doctorKpisTable, patientsTable } from "@workspace/db";
 import { and, eq, gte, sql } from "drizzle-orm";
+import { notifyClinicStaff, NOTIFY_KINDS } from "./clinic-notify";
 
 /** Convert 1–5 star score to NPS-like 0–100 for KPI blending. */
 export function starScoreToNpsPercent(score: number): number {
@@ -28,6 +29,41 @@ export async function savePatientReview(opts: {
 
   if (opts.doctorId) {
     await upsertDoctorNpsFromReviews(opts.clinicId, opts.doctorId);
+  }
+
+  try {
+    const [patient] = await db
+      .select({ name: patientsTable.name })
+      .from(patientsTable)
+      .where(eq(patientsTable.id, opts.patientId))
+      .limit(1);
+    const patientName = patient?.name ?? "Пациент";
+    const stars = "★".repeat(score) + "☆".repeat(5 - score);
+    if (score <= 3) {
+      await notifyClinicStaff({
+        clinicId: opts.clinicId,
+        kind: NOTIFY_KINDS.review_low,
+        message: `⚠️ Низкая оценка ${stars}: ${patientName}${opts.comment ? ` — «${opts.comment.slice(0, 60)}»` : ""}`,
+        patientId: opts.patientId,
+        payload: { score, doctorId: opts.doctorId ?? null, procedureId: opts.procedureId ?? null },
+        extraUserIds: opts.doctorId ? [opts.doctorId] : [],
+        dedupKey: `${opts.clinicId}:review_low:${opts.patientId}:${score}`,
+        dedupTtlMs: 60 * 60_000,
+      });
+    } else if (score >= 5) {
+      await notifyClinicStaff({
+        clinicId: opts.clinicId,
+        kind: NOTIFY_KINDS.review_positive,
+        message: `🌟 Новый отзыв ${stars}: ${patientName}`,
+        patientId: opts.patientId,
+        payload: { score, doctorId: opts.doctorId ?? null },
+        extraUserIds: opts.doctorId ? [opts.doctorId] : [],
+        dedupKey: `${opts.clinicId}:review_positive:${opts.patientId}`,
+        dedupTtlMs: 60 * 60_000,
+      });
+    }
+  } catch {
+    // Review notify must never fail the save path.
   }
 }
 

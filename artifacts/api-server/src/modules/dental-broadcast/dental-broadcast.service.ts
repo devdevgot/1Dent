@@ -20,6 +20,7 @@ import { transitionPatientStage, PATIENT_STAGE_TRIGGERS, BROADCAST_ELIGIBLE_STAT
 import { getCachedChatbotDefaults } from "../platform-config/platform-config.service";
 import { DEFAULT_BROADCAST_TEMPLATE } from "../platform-config/platform-config.defaults";
 import { isWhatsAppEnabled } from "../../shared/messaging";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 
 // Conditions that still require active treatment
 const PROBLEM_CONDITIONS = [
@@ -555,6 +556,14 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
     { clinicId, runId, messagesSent, errorsCount },
     "[DentalBroadcast] Run completed",
   );
+
+  void notifyClinicStaff({
+    clinicId,
+    kind: NOTIFY_KINDS.broadcast_finished,
+    message: `📣 Рассылка завершена: отправлено ${messagesSent}, ошибок ${errorsCount}`,
+    payload: { runId, messagesSent, errorsCount },
+    dedupKey: `${clinicId}:broadcast_finished:${runId}`,
+  }).catch(() => {});
 }
 
 const STALE_RUN_MS = 2 * 60 * 60 * 1000;
@@ -588,6 +597,13 @@ export async function runDentalBroadcastForClinic(
       .set({ status: "failed", completedAt: new Date() })
       .where(eq(dentalBroadcastRunsTable.id, run.id))
       .catch(() => {});
+    void notifyClinicStaff({
+      clinicId,
+      kind: NOTIFY_KINDS.broadcast_failed,
+      message: "❌ Рассылка завершилась с ошибкой",
+      payload: { runId: run.id },
+      dedupKey: `${clinicId}:broadcast_failed:${run.id}`,
+    }).catch(() => {});
   });
 
   return run;

@@ -3,8 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getListPatientsQueryKey } from "@workspace/api-client-react";
 import { useAuthStore } from "@/hooks/use-auth";
 import {
+  addServiceWorkerMessageHandler,
   requestOutboxBackgroundSync,
-  setServiceWorkerMessageHandler,
 } from "@/lib/pwa";
 import {
   cachePatientTeeth,
@@ -50,7 +50,7 @@ export function OfflineSyncProvider() {
 
     void startOfflineSync();
 
-    setServiceWorkerMessageHandler((data) => {
+    const removeSwHandler = addServiceWorkerMessageHandler((data) => {
       if (data.type === "FLUSH_OUTBOX") {
         void flushOutbox();
       }
@@ -58,7 +58,7 @@ export function OfflineSyncProvider() {
     requestOutboxBackgroundSync();
 
     return () => {
-      setServiceWorkerMessageHandler(null);
+      removeSwHandler();
     };
   }, [queryClient]);
 

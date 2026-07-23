@@ -4,6 +4,7 @@ import path from "path";
 import { ContractsRepository } from "../modules/contracts/contracts.repository";
 import { CONTRACT_TABLE_CSS, htmlToPdfmakeContent } from "../modules/contracts/contract-render";
 import { sendPlatformWhatsApp } from "../shared/platform-whatsapp";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../shared/clinic-notify";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -472,6 +473,15 @@ router.get("/p/contract/:token", async (req: Request, res: Response, next: NextF
       await repo.markContractViewed(token).catch((err: unknown) =>
         logger.warn({ err }, "[contract] markViewed failed"),
       );
+      void notifyClinicStaff({
+        clinicId: contract.clinicId,
+        kind: NOTIFY_KINDS.contract_viewed,
+        message: `👁 Договор «${result.templateName}» просмотрен: ${result.patientName}`,
+        patientId: contract.patientId,
+        payload: { contractId: contract.id, templateName: result.templateName },
+        dedupKey: `${contract.clinicId}:contract_viewed:${contract.id}`,
+        dedupTtlMs: 24 * 60 * 60_000,
+      }).catch(() => {});
     }
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -552,6 +562,15 @@ router.post("/p/contract/:token/sign", async (req: Request, res: Response, next:
     sendPlatformWhatsApp(result.patientPhone, confirmMsg).catch((err: unknown) => {
       logger.warn({ err }, "[contract] Failed to send signing confirmation");
     });
+
+    void notifyClinicStaff({
+      clinicId: result.contract.clinicId,
+      kind: NOTIFY_KINDS.contract_signed,
+      message: `✍️ Договор «${result.templateName}» подписан: ${result.patientName}`,
+      patientId: result.contract.patientId,
+      payload: { contractId: result.contract.id, templateName: result.templateName },
+      dedupKey: `${result.contract.clinicId}:contract_signed:${result.contract.id}`,
+    }).catch(() => {});
 
     return res.json({ success: true });
   } catch (err) {
@@ -1039,6 +1058,15 @@ router.post("/p/bundle/:bundleToken/sign-all", async (req: Request, res: Respons
     }
 
     const first = results[0]!;
+    void notifyClinicStaff({
+      clinicId: first.contract.clinicId,
+      kind: NOTIFY_KINDS.contract_signed,
+      message: `✍️ Пакет договоров подписан: ${first.patientName} (${signed.length} док.)`,
+      patientId: first.contract.patientId,
+      payload: { bundleToken, count: signed.length },
+      dedupKey: `${first.contract.clinicId}:contract_signed_bundle:${bundleToken}`,
+    }).catch(() => {});
+
     const signedDateStr = new Date().toLocaleString("ru-RU", {
       day: "2-digit", month: "2-digit", year: "numeric",
       hour: "2-digit", minute: "2-digit",

@@ -1,5 +1,12 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
+import {
+  db,
+  notificationPreferencesTable,
+  NOTIFICATION_PREF_GROUPS,
+  type NotificationPrefGroup,
+} from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError } from "../../shared/errors";
 import {
@@ -29,6 +36,10 @@ const unsubscribeSchema = z.object({
 
 const testSchema = z.object({
   kind: z.enum(["tracking", "notification"]).optional().default("notification"),
+});
+
+const prefsSchema = z.object({
+  mutedGroups: z.array(z.enum(NOTIFICATION_PREF_GROUPS as [NotificationPrefGroup, ...NotificationPrefGroup[]])),
 });
 
 router.get("/push/vapid-public-key", authMiddleware, async (_req: Request, res: Response, next: NextFunction) => {
@@ -104,6 +115,62 @@ router.delete("/push/subscribe/all", authMiddleware, async (req: Request, res: R
   try {
     await deleteAllPushSubscriptions(req.user!.userId);
     res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/push/preferences", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId, clinicId } = req.user!;
+    const [row] = await db
+      .select()
+      .from(notificationPreferencesTable)
+      .where(eq(notificationPreferencesTable.userId, userId))
+      .limit(1);
+
+    res.json({
+      success: true,
+      data: {
+        groups: NOTIFICATION_PREF_GROUPS,
+        mutedGroups: row?.mutedGroups ?? [],
+        clinicId: row?.clinicId ?? clinicId,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/push/preferences", authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = prefsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new ValidationError(parsed.error.errors[0]?.message ?? "Validation failed"));
+    }
+
+    // Red Alert / alerts group cannot be muted — strip if present
+    const mutedGroups = parsed.data.mutedGroups.filter((g) => g !== "alerts");
+    const { userId, clinicId } = req.user!;
+
+    await db
+      .insert(notificationPreferencesTable)
+      .values({
+        userId,
+        clinicId,
+        mutedGroups,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: notificationPreferencesTable.userId,
+        set: {
+          mutedGroups,
+          clinicId,
+          updatedAt: new Date(),
+        },
+      });
+
+    res.json({ success: true, data: { mutedGroups } });
   } catch (err) {
     next(err);
   }

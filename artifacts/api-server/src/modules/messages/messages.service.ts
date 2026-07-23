@@ -8,6 +8,7 @@ import { sendFileToPatient, sendToPatient } from "../../shared/messaging";
 import { encodeAttachmentContent } from "../../shared/attachment-content";
 import { getAlertQueue } from "../../shared/alert-queue";
 import { insertNotifications } from "../../shared/notifications-dispatch";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 import { NotFoundError, ValidationError } from "../../shared/errors";
 import { ObjectStorageService } from "../../lib/objectStorage";
 import { getObjectAclPolicy } from "../../lib/objectAcl";
@@ -285,6 +286,22 @@ export class MessagesService {
           clinicId, patient.id, message.id, content, patient.name,
         ).catch((err) => logger.error({ err }, "Failed to write inbound red alert notifications"));
       }
+    } else {
+      // Ordinary inbound chat → PWA push (coalesced per patient)
+      const preview = content.length > 80 ? `${content.slice(0, 80)}…` : content;
+      notifyClinicStaff({
+        clinicId,
+        kind: NOTIFY_KINDS.inbound_chat,
+        message: `💬 ${patient.name}: ${preview}`,
+        patientId: patient.id,
+        messageId: message.id,
+        payload: { preview },
+        extraUserIds: patient.doctorId ? [patient.doctorId] : [],
+        coalescePatientId: patient.id,
+        coalesceWindowMs: 90_000,
+        dedupKey: `${clinicId}:inbound_chat:${patient.id}`,
+        dedupTtlMs: 60_000,
+      }).catch((err) => logger.error({ err }, "Failed to notify inbound chat"));
     }
 
     return message;

@@ -75,32 +75,54 @@ function getNotificationVisual(notification: Notification): NotificationVisual {
         iconColor: "text-[#16a34a]",
       };
     case "system":
-      if (payloadKind === "tablet_pairing") {
+      if (payloadKind === "tablet_pairing" || payloadKind === "tablet_pairing_expired") {
         return {
           Icon: Tablet,
           iconBg: "bg-[var(--primary-light)]",
           iconColor: "text-[#1f75fe]",
         };
       }
-      if (payloadKind === "ai_credits_exhausted") {
+      if (payloadKind === "ai_credits_exhausted" || payloadKind === "ai_diagnosis_ready") {
         return {
           Icon: Sparkles,
           iconBg: "bg-[#f3e8ff]",
           iconColor: "text-[#7c3aed]",
         };
       }
-      if (notification.message.includes("оператор") || notification.message.includes("чат-бот")) {
+      if (
+        payloadKind === "human_takeover" ||
+        notification.message.includes("оператор") ||
+        notification.message.includes("чат-бот")
+      ) {
         return {
           Icon: Bot,
           iconBg: "bg-[var(--primary-light)]",
           iconColor: "text-[#1f75fe]",
         };
       }
-      if (notification.message.includes("📅") || notification.message.includes("запись")) {
+      if (
+        payloadKind?.startsWith("appointment_") ||
+        notification.message.includes("📅") ||
+        notification.message.includes("запись")
+      ) {
         return {
           Icon: Calendar,
           iconBg: "bg-[var(--primary-light)]",
           iconColor: "text-[#1f75fe]",
+        };
+      }
+      if (payloadKind === "review_low" || payloadKind === "review_positive") {
+        return {
+          Icon: Stethoscope,
+          iconBg: "bg-[var(--warning-light)]",
+          iconColor: "text-[#d97706]",
+        };
+      }
+      if (payloadKind === "contract_signed" || payloadKind === "contract_viewed") {
+        return {
+          Icon: Bell,
+          iconBg: "bg-[var(--success-light)]",
+          iconColor: "text-[#16a34a]",
         };
       }
       return {

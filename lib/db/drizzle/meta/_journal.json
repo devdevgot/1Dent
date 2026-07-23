@@ -421,6 +421,13 @@
       "when": 1783429800000,
       "tag": "0058_platform_push_broadcasts",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1783516200000,
+      "tag": "0059_notification_preferences",
+      "breakpoints": true
     }
   ]
 }

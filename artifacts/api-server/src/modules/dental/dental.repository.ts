@@ -15,6 +15,7 @@ import type {
   InsertToothTreatment,
   ToothCondition,
 } from "@workspace/db";
+import { notifyClinicStaff, NOTIFY_KINDS } from "../../shared/clinic-notify";
 
 export class DentalRepository {
   async listTeeth(patientId: string, clinicId: string): Promise<ToothRecord[]> {
@@ -160,7 +161,7 @@ export class DentalRepository {
     updatedBy: string,
   ): Promise<{ completed: ToothTreatment; tooth: ToothRecord | null }> {
     const newCondition: ToothCondition = treatment.type === "extraction" ? "missing" : "treated";
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const [completed] = await tx
         .update(toothTreatmentsTable)
         .set({ status: "done" })
@@ -221,6 +222,8 @@ export class DentalRepository {
         )
         .limit(1);
 
+      let createdPendingPayment: { procedureId: string; name: string } | null = null;
+
       if (!matchingPlanItem) {
         tooth = await finalizeTooth();
       } else {
@@ -239,6 +242,7 @@ export class DentalRepository {
           completedAt: null,
           createdAt: new Date(),
         });
+        createdPendingPayment = { procedureId, name: matchingPlanItem.title };
 
         const [updated] = await tx
           .update(treatmentPlanItemsTable)
@@ -313,7 +317,24 @@ export class DentalRepository {
           .where(eq(treatmentPlansTable.id, matchingPlanItem.planId));
       }
 
-      return { completed: completed!, tooth };
+      return { completed: completed!, tooth, createdPendingPayment };
     });
+
+    if (result.createdPendingPayment) {
+      void notifyClinicStaff({
+        clinicId,
+        kind: NOTIFY_KINDS.pending_payment,
+        message: `💳 Ожидает оплаты: ${result.createdPendingPayment.name}`,
+        patientId: treatment.patientId,
+        payload: {
+          procedureId: result.createdPendingPayment.procedureId,
+          doctorId: updatedBy,
+        },
+        skipUserId: updatedBy,
+        dedupKey: `${clinicId}:pending_payment:${result.createdPendingPayment.procedureId}`,
+      }).catch(() => {});
+    }
+
+    return { completed: result.completed, tooth: result.tooth };
   }
 }

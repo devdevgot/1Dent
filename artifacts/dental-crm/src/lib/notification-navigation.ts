@@ -41,30 +41,101 @@ function scheduleHref(role: string, scheduledAt?: string): string {
   return "/admin/calendar";
 }
 
+function kanbanTarget(patientId?: string): NotificationTarget {
+  return patientId
+    ? { href: "/patients?view=kanban", patientId }
+    : { href: "/patients?view=kanban" };
+}
+
 export function getNotificationTarget(
   notification: Notification,
   role: string,
 ): NotificationTarget | null {
   const patientId = resolvePatientId(notification);
   const payload = notification.payload;
+  const kind = payloadKind(payload);
+
+  // Prefer structured kind routing for all types
+  switch (kind) {
+    case "inbound_chat":
+    case "broadcast_reply":
+    case "human_takeover":
+      return patientId
+        ? { href: "/chat", chatPatientId: patientId }
+        : { href: "/chat" };
+
+    case "appointment_created":
+    case "appointment_rescheduled":
+    case "appointment_cancelled":
+    case "appointment_reassigned":
+      return {
+        href: scheduleHref(role, payloadStr(payload, "scheduledAt")),
+        patientId,
+      };
+
+    case "pending_payment":
+    case "payment_received":
+    case "payment_debt":
+    case "payment_overdue":
+    case "patient_stage_changed":
+    case "review_low":
+    case "review_positive":
+    case "contract_viewed":
+    case "contract_signed":
+    case "treatment_plan_created":
+    case "treatment_plan_approved":
+    case "treatment_plan_sent":
+    case "ai_diagnosis_ready":
+      return kanbanTarget(patientId);
+
+    case "tablet_pairing":
+    case "tablet_pairing_expired": {
+      const sessionId = payloadStr(payload, "sessionId");
+      if (sessionId) {
+        return {
+          href: "/tablet/link",
+          tabletPairing: {
+            sessionId,
+            cabinetName: payloadStr(payload, "cabinetName"),
+          },
+        };
+      }
+      return { href: "/tablet/link" };
+    }
+
+    case "ai_credits_exhausted":
+      return role === "owner"
+        ? { href: "/ai-credits" }
+        : { href: getRoleDashboardPath(role) };
+
+    case "broadcast_finished":
+    case "broadcast_failed":
+      return { href: "/chatbot" };
+
+    case "low_stock":
+      return { href: "/inventory" };
+
+    case "landing_lead":
+      return { href: getRoleDashboardPath(role) };
+
+    default:
+      break;
+  }
 
   switch (notification.type) {
     case "red_alert":
-      return patientId
-        ? { href: "/patients?view=kanban", patientId }
-        : { href: "/patients?view=kanban" };
+      return kanbanTarget(patientId);
 
     case "pending_payment":
-      if (patientId) return { href: "/patients?view=kanban", patientId };
+      if (patientId) return kanbanTarget(patientId);
       return { href: "/admin/finance" };
 
     case "appointment_reminder":
     case "appointment": {
-      // 5-minute staff heads-up → open the day timeline for that visit.
       if (payloadStr(payload, "reminderType") === "5m") {
         return { href: scheduleHref(role, payloadStr(payload, "scheduledAt")) };
       }
-      if (patientId) return { href: "/patients?view=kanban", patientId };
+      if (patientId) return kanbanTarget(patientId);
       return { href: scheduleHref(role, payloadStr(payload, "scheduledAt")) };
     }
 
@@ -74,31 +145,7 @@ export function getNotificationTarget(
         : { href: "/chat" };
 
     case "system": {
-      const kind = payloadKind(payload);
-
-      if (kind === "tablet_pairing") {
-        const sessionId = payloadStr(payload, "sessionId");
-        if (sessionId) {
-          return {
-            href: "/tablet/link",
-            tabletPairing: {
-              sessionId,
-              cabinetName: payloadStr(payload, "cabinetName"),
-            },
-          };
-        }
-        return { href: "/tablet/link" };
-      }
-
-      if (kind === "ai_credits_exhausted") {
-        return role === "owner"
-          ? { href: "/ai-credits" }
-          : { href: getRoleDashboardPath(role) };
-      }
-
-      if (patientId) {
-        return { href: "/patients?view=kanban", patientId };
-      }
+      if (patientId) return kanbanTarget(patientId);
 
       if (
         notification.message.includes("оператор") ||
@@ -115,7 +162,7 @@ export function getNotificationTarget(
     }
 
     default:
-      if (patientId) return { href: "/patients?view=kanban", patientId };
+      if (patientId) return kanbanTarget(patientId);
       return null;
   }
 }
