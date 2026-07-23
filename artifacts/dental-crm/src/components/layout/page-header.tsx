@@ -39,20 +39,20 @@ export function PageHeader({
     return (
       <header
         className={cn(
-          "bg-surface border-b border-border font-manrope shrink-0",
+          "bg-surface border-b border-border font-manrope shrink-0 min-w-0",
           sticky && "sticky top-0 z-20",
           className,
         )}
       >
         {hasToolbar ? (
-          <div className="flex items-center gap-2 px-4 py-2.5 min-h-[48px]">
-            <div className="flex-1 min-w-0 flex items-center gap-2">
+          <div className="flex items-center gap-2 px-4 py-2.5 min-h-[48px] min-w-0">
+            <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2 overflow-hidden">
               {subtitle ? (
-                <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                <p className="text-xs text-muted-foreground truncate min-w-0">{subtitle}</p>
               ) : !badge && title && right ? (
-                <p className="text-sm font-semibold text-foreground truncate">{title}</p>
+                <p className="text-sm font-semibold text-foreground truncate min-w-0">{title}</p>
               ) : null}
-              {badge}
+              {badge ? <div className="min-w-0 max-w-full">{badge}</div> : null}
             </div>
             {right ? (
               <div className="shrink-0 flex items-center gap-1.5">{right}</div>
@@ -67,13 +67,13 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "bg-surface border-b border-border safe-area-top font-manrope shrink-0",
+        "bg-surface border-b border-border safe-area-top font-manrope shrink-0 min-w-0",
         sticky && "sticky top-0 z-20",
         shadow && "shadow-sm",
         className,
       )}
     >
-      <div className="flex items-center gap-2 px-4 pt-3 pb-3 min-h-[52px]">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-3 min-h-[52px] min-w-0">
         {onBack ? (
           <button
             type="button"
@@ -89,10 +89,10 @@ export function PageHeader({
 
         {icon ? <div className="shrink-0 text-[#1f75fe]">{icon}</div> : null}
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-nav-title font-semibold text-[#0f172a] truncate">{title}</h1>
-            {badge}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <h1 className="text-nav-title font-semibold text-[#0f172a] truncate min-w-0">{title}</h1>
+            {badge ? <div className="min-w-0 max-w-full">{badge}</div> : null}
           </div>
           {subtitle ? (
             <p className="text-xs text-[#64748b] mt-0.5 truncate">{subtitle}</p>
