@@ -25,6 +25,12 @@ import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
 import { phonesMatch } from "../../shared/phone";
 import { TREATING_DOCTOR_ROLES } from "../../lib/clinical-roles";
 import { resolvePatientByPhone, setMarketingOptOut, ensureWhatsAppContactPatient, updatePatientNameByPhone, normalizedPhoneForStorage } from "../../shared/patient-phone-resolver";
+import {
+  extractClickId,
+  extractRefCode,
+  isGenericPatientSource,
+  patientSourceFromRefCode,
+} from "../channels/channel-attribution";
 import { mirrorChatbotMessageToPatient, syncChatbotMessagesToPatient } from "../../shared/whatsapp-message-sync";
 import { withSessionLock } from "../../shared/session-lock";
 import { parseReviewScoreFromText, savePatientReview } from "../../shared/patient-reviews";
@@ -763,6 +769,16 @@ async function createPatient(
 ) {
   const existing = await findPatientByPhoneNormalized(clinicId, phone);
   if (existing) {
+    let shouldStampSource = false;
+    if (source?.startsWith("ref:")) {
+      const [current] = await db
+        .select({ source: patientsTable.source })
+        .from(patientsTable)
+        .where(and(eq(patientsTable.id, existing.id), eq(patientsTable.clinicId, clinicId)))
+        .limit(1);
+      shouldStampSource = isGenericPatientSource(current?.source);
+    }
+
     await db
       .update(patientsTable)
       .set({
@@ -771,6 +787,7 @@ async function createPatient(
         iin: iin ?? undefined,
         status,
         phoneNormalized: normalizedPhoneForStorage(phone),
+        ...(shouldStampSource && source ? { source } : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(patientsTable.id, existing.id), eq(patientsTable.clinicId, clinicId)));
@@ -801,6 +818,38 @@ async function createPatient(
     logger.warn({ err, patientId: id }, "ChatbotService: chat history backfill failed after createPatient"),
   );
   return patient!;
+}
+
+/** Apply first-touch channel attribution to an early-created WhatsApp contact. */
+async function applyChannelAttributionToPatient(
+  clinicId: string,
+  patientId: string,
+  refCode: string | undefined,
+  clickId: string | undefined,
+): Promise<void> {
+  if (!refCode) return;
+
+  const source = patientSourceFromRefCode(refCode);
+  const [row] = await db
+    .select({ id: patientsTable.id, source: patientsTable.source })
+    .from(patientsTable)
+    .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
+    .limit(1);
+
+  if (!row) return;
+
+  if (isGenericPatientSource(row.source)) {
+    await db
+      .update(patientsTable)
+      .set({ source, updatedAt: new Date() })
+      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
+  }
+
+  if (clickId) {
+    channelsRepo.linkClickToPatient(clickId, patientId).catch((err) =>
+      logger.warn({ err, clickId, patientId }, "ChatbotService: failed to link click to patient"),
+    );
+  }
 }
 
 // ─── AI system prompt builder ────────────────────────────────────────────────
@@ -1594,17 +1643,26 @@ async function finalizeBookingAppointment(params: {
       let patientId = data.existingPatientId ?? data.createdPatientId;
 
       if (!patientId && data.patientName && data.suggestedDoctorId) {
+        const patientSource = data.refCode ? patientSourceFromRefCode(data.refCode) : "whatsapp";
         const newPatient = await createPatient(
           clinicId,
           data.collectedPhone ?? phone,
           data.patientName,
           data.suggestedDoctorId,
-          "whatsapp",
+          patientSource,
           data.collectedIin,
           "initial_consultation",
         );
         patientId = newPatient.id;
         data.createdPatientId = newPatient.id;
+
+        if (data.clickId) {
+          channelsRepo
+            .linkClickToPatient(data.clickId, newPatient.id)
+            .catch((err) =>
+              logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
+            );
+        }
       } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
         await db
           .update(patientsTable)
@@ -2190,6 +2248,35 @@ export class ChatbotService {
 
     let state = session.state;
     let data = { ...session.data };
+
+    // Parse ref code and click_id from any inbound message (wa.me prefill tokens)
+    const refCode = extractRefCode(text);
+    if (refCode && !data.refCode) {
+      try {
+        const channel = await channelsRepo.findByRefCode(refCode);
+        if (channel && channel.clinicId === clinicId) {
+          data.refCode = refCode;
+          data.channelId = channel.id;
+        }
+      } catch (err) {
+        logger.warn({ err }, "ChatbotService: failed to resolve ref code");
+      }
+    }
+
+    const clickId = extractClickId(text);
+    if (clickId && !data.clickId) {
+      data.clickId = clickId;
+    }
+
+    // Early WhatsApp contact may already exist with source "whatsapp" — stamp channel now
+    if (!dryRun && patientDb && data.refCode) {
+      await applyChannelAttributionToPatient(clinicId, patientDb.id, data.refCode, data.clickId).catch((err) =>
+        logger.warn({ err, patientId: patientDb.id }, "ChatbotService: failed to apply channel attribution"),
+      );
+    }
+
+    // Keep session in sync so later finishTurn/saveSession persist attribution tokens
+    session.data = data;
 
     if (LEAD_NURTURE_STATES.includes(state) && !data.leadNurtureAnchorAt) {
       data.leadNurtureAnchorAt = new Date().toISOString();
@@ -3869,8 +3956,22 @@ export class ChatbotService {
           // Pre-create patient record so collect_datetime can attach the procedure
           if (data.suggestedDoctorId && data.patientName && !data.existingPatientId && !data.createdPatientId) {
             try {
-              const patient = await createPatient(clinicId, phone, data.patientName, data.suggestedDoctorId, "whatsapp", data.collectedIin, "initial_consultation");
+              const patientSource = data.refCode ? patientSourceFromRefCode(data.refCode) : "whatsapp";
+              const patient = await createPatient(
+                clinicId,
+                phone,
+                data.patientName,
+                data.suggestedDoctorId,
+                patientSource,
+                data.collectedIin,
+                "initial_consultation",
+              );
               data.createdPatientId = patient.id;
+              if (data.clickId) {
+                channelsRepo.linkClickToPatient(data.clickId, patient.id).catch((err) =>
+                  logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
+                );
+              }
               session.data = data;
             } catch (err) {
               logger.error({ err }, "ChatbotService: failed to create patient in confirm_appointment");

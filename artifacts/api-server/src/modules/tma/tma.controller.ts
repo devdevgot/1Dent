@@ -1192,7 +1192,11 @@ router.get("/clinics/:clinicId/analytics/channels", async (req: Request, res: Re
       .from(clinicChannelsTable)
       .leftJoin(patientsTable, and(
         eq(patientsTable.clinicId, clinicId),
-        eq(patientsTable.source, clinicChannelsTable.refCode),
+        or(
+          sql`${patientsTable.source} = 'ref:' || ${clinicChannelsTable.refCode}`,
+          eq(patientsTable.source, clinicChannelsTable.refCode),
+          eq(patientsTable.source, clinicChannelsTable.id),
+        ),
       ) as SQL<unknown>)
       .where(eq(clinicChannelsTable.clinicId, clinicId))
       .groupBy(clinicChannelsTable.id, clinicChannelsTable.name, clinicChannelsTable.type)

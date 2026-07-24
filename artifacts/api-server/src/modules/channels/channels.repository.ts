@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "crypto";
 import { db, clinicChannelsTable, channelClicksTable, patientsTable, proceduresTable } from "@workspace/db";
+import { patientMatchesChannelSource } from "./channel-attribution";
 import { eq, and, gte, lte, sql, type SQL } from "drizzle-orm";
 
 function generateRefCode(): string {
@@ -156,9 +157,8 @@ export class ChannelsRepository {
     }
 
     return channels.map((ch) => {
-      const tag = `ref:${ch.refCode}`;
-      const channelPatients = allPatients.filter(
-        (p) => p.source === tag || p.source === ch.id,
+      const channelPatients = allPatients.filter((p) =>
+        patientMatchesChannelSource(p.source, ch.refCode, ch.id),
       );
       const consultationCount = channelPatients.filter(
         (p) => p.status !== "new_request",
