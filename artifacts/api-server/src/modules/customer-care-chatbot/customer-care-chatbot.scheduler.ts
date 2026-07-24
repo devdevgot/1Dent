@@ -1,6 +1,6 @@
 /**
- * Periodic tick for Customer Care Chatbot outbound jobs.
- * Not started from chatbot module — wire from api-server index when enabling Phase 1.
+ * Periodic tick for Customer Care Chatbot outbound jobs (Phase 1).
+ * Started from api-server index alongside the booking inactivity scheduler.
  */
 
 import { logger } from "../../lib/logger";
@@ -16,7 +16,13 @@ export function startCustomerCareScheduler(): void {
       logger.warn({ err }, "[CustomerCare] processDueJobs failed"),
     );
   }, TICK_MS);
-  logger.info("[CustomerCare] scheduler registered (idle until jobs are wired)");
+  // Kick once shortly after boot so due jobs don't wait a full minute.
+  setTimeout(() => {
+    customerCareChatbotService.processDueJobs().catch((err) =>
+      logger.warn({ err }, "[CustomerCare] initial processDueJobs failed"),
+    );
+  }, 15_000);
+  logger.info("[CustomerCare] scheduler registered");
 }
 
 export function stopCustomerCareScheduler(): void {

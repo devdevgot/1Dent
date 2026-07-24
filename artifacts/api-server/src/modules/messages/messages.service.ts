@@ -15,9 +15,14 @@ import { getObjectAclPolicy } from "../../lib/objectAcl";
 import { logger } from "../../lib/logger";
 import { ChatbotService } from "../chatbot/chatbot.service";
 import { debounceMessage } from "../../shared/message-debounce";
-import { markConversationInbound, markConversationOutbound } from "../../shared/conversation-gate";
+import {
+  hasActiveBookingDialog,
+  markConversationInbound,
+  markConversationOutbound,
+} from "../../shared/conversation-gate";
 import { ensureWhatsAppContactPatient } from "../../shared/patient-phone-resolver";
 import { syncChatbotMessagesToPatient } from "../../shared/whatsapp-message-sync";
+import { customerCareChatbotService } from "../customer-care-chatbot/customer-care-chatbot.service";
 import type { UserRole, Message, Notification } from "@workspace/db";
 
 export interface SendMessageAttachment {
@@ -242,8 +247,8 @@ export class MessagesService {
     void markConversationInbound(clinicId, senderPhone);
 
     debounceMessage(clinicId, senderPhone, content, (combined) => {
-      this.chatbot.processMessage(clinicId, senderPhone, combined, { skipRedAlert: !!patient }).catch((err) =>
-        logger.error({ err }, "ChatbotService.processMessage failed"),
+      this.routeInboundToBots(clinicId, senderPhone, combined, !!patient).catch((err) =>
+        logger.error({ err }, "MessagesService.routeInboundToBots failed"),
       );
     });
 
@@ -310,6 +315,31 @@ export class MessagesService {
     }
 
     return message;
+  }
+
+  /**
+   * Route inbound WhatsApp to Care (when it owns the thread) or the booking chatbot.
+   * Care handoff → booking bot continues in the same turn.
+   */
+  private async routeInboundToBots(
+    clinicId: string,
+    phone: string,
+    combined: string,
+    skipRedAlert: boolean,
+  ): Promise<void> {
+    const bookingActive = await hasActiveBookingDialog(clinicId, phone);
+    if (!bookingActive) {
+      const careActive = await customerCareChatbotService.hasActiveCareContext(clinicId, phone);
+      if (careActive) {
+        const result = await customerCareChatbotService.processReply(clinicId, phone, combined);
+        if (result.handled && !result.handoffToBooking) {
+          return;
+        }
+        // handoffToBooking or unhandled → fall through to booking bot
+      }
+    }
+
+    await this.chatbot.processMessage(clinicId, phone, combined, { skipRedAlert });
   }
 
   async listNotifications(

@@ -449,6 +449,13 @@
       "when": 1783775400000,
       "tag": "0062_customer_care_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1783861800000,
+      "tag": "0063_customer_care_jobs",
+      "breakpoints": true
     }
   ]
 }

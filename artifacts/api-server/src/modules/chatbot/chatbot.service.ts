@@ -19,6 +19,7 @@ import {
   clinicBranchesTable,
   knowledgeSourcesTable,
   procedureTemplatesTable,
+  customerCareSettingsTable,
 } from "@workspace/db";
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
@@ -1653,6 +1654,22 @@ async function finalizeBookingAppointment(params: {
     } else {
       let patientId = data.existingPatientId ?? data.createdPatientId;
 
+      // Redis session TTL may drop existingPatientId — recover by canonical phone.
+      if (!patientId) {
+        const recovered = await findPatientByPhoneNormalized(clinicId, data.collectedPhone ?? phone);
+        if (recovered) {
+          patientId = recovered.id;
+          data.existingPatientId = recovered.id;
+          if (!data.patientName && recovered.name) {
+            data.patientName = recovered.name;
+          }
+          logger.info(
+            { clinicId, phone, patientId },
+            "ChatbotService: recovered existingPatientId by phone before finalize",
+          );
+        }
+      }
+
       if (!patientId && data.patientName && data.suggestedDoctorId) {
         const patientSource = data.refCode ? patientSourceFromRefCode(data.refCode) : "whatsapp";
         const newPatient = await createPatient(
@@ -1674,17 +1691,25 @@ async function finalizeBookingAppointment(params: {
               logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
             );
         }
-      } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
+      } else if (patientId && data.suggestedDoctorId) {
         await db
           .update(patientsTable)
           .set({ doctorId: data.suggestedDoctorId, updatedAt: new Date() })
           .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
-        await transitionPatientStage({
-          patientId,
-          clinicId,
-          toStatus: "initial_consultation",
-          trigger: PATIENT_STAGE_TRIGGERS.APPOINTMENT_CREATED,
-        });
+        try {
+          await transitionPatientStage({
+            patientId,
+            clinicId,
+            toStatus: "initial_consultation",
+            trigger: PATIENT_STAGE_TRIGGERS.APPOINTMENT_CREATED,
+          });
+        } catch (stageErr) {
+          // Never block procedure insert on Kanban stage failures.
+          logger.warn(
+            { err: stageErr, patientId, clinicId },
+            "ChatbotService: transitionPatientStage failed — continuing with procedure insert",
+          );
+        }
       }
 
       if (patientId && data.suggestedDoctorId) {
@@ -1722,21 +1747,53 @@ async function finalizeBookingAppointment(params: {
         );
 
         try {
-          const [[clinicRow], [patientRow]] = await Promise.all([
+          const [[clinicRow], [patientRow], [careSettings]] = await Promise.all([
             db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
             db.select({ name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.id, patientId)).limit(1),
+            db
+              .select({
+                enabled: customerCareSettingsTable.enabled,
+                reminder1hEnabled: customerCareSettingsTable.reminder1hEnabled,
+                reminder24hEnabled: customerCareSettingsTable.reminder24hEnabled,
+              })
+              .from(customerCareSettingsTable)
+              .where(eq(customerCareSettingsTable.clinicId, clinicId))
+              .limit(1),
           ]);
-          await scheduleAppointmentReminders({
-            clinicId,
-            patientId,
-            procedureId,
-            scheduledAt: preferredDate,
-            patientName: patientRow?.name ?? data.patientName ?? "Пациент",
-            procedureName: serviceLabel,
-            doctorName: data.suggestedDoctorName ?? "",
-            clinicName: clinicRow?.name ?? "",
-            doctorId: data.suggestedDoctorId ?? null,
-          });
+          const patientName = patientRow?.name ?? data.patientName ?? "Пациент";
+          const clinicName = clinicRow?.name ?? "";
+          const doctorName = data.suggestedDoctorName ?? "";
+          const careOwnsReminders =
+            careSettings?.enabled === true &&
+            (careSettings.reminder1hEnabled || careSettings.reminder24hEnabled);
+
+          if (careOwnsReminders) {
+            const { customerCareChatbotService } = await import(
+              "../customer-care-chatbot/customer-care-chatbot.service"
+            );
+            await customerCareChatbotService.scheduleVisitReminders({
+              clinicId,
+              patientId,
+              phone: data.collectedPhone ?? phone,
+              procedureId,
+              scheduledAt: preferredDate,
+              clinicName,
+              doctorName,
+              patientName,
+            });
+          } else {
+            await scheduleAppointmentReminders({
+              clinicId,
+              patientId,
+              procedureId,
+              scheduledAt: preferredDate,
+              patientName,
+              procedureName: serviceLabel,
+              doctorName,
+              clinicName,
+              doctorId: data.suggestedDoctorId ?? null,
+            });
+          }
         } catch (schedErr) {
           logger.warn({ err: schedErr, procedureId }, "ChatbotService: failed to schedule reminders after booking");
         }
@@ -4530,13 +4587,26 @@ export class ChatbotService {
       .returning();
     settingsCache.delete(clinicId);
 
-    // Critical: Customer Care must stay in sync with the main chatbot power switch.
+    // Critical: Customer Care.enabled always mirrors chatbot.enabled (direct table write).
     if (typeof updates.enabled === "boolean") {
       try {
-        const { customerCareChatbotService } = await import(
-          "../customer-care-chatbot/customer-care-chatbot.service"
-        );
-        await customerCareChatbotService.syncEnabledWithChatbot(clinicId, updates.enabled);
+        const [careRow] = await db
+          .select({ id: customerCareSettingsTable.id })
+          .from(customerCareSettingsTable)
+          .where(eq(customerCareSettingsTable.clinicId, clinicId))
+          .limit(1);
+        if (careRow) {
+          await db
+            .update(customerCareSettingsTable)
+            .set({ enabled: updates.enabled, updatedAt: new Date() })
+            .where(eq(customerCareSettingsTable.clinicId, clinicId));
+        } else {
+          await db.insert(customerCareSettingsTable).values({
+            id: randomUUID(),
+            clinicId,
+            enabled: updates.enabled,
+          });
+        }
       } catch (err) {
         logger.warn(
           { err, clinicId, enabled: updates.enabled },
@@ -4797,6 +4867,19 @@ export class ChatbotService {
         continue;
       }
 
+      // Customer Care owns nurture/idle follow-ups when enabled — avoid dual outbound.
+      const [care] = await db
+        .select({
+          enabled: customerCareSettingsTable.enabled,
+          leadNurtureEnabled: customerCareSettingsTable.leadNurtureEnabled,
+        })
+        .from(customerCareSettingsTable)
+        .where(eq(customerCareSettingsTable.clinicId, session.clinicId))
+        .limit(1);
+      if (care?.enabled && care.leadNurtureEnabled) {
+        continue;
+      }
+
       await withProactiveSendClaim(session.clinicId, session.phone, "inactivity", async () => {
         // Re-load under claim — patient may have replied while we waited.
         const [fresh] = await db
@@ -4904,6 +4987,19 @@ export class ChatbotService {
     for (const row of sessions) {
       const state = row.state as ChatbotState;
       if (!LEAD_NURTURE_STATES.includes(state)) continue;
+
+      // Customer Care owns lead nurture when enabled — skip legacy chatbot nurture.
+      const [care] = await db
+        .select({
+          enabled: customerCareSettingsTable.enabled,
+          leadNurtureEnabled: customerCareSettingsTable.leadNurtureEnabled,
+        })
+        .from(customerCareSettingsTable)
+        .where(eq(customerCareSettingsTable.clinicId, row.clinicId))
+        .limit(1);
+      if (care?.enabled && care.leadNurtureEnabled) {
+        continue;
+      }
 
       const data = row.data as ChatbotSessionData;
       if (data.decisionOutcome === "refused") continue;

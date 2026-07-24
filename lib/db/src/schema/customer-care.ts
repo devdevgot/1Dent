@@ -1,5 +1,7 @@
-import { pgTable, text, boolean, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, integer, jsonb, timestamp, index } from "drizzle-orm/pg-core";
 import { clinicsTable } from "./clinics";
+import { patientsTable } from "./patients";
+import { proceduresTable } from "./procedures";
 
 /** Editable WhatsApp templates + AI system prompts per Care scenario. */
 export type CustomerCarePromptPack = {
@@ -49,3 +51,48 @@ export const customerCareSettingsTable = pgTable("customer_care_settings", {
 
 export type CustomerCareSettingsRow = typeof customerCareSettingsTable.$inferSelect;
 export type InsertCustomerCareSettings = typeof customerCareSettingsTable.$inferInsert;
+
+export type CustomerCareJobTypeDb =
+  | "lead_nurture"
+  | "reminder_1h"
+  | "reminder_24h"
+  | "no_show"
+  | "post_visit"
+  | "upsell";
+
+export type CustomerCareJobStatusDb =
+  | "pending"
+  | "sent"
+  | "replied"
+  | "cancelled"
+  | "failed";
+
+/** Outbound Care jobs (nurture / reminders / no-show / post-visit / upsell). */
+export const customerCareJobsTable = pgTable(
+  "customer_care_jobs",
+  {
+    id: text("id").primaryKey(),
+    clinicId: text("clinic_id")
+      .notNull()
+      .references(() => clinicsTable.id, { onDelete: "cascade" }),
+    patientId: text("patient_id").references(() => patientsTable.id, { onDelete: "set null" }),
+    phone: text("phone").notNull(),
+    type: text("type").$type<CustomerCareJobTypeDb>().notNull(),
+    status: text("status").$type<CustomerCareJobStatusDb>().default("pending").notNull(),
+    step: integer("step").default(0).notNull(),
+    sendAt: timestamp("send_at", { withTimezone: true }).notNull(),
+    procedureId: text("procedure_id").references(() => proceduresTable.id, { onDelete: "set null" }),
+    payload: jsonb("payload").$type<Record<string, unknown>>().default({}).notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("customer_care_jobs_due_idx").on(t.status, t.sendAt),
+    index("customer_care_jobs_clinic_phone_idx").on(t.clinicId, t.phone),
+    index("customer_care_jobs_procedure_idx").on(t.procedureId),
+  ],
+);
+
+export type CustomerCareJobRow = typeof customerCareJobsTable.$inferSelect;
+export type InsertCustomerCareJob = typeof customerCareJobsTable.$inferInsert;

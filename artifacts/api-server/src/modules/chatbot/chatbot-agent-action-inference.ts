@@ -1,9 +1,28 @@
 import type { ChatbotSessionData } from "./chatbot.types";
-import type { ChatbotAgentAction } from "./chatbot-agent.types";
+import type { ChatbotAgentAction, ChatbotAgentActionType } from "./chatbot-agent.types";
 import { tryParseAppointmentDatetimeLocal } from "./almaty-time";
 import { resolveOfficialBranchFromMessage } from "./clinic-knowledge";
 import { isReadyToBook, isShortYes } from "./booking-script";
 import { hasPatientIdentity } from "./chatbot-patient-identity";
+
+/** Stable execution order so book_appointment runs after data-collecting actions. */
+export const ACTION_ORDER: ChatbotAgentActionType[] = [
+  "set_branch",
+  "set_patient_name",
+  "suggest_doctor",
+  "rerank_doctor",
+  "parse_datetime",
+  "show_slots",
+  "book_appointment",
+  "cancel_appointment",
+  "reschedule_appointment",
+  "handoff_operator",
+];
+
+export function orderAgentActions(actions: ChatbotAgentAction[]): ChatbotAgentAction[] {
+  const rank = new Map(ACTION_ORDER.map((t, i) => [t, i]));
+  return [...actions].sort((a, b) => (rank.get(a.type) ?? 99) - (rank.get(b.type) ?? 99));
+}
 
 function messageLikelyIsName(text: string): boolean {
   const trimmed = text.trim();
@@ -43,7 +62,7 @@ export function inferKnowledgeAgentActions(
     isShortYes(messageText) || isReadyToBook(messageText) || Boolean(matchedBranch);
 
   if (
-    (sessionData.selectedBranch || officialBranches.length === 1) &&
+    (sessionData.selectedBranch || officialBranches.length === 1 || has("set_branch")) &&
     !sessionData.suggestedDoctorId &&
     !has("suggest_doctor") &&
     (sessionData.serviceType || sessionData.problemDescription || patientConfirmed)
@@ -52,7 +71,7 @@ export function inferKnowledgeAgentActions(
   }
 
   if (
-    sessionData.suggestedDoctorId &&
+    (sessionData.suggestedDoctorId || has("suggest_doctor")) &&
     messageLikelyContainsDatetime(messageText) &&
     !has("parse_datetime")
   ) {
@@ -67,19 +86,27 @@ export function inferKnowledgeAgentActions(
     actions.push({ type: "set_patient_name", name: messageText.trim() });
   }
 
+  // Prerequisites may be filled by other actions in this same turn.
+  const branchReadyThisTurn =
+    Boolean(sessionData.selectedBranch) || has("set_branch") || officialBranches.length === 1;
+  const doctorReadyThisTurn = Boolean(sessionData.suggestedDoctorId) || has("suggest_doctor");
+  const datetimeReadyThisTurn =
+    Boolean(sessionData.preferredDatetime) || has("parse_datetime");
+  const nameReadyThisTurn = hasPatientIdentity(sessionData) || has("set_patient_name");
+
   if (
-    sessionData.suggestedDoctorId &&
-    sessionData.preferredDatetime &&
-    sessionData.selectedBranch &&
-    (isShortYes(messageText) || isReadyToBook(messageText)) &&
-    !has("book_appointment") &&
-    hasPatientIdentity(sessionData)
+    doctorReadyThisTurn &&
+    datetimeReadyThisTurn &&
+    branchReadyThisTurn &&
+    nameReadyThisTurn &&
+    (isShortYes(messageText) || isReadyToBook(messageText) || patientConfirmed) &&
+    !has("book_appointment")
   ) {
     actions.push({ type: "book_appointment" });
   }
 
   if (
-    sessionData.suggestedDoctorId &&
+    (sessionData.suggestedDoctorId || has("suggest_doctor")) &&
     !sessionData.preferredDatetime &&
     !has("show_slots") &&
     !has("parse_datetime") &&
@@ -88,5 +115,5 @@ export function inferKnowledgeAgentActions(
     actions.push({ type: "show_slots" });
   }
 
-  return actions;
+  return orderAgentActions(actions);
 }

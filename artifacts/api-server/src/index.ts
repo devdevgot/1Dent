@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { startAlertWorker } from "./shared/alert-queue";
 import { startDentalBroadcastScheduler } from "./modules/dental-broadcast/dental-broadcast.scheduler";
 import { startChatbotInactivityScheduler } from "./modules/chatbot/chatbot-inactivity.scheduler";
+import { startCustomerCareScheduler } from "./modules/customer-care-chatbot/customer-care-chatbot.scheduler";
 import { startPaymentOverduePoller } from "./shared/payment-overdue-notify";
 import { errorEventsService } from "./modules/error-events/error-events.service";
 import { getServerBaseUrl } from "./shared/green-api";
@@ -287,6 +288,12 @@ function onServerReady(): void {
     startChatbotInactivityScheduler();
   } catch (err) {
     logger.warn({ err }, "Chatbot inactivity scheduler failed to start");
+  }
+
+  try {
+    startCustomerCareScheduler();
+  } catch (err) {
+    logger.warn({ err }, "Customer Care scheduler failed to start");
   }
 
   try {
