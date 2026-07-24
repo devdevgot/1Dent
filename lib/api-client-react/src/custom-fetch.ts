@@ -533,15 +533,18 @@ export async function customFetch<T = unknown>(
     }
   }
 
-  let response: Response;
-  try {
-    response = await fetch(input, {
+  const fetchOnce = () =>
+    fetch(input, {
       ...init,
       method,
       headers,
       body: body ?? init.body,
       credentials: "include",
     });
+
+  let response: Response;
+  try {
+    response = await fetchOnce();
   } catch (networkErr) {
     if (method === "GET" && _offlineReadInterceptor) {
       const cached = await _offlineReadInterceptor({
@@ -568,6 +571,19 @@ export async function customFetch<T = unknown>(
       }
     }
     throw networkErr;
+  }
+
+  // Absorb brief Railway/proxy blips (502/503/504) on safe GETs before surfacing.
+  if (
+    method === "GET" &&
+    (response.status === 502 || response.status === 503 || response.status === 504)
+  ) {
+    await new Promise((r) => setTimeout(r, 350));
+    try {
+      response = await fetchOnce();
+    } catch {
+      // Keep the original gateway response for error reporting below.
+    }
   }
 
   if (!response.ok) {
@@ -607,6 +623,7 @@ export async function customFetch<T = unknown>(
             message: apiError.message,
             code: `HTTP_${response.status}`,
             url: requestInfo.url,
+            method: requestInfo.method,
             metadata: {
               method: requestInfo.method,
               statusText: response.statusText,
