@@ -5,6 +5,7 @@ import { db, clinicsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { getGreenApiWaSettings, getGreenApiState, extractPhoneFromWaSettings } from "../shared/green-api";
+import { buildWhatsAppPrefillText } from "../modules/channels/channel-attribution";
 
 const router: IRouter = Router();
 const channelsRepo = new ChannelsRepository();
@@ -135,8 +136,8 @@ async function handleRefCode(
       }
     }
 
-    // ── Step 5: build clean message — no tracking codes visible to user ──────
-    const messageText = `Здравствуйте, хочу записаться на приём 👋`;
+    // ── Step 5: greeting + compact attribution tokens (parsed by chatbot) ─────
+    const messageText = buildWhatsAppPrefillText(code, clickId);
     const encodedText = encodeURIComponent(messageText);
 
     if (!phone) {
