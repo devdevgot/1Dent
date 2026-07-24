@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import { eq, and, isNotNull, ne, sql, inArray, asc, gte, lte } from "drizzle-orm";
 import { sendToPatient } from "../../shared/messaging";
+import { withProactiveSendClaim } from "../../shared/conversation-gate";
 import { logger } from "../../lib/logger";
 import { generateBroadcastMessageAi } from "./dental-broadcast-ai";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS, BROADCAST_ELIGIBLE_STATUSES } from "../patients/patient-stage.service";
@@ -466,7 +467,16 @@ async function executeBroadcastRun(runId: string, clinicId: string): Promise<voi
       );
 
       if (message && patient.phone) {
-        const msgId = await sendToPatient(clinicId, patient.phone, message);
+        const msgId = await withProactiveSendClaim(clinicId, patient.phone, "broadcast", async () =>
+          sendToPatient(clinicId, patient.phone!, message),
+        );
+        if (msgId === null) {
+          logger.info(
+            { patientId: patient.id },
+            "[DentalBroadcast] Skipping patient — active booking dialog or recent inbound",
+          );
+          continue;
+        }
         if (msgId) {
           messagesSent++;
           logger.info(

@@ -19,6 +19,7 @@ import {
   clinicBranchesTable,
   knowledgeSourcesTable,
   procedureTemplatesTable,
+  customerCareSettingsTable,
 } from "@workspace/db";
 import type { StepInstructions } from "@workspace/db";
 import { eq, and, inArray, gte, lte, ne, asc, desc, sql } from "drizzle-orm";
@@ -33,6 +34,10 @@ import {
 } from "../channels/channel-attribution";
 import { mirrorChatbotMessageToPatient, syncChatbotMessagesToPatient } from "../../shared/whatsapp-message-sync";
 import { withSessionLock } from "../../shared/session-lock";
+import {
+  markConversationOutbound,
+  withProactiveSendClaim,
+} from "../../shared/conversation-gate";
 import { parseReviewScoreFromText, savePatientReview } from "../../shared/patient-reviews";
 import { isRedAlert } from "../../shared/whatsapp";
 import { chatbotDefaultsForNewClinic } from "../platform-config/platform-config.service";
@@ -441,9 +446,16 @@ function toChatbotReply(value: OutboundResponse): ChatbotReply | null {
   return value.parts.length > 0 ? value : null;
 }
 
-async function sendOutboundReply(clinicId: string, phone: string, value: OutboundResponse): Promise<string | null> {
+async function sendOutboundReply(
+  clinicId: string,
+  phone: string,
+  value: OutboundResponse,
+  source: "booking" | "nurture" | "inactivity" | "reactivation" = "booking",
+): Promise<string | null> {
   const reply = toChatbotReply(value);
   if (!reply) return null;
+  // Claim outbound lease so other proactive senders cannot interleave.
+  await markConversationOutbound(clinicId, phone, source);
   await deliverChatbotReply(clinicId, phone, reply, {
     onPartDelivered: (part) => saveChatbotMessage(clinicId, phone, "outbound", part),
   });
@@ -1642,6 +1654,22 @@ async function finalizeBookingAppointment(params: {
     } else {
       let patientId = data.existingPatientId ?? data.createdPatientId;
 
+      // Redis session TTL may drop existingPatientId — recover by canonical phone.
+      if (!patientId) {
+        const recovered = await findPatientByPhoneNormalized(clinicId, data.collectedPhone ?? phone);
+        if (recovered) {
+          patientId = recovered.id;
+          data.existingPatientId = recovered.id;
+          if (!data.patientName && recovered.name) {
+            data.patientName = recovered.name;
+          }
+          logger.info(
+            { clinicId, phone, patientId },
+            "ChatbotService: recovered existingPatientId by phone before finalize",
+          );
+        }
+      }
+
       if (!patientId && data.patientName && data.suggestedDoctorId) {
         const patientSource = data.refCode ? patientSourceFromRefCode(data.refCode) : "whatsapp";
         const newPatient = await createPatient(
@@ -1663,17 +1691,25 @@ async function finalizeBookingAppointment(params: {
               logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
             );
         }
-      } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
+      } else if (patientId && data.suggestedDoctorId) {
         await db
           .update(patientsTable)
           .set({ doctorId: data.suggestedDoctorId, updatedAt: new Date() })
           .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
-        await transitionPatientStage({
-          patientId,
-          clinicId,
-          toStatus: "initial_consultation",
-          trigger: PATIENT_STAGE_TRIGGERS.APPOINTMENT_CREATED,
-        });
+        try {
+          await transitionPatientStage({
+            patientId,
+            clinicId,
+            toStatus: "initial_consultation",
+            trigger: PATIENT_STAGE_TRIGGERS.APPOINTMENT_CREATED,
+          });
+        } catch (stageErr) {
+          // Never block procedure insert on Kanban stage failures.
+          logger.warn(
+            { err: stageErr, patientId, clinicId },
+            "ChatbotService: transitionPatientStage failed — continuing with procedure insert",
+          );
+        }
       }
 
       if (patientId && data.suggestedDoctorId) {
@@ -1711,21 +1747,53 @@ async function finalizeBookingAppointment(params: {
         );
 
         try {
-          const [[clinicRow], [patientRow]] = await Promise.all([
+          const [[clinicRow], [patientRow], [careSettings]] = await Promise.all([
             db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, clinicId)).limit(1),
             db.select({ name: patientsTable.name }).from(patientsTable).where(eq(patientsTable.id, patientId)).limit(1),
+            db
+              .select({
+                enabled: customerCareSettingsTable.enabled,
+                reminder1hEnabled: customerCareSettingsTable.reminder1hEnabled,
+                reminder24hEnabled: customerCareSettingsTable.reminder24hEnabled,
+              })
+              .from(customerCareSettingsTable)
+              .where(eq(customerCareSettingsTable.clinicId, clinicId))
+              .limit(1),
           ]);
-          await scheduleAppointmentReminders({
-            clinicId,
-            patientId,
-            procedureId,
-            scheduledAt: preferredDate,
-            patientName: patientRow?.name ?? data.patientName ?? "Пациент",
-            procedureName: serviceLabel,
-            doctorName: data.suggestedDoctorName ?? "",
-            clinicName: clinicRow?.name ?? "",
-            doctorId: data.suggestedDoctorId ?? null,
-          });
+          const patientName = patientRow?.name ?? data.patientName ?? "Пациент";
+          const clinicName = clinicRow?.name ?? "";
+          const doctorName = data.suggestedDoctorName ?? "";
+          const careOwnsReminders =
+            careSettings?.enabled === true &&
+            (careSettings.reminder1hEnabled || careSettings.reminder24hEnabled);
+
+          if (careOwnsReminders) {
+            const { customerCareChatbotService } = await import(
+              "../customer-care-chatbot/customer-care-chatbot.service"
+            );
+            await customerCareChatbotService.scheduleVisitReminders({
+              clinicId,
+              patientId,
+              phone: data.collectedPhone ?? phone,
+              procedureId,
+              scheduledAt: preferredDate,
+              clinicName,
+              doctorName,
+              patientName,
+            });
+          } else {
+            await scheduleAppointmentReminders({
+              clinicId,
+              patientId,
+              procedureId,
+              scheduledAt: preferredDate,
+              patientName,
+              procedureName: serviceLabel,
+              doctorName,
+              clinicName,
+              doctorId: data.suggestedDoctorId ?? null,
+            });
+          }
         } catch (schedErr) {
           logger.warn({ err: schedErr, procedureId }, "ChatbotService: failed to schedule reminders after booking");
         }
@@ -4518,6 +4586,35 @@ export class ChatbotService {
       .where(eq(chatbotSettingsTable.id, settings.id))
       .returning();
     settingsCache.delete(clinicId);
+
+    // Critical: Customer Care.enabled always mirrors chatbot.enabled (direct table write).
+    if (typeof updates.enabled === "boolean") {
+      try {
+        const [careRow] = await db
+          .select({ id: customerCareSettingsTable.id })
+          .from(customerCareSettingsTable)
+          .where(eq(customerCareSettingsTable.clinicId, clinicId))
+          .limit(1);
+        if (careRow) {
+          await db
+            .update(customerCareSettingsTable)
+            .set({ enabled: updates.enabled, updatedAt: new Date() })
+            .where(eq(customerCareSettingsTable.clinicId, clinicId));
+        } else {
+          await db.insert(customerCareSettingsTable).values({
+            id: randomUUID(),
+            clinicId,
+            enabled: updates.enabled,
+          });
+        }
+      } catch (err) {
+        logger.warn(
+          { err, clinicId, enabled: updates.enabled },
+          "[ChatbotService] Failed to sync Customer Care enabled with chatbot",
+        );
+      }
+    }
+
     return { settings: updated! };
   }
 
@@ -4759,6 +4856,7 @@ export class ChatbotService {
         and(
           ne(chatbotSessionsTable.state, "done"),
           ne(chatbotSessionsTable.state, "human_takeover"),
+          eq(chatbotSessionsTable.humanTakeover, false),
           lte(chatbotSessionsTable.updatedAt, sixtyMinutesAgo)
         )
       );
@@ -4769,91 +4867,106 @@ export class ChatbotService {
         continue;
       }
 
-      // Mark as sent immediately to avoid multiple ticks overlapping
-      data.inactivityReminderSent = true;
-      await saveSession({
-        id: session.id,
-        clinicId: session.clinicId,
-        phone: session.phone,
-        state: session.state as ChatbotState,
-        data,
-        humanTakeover: session.humanTakeover,
-      });
-
-      logger.info({ phone: session.phone, state: session.state }, "[ChatbotService] Sending inactivity reminder");
-
-      let settings: Awaited<ReturnType<typeof getSettings>>;
-      let managerExamples: ManagerExample[];
-      let knowledgeContext: string;
-      let priceListContext: string;
-      let doctorsWithSlots: DoctorWithSlots[];
-      let clinicName: string | undefined;
-
-      let clinicBranchNames: string[] = [];
-
-      try {
-        const [settingsRow, managerExamplesRow, knowledgeContextRow, priceListContextRow, doctorsWithSlotsRow, clinicRow, branchNamesRow] = await Promise.all([
-          getSettings(session.clinicId),
-          getManagerExamples(session.clinicId),
-          loadKnowledgeContext(session.clinicId),
-          loadPriceListContext(session.clinicId),
-          getClinicDoctorsWithSlots(session.clinicId).catch(() => [] as DoctorWithSlots[]),
-          db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, session.clinicId)).limit(1).catch(() => []),
-          loadClinicBranchNames(session.clinicId),
-        ]);
-        settings = settingsRow;
-        managerExamples = managerExamplesRow;
-        knowledgeContext = knowledgeContextRow;
-        priceListContext = priceListContextRow;
-        doctorsWithSlots = doctorsWithSlotsRow;
-        clinicName = clinicRow[0]?.name ?? undefined;
-        clinicBranchNames = branchNamesRow;
-      } catch (err) {
-        logger.error({ err }, "[ChatbotService] Failed to load context for inactivity reminder");
+      // Customer Care owns nurture/idle follow-ups when enabled — avoid dual outbound.
+      const [care] = await db
+        .select({
+          enabled: customerCareSettingsTable.enabled,
+          leadNurtureEnabled: customerCareSettingsTable.leadNurtureEnabled,
+        })
+        .from(customerCareSettingsTable)
+        .where(eq(customerCareSettingsTable.clinicId, session.clinicId))
+        .limit(1);
+      if (care?.enabled && care.leadNurtureEnabled) {
         continue;
       }
 
-      if (!settings.enabled) continue;
+      await withProactiveSendClaim(session.clinicId, session.phone, "inactivity", async () => {
+        // Re-load under claim — patient may have replied while we waited.
+        const [fresh] = await db
+          .select()
+          .from(chatbotSessionsTable)
+          .where(eq(chatbotSessionsTable.id, session.id))
+          .limit(1);
+        if (!fresh || fresh.humanTakeover || fresh.state === "done" || fresh.state === "human_takeover") {
+          return;
+        }
+        if (new Date(fresh.updatedAt).getTime() > sixtyMinutesAgo.getTime()) {
+          return;
+        }
+        const freshData = fresh.data as ChatbotSessionData;
+        if (freshData.inactivityReminderSent) return;
 
-      const reminderData = data as ChatbotSessionData;
-      const contextBits = [
-        reminderData.problemDescription ? `Запрос пациента: «${reminderData.problemDescription}».` : null,
-        reminderData.suggestedDoctorName ? `Обсуждали врача: ${reminderData.suggestedDoctorName}.` : null,
-        reminderData.preferredDatetime ? `Пациент упоминал время: ${reminderData.preferredDatetime}.` : null,
-        reminderData.selectedBranch ? `Филиал: ${reminderData.selectedBranch}.` : null,
-      ].filter(Boolean).join(" ");
+        freshData.inactivityReminderSent = true;
+        await saveSession({
+          id: fresh.id,
+          clinicId: fresh.clinicId,
+          phone: fresh.phone,
+          state: fresh.state as ChatbotState,
+          data: freshData,
+          humanTakeover: fresh.humanTakeover,
+        });
 
-      const recentRows = await db
-        .select()
-        .from(chatbotMessagesTable)
-        .where(and(eq(chatbotMessagesTable.clinicId, session.clinicId), eq(chatbotMessagesTable.phone, session.phone)))
-        .orderBy(asc(chatbotMessagesTable.createdAt))
-        .limit(20);
+        logger.info({ phone: fresh.phone, state: fresh.state }, "[ChatbotService] Sending inactivity reminder");
 
-      const recentMessages = recentRows.map((r) => ({
-        role: r.direction === "inbound" ? ("user" as const) : ("assistant" as const),
-        content: r.content,
-      }));
+        let settings: Awaited<ReturnType<typeof getSettings>>;
+        let managerExamples: ManagerExample[];
+        let clinicName: string | undefined;
 
-      const helperPrompt = buildFollowUpMiniPrompt({
-        clinicName: resolveClinicName(settings, clinicName),
-        state: session.state as ChatbotState,
-        contextBits,
-        template: "Отправь одно короткое напоминание без повторения уже заданных вопросов.",
-      });
+        try {
+          const [settingsRow, managerExamplesRow, clinicRow] = await Promise.all([
+            getSettings(fresh.clinicId),
+            getManagerExamples(fresh.clinicId),
+            db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, fresh.clinicId)).limit(1).catch(() => []),
+          ]);
+          settings = settingsRow;
+          managerExamples = managerExamplesRow;
+          clinicName = clinicRow[0]?.name ?? undefined;
+        } catch (err) {
+          logger.error({ err }, "[ChatbotService] Failed to load context for inactivity reminder");
+          return;
+        }
 
-      const aiReminder = await generateChatbotResponse(
-        helperPrompt,
-        recentMessages,
-        "Отправь вежливое напоминание (reminder)",
-        managerExamples,
-      );
-      const reminderReply = mergeReply(aiReminder, "Если актуально — напишите, продолжим запись 😊");
-      if (reminderReply.parts.length > 0) {
-        await sendOutboundReply(session.clinicId, session.phone, reminderReply).catch((err) =>
-          logger.error({ err }, "[ChatbotService] Failed to send inactivity reminder"),
+        if (!settings.enabled) return;
+
+        const contextBits = [
+          freshData.problemDescription ? `Запрос пациента: «${freshData.problemDescription}».` : null,
+          freshData.suggestedDoctorName ? `Обсуждали врача: ${freshData.suggestedDoctorName}.` : null,
+          freshData.preferredDatetime ? `Пациент упоминал время: ${freshData.preferredDatetime}.` : null,
+          freshData.selectedBranch ? `Филиал: ${freshData.selectedBranch}.` : null,
+        ].filter(Boolean).join(" ");
+
+        const recentRows = await db
+          .select()
+          .from(chatbotMessagesTable)
+          .where(and(eq(chatbotMessagesTable.clinicId, fresh.clinicId), eq(chatbotMessagesTable.phone, fresh.phone)))
+          .orderBy(asc(chatbotMessagesTable.createdAt))
+          .limit(20);
+
+        const recentMessages = recentRows.map((r) => ({
+          role: r.direction === "inbound" ? ("user" as const) : ("assistant" as const),
+          content: r.content,
+        }));
+
+        const helperPrompt = buildFollowUpMiniPrompt({
+          clinicName: resolveClinicName(settings, clinicName),
+          state: fresh.state as ChatbotState,
+          contextBits,
+          template: "Отправь одно короткое напоминание без повторения уже заданных вопросов.",
+        });
+
+        const aiReminder = await generateChatbotResponse(
+          helperPrompt,
+          recentMessages,
+          "Отправь вежливое напоминание (reminder)",
+          managerExamples,
         );
-      }
+        const reminderReply = mergeReply(aiReminder, "Если актуально — напишите, продолжим запись 😊");
+        if (reminderReply.parts.length > 0) {
+          await sendOutboundReply(fresh.clinicId, fresh.phone, reminderReply, "inactivity").catch((err) =>
+            logger.error({ err }, "[ChatbotService] Failed to send inactivity reminder"),
+          );
+        }
+      });
     }
   }
 
@@ -4875,6 +4988,19 @@ export class ChatbotService {
       const state = row.state as ChatbotState;
       if (!LEAD_NURTURE_STATES.includes(state)) continue;
 
+      // Customer Care owns lead nurture when enabled — skip legacy chatbot nurture.
+      const [care] = await db
+        .select({
+          enabled: customerCareSettingsTable.enabled,
+          leadNurtureEnabled: customerCareSettingsTable.leadNurtureEnabled,
+        })
+        .from(customerCareSettingsTable)
+        .where(eq(customerCareSettingsTable.clinicId, row.clinicId))
+        .limit(1);
+      if (care?.enabled && care.leadNurtureEnabled) {
+        continue;
+      }
+
       const data = row.data as ChatbotSessionData;
       if (data.decisionOutcome === "refused") continue;
       if (data.leadFollowup168Sent) continue;
@@ -4892,90 +5018,100 @@ export class ChatbotService {
       }
       if (stage === null) continue;
 
-      let settings: Awaited<ReturnType<typeof getSettings>>;
-      try {
-        settings = getEffectiveSettings(await getSettings(row.clinicId));
-      } catch {
-        continue;
-      }
-      if (!settings.enabled) continue;
+      await withProactiveSendClaim(row.clinicId, row.phone, "nurture", async () => {
+        const [fresh] = await db
+          .select()
+          .from(chatbotSessionsTable)
+          .where(eq(chatbotSessionsTable.id, row.id))
+          .limit(1);
+        if (!fresh || fresh.humanTakeover || fresh.state === "done" || fresh.state === "human_takeover") {
+          return;
+        }
+        const freshState = fresh.state as ChatbotState;
+        if (!LEAD_NURTURE_STATES.includes(freshState)) return;
+        const freshData = fresh.data as ChatbotSessionData;
+        if (freshData.decisionOutcome === "refused") return;
+        if (stage === 0 && freshData.leadFollowup24Sent) return;
+        if (stage === 1 && freshData.leadFollowup72Sent) return;
+        if (stage === 2 && freshData.leadFollowup168Sent) return;
 
-      const templates = getLeadNurtureTemplates(settings);
-      const fallbackText = templates[stage]!;
+        let settings: Awaited<ReturnType<typeof getSettings>>;
+        try {
+          settings = getEffectiveSettings(await getSettings(fresh.clinicId));
+        } catch {
+          return;
+        }
+        if (!settings.enabled) return;
 
-      if (!data.leadNurtureAnchorAt) {
-        data.leadNurtureAnchorAt = new Date(anchorMs).toISOString();
-      }
-      if (stage === 0) data.leadFollowup24Sent = true;
-      if (stage === 1) data.leadFollowup72Sent = true;
-      if (stage === 2) data.leadFollowup168Sent = true;
+        const templates = getLeadNurtureTemplates(settings);
+        const fallbackText = templates[stage]!;
 
-      await saveSession({
-        id: row.id,
-        clinicId: row.clinicId,
-        phone: row.phone,
-        state,
-        data,
-        humanTakeover: row.humanTakeover,
-      });
+        if (!freshData.leadNurtureAnchorAt) {
+          freshData.leadNurtureAnchorAt = new Date(anchorMs).toISOString();
+        }
+        if (stage === 0) freshData.leadFollowup24Sent = true;
+        if (stage === 1) freshData.leadFollowup72Sent = true;
+        if (stage === 2) freshData.leadFollowup168Sent = true;
 
-      logger.info({ phone: row.phone, stage, hoursSince }, "[ChatbotService] Sending lead nurture follow-up");
+        await saveSession({
+          id: fresh.id,
+          clinicId: fresh.clinicId,
+          phone: fresh.phone,
+          state: freshState,
+          data: freshData,
+          humanTakeover: fresh.humanTakeover,
+        });
 
-      const recentRows = await db
-        .select()
-        .from(chatbotMessagesTable)
-        .where(and(eq(chatbotMessagesTable.clinicId, row.clinicId), eq(chatbotMessagesTable.phone, row.phone)))
-        .orderBy(asc(chatbotMessagesTable.createdAt))
-        .limit(20);
+        logger.info({ phone: fresh.phone, stage, hoursSince }, "[ChatbotService] Sending lead nurture follow-up");
 
-      const recentMessages = recentRows.map((r) => ({
-        role: r.direction === "inbound" ? ("user" as const) : ("assistant" as const),
-        content: r.content,
-      }));
+        const recentRows = await db
+          .select()
+          .from(chatbotMessagesTable)
+          .where(and(eq(chatbotMessagesTable.clinicId, fresh.clinicId), eq(chatbotMessagesTable.phone, fresh.phone)))
+          .orderBy(asc(chatbotMessagesTable.createdAt))
+          .limit(20);
 
-      let managerExamples: ManagerExample[] = [];
-      let knowledgeContext = "";
-      let priceListContext = "";
-      let doctorsWithSlots: DoctorWithSlots[] = [];
-      let clinicName: string | undefined;
-      let clinicBranchNames: string[] = [];
+        const recentMessages = recentRows.map((r) => ({
+          role: r.direction === "inbound" ? ("user" as const) : ("assistant" as const),
+          content: r.content,
+        }));
 
-      try {
-        [managerExamples, knowledgeContext, priceListContext, doctorsWithSlots, clinicName, clinicBranchNames] = await Promise.all([
-          getManagerExamples(row.clinicId),
-          loadKnowledgeContext(row.clinicId, data.problemDescription ?? ""),
-          loadPriceListContext(row.clinicId),
-          getClinicDoctorsWithSlots(row.clinicId).catch(() => [] as DoctorWithSlots[]),
-          db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, row.clinicId)).limit(1).then((rows) => rows[0]?.name),
-          loadClinicBranchNames(row.clinicId),
-        ]);
-      } catch (err) {
-        logger.error({ err }, "[ChatbotService] Failed to load context for lead nurture");
-        await sendOutboundReply(row.clinicId, row.phone, fallbackText).catch(() => {});
-        continue;
-      }
+        let managerExamples: ManagerExample[] = [];
+        let clinicName: string | undefined;
 
-      const nurtureGuidance = `Пациент не завершил запись (этап «${state}»). Одно короткое follow-up — без повторения уже заданных вопросов. Этап ${stage + 1} из 3.`;
+        try {
+          [managerExamples, clinicName] = await Promise.all([
+            getManagerExamples(fresh.clinicId),
+            db.select({ name: clinicsTable.name }).from(clinicsTable).where(eq(clinicsTable.id, fresh.clinicId)).limit(1).then((rows) => rows[0]?.name),
+          ]);
+        } catch (err) {
+          logger.error({ err }, "[ChatbotService] Failed to load context for lead nurture");
+          await sendOutboundReply(fresh.clinicId, fresh.phone, fallbackText, "nurture").catch(() => {});
+          return;
+        }
 
-      const helperPrompt = buildFollowUpMiniPrompt({
-        clinicName: resolveClinicName(settings, clinicName),
-        state,
-        contextBits: data.problemDescription ? `Запрос: «${data.problemDescription}».` : "",
-        template: `${nurtureGuidance}\n\nБазовый шаблон:\n${fallbackText}`,
-      });
+        const nurtureGuidance = `Пациент не завершил запись (этап «${freshState}»). Одно короткое follow-up — без повторения уже заданных вопросов. Этап ${stage + 1} из 3.`;
 
-      const aiNurture = await generateChatbotResponse(
-        helperPrompt,
-        recentMessages,
-        "Отправь follow-up для дожима лида",
-        managerExamples,
-      );
-      const nurtureReply = mergeReply(aiNurture, fallbackText);
-      if (nurtureReply.parts.length > 0) {
-        await sendOutboundReply(row.clinicId, row.phone, nurtureReply).catch((err) =>
-          logger.error({ err }, "[ChatbotService] Failed to send lead nurture follow-up"),
+        const helperPrompt = buildFollowUpMiniPrompt({
+          clinicName: resolveClinicName(settings, clinicName),
+          state: freshState,
+          contextBits: freshData.problemDescription ? `Запрос: «${freshData.problemDescription}».` : "",
+          template: `${nurtureGuidance}\n\nБазовый шаблон:\n${fallbackText}`,
+        });
+
+        const aiNurture = await generateChatbotResponse(
+          helperPrompt,
+          recentMessages,
+          "Отправь follow-up для дожима лида",
+          managerExamples,
         );
-      }
+        const nurtureReply = mergeReply(aiNurture, fallbackText);
+        if (nurtureReply.parts.length > 0) {
+          await sendOutboundReply(fresh.clinicId, fresh.phone, nurtureReply, "nurture").catch((err) =>
+            logger.error({ err }, "[ChatbotService] Failed to send lead nurture follow-up"),
+          );
+        }
+      });
     }
   }
 }

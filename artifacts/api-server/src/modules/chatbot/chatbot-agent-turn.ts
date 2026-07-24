@@ -15,6 +15,7 @@ import {
 } from "./chatbot-tools";
 import { inferKnowledgeAgentActions } from "./chatbot-agent-action-inference";
 import { stripWaitFillerParts } from "./chatbot-reply-format";
+import { hasPatientIdentity } from "./chatbot-patient-identity";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 
 type OutboundResponse = ChatbotReply | null;
@@ -64,6 +65,33 @@ function buildKnowledgeFallbackReply(data: ChatbotSessionData): string {
     return `Отлично, филиал «${data.selectedBranch}». Подскажите, с чем обращаетесь?`;
   }
   return "Подскажите, чем могу помочь?";
+}
+
+/** True when the agent reply claims a booking was saved (must not send without createdProcedureId). */
+export function looksLikeBookingConfirmation(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (!t) return false;
+  return (
+    /запис(ь|али|ан[ао]?)\s+(подтвержден|оформлен|создан|готова)/i.test(t) ||
+    /записал(а|и)?\s+(вас|вас\s+на)/i.test(t) ||
+    /вы\s+записаны/i.test(t) ||
+    /ждём\s+вас/i.test(t) ||
+    /ждем\s+вас/i.test(t) ||
+    /запись\s+подтверждена/i.test(t) ||
+    /✅\s*запись/i.test(t)
+  );
+}
+
+function missingBookingFieldsHint(data: ChatbotSessionData): string {
+  const missing: string[] = [];
+  if (!hasPatientIdentity(data)) missing.push("как к вам обращаться");
+  if (!data.preferredDatetime) missing.push("удобное время");
+  if (!data.selectedBranch) missing.push("филиал");
+  if (!data.suggestedDoctorId) missing.push("врача");
+  if (missing.length === 0) {
+    return "Не удалось оформить запись. Уточните время или филиал — и я завершу запись.";
+  }
+  return `Чтобы оформить запись, уточните: ${missing.join(", ")}.`;
 }
 
 async function fetchAgentLlmRaw(messages: AgentLlmMessage[], dryRun: boolean): Promise<string | null> {
@@ -198,6 +226,32 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     data = toolResult.data;
     state = deriveFsmStateFromAgent(data, state);
 
+    if (toolResult.bookingReady && finalizeBooking && data.selectedBranch) {
+      try {
+        const finalized = await finalizeBooking({
+          data,
+          branchToSave: data.selectedBranch,
+          promptState: "confirm_appointment",
+        });
+        return {
+          state: "done",
+          data: finalized.data,
+          response: finalized.response ?? replyFromText("Запись подтверждена."),
+          humanTakeover: false,
+        };
+      } catch (err) {
+        logger.error({ err }, "[AgentTurn] finalizeBooking failed (fallback path)");
+        return {
+          state,
+          data,
+          response: replyFromText(
+            "Не удалось оформить запись в системе. Напишите удобное время ещё раз — или «оператор».",
+          ),
+          humanTakeover: false,
+        };
+      }
+    }
+
     const plainPrompt = [
       composedSystemPrompt,
       "",
@@ -228,6 +282,16 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
 
     if (dryRun) {
       for (const note of toolResult.toolNotes) noteAction(note);
+    }
+
+    const replyText = joinChatbotReply(reply);
+    if (!data.createdProcedureId && looksLikeBookingConfirmation(replyText)) {
+      return {
+        state,
+        data,
+        response: replyFromText(missingBookingFieldsHint(data)),
+        humanTakeover: false,
+      };
     }
 
     return { state, data, response: reply, humanTakeover: false };
@@ -340,6 +404,20 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     for (const note of toolResult.toolNotes) {
       noteAction(note);
     }
+  }
+
+  const replyText = joinChatbotReply(reply);
+  if (!data.createdProcedureId && looksLikeBookingConfirmation(replyText)) {
+    logger.warn(
+      { clinicId, phone, replySnippet: replyText.slice(0, 120) },
+      "[AgentTurn] Suppressed false booking confirmation — no procedure created",
+    );
+    return {
+      state,
+      data,
+      response: replyFromText(missingBookingFieldsHint(data)),
+      humanTakeover: false,
+    };
   }
 
   return {

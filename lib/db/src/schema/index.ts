@@ -6,6 +6,7 @@ export * from "./dental";
 export * from "./procedures";
 export * from "./logs";
 export * from "./chatbot";
+export * from "./customer-care";
 export * from "./migration";
 export * from "./channels";
 export * from "./payroll";

@@ -874,6 +874,15 @@ return <PatientDetailPanel />;
 | **Consequences** | ✅ Safer releases. ❌ Requires discipline on PR targets |
 | **Status** | Active (`docs/BRANCHING.md`) |
 
+### ADR-006: Customer Care Chatbot (Accepted direction)
+
+| | |
+|---|---|
+| **Context** | Product wants a second bot for nurture, 1h reminders, no-show, post-visit care + upsell, without changing booking chatbot |
+| **Decision** | Same clinic WhatsApp number; new module `modules/customer-care-chatbot/*`; do **not** modify `modules/chatbot`; thin inbound router in `messages.service` later |
+| **Consequences** | ✅ Booking stays untouched. ❌ Needs jobs table + scheduler + care reply routing. Full write-up: [`docs/ADR-006-care-service-second-chatbot.md`](./ADR-006-care-service-second-chatbot.md) |
+| **Status** | Accepted (skeleton landed; outbound wiring Phase 1+) |
+
 ---
 
 ## 15. Blueprint for New Development

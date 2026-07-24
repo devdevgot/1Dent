@@ -20,8 +20,36 @@ import { resolveBranchFromMessage } from "./clinic-knowledge";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 import type { ClinicCalendarConfig } from "@workspace/db";
 import { updatePatientNameByPhone } from "../../shared/patient-phone-resolver";
+import { isReadyToBook, isShortYes } from "./booking-script";
+import { orderAgentActions } from "./chatbot-agent-action-inference";
 
-export { inferKnowledgeAgentActions } from "./chatbot-agent-action-inference";
+export { inferKnowledgeAgentActions, orderAgentActions } from "./chatbot-agent-action-inference";
+
+function tryMarkBookingReady(
+  sessionData: ChatbotSessionData,
+  toolNotes: string[],
+): { bookingReady: boolean; needsPatientName: boolean; data: ChatbotSessionData } {
+  if (!sessionData.suggestedDoctorId || !sessionData.preferredDatetime || !sessionData.selectedBranch) {
+    toolNotes.push("book_appointment: не хватает врача, времени или филиала");
+    return { bookingReady: false, needsPatientName: false, data: sessionData };
+  }
+  const parsed = parseAlmatyDatetime(sessionData.preferredDatetime);
+  if (!parsed) {
+    toolNotes.push("book_appointment: невалидная дата/время — нужна parse_datetime");
+    return {
+      bookingReady: false,
+      needsPatientName: false,
+      data: { ...sessionData, preferredDatetime: undefined },
+    };
+  }
+  const normalized = { ...sessionData, preferredDatetime: formatAlmatyIso(parsed) };
+  if (!hasPatientIdentity(normalized)) {
+    toolNotes.push("book_appointment: нужно имя пациента");
+    return { bookingReady: false, needsPatientName: true, data: normalized };
+  }
+  toolNotes.push("Готово к финализации записи");
+  return { bookingReady: true, needsPatientName: false, data: normalized };
+}
 
 export interface AgentToolContext {
   clinicId: string;
@@ -139,8 +167,11 @@ export async function executeChatbotAgentTools(
   let bookingReady = false;
   let needsPatientName = false;
   let handoff = false;
+  let bookAppointmentAttempted = false;
 
-  for (const action of actions) {
+  const ordered = orderAgentActions(actions);
+
+  for (const action of ordered) {
     switch (action.type) {
       case "set_branch": {
         const branch =
@@ -234,24 +265,11 @@ export async function executeChatbotAgentTools(
         break;
       }
       case "book_appointment": {
-        if (sessionData.suggestedDoctorId && sessionData.preferredDatetime && sessionData.selectedBranch) {
-          const parsed = parseAlmatyDatetime(sessionData.preferredDatetime);
-          if (!parsed) {
-            sessionData.preferredDatetime = undefined;
-            toolNotes.push("book_appointment: невалидная дата/время — нужна parse_datetime");
-            break;
-          }
-          sessionData.preferredDatetime = formatAlmatyIso(parsed);
-          if (!hasPatientIdentity(sessionData)) {
-            needsPatientName = true;
-            toolNotes.push("book_appointment: нужно имя пациента");
-          } else {
-            bookingReady = true;
-            toolNotes.push("Готово к финализации записи");
-          }
-        } else {
-          toolNotes.push("book_appointment: не хватает врача, времени или филиала");
-        }
+        bookAppointmentAttempted = true;
+        const marked = tryMarkBookingReady(sessionData, toolNotes);
+        sessionData = marked.data;
+        bookingReady = marked.bookingReady;
+        if (marked.needsPatientName) needsPatientName = true;
         break;
       }
       case "handoff_operator":
@@ -265,6 +283,18 @@ export async function executeChatbotAgentTools(
       default:
         break;
     }
+  }
+
+  // Second pass: prerequisites may have been collected earlier in this same turn
+  // after book_appointment was first evaluated (or user confirmed after tools ran).
+  if (
+    !bookingReady &&
+    (bookAppointmentAttempted || isShortYes(ctx.messageText) || isReadyToBook(ctx.messageText))
+  ) {
+    const marked = tryMarkBookingReady(sessionData, toolNotes);
+    sessionData = marked.data;
+    bookingReady = marked.bookingReady;
+    if (marked.needsPatientName) needsPatientName = true;
   }
 
   if (
