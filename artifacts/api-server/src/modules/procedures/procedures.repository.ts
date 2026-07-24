@@ -5,8 +5,9 @@ import {
   procedureMaterialsTable,
   usersTable,
   inventoryItemsTable,
+  patientsTable,
 } from "@workspace/db";
-import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, inArray, isNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import type { Procedure, ProcedureTemplate, ProcedureStatus, PaymentMethod } from "@workspace/db";
 
@@ -23,6 +24,25 @@ export type ProcedureWithDoctor = Procedure & {
 };
 
 export class ProceduresRepository {
+  /** Persist treating physician on the patient when still empty. */
+  private async syncPatientTreatingDoctor(
+    patientId: string,
+    clinicId: string,
+    doctorId: string | null | undefined,
+  ): Promise<void> {
+    if (!doctorId) return;
+    await db
+      .update(patientsTable)
+      .set({ doctorId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(patientsTable.id, patientId),
+          eq(patientsTable.clinicId, clinicId),
+          isNull(patientsTable.doctorId),
+        ),
+      );
+  }
+
   private async fetchMaterials(procedureIds: string[]): Promise<Map<string, ProcedureMaterialItem[]>> {
     if (procedureIds.length === 0) return new Map();
     const rows = await db
@@ -119,6 +139,12 @@ export class ProceduresRepository {
       })
       .returning();
 
+    await this.syncPatientTreatingDoctor(
+      data.patientId,
+      data.clinicId,
+      data.doctorId ?? null,
+    );
+
     return this.findById(procedure!.id, data.clinicId) as Promise<ProcedureWithDoctor>;
   }
 
@@ -154,6 +180,15 @@ export class ProceduresRepository {
       .returning();
 
     if (!procedure) return undefined;
+
+    if (procedure.doctorId) {
+      await this.syncPatientTreatingDoctor(
+        procedure.patientId,
+        clinicId,
+        procedure.doctorId,
+      );
+    }
+
     return this.findById(id, clinicId);
   }
 

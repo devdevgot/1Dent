@@ -273,6 +273,11 @@ function PatientsListView({
                           <p className="font-medium text-[#0f172a] group-hover:text-[#1f75fe] transition-colors">
                             {patient.name}
                           </p>
+                          {doctorLabel(patient) ? (
+                            <p className="text-xs text-[#64748b] md:hidden mt-0.5">
+                              {doctorLabel(patient)}
+                            </p>
+                          ) : null}
                           {patient.notes && (
                             <p className="text-xs text-[#94a3b8] truncate max-w-[200px]">{patient.notes}</p>
                           )}

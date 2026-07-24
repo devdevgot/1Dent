@@ -65,6 +65,13 @@ export const PatientCardView = memo(function PatientCardView({
         {patient.phone}
       </p>
 
+      {patient.doctorName ? (
+        <p className="text-[11px] text-[#64748b] mb-2 flex items-center gap-1">
+          <User className="w-3 h-3 shrink-0" />
+          <span className="truncate">{patient.doctorName}</span>
+        </p>
+      ) : null}
+
       <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded-full mb-2.5 ${statusColor}`}>
         {statusLabel}
       </span>
