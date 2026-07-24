@@ -414,9 +414,9 @@ async function parseSuccessBody(
 async function attachAuthHeaders(
   input: RequestInfo | URL,
   headers: Headers,
-  options: { skipBranchHeader?: boolean } = {},
+  options: { skipBranchHeader?: boolean; method?: string } = {},
 ): Promise<{ method: string; url: string }> {
-  const method = resolveMethod(input, undefined);
+  const method = resolveMethod(input, options.method);
 
   if (_authTokenGetter && !headers.has("authorization")) {
     const token = await _authTokenGetter();
@@ -453,7 +453,7 @@ export async function fetchWithAuth(
   }
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
-  await attachAuthHeaders(input, headers, { skipBranchHeader });
+  await attachAuthHeaders(input, headers, { skipBranchHeader, method });
 
   return fetch(input, { ...init, method, headers, credentials: "include" });
 }
@@ -503,7 +503,7 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  const requestInfo = await attachAuthHeaders(input, headers);
+  const requestInfo = await attachAuthHeaders(input, headers, { method });
   const offline = isBrowserOffline();
 
   if (offline && method === "GET" && _offlineReadInterceptor) {

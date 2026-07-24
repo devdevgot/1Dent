@@ -29,6 +29,9 @@ export function useTabletLinkFlow() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [notPairedModalOpen, setNotPairedModalOpen] = useState(false);
   const shownPendingRef = useRef<string | null>(null);
+  /** Prevents Android double-scan / remount from firing two parallel redeems. */
+  const inFlightTokenRef = useRef<string | null>(null);
+  const lastSuccessTokenRef = useRef<string | null>(null);
 
   const processToken = useCallback(async (raw: string) => {
     const token = raw.includes("token=")
@@ -49,6 +52,15 @@ export function useTabletLinkFlow() {
       return false;
     }
 
+    if (inFlightTokenRef.current === token) {
+      return false;
+    }
+    if (lastSuccessTokenRef.current === token) {
+      setStatus("success");
+      return true;
+    }
+
+    inFlightTokenRef.current = token;
     setSubmitting(true);
     setStatus("processing");
     setErrorMessage(null);
@@ -63,6 +75,7 @@ export function useTabletLinkFlow() {
           return false;
         }
 
+        lastSuccessTokenRef.current = token;
         openOwnerModal(
           result.data.sessionId,
           result.data.cabinet?.name ?? null,
@@ -72,6 +85,7 @@ export function useTabletLinkFlow() {
         return true;
       }
 
+      lastSuccessTokenRef.current = token;
       setStatus("success");
       toast({
         title: "Планшет разблокирован",
@@ -97,6 +111,9 @@ export function useTabletLinkFlow() {
       });
       return false;
     } finally {
+      if (inFlightTokenRef.current === token) {
+        inFlightTokenRef.current = null;
+      }
       setSubmitting(false);
     }
   }, [toast, openOwnerModal, user?.role]);

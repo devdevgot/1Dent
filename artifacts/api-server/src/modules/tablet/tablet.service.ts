@@ -493,8 +493,14 @@ export class TabletService {
   async redeemLink(userId: string, role: UserRole, linkToken: string, pin?: string) {
     assertTabletRole(role);
 
-    const session = await this.repo.findPendingSessionByTokenHash(hashToken(linkToken));
-    if (!session) throw new NotFoundError("Ссылка устарела или уже использована");
+    const tokenHash = hashToken(linkToken);
+    const session = await this.repo.findPendingSessionByTokenHash(tokenHash);
+
+    // Idempotent path: Android cameras / PWA remounts often POST the same token twice.
+    // If the first redeem already moved the session out of pending, return the same success.
+    if (!session) {
+      return this.redeemLinkIdempotent(userId, role, tokenHash);
+    }
 
     const user = await this.authRepo.findUserById(userId);
     if (!user) throw new NotFoundError("Пользователь не найден");
@@ -517,7 +523,10 @@ export class TabletService {
         user.clinicId,
         userId,
       );
-      if (!assigned) throw new NotFoundError("Не удалось начать подключение планшета");
+      // Parallel double-redeem: another request already moved this session.
+      if (!assigned) {
+        return this.redeemLinkIdempotent(userId, role, tokenHash);
+      }
 
       void notifyClinicStaff({
         clinicId: user.clinicId,
@@ -578,7 +587,10 @@ export class TabletService {
     }
 
     const unlocked = await this.repo.unlockSession(session.id, userId);
-    if (!unlocked) throw new NotFoundError("Не удалось разблокировать планшет");
+    if (!unlocked) {
+      // Parallel double-redeem: another request already unlocked.
+      return this.redeemLinkIdempotent(userId, role, tokenHash);
+    }
 
     return {
       success: true as const,
@@ -587,6 +599,66 @@ export class TabletService {
       cabinet: cabinet ? { id: cabinet.id, name: cabinet.name } : null,
       doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
     };
+  }
+
+  /** Replay a successful redeem when the token was already consumed (double scan / remount). */
+  private async redeemLinkIdempotent(userId: string, role: UserRole, tokenHash: string) {
+    const existing = await this.repo.findSessionByTokenHash(tokenHash);
+    if (!existing || existing.expiresAt < new Date()) {
+      throw new NotFoundError("Ссылка устарела или уже использована");
+    }
+    if (existing.status === "released" || existing.status === "expired") {
+      throw new NotFoundError("Ссылка устарела или уже использована");
+    }
+
+    const user = await this.authRepo.findUserById(userId);
+    if (!user) throw new NotFoundError("Пользователь не найден");
+
+    if (existing.status === "awaiting_pairing") {
+      if (role !== "owner") throw new TabletNotPairedByOwnerError();
+      if (existing.clinicId && user.clinicId !== existing.clinicId) {
+        throw new TabletCabinetStaleError(
+          "QR-код от другой клиники. На планшете нажмите «Обновить код» и отсканируйте новый QR.",
+        );
+      }
+      const cabinet = existing.cabinetId
+        ? await this.repo.findCabinetById(existing.cabinetId)
+        : null;
+      const doctor = await this.repo.getDoctorPublic(userId);
+      return {
+        success: true as const,
+        pairingRequired: true as const,
+        sessionId: existing.id,
+        cabinet: cabinet ? { id: cabinet.id, name: cabinet.name } : null,
+        doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
+      };
+    }
+
+    if (existing.status === "unlocked") {
+      if (existing.clinicId && user.clinicId !== existing.clinicId) {
+        throw new TabletCabinetStaleError(
+          "QR-код от другой клиники. На планшете нажмите «Обновить код» и отсканируйте новый QR.",
+        );
+      }
+      if (existing.doctorUserId && existing.doctorUserId !== userId) {
+        throw new NotFoundError("Ссылка устарела или уже использована");
+      }
+      const cabinet = existing.cabinetId
+        ? await this.repo.findCabinetById(existing.cabinetId)
+        : null;
+      const doctor = await this.repo.getDoctorPublic(userId);
+      return {
+        success: true as const,
+        pairingRequired: false as const,
+        ownerActionRequired: false as const,
+        sessionId: existing.id,
+        cabinet: cabinet ? { id: cabinet.id, name: cabinet.name } : null,
+        doctor: doctor ? this.buildDoctorPublic(doctor, role) : null,
+      };
+    }
+
+    // Still pending but findPending missed it (timing) — surface the generic error.
+    throw new NotFoundError("Ссылка устарела или уже использована");
   }
 
   async enterTablet(
