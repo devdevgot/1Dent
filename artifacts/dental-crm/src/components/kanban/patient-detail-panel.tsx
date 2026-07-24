@@ -65,6 +65,7 @@ import { DocumentPreviewDialog } from "@/components/contracts/document-preview-d
 import { Button } from "@/components/ui/button";
 import { useKanbanStore } from "@/hooks/use-kanban";
 import { useAuthStore } from "@/hooks/use-auth";
+import { showContractFillWarnings } from "@/lib/contract-fill-warnings";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
 import {
@@ -1405,7 +1406,12 @@ export function PatientDetailPanel() {
       const responseData = await res.json() as {
         success: boolean;
         error?: string;
-        data?: { bundleUrl: string; bundleToken: string; contracts?: unknown[] };
+        data?: {
+          bundleUrl: string;
+          bundleToken: string;
+          contracts?: unknown[];
+          warnings?: string[];
+        };
       };
       if (!res.ok || !responseData.success) {
         const message = responseData.error ?? `HTTP ${res.status}`;
@@ -1431,6 +1437,7 @@ export function PatientDetailPanel() {
         setBundleToken(responseData.data.bundleToken);
         setBundleUrl(responseData.data.bundleUrl);
         setBundlePrepareError(null);
+        showContractFillWarnings(toast, responseData.data.warnings);
         queryClient.invalidateQueries({ queryKey: ["patient-contracts", pid] }).catch(() => {});
         return responseData.data.bundleToken;
       }

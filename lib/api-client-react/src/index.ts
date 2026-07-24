@@ -1630,7 +1630,7 @@ export interface UploadTemplateResponse {
 
 export interface SendContractResponse {
   success: boolean;
-  data: { contract: PatientContract; contractUrl: string };
+  data: { contract: PatientContract; contractUrl: string; warnings?: string[] };
 }
 
 export const listContractTemplates = (): Promise<{

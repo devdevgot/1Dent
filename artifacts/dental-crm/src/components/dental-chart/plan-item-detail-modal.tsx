@@ -21,6 +21,7 @@ import {
 import type { TreatmentPlanItem } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { showContractFillWarnings } from "@/lib/contract-fill-warnings";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useConfirm } from "@/hooks/use-confirm";
 import { getBaseUrl } from "@/lib/base-url";
@@ -360,7 +361,7 @@ export function PlanItemDetailModal({
         const prepareData = await prepareRes.json() as {
           success: boolean;
           error?: string;
-          data?: { bundleToken: string; contracts?: unknown[] };
+          data?: { bundleToken: string; contracts?: unknown[]; warnings?: string[] };
         };
         if (!prepareRes.ok || !prepareData.success || !prepareData.data?.bundleToken) {
           throw new Error(prepareData.error ?? "Не удалось сформировать пакет документов");
@@ -369,6 +370,8 @@ export function PlanItemDetailModal({
           throw new Error("Нет документов для данной услуги. Проверьте шаблоны договоров.");
         }
         tokenToSend = prepareData.data.bundleToken;
+
+        showContractFillWarnings(toast, prepareData.data.warnings);
 
         await updateMutation.mutateAsync({
           id: patientId,

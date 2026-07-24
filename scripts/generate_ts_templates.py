@@ -50,7 +50,7 @@ def inject_placeholders(text: str) -> str:
     # --- Director / doctor ---
     t = re.sub(
         r"от 04\.12\.2018г\.,\s+([А-ЯЁA-Z][а-яёa-z]+(?:\s+[А-ЯЁA-Z]\.[А-ЯЁA-Z]\.)?)\s+в\s+лице\s+директора",
-        r"от 04.12.2018г., {{doctor_name}} в лице директора",
+        r"от 04.12.2018г., {{clinic_director}} в лице директора",
         t,
     )
     t = re.sub(

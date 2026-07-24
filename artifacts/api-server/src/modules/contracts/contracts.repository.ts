@@ -456,8 +456,15 @@ export class ContractsRepository {
     return row!;
   }
 
+  async getPendingPlanTableItems(
+    patientId: string,
+    clinicId: string,
+    serviceNames?: string[],
+  ): Promise<ContractTableItem[]> {
+    return this.loadPendingTreatmentPlanItems(patientId, clinicId, serviceNames);
+  }
+
   /**
-   * Creates all 4 extraction contracts sharing the same bundleToken.
    * Fills each template with patient/clinic data and renders HTML.
    */
   private async loadPendingTreatmentPlanItems(

@@ -6,7 +6,13 @@ import { authMiddleware, roleGuard } from "../../middlewares/auth.middleware";
 import { ValidationError, NotFoundError, WhatsappNotConnectedError } from "../../shared/errors";
 import { ContractsRepository } from "./contracts.repository";
 import { analyzeContractFields, renderContractHtml, PATIENT_FIELDS } from "./contracts.ai";
-import { getExtractionTemplateDef, renderExtractionTemplate, getExtractionTemplateText } from "./extraction-templates";
+import {
+  collectContractFillWarnings,
+  formatContractDobRu,
+  renderPatientContractHtml,
+  type ContractFillContext,
+} from "./contract-fill";
+import { getExtractionTemplateDef, getExtractionTemplateText, renderExtractionTemplate } from "./extraction-templates";
 import { textToHtml, wrapContractPreviewDocument } from "./contract-render";
 import { sendPlatformWhatsApp, isPlatformWhatsAppConfigured } from "../../shared/platform-whatsapp";
 import { getPublicAppBaseUrl } from "../../shared/public-url";
@@ -378,73 +384,37 @@ router.post(
     const clinicId = req.user!.clinicId;
     const { templateId } = parsed.data;
 
-    // Load template (also verifies clinic ownership)
     const template = await repo.findTemplate(templateId, clinicId).catch(next);
     if (!template) return next(new NotFoundError("Шаблон не найден"));
 
-    // Load patient (also verifies clinic ownership)
-    const [patientRow] = await db
-      .select({
-        id: patientsTable.id,
-        name: patientsTable.name,
-        phone: patientsTable.phone,
-        iin: patientsTable.iin,
-        dateOfBirth: patientsTable.dateOfBirth,
-        gender: patientsTable.gender,
-        doctorId: patientsTable.doctorId,
-      })
-      .from(patientsTable)
-      .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)))
-      .limit(1);
-    if (!patientRow) return next(new NotFoundError("Пациент не найден"));
+    const sentById = req.user!.userId ?? null;
+    const ctx = await loadBundleContext(patientId, clinicId, { sentById }).catch(() => null);
+    if (!ctx) return next(new NotFoundError("Пациент не найден"));
 
-    // Load clinic name
-    const [clinicRow] = await db
-      .select({ name: clinicsTable.name })
-      .from(clinicsTable)
-      .where(eq(clinicsTable.id, clinicId))
-      .limit(1);
-    const clinicName = clinicRow?.name ?? "";
-
-    // Load doctor name if available
-    let doctorName = "";
-    if (patientRow.doctorId) {
-      const [doc] = await db
-        .select({ name: usersTable.name })
-        .from(usersTable)
-        .where(eq(usersTable.id, patientRow.doctorId))
-        .limit(1);
-      doctorName = doc?.name ?? "";
-    }
-
-    // Build filled data map
-    const today = new Date();
-    const dateStr = today.toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const genderMap: Record<string, string> = {
-      male: "мужской",
-      female: "женский",
-      other: "не указан",
+    const fillCtx: ContractFillContext = {
+      patientName: ctx.patientName,
+      patientPhone: ctx.patientPhone,
+      patientIin: ctx.patientIin,
+      patientDob: ctx.patientDob,
+      clinicName: ctx.clinicName,
+      clinicPhone: ctx.clinicPhone,
+      clinicCity: ctx.clinicCity,
+      clinicAddress: ctx.clinicAddress,
+      clinicLicense: ctx.clinicLicense,
+      clinicDirector: ctx.clinicDirector,
+      doctorName: ctx.doctorName,
+      patientGender: ctx.patientGender,
     };
 
-    const filledData: Record<string, string> = {
-      "patient.name":        patientRow.name,
-      "patient.phone":       patientRow.phone,
-      "patient.iin":         patientRow.iin ?? "",
-      "patient.dateOfBirth": patientRow.dateOfBirth ?? "",
-      "patient.gender":      genderMap[patientRow.gender ?? ""] ?? "",
-      "doctor.name":         doctorName,
-      "clinic.name":         clinicName,
-      "date.today":          dateStr,
-      "date.year":           String(today.getFullYear()),
-    };
-
-    // Render HTML from extracted text using properly typed mappings
+    const planItems = await repo.getPendingPlanTableItems(patientId, clinicId).catch(() => []);
     const fieldMappings = parseFieldMappings(template.fieldMappings);
-    const renderedHtml = renderContractHtml(template.extractedText ?? "", fieldMappings, filledData);
+    const { html: renderedHtml, filledData } = renderPatientContractHtml(
+      template,
+      fillCtx,
+      fieldMappings,
+      planItems,
+    );
+    const warnings = collectContractFillWarnings(fillCtx);
 
     const token = randomUUID();
 
@@ -453,7 +423,7 @@ router.post(
         clinicId,
         patientId,
         templateId,
-        sentById: req.user!.userId ?? null,
+        sentById,
         token,
         renderedHtml,
         filledData,
@@ -463,14 +433,16 @@ router.post(
 
     const contractUrl = `${getPublicAppBaseUrl()}/p/contract/${token}`;
 
-    const message = `📋 *${template.name}*\n\nУважаемый(-ая) ${patientRow.name}!\n\nВам отправлен договор для ознакомления и подписи.\n\nОткройте по ссылке: ${contractUrl}\n\nПосле прочтения нажмите кнопку «Подписать».`;
+    const message = `📋 *${template.name}*\n\nУважаемый(-ая) ${ctx.patientName}!\n\nВам отправлен договор для ознакомления и подписи.\n\nОткройте по ссылке: ${contractUrl}\n\nПосле прочтения нажмите кнопку «Подписать».`;
 
-    // Contract links go via platform 1Dent WhatsApp (same channel as login OTP / staff invites)
-    sendPlatformWhatsApp(patientRow.phone, message).catch((err: unknown) => {
+    sendPlatformWhatsApp(ctx.patientPhone, message).catch((err: unknown) => {
       logger.error({ err, patientId, token }, "[contracts] Failed to send WhatsApp message");
     });
 
-    res.status(201).json({ success: true, data: { contract, contractUrl } });
+    res.status(201).json({
+      success: true,
+      data: { contract, contractUrl, warnings },
+    });
   },
 );
 
@@ -516,6 +488,7 @@ async function loadBundleContext(
   patientPhone: string;
   patientIin: string;
   patientDob: string;
+  patientGender: string;
   patientDoctorId: string | null;
   clinicName: string;
   clinicPhone: string;
@@ -525,6 +498,12 @@ async function loadBundleContext(
   clinicDirector: string;
   doctorName: string;
 } | null> {
+  const genderMap: Record<string, string> = {
+    male: "мужской",
+    female: "женский",
+    other: "не указан",
+  };
+
   const [patientRow] = await db
     .select({
       id: patientsTable.id,
@@ -532,6 +511,7 @@ async function loadBundleContext(
       phone: patientsTable.phone,
       iin: patientsTable.iin,
       dateOfBirth: patientsTable.dateOfBirth,
+      gender: patientsTable.gender,
       doctorId: patientsTable.doctorId,
     })
     .from(patientsTable)
@@ -571,7 +551,8 @@ async function loadBundleContext(
     patientName: patientRow.name,
     patientPhone: patientRow.phone,
     patientIin: patientRow.iin ?? "",
-    patientDob: patientRow.dateOfBirth ?? "",
+    patientDob: formatContractDobRu(patientRow.dateOfBirth),
+    patientGender: genderMap[patientRow.gender ?? ""] ?? "",
     patientDoctorId: patientRow.doctorId ?? null,
     clinicName: clinicRow?.contractLegalName?.trim() || clinicRow?.name || "",
     clinicPhone: clinicRow?.whatsappPhone ?? "",
@@ -646,10 +627,25 @@ router.post(
     }
 
     const bundleUrl = buildBundleUrl(req, bundleToken);
+    const fillCtx: ContractFillContext = {
+      patientName: ctx.patientName,
+      patientPhone: ctx.patientPhone,
+      patientIin: ctx.patientIin,
+      patientDob: ctx.patientDob,
+      clinicName: ctx.clinicName,
+      clinicPhone: ctx.clinicPhone,
+      clinicCity: ctx.clinicCity,
+      clinicAddress: ctx.clinicAddress,
+      clinicLicense: ctx.clinicLicense,
+      clinicDirector: ctx.clinicDirector,
+      doctorName: ctx.doctorName,
+      patientGender: ctx.patientGender,
+    };
+    const warnings = collectContractFillWarnings(fillCtx);
 
     res.status(201).json({
       success: true,
-      data: { bundleToken, bundleUrl, contracts, matchedSubcategories },
+      data: { bundleToken, bundleUrl, contracts, matchedSubcategories, warnings },
     });
   },
 );
