@@ -15,6 +15,7 @@ import { getObjectAclPolicy } from "../../lib/objectAcl";
 import { logger } from "../../lib/logger";
 import { ChatbotService } from "../chatbot/chatbot.service";
 import { debounceMessage } from "../../shared/message-debounce";
+import { markConversationInbound, markConversationOutbound } from "../../shared/conversation-gate";
 import { ensureWhatsAppContactPatient } from "../../shared/patient-phone-resolver";
 import { syncChatbotMessagesToPatient } from "../../shared/whatsapp-message-sync";
 import type { UserRole, Message, Notification } from "@workspace/db";
@@ -119,6 +120,7 @@ export class MessagesService {
     this.chatbot.pauseBotForStaffMessage(clinicId, patient.phone).catch((err) =>
       logger.warn({ err, phone: patient.phone }, "Failed to pause chatbot after staff message"),
     );
+    void markConversationOutbound(clinicId, patient.phone, "staff");
 
     if (alertFlag) {
       const queue = getAlertQueue();
@@ -235,6 +237,9 @@ export class MessagesService {
         logger.error({ err, senderPhone, clinicId }, "Failed to ensure WhatsApp contact patient");
       }
     }
+
+    // Quiet proactive bots (nurture / broadcast / care) while the patient is chatting.
+    void markConversationInbound(clinicId, senderPhone);
 
     debounceMessage(clinicId, senderPhone, content, (combined) => {
       this.chatbot.processMessage(clinicId, senderPhone, combined, { skipRedAlert: !!patient }).catch((err) =>

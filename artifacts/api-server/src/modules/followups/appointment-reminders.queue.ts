@@ -10,7 +10,8 @@ import {
 } from "@workspace/db";
 import { insertNotifications } from "../../shared/notifications-dispatch";
 import { eq, and, lte, inArray } from "drizzle-orm";
-import { sendWhatsAppMessage } from "../../shared/whatsapp";
+import { sendToPatient } from "../../shared/messaging";
+import { withProactiveSendClaim } from "../../shared/conversation-gate";
 import { logger } from "../../lib/logger";
 import { attachWorkerFailedHandler } from "../error-events/error-events.worker-capture";
 
@@ -181,10 +182,6 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
     .where(eq(patientsTable.id, patientId))
     .limit(1);
 
-  const whatsappEnabled = !!(
-    process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
-  );
-
   if (patient?.phone) {
     const clinicInfo = clinicName ? ` в клинике «${clinicName}»` : "";
     const messageText =
@@ -192,17 +189,35 @@ async function processReminderJob(data: AppointmentReminderJobData): Promise<voi
         ? `Здравствуйте, ${patientName}! Напоминаем: ваш приём «${procedureName}»${clinicInfo} запланирован на завтра, ${dateStr} в ${timeStr}. Ждём вас! По вопросам — пишите нам.`
         : `Здравствуйте, ${patientName}! Напоминаем: ваш приём «${procedureName}»${clinicInfo} начнётся через 1 час — сегодня в ${timeStr}. Ждём вас! Если не сможете прийти — пожалуйста, сообщите нам.`;
 
-    if (whatsappEnabled) {
-      await sendWhatsAppMessage(patient.phone, messageText).catch((err) => {
-        logger.error({ err, reminderId, patientId }, "[AppointmentReminders] WhatsApp send failed");
-      });
-      logger.info({ reminderId, patientId, reminderType }, "[AppointmentReminders] WhatsApp reminder sent");
-    } else {
+    // Same clinic WhatsApp (Green API) as booking bot — not the global Meta number.
+    // Gate skips only when booking is mid-reply (avoid two bubbles at once).
+    const sent = await withProactiveSendClaim(clinicId, patient.phone, "reminder", async () => {
+      const msgId = await sendToPatient(clinicId, patient.phone!, messageText);
+      return msgId;
+    });
+
+    if (sent === null) {
+      // Booking bot is speaking — retry shortly via pending row / delayed job.
+      const retryAt = new Date(Date.now() + 2 * 60 * 1000);
+      await db
+        .update(appointmentRemindersTable)
+        .set({ sendAt: retryAt })
+        .where(eq(appointmentRemindersTable.id, reminderId));
+      if (appointmentReminderQueue) {
+        await appointmentReminderQueue.add(
+          `reminder-retry-${reminderId}`,
+          { ...data },
+          { delay: 2 * 60 * 1000, jobId: `retry-${reminderId}-${retryAt.getTime()}` },
+        ).catch(() => {});
+      }
       logger.info(
-        { reminderId, patientId, reminderType, messageText },
-        "[AppointmentReminders] WhatsApp disabled — reminder would have been sent",
+        { reminderId, patientId, reminderType },
+        "[AppointmentReminders] Deferred — booking bot holds conversation",
       );
+      return;
     }
+
+    logger.info({ reminderId, patientId, reminderType, msgId: sent }, "[AppointmentReminders] WhatsApp reminder sent");
   } else {
     logger.warn({ reminderId, patientId }, "[AppointmentReminders] Patient has no phone, skipping WhatsApp");
   }

@@ -7,7 +7,8 @@ import {
   chatbotSettingsTable,
 } from "@workspace/db";
 import { eq, and, lte } from "drizzle-orm";
-import { sendWhatsAppMessage } from "../../shared/whatsapp";
+import { sendToPatient } from "../../shared/messaging";
+import { withProactiveSendClaim } from "../../shared/conversation-gate";
 import { logger } from "../../lib/logger";
 import { attachWorkerFailedHandler } from "../error-events/error-events.worker-capture";
 import { transitionPatientStage, PATIENT_STAGE_TRIGGERS } from "../patients/patient-stage.service";
@@ -58,18 +59,33 @@ async function processFollowupJob(data: FollowupJobData): Promise<void> {
   if (!patient?.phone) {
     logger.warn({ followupId, patientId }, "[FollowupQueue] Patient has no phone, marking sent and skipping WhatsApp");
   } else {
-    const whatsappEnabled = !!(
-      process.env["WHATSAPP_TOKEN"] && process.env["WHATSAPP_PHONE_ID"]
-    );
-    if (whatsappEnabled) {
-      await sendWhatsAppMessage(patient.phone, messageTemplate);
-      logger.info({ followupId, patientId, phone: patient.phone }, "[FollowupQueue] Post-op followup WhatsApp sent");
-    } else {
+    const sent = await withProactiveSendClaim(clinicId, patient.phone, "postop", async () => {
+      return sendToPatient(clinicId, patient.phone!, messageTemplate);
+    });
+
+    if (sent === null) {
+      const retryAt = new Date(Date.now() + 2 * 60 * 1000);
+      await db
+        .update(postopFollowupsTable)
+        .set({ sendAt: retryAt })
+        .where(eq(postopFollowupsTable.id, followupId));
+      if (followupQueue) {
+        await followupQueue
+          .add(
+            `followup-retry-${followupId}`,
+            { ...data },
+            { delay: 2 * 60 * 1000, jobId: `retry-${followupId}-${retryAt.getTime()}` },
+          )
+          .catch(() => {});
+      }
       logger.info(
-        { followupId, patientId, phone: patient.phone, messageTemplate },
-        "[FollowupQueue] WhatsApp disabled — post-op followup would have been sent",
+        { followupId, patientId },
+        "[FollowupQueue] Deferred — booking bot holds conversation",
       );
+      return;
     }
+
+    logger.info({ followupId, patientId, phone: patient.phone, msgId: sent }, "[FollowupQueue] Post-op followup WhatsApp sent");
   }
 
   await transitionPatientStage({
