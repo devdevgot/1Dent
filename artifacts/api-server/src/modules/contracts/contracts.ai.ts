@@ -2,7 +2,7 @@ import { openrouter, FAST_MODEL, parseLlmJson, withTimeout } from "../../lib/ope
 import { logger } from "../../lib/logger";
 import { aiCreditsService } from "../../shared/ai-credits";
 import type { FieldMapping } from "@workspace/db";
-import { escapeHtml, textToHtml } from "./contract-render";
+import { escapeHtml, normalizeContractText, textToHtml } from "./contract-render";
 
 /** All patient fields we can auto-fill */
 export const PATIENT_FIELDS: { field: string; label: string }[] = [
@@ -153,16 +153,29 @@ export function renderContractHtml(
   fieldMappings: FieldMapping[],
   patientData: Record<string, string>,
 ): string {
-  let html = textToHtml(rawText);
+  let text = normalizeContractText(rawText);
+  const filledHtml: string[] = [];
 
   for (const mapping of fieldMappings) {
     const value = patientData[mapping.patientField] ?? `[${mapping.label}]`;
-    // Escape special regex chars in placeholder
-    const escaped = mapping.placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(escaped, "g");
-    html = html.replace(re, `<strong class="filled-field">${escapeHtml(value)}</strong>`);
+    const marker = `\uE000${filledHtml.length}\uE001`;
+    filledHtml.push(`<strong class="filled-field">${escapeHtml(value)}</strong>`);
+
+    const placeholders = new Set<string>([mapping.placeholder]);
+    const normalized = normalizeContractText(mapping.placeholder);
+    placeholders.add(normalized);
+
+    for (const ph of placeholders) {
+      if (!ph.trim()) continue;
+      const escaped = ph.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      text = text.replace(new RegExp(escaped, "g"), marker);
+    }
   }
 
+  let html = textToHtml(text);
+  filledHtml.forEach((replacement, idx) => {
+    html = html.split(`\uE000${idx}\uE001`).join(replacement);
+  });
   return html;
 }
 

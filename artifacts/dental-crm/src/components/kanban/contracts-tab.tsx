@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { matchSubcategoriesFromTitles } from "@/lib/contract-service-matching";
+import { showContractFillWarnings } from "@/lib/contract-fill-warnings";
 import {
   FileText, Send, CheckCircle2, Eye, ExternalLink,
   RefreshCw, FileSignature, Clock, ChevronDown, ChevronUp,
@@ -299,8 +300,8 @@ export function ContractsTab({ patientId, planServiceTitles = [], bundle }: Cont
     sendMutation.mutate(
       { patientId, templateId: selectedTemplateId },
       {
-        onSuccess: () => {
-          toast({ title: "✓ Договор отправлен по WhatsApp" });
+        onSuccess: (res) => {
+          showContractFillWarnings(toast, res.data?.warnings, "✓ Договор отправлен по WhatsApp");
           setSelectedTemplateId("");
           void queryClient.invalidateQueries({ queryKey: ["patient-contracts", patientId] });
         },
