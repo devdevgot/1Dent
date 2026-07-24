@@ -874,6 +874,15 @@ return <PatientDetailPanel />;
 | **Consequences** | ✅ Safer releases. ❌ Requires discipline on PR targets |
 | **Status** | Active (`docs/BRANCHING.md`) |
 
+### ADR-006: Care Service as Second Chatbot Mode (Proposed)
+
+| | |
+|---|---|
+| **Context** | Product wants a second chatbot for nurture, 1h reminders, no-show follow-up, and post-visit upsell, separate from booking |
+| **Decision** | Same WhatsApp number + purpose-aware care mode on existing `chatbot` / `followups` / `dental-broadcast`; not a second Green API number or microservice unless brand/ops require it |
+| **Consequences** | ✅ Reuses current queues and sessions. ❌ Needs Green API send fix for reminders/postop + reply routing by purpose. Full write-up: [`docs/ADR-006-care-service-second-chatbot.md`](./ADR-006-care-service-second-chatbot.md) |
+| **Status** | Proposed |
+
 ---
 
 ## 15. Blueprint for New Development
