@@ -293,8 +293,11 @@ router.get("/", allRoles, async (req: Request, res: Response, next: NextFunction
   const dateFrom = typeof req.query["dateFrom"] === "string" ? new Date(req.query["dateFrom"]) : undefined;
   const dateTo = typeof req.query["dateTo"] === "string" ? new Date(req.query["dateTo"] + "T23:59:59") : undefined;
 
+  // Clinic-wide schedule stays scoped to the signed-in doctor.
+  // When loading one patient's procedures (detail panel), return the full
+  // patient history so treating-doctor fallbacks and treatment tabs work.
   const doctorId =
-    role === "doctor"
+    role === "doctor" && !patientId
       ? userId
       : (role === "owner" || role === "admin") && queryDoctorId
         ? queryDoctorId

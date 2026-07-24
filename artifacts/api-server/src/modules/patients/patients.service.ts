@@ -16,6 +16,7 @@ import {
 import { isBaseVersionCurrent } from "../../shared/optimistic-concurrency";
 import { parseIIN, isIINError } from "@workspace/api-zod";
 import { TREATING_DOCTOR_ROLES } from "../../lib/clinical-roles";
+import { latestProcedureDoctorMap } from "./resolve-treating-doctor";
 import type {
   Patient,
   PatientInteraction,
@@ -77,6 +78,38 @@ function withDoctorName(
   };
 }
 
+/**
+ * Fill missing treating physicians from the latest appointment doctor,
+ * persist the assignment, and return DTOs with doctorName resolved.
+ * This keeps the Patients page aligned with the schedule even when
+ * patients.doctor_id was never written at booking time.
+ */
+async function resolveTreatingDoctors(
+  clinicId: string,
+  patients: Patient[],
+  requestingRole: UserRole,
+  repo: PatientsRepository,
+): Promise<PatientDTO[]> {
+  const missingIds = patients.filter((p) => !p.doctorId).map((p) => p.id);
+  const fromProcs = await latestProcedureDoctorMap(clinicId, missingIds);
+
+  if (fromProcs.size > 0) {
+    await Promise.all(
+      [...fromProcs.entries()].map(([patientId, doctorId]) =>
+        repo.assignTreatingDoctorIfEmpty(patientId, clinicId, doctorId),
+      ),
+    );
+  }
+
+  const effective = patients.map((p) =>
+    p.doctorId ? p : { ...p, doctorId: fromProcs.get(p.id) ?? null },
+  );
+  const names = await doctorNameMapForIds(effective.map((p) => p.doctorId));
+  return effective.map((p) =>
+    withDoctorName(p, maskPhone(p.phone, requestingRole), names),
+  );
+}
+
 export class PatientsService {
   private repo = new PatientsRepository();
   private proceduresRepo = new ProceduresRepository();
@@ -87,10 +120,7 @@ export class PatientsService {
     _requestingUserId: string,
   ): Promise<PatientDTO[]> {
     const patients = await this.repo.listByClinic(clinicId);
-    const names = await doctorNameMapForIds(patients.map((p) => p.doctorId));
-    return patients.map((p) =>
-      withDoctorName(p, maskPhone(p.phone, requestingRole), names),
-    );
+    return resolveTreatingDoctors(clinicId, patients, requestingRole, this.repo);
   }
 
   async get(
@@ -103,9 +133,14 @@ export class PatientsService {
     if (!patient) throw new NotFoundError("Patient not found");
 
     const interactions = await this.repo.listInteractions(id, clinicId);
-    const names = await doctorNameMapForIds([patient.doctorId]);
+    const [dto] = await resolveTreatingDoctors(
+      clinicId,
+      [patient],
+      requestingRole,
+      this.repo,
+    );
     return {
-      patient: withDoctorName(patient, maskPhone(patient.phone, requestingRole), names),
+      patient: dto!,
       interactions,
     };
   }
@@ -118,8 +153,13 @@ export class PatientsService {
   ): Promise<PatientDTO | null> {
     const patient = await this.repo.findByIIN(clinicId, iin);
     if (!patient) return null;
-    const names = await doctorNameMapForIds([patient.doctorId]);
-    return withDoctorName(patient, maskPhone(patient.phone, requestingRole), names);
+    const [dto] = await resolveTreatingDoctors(
+      clinicId,
+      [patient],
+      requestingRole,
+      this.repo,
+    );
+    return dto ?? null;
   }
 
   async create(
