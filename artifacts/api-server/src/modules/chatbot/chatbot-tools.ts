@@ -20,8 +20,10 @@ import { resolveBranchFromMessage } from "./clinic-knowledge";
 import type { DoctorCandidate } from "../analytics/analytics.repository";
 import type { ClinicCalendarConfig } from "@workspace/db";
 import { updatePatientNameByPhone } from "../../shared/patient-phone-resolver";
+import { isReadyToBook, isShortYes } from "./booking-script";
+import { orderAgentActions } from "./chatbot-agent-action-inference";
 
-export { inferKnowledgeAgentActions } from "./chatbot-agent-action-inference";
+export { inferKnowledgeAgentActions, orderAgentActions } from "./chatbot-agent-action-inference";
 
 export interface AgentToolContext {
   clinicId: string;
@@ -125,6 +127,31 @@ async function validateParsedDatetime(
   return { data: sessionData, feedback, slotOk: true };
 }
 
+function tryMarkBookingReady(
+  sessionData: ChatbotSessionData,
+  toolNotes: string[],
+  note: string,
+): { data: ChatbotSessionData; bookingReady: boolean; needsPatientName: boolean } {
+  if (!sessionData.suggestedDoctorId || !sessionData.preferredDatetime || !sessionData.selectedBranch) {
+    return { data: sessionData, bookingReady: false, needsPatientName: false };
+  }
+  const parsed = parseAlmatyDatetime(sessionData.preferredDatetime);
+  if (!parsed) {
+    return {
+      data: { ...sessionData, preferredDatetime: undefined },
+      bookingReady: false,
+      needsPatientName: false,
+    };
+  }
+  const withIso = { ...sessionData, preferredDatetime: formatAlmatyIso(parsed) };
+  if (!hasPatientIdentity(withIso)) {
+    toolNotes.push("book_appointment: нужно имя пациента");
+    return { data: withIso, bookingReady: false, needsPatientName: true };
+  }
+  toolNotes.push(note);
+  return { data: withIso, bookingReady: true, needsPatientName: false };
+}
+
 /** Execute agent-declared tools (validated server-side). */
 export async function executeChatbotAgentTools(
   data: ChatbotSessionData,
@@ -133,14 +160,16 @@ export async function executeChatbotAgentTools(
   ctx: AgentToolContext,
 ): Promise<AgentToolResult> {
   let sessionData = mergeIntent(data, intent);
+  const orderedActions = orderAgentActions(actions);
   const toolNotes: string[] = [];
   let suggestedDoctor: DoctorCandidate | null = null;
   let slotsAppendix = "";
   let bookingReady = false;
   let needsPatientName = false;
   let handoff = false;
+  let bookAttempted = false;
 
-  for (const action of actions) {
+  for (const action of orderedActions) {
     switch (action.type) {
       case "set_branch": {
         const branch =
@@ -234,22 +263,12 @@ export async function executeChatbotAgentTools(
         break;
       }
       case "book_appointment": {
-        if (sessionData.suggestedDoctorId && sessionData.preferredDatetime && sessionData.selectedBranch) {
-          const parsed = parseAlmatyDatetime(sessionData.preferredDatetime);
-          if (!parsed) {
-            sessionData.preferredDatetime = undefined;
-            toolNotes.push("book_appointment: невалидная дата/время — нужна parse_datetime");
-            break;
-          }
-          sessionData.preferredDatetime = formatAlmatyIso(parsed);
-          if (!hasPatientIdentity(sessionData)) {
-            needsPatientName = true;
-            toolNotes.push("book_appointment: нужно имя пациента");
-          } else {
-            bookingReady = true;
-            toolNotes.push("Готово к финализации записи");
-          }
-        } else {
+        bookAttempted = true;
+        const marked = tryMarkBookingReady(sessionData, toolNotes, "Готово к финализации записи");
+        sessionData = marked.data;
+        if (marked.bookingReady) bookingReady = true;
+        if (marked.needsPatientName) needsPatientName = true;
+        if (!marked.bookingReady && !marked.needsPatientName) {
           toolNotes.push("book_appointment: не хватает врача, времени или филиала");
         }
         break;
@@ -270,10 +289,26 @@ export async function executeChatbotAgentTools(
   if (
     sessionData.patientName &&
     intent?.patientName &&
-    !actions.some((a) => a.type === "set_patient_name") &&
+    !orderedActions.some((a) => a.type === "set_patient_name") &&
     !ctx.dryRun
   ) {
     await updatePatientNameByPhone(ctx.clinicId, ctx.phone, sessionData.patientName).catch(() => {});
+  }
+
+  // Second pass: branch/time/name/doctor may have been filled earlier in this same turn
+  // after an early book_appointment attempt (or LLM omitted book while user confirmed).
+  if (!bookingReady && !needsPatientName && !handoff) {
+    const userConfirmed = isShortYes(ctx.messageText) || isReadyToBook(ctx.messageText);
+    if (bookAttempted || userConfirmed) {
+      const marked = tryMarkBookingReady(
+        sessionData,
+        toolNotes,
+        "Готово к финализации записи (second pass)",
+      );
+      sessionData = marked.data;
+      if (marked.bookingReady) bookingReady = true;
+      if (marked.needsPatientName) needsPatientName = true;
+    }
   }
 
   return { data: sessionData, toolNotes, suggestedDoctor, slotsAppendix, bookingReady, needsPatientName, handoff };

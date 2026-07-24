@@ -322,6 +322,40 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     }
   }
 
+  // Never send a verbal “запись подтверждена” when no procedure was persisted.
+  const agentReplyText = [agentTurn.reply, ...(agentTurn.replyParts ?? [])].join("\n");
+  if (looksLikeBookingConfirmation(agentReplyText) && !data.createdProcedureId) {
+    logger.warn(
+      {
+        clinicId,
+        phone,
+        bookingReady: toolResult.bookingReady,
+        hasDoctor: Boolean(data.suggestedDoctorId),
+        hasDatetime: Boolean(data.preferredDatetime),
+        hasBranch: Boolean(data.selectedBranch),
+        hasName: Boolean(data.patientName),
+      },
+      "[AgentTurn] Suppressed false booking confirmation — finalize did not run",
+    );
+    noteAction("Ложное подтверждение записи подавлено — данных для сохранения не хватает");
+    const missing = [
+      !data.suggestedDoctorId ? "врач" : null,
+      !data.preferredDatetime ? "время" : null,
+      !data.selectedBranch ? "филиал" : null,
+      !data.patientName ? "имя" : null,
+    ].filter(Boolean);
+    const ask =
+      missing.length > 0
+        ? `Чтобы оформить запись, уточните пожалуйста: ${missing.join(", ")}.`
+        : "Подтвердите, пожалуйста, запись ещё раз — напишите «да» или удобное время.";
+    return {
+      state,
+      data,
+      response: replyFromText(ask),
+      humanTakeover: false,
+    };
+  }
+
   const reply = finalizeAgentReply(
     enrichReplyWithFsmFollowUp(
       replyFromAgentText(agentTurn.reply, agentTurn.replyParts),
@@ -348,4 +382,11 @@ export async function runChatbotAgentTurn(deps: AgentTurnDeps): Promise<AgentTur
     response: reply,
     humanTakeover: false,
   };
+}
+
+/** LLM sometimes claims booking success without book_appointment / finalize. */
+export function looksLikeBookingConfirmation(text: string): boolean {
+  return /запис[ьиа]?.{0,40}(подтвержд|оформлен|создан|успешн)|вы записаны|запись подтверждена|✅\s*запис/i.test(
+    text,
+  );
 }

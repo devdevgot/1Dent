@@ -437,6 +437,73 @@ test("inferKnowledgeAgentActions: short yes with datetime triggers book_appointm
   assert.ok(actions.some((a) => a.type === "book_appointment"));
 });
 
+test("orderAgentActions: book_appointment runs after set_branch and parse_datetime", async () => {
+  const { orderAgentActions } = await import("./chatbot-agent-action-inference.ts");
+  const ordered = orderAgentActions([
+    { type: "book_appointment" },
+    { type: "set_branch", branch: "ул. A" },
+    { type: "parse_datetime", datetimeText: "завтра 14:00" },
+    { type: "set_patient_name", name: "Айгуль" },
+  ]);
+  assert.deepEqual(
+    ordered.map((a) => a.type),
+    ["set_branch", "set_patient_name", "parse_datetime", "book_appointment"],
+  );
+});
+
+test("inferKnowledgeAgentActions: branch chosen this turn still queues book_appointment last", async () => {
+  const { inferKnowledgeAgentActions } = await import("./chatbot-agent-action-inference.ts");
+  const data = {
+    suggestedDoctorId: "doc-1",
+    suggestedDoctorName: "Dr. Smith",
+    preferredDatetime: "2026-07-11T14:00:00+05:00",
+    patientName: "Айгуль",
+  };
+  const actions = inferKnowledgeAgentActions(data, "ул. A", ["ул. A", "ул. B"], [
+    { type: "book_appointment" },
+  ]);
+  assert.ok(actions.some((a) => a.type === "set_branch"));
+  assert.ok(actions.some((a) => a.type === "book_appointment"));
+  const bookIdx = actions.findIndex((a) => a.type === "book_appointment");
+  const branchIdx = actions.findIndex((a) => a.type === "set_branch");
+  assert.ok(branchIdx < bookIdx);
+});
+
+test("looksLikeBookingConfirmation: detects false verbal confirmations", async () => {
+  const { looksLikeBookingConfirmation } = await import("./chatbot-agent-turn.ts");
+  assert.equal(looksLikeBookingConfirmation("✅ Запись подтверждена."), true);
+  assert.equal(looksLikeBookingConfirmation("Вы записаны на завтра в 14:00"), true);
+  assert.equal(looksLikeBookingConfirmation("Могу записать вас на консультацию?"), false);
+});
+
+test("executeChatbotAgentTools: early book_appointment becomes ready after set_branch same turn", async () => {
+  const { executeChatbotAgentTools } = await import("./chatbot-tools.ts");
+  const result = await executeChatbotAgentTools(
+    {
+      suggestedDoctorId: "doc-1",
+      suggestedDoctorName: "Dr",
+      preferredDatetime: "2026-07-11T14:00:00+05:00",
+      patientName: "Айгуль",
+    },
+    [
+      { type: "book_appointment" },
+      { type: "set_branch", branch: "ул. A" },
+    ],
+    undefined,
+    {
+      clinicId: "c1",
+      phone: "77001112233",
+      messageText: "ул. A",
+      dryRun: true,
+      knowledgeContext: "",
+      officialBranches: ["ул. A"],
+      noteAction: () => {},
+    },
+  );
+  assert.equal(result.data.selectedBranch, "ул. A");
+  assert.equal(result.bookingReady, true);
+});
+
 test("isWaitFillerText: detects async wait phrases", async () => {
   const { isWaitFillerText } = await import("./chatbot-reply-format.ts");
   assert.equal(isWaitFillerText("Минутку... ✨"), true);

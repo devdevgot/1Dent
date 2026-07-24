@@ -1642,6 +1642,17 @@ async function finalizeBookingAppointment(params: {
     } else {
       let patientId = data.existingPatientId ?? data.createdPatientId;
 
+      // Session may lose existingPatientId after Redis TTL / resume — recover by phone
+      // so we still attach the procedure to the CRM patient (calendar / kanban / card).
+      if (!patientId) {
+        const byPhone = await findPatientByPhoneNormalized(clinicId, data.collectedPhone ?? phone);
+        if (byPhone) {
+          patientId = byPhone.id;
+          data.existingPatientId = byPhone.id;
+          if (!data.patientName) data.patientName = byPhone.name;
+        }
+      }
+
       if (!patientId && data.patientName && data.suggestedDoctorId) {
         const patientSource = data.refCode ? patientSourceFromRefCode(data.refCode) : "whatsapp";
         const newPatient = await createPatient(
@@ -1663,17 +1674,27 @@ async function finalizeBookingAppointment(params: {
               logger.warn({ err, clickId: data.clickId }, "ChatbotService: failed to link click to patient"),
             );
         }
-      } else if (patientId && data.existingPatientId && data.suggestedDoctorId) {
+      } else if (patientId && data.suggestedDoctorId) {
         await db
           .update(patientsTable)
-          .set({ doctorId: data.suggestedDoctorId, updatedAt: new Date() })
+          .set({
+            doctorId: data.suggestedDoctorId,
+            ...(looksLikeRealPatientName(data.patientName) ? { name: data.patientName } : {}),
+            updatedAt: new Date(),
+          })
           .where(and(eq(patientsTable.id, patientId), eq(patientsTable.clinicId, clinicId)));
+        // Stage move must not block procedure insert (FSM may reject completed→consultation).
         await transitionPatientStage({
           patientId,
           clinicId,
           toStatus: "initial_consultation",
           trigger: PATIENT_STAGE_TRIGGERS.APPOINTMENT_CREATED,
-        });
+        }).catch((err) =>
+          logger.warn(
+            { err, patientId, clinicId },
+            "ChatbotService: stage transition after booking failed — procedure will still be created",
+          ),
+        );
       }
 
       if (patientId && data.suggestedDoctorId) {
