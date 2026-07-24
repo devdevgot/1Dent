@@ -92,10 +92,12 @@ export async function canSendProactive(
 
   if (redis) {
     const outboundOwner = await redis.get(outboundKey(clinicId, normalized)).catch(() => null);
-    if (outboundOwner && outboundOwner !== source) {
+    // Lease value is either a plain source ("booking") or a claim token ("reminder:1712...").
+    const ownerSource = outboundOwner ? outboundOwner.split(":")[0] : null;
+    if (ownerSource && ownerSource !== source) {
       // Always respect in-flight booking/staff send — avoids double bubble in the same second.
-      if (outboundOwner === "booking" || outboundOwner === "staff" || isVisitLifecycle) {
-        return { allow: false, reason: `outbound_lease_held_by_${outboundOwner}` };
+      if (ownerSource === "booking" || ownerSource === "staff" || isVisitLifecycle) {
+        return { allow: false, reason: `outbound_lease_held_by_${ownerSource}` };
       }
     }
 
