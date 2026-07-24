@@ -20,6 +20,7 @@ export function TabletQrScanner({
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
   const onCloseRef = useRef(onClose);
+  const handledTokenRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function TabletQrScanner({
 
     let cancelled = false;
     let scanner: Html5Qrcode | null = null;
+    handledTokenRef.current = null;
     setError(null);
 
     const startScanner = async () => {
@@ -54,6 +56,9 @@ export function TabletQrScanner({
           (decoded) => {
             const token = parseTabletLinkToken(decoded);
             if (!token) return;
+            // Android often fires success multiple times before stop() settles.
+            if (handledTokenRef.current === token || handledTokenRef.current !== null) return;
+            handledTokenRef.current = token;
             hapticNotify("success");
             void scanner?.stop().catch(() => {});
             scannerRef.current = null;

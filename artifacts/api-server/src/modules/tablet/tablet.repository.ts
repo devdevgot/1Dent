@@ -160,6 +160,17 @@ export class TabletRepository {
     return row ?? null;
   }
 
+  /** Lookup by token hash regardless of status (for idempotent redeem / retries). */
+  async findSessionByTokenHash(hash: string): Promise<TabletSession | null> {
+    const [row] = await db
+      .select()
+      .from(tabletSessionsTable)
+      .where(eq(tabletSessionsTable.linkTokenHash, hash))
+      .orderBy(desc(tabletSessionsTable.createdAt))
+      .limit(1);
+    return row ?? null;
+  }
+
   async unlockSession(sessionId: string, doctorUserId: string): Promise<TabletSession | null> {
     const now = new Date();
     const [row] = await db
