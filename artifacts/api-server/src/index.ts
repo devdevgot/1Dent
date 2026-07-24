@@ -316,6 +316,57 @@ const server = app.listen(port, "0.0.0.0", () => {
   void bootstrapDatabase();
 });
 
+// Railway's edge keeps idle HTTP connections ~60s. Node's default keepAliveTimeout
+// is 5s, so the LB can reuse a socket the app already closed → intermittent 502
+// "upstream error". Keep app timeouts strictly above the proxy.
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 70_000;
+// Allow long AI / voice / export requests without premature socket teardown.
+server.requestTimeout = 300_000;
+
+let shuttingDown = false;
+
+async function gracefulShutdown(signal: string, exitCode = 0): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, "Graceful shutdown started");
+
+  const forceTimer = setTimeout(() => {
+    logger.error({ signal }, "Graceful shutdown timed out — forcing exit");
+    process.exit(exitCode || 1);
+  }, 20_000);
+  forceTimer.unref();
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+      // Node 18.2+: drop keep-alive idle sockets so close() can finish.
+      if (typeof server.closeIdleConnections === "function") {
+        server.closeIdleConnections();
+      }
+    });
+  } catch (err) {
+    logger.warn({ err, signal }, "HTTP server close failed");
+  }
+
+  try {
+    await pool.end();
+  } catch (err) {
+    logger.warn({ err, signal }, "Postgres pool end failed");
+  }
+
+  clearTimeout(forceTimer);
+  logger.info({ signal, exitCode }, "Graceful shutdown complete");
+  process.exit(exitCode);
+}
+
+process.on("SIGTERM", () => {
+  void gracefulShutdown("SIGTERM");
+});
+process.on("SIGINT", () => {
+  void gracefulShutdown("SIGINT");
+});
+
 process.on("unhandledRejection", (reason) => {
   logger.error({ err: reason }, "Unhandled promise rejection");
   errorEventsService.captureSafe({
@@ -336,6 +387,8 @@ process.on("uncaughtException", (err) => {
     stack: err.stack ?? null,
     code: "UNCAUGHT_EXCEPTION",
   });
+  // A broken process left running is a common source of Railway 502s.
+  void gracefulShutdown("uncaughtException", 1);
 });
 
 server.on("error", (err) => {

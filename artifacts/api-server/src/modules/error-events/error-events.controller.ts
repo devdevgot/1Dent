@@ -15,6 +15,7 @@ const reportSchema = z.object({
   stack: z.string().max(20_000).optional().nullable(),
   code: z.string().max(100).optional().nullable(),
   url: z.string().max(2_000).optional().nullable(),
+  method: z.string().max(16).optional().nullable(),
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
