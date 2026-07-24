@@ -442,6 +442,13 @@
       "when": 1783689000000,
       "tag": "0061_notification_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1783775400000,
+      "tag": "0062_customer_care_settings",
+      "breakpoints": true
     }
   ]
 }

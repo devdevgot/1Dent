@@ -10,6 +10,7 @@ export const GEO_RESTRICTED_PREFIXES = [
   "/warehouse",
   "/users",
   "/chatbot",
+  "/customer-care",
   "/staff",
   "/channels",
   "/migration",

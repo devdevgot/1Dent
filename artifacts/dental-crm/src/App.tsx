@@ -108,6 +108,7 @@ const WarehousePage = lazyPage(() => import("@/pages/warehouse"), <WarehousePage
 const UsersPage = lazyPage(() => import("@/pages/users"), <UsersPageSkeleton />);
 const DoctorRatingsPage = lazyPage(() => import("@/pages/doctor-ratings"), <UsersPageSkeleton />);
 const ChatbotPage = lazyPage(() => import("@/pages/chatbot"), <ChatbotPageSkeleton />);
+const CustomerCarePage = lazyPage(() => import("@/pages/customer-care"), <ChatbotPageSkeleton />);
 const StaffDetailPage = lazyPage(() => import("@/pages/staff-detail"), <StaffDetailPageSkeleton />);
 const StaffSelfAnalyticsRedirect = lazyPage(
   () => import("@/pages/staff-self-analytics-redirect"),
@@ -396,6 +397,9 @@ function Router() {
       {/* Chatbot management */}
       <Route path="/chatbot">
         <ProtectedRoute component={ChatbotPage} allowedRoles={['owner']} />
+      </Route>
+      <Route path="/customer-care">
+        <ProtectedRoute component={CustomerCarePage} allowedRoles={['owner']} />
       </Route>
 
 

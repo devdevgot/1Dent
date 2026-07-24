@@ -178,6 +178,16 @@ export const MENU_SERVICES: MenuServiceDefinition[] = [
     skeletonVariant: "chatbot",
   },
   {
+    slug: "customer-care",
+    nameKey: "nav.customerCare",
+    href: "/customer-care",
+    img: "/icons/menu/chatbot.png",
+    roles: ["owner"],
+    category: "automation",
+    component: lazyWithChunkRecovery(() => import("@/pages/customer-care")),
+    skeletonVariant: "form",
+  },
+  {
     slug: "channels",
     nameKey: "nav.channels",
     href: "/channels",
