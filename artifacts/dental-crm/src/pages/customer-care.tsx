@@ -321,10 +321,12 @@ export default function CustomerCarePage() {
                 </p>
               </div>
               {settings && (
-                <Switch
-                  checked={settings.enabled}
-                  onCheckedChange={(v) => setSettings({ ...settings, enabled: v })}
-                />
+                <div className="flex flex-col items-end gap-1">
+                  <Switch checked={settings.enabled} disabled aria-readonly />
+                  <span className="text-[10px] text-[#94a3b8] whitespace-nowrap">
+                    {settings.enabled ? "Включён с чатботом" : "Выключен с чатботом"}
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -333,9 +335,10 @@ export default function CustomerCarePage() {
         <div className="rounded-2xl border border-[#dbeafe] bg-[#eff6ff] p-3.5 flex gap-2.5">
           <Info className="w-4 h-4 text-[#1f75fe] shrink-0 mt-0.5" />
           <p className="text-xs text-[#1e3a5f] leading-relaxed">
-            Когда пациент согласится записаться после сообщения службы заботы,{" "}
-            <strong>основной чатбот записи</strong> подберёт врача, покажет слоты и создаст визит в
-            CRM. Служба заботы сама записи не оформляет — только передаёт диалог.
+            Служба заботы <strong>всегда включается вместе с основным чатботом</strong> и выключается
+            вместе с ним — отдельный выключатель не нужен. Когда пациент согласится записаться,{" "}
+            <strong>основной чатбот записи</strong> подберёт врача, слоты и создаст визит. Care сам
+            запись не оформляет.
           </p>
         </div>
 

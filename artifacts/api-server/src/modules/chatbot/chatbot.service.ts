@@ -4518,6 +4518,22 @@ export class ChatbotService {
       .where(eq(chatbotSettingsTable.id, settings.id))
       .returning();
     settingsCache.delete(clinicId);
+
+    // Critical: Customer Care must stay in sync with the main chatbot power switch.
+    if (typeof updates.enabled === "boolean") {
+      try {
+        const { customerCareChatbotService } = await import(
+          "../customer-care-chatbot/customer-care-chatbot.service"
+        );
+        await customerCareChatbotService.syncEnabledWithChatbot(clinicId, updates.enabled);
+      } catch (err) {
+        logger.warn(
+          { err, clinicId, enabled: updates.enabled },
+          "[ChatbotService] Failed to sync Customer Care enabled with chatbot",
+        );
+      }
+    }
+
     return { settings: updated! };
   }
 

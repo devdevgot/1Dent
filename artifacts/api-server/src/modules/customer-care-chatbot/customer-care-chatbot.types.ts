@@ -59,6 +59,7 @@ export interface CustomerCareClinicSettings {
   prompts: CustomerCarePromptPack;
 }
 
+/** Default before sync with chatbot_settings.enabled (getSettings always mirrors chatbot). */
 export const DEFAULT_CUSTOMER_CARE_SETTINGS: CustomerCareClinicSettings = {
   enabled: false,
   leadNurtureEnabled: true,

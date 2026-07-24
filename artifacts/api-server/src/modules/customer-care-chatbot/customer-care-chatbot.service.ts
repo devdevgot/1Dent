@@ -11,7 +11,12 @@
 
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
-import { db, customerCareSettingsTable, type CustomerCarePromptPack } from "@workspace/db";
+import {
+  db,
+  customerCareSettingsTable,
+  chatbotSettingsTable,
+  type CustomerCarePromptPack,
+} from "@workspace/db";
 import { logger } from "../../lib/logger";
 import { sendToPatient } from "../../shared/messaging";
 import { customerCareTemplates } from "./customer-care-templates";
@@ -46,30 +51,77 @@ function rowToSettings(row: typeof customerCareSettingsTable.$inferSelect): Cust
   };
 }
 
+async function isChatbotEnabled(clinicId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ enabled: chatbotSettingsTable.enabled })
+    .from(chatbotSettingsTable)
+    .where(eq(chatbotSettingsTable.clinicId, clinicId))
+    .limit(1);
+  // No chatbot_settings row → treat as off (new clinic hasn't enabled bot yet).
+  return row?.enabled === true;
+}
+
 export class CustomerCareChatbotService {
-  async getSettings(clinicId: string): Promise<CustomerCareClinicSettings> {
+  /**
+   * Critical product rule: Customer Care is ON whenever the main booking chatbot is ON.
+   * Called from chatbot.updateSettings and from getSettings (self-heal).
+   */
+  async syncEnabledWithChatbot(clinicId: string, chatbotEnabled: boolean): Promise<CustomerCareClinicSettings> {
+    const current = await this.getSettingsRaw(clinicId);
+    if (current.enabled === chatbotEnabled) {
+      return current;
+    }
+    logger.info(
+      { clinicId, chatbotEnabled, careWasEnabled: current.enabled },
+      "[CustomerCare] Syncing enabled flag with main chatbot",
+    );
+    return this.persistSettings(clinicId, { ...current, enabled: chatbotEnabled });
+  }
+
+  /** Raw read without chatbot sync (avoids recursion). */
+  private async getSettingsRaw(clinicId: string): Promise<CustomerCareClinicSettings> {
     const [row] = await db
       .select()
       .from(customerCareSettingsTable)
       .where(eq(customerCareSettingsTable.clinicId, clinicId))
       .limit(1);
-    if (!row) return { ...DEFAULT_CUSTOMER_CARE_SETTINGS, prompts: mergeCarePrompts(null) };
+    if (!row) {
+      return { ...DEFAULT_CUSTOMER_CARE_SETTINGS, prompts: mergeCarePrompts(null) };
+    }
     return rowToSettings(row);
+  }
+
+  async getSettings(clinicId: string): Promise<CustomerCareClinicSettings> {
+    const chatbotOn = await isChatbotEnabled(clinicId);
+    const current = await this.getSettingsRaw(clinicId);
+    if (current.enabled !== chatbotOn) {
+      return this.syncEnabledWithChatbot(clinicId, chatbotOn);
+    }
+    return current;
   }
 
   async updateSettings(
     clinicId: string,
     patch: Partial<CustomerCareClinicSettings>,
   ): Promise<CustomerCareClinicSettings> {
-    const current = await this.getSettings(clinicId);
+    const chatbotOn = await isChatbotEnabled(clinicId);
+    const current = await this.getSettingsRaw(clinicId);
     const next: CustomerCareClinicSettings = {
       ...current,
       ...patch,
+      // Cannot disable Care while booking chatbot is on (and vice versa when chatbot off).
+      enabled: chatbotOn,
       bookingMode: "handoff_to_booking",
       leadNurtureDelaysMinutes: patch.leadNurtureDelaysMinutes ?? current.leadNurtureDelaysMinutes,
       prompts: mergeCarePrompts({ ...current.prompts, ...(patch.prompts ?? {}) }),
     };
+    return this.persistSettings(clinicId, next);
+  }
 
+  private async persistSettings(
+    clinicId: string,
+    next: CustomerCareClinicSettings,
+  ): Promise<CustomerCareClinicSettings> {
     const [existing] = await db
       .select({ id: customerCareSettingsTable.id })
       .from(customerCareSettingsTable)
